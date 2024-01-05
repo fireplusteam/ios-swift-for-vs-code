@@ -15,17 +15,17 @@ original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-
 
    In the shell perform the following command:
 ```bash
-   ln -s PATH/TO/xcode-build-server /usr/local/bin
+ln -s PATH/TO/xcode-build-server /usr/local/bin
 ```
 
 4. Navigate to your project and run the following command:
 
 ```bash
-   xcode-build-server config -scheme <XXX> -workspace *.xcworkspace
+xcode-build-server config -scheme <XXX> -workspace *.xcworkspace
 ```
    OR:
 ```bash
-   xcode-build-server config -scheme <XXX> -project *.xcodeproj
+xcode-build-server config -scheme <XXX> -project *.xcodeproj
 ```
 
    Note: *.xcworkspace or *.xcodeproj should be unique. can be omit and will auto choose the unique workspace or project.
