@@ -19,9 +19,12 @@ original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-
 
 4. Navigate to your project and run the following command:
 
+<pre>
+```bash
    xcode-build-server config -scheme <XXX> -workspace *.xcworkspace
    xcode-build-server config -scheme <XXX> -project *.xcodeproj
-
+```
+</pre>
    Note: *.xcworkspace or *.xcodeproj should be unique. can be omit and will auto choose the unique workspace or project.
 
 5. Open the directory with your iOS project in Visual Studio Code. Autocompletion should work automatically.
@@ -40,5 +43,5 @@ original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-
         "args": "Run iOS App"
     }
 ]
-
+```
 So cmd+shift+b builds your project and cmd+r runs in on simulator, as in xCode
