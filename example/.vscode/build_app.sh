@@ -8,5 +8,4 @@ DEVICE_NAME="$6"
 
 DESTINATION="platform=$PLATFORM,OS=$OS,name=$DEVICE_NAME"
 
-xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build
-#xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee .vscode/build.log; xcode-build-server parse build.log >/dev/null 2>&1
+xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.vscode/build.log'

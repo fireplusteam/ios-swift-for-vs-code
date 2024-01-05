@@ -38,7 +38,7 @@ echo "UUID of the device:${SIMULATOR_UDID}"
 is_empty "$SIMULATOR_UDID"
 
 # build a project
-xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build
+xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.vscode/build.log'
 
 # Check the exit status
 if [ $? -eq 0 ]; then
@@ -90,7 +90,7 @@ cat << EOF > .vscode/launch.json
             "request": "launch",
             "program": ".vscode/show-app-log.js",
             "stopOnEntry": false,
-            "args": [".vscode/app_log.txt"],
+            "args": [".vscode/app.log"],
             "console": "internalConsole",
             "internalConsoleOptions": "neverOpen"
         }
@@ -100,6 +100,9 @@ EOF
 
 #xcrun simctl spawn $SIMULATOR_UDID log stream --predicate "processID == $PID" 2>&1 | tee app_log.txt
 
-echo "App logs: .vscode/app_log.txt"
+echo "App logs: .vscode/app.log"
 
-xcrun simctl spawn $SIMULATOR_UDID log stream --predicate "processID == $PID" > '.vscode/app_log.txt' 2>&1 &
+#Log Levels:
+#
+#default | info | debug
+xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .vscode/app.log 2>&1
