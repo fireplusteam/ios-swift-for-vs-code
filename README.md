@@ -14,16 +14,23 @@ original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-
 3. Create a link file to xcode-build-server file from the downloaded directory:
 
    In the shell perform the following command:
-            
-          ln -s PATH/TO/xcode-build-server /usr/local/bin
+```bash
+   ln -s PATH/TO/xcode-build-server /usr/local/bin
+```
 
 4. Navigate to your project and run the following command:
 
 ```bash
    xcode-build-server config -scheme <XXX> -workspace *.xcworkspace
+```
+   OR:
+```bash
    xcode-build-server config -scheme <XXX> -project *.xcodeproj
 ```
+
    Note: *.xcworkspace or *.xcodeproj should be unique. can be omit and will auto choose the unique workspace or project.
+   Note: current solution works only with xcworkspace
+
 
 5. Open the directory with your iOS project in Visual Studio Code. Autocompletion should work automatically.
 
