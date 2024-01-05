@@ -56,7 +56,7 @@
              }
         },
         {
-            "label": "Bind AutoComplete",
+            "label": "Generate xCode Server",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_autocomplete.sh",
             "group": {
@@ -70,6 +70,18 @@
              "options": {
                 "cwd": "${workspaceFolder}"
              }
+        },
+        {
+            "label": "Bind Autocomplete",
+            "type": "shell",
+            "command": ".vscode/restart_lsp_swift.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "dependsOn":[
+                "Generate xCode Server"
+            ]
         }
     ]
 }
