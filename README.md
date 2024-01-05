@@ -31,6 +31,8 @@ original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-
 1. In VS Code tap ⇧⌘P then enter "Open Keyboard Shortcuts (JSON)"
 
 2. Place your key bindings in this file to override the defaults
+
+```json
 [
     {
         "key": "cmd+r",
