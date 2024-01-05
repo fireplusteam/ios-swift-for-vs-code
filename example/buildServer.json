@@ -12,8 +12,9 @@
 	"argv": [
 		"/usr/local/bin/xcode-build-server"
 	],
+	"kind": "manual",
 	"workspace": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/TestVSCode.xcworkspace",
 	"build_root": "/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht",
 	"scheme": "TestVSCode",
-	"kind": "xcode"
+	"indexStorePath": "/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Index.noindex/DataStore"
 }
