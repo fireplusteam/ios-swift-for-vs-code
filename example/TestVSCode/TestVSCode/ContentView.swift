@@ -45,6 +45,7 @@ struct ContentView: View {
         Button("Title") {
             let a = 10;
             let str = "sfdsfs"
+            debugPrint("OK")
             print("ok\(a)")
         }
     }
