@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "attach",
+            "name": "Attach",
+            "pid": 11380,
+            "stopOnEntry": false
+        },
+        {
+            "name": "Show App Log",
+            "type": "node",
+            "request": "launch",
+            "program": ".vscode/show-app-log.js",
+            "stopOnEntry": false,
+            "args": [".vscode/app_log.txt"],
+            "console": "internalConsole",
+            "internalConsoleOptions": "neverOpen"
+        }
+    ]
+}
