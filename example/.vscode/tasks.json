@@ -8,6 +8,7 @@
             "PROJECT_FILE": "TestVSCode.xcworkspace",
             "PROJECT_SCHEME": "TestVSCode",
             "BUNDLE_NAME": "puzzle.TestVSCode",
+
             "PLATFORM": "iOS Simulator",
             "PLATFORM_OS": "17.0.1",
             "DEVICE_NAME": "iPhone 15 Pro"
@@ -19,7 +20,7 @@
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_app.sh",
             "args": [
-                "${PROJECT_FILE}", // path
+                "${PROJECT_FILE}",
                 "${PROJECT_SCHEME}",
                 "${BUNDLE_NAME}",
                 "${PLATFORM}",
@@ -43,12 +44,28 @@
                 "isDefault": false
              },
              "args": [
-                "${PROJECT_FILE}", // project
+                "${PROJECT_FILE}",
                 "${PROJECT_SCHEME}",
                 "${BUNDLE_NAME}",
                 "${PLATFORM}",
                 "${PLATFORM_OS}",
                 "${DEVICE_NAME}"
+            ],
+             "options": {
+                "cwd": "${workspaceFolder}"
+             }
+        },
+        {
+            "label": "Bind AutoComplete",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_autocomplete.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+             },
+             "args": [
+                "${PROJECT_FILE}",
+                "${PROJECT_SCHEME}"
             ],
              "options": {
                 "cwd": "${workspaceFolder}"
