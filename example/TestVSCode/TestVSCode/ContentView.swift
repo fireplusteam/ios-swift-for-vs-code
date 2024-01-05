@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct SomeAwesomeView: View {
+    @State var po: Int = 10
     init(a: Int) {
 
     }
@@ -20,12 +21,19 @@ struct SomeAwesomeView: View {
     @ViewBuilder
     var subview: some View {
         Button("ok") {
-            
+            let b = 20;
+            print("\(b)")
+            callMethod();
         }
     }
 
     var secondView: some View {
         subview
+    }
+
+    func callMethod() {
+        let a = 10;
+        print("\(a),\(self.po)")
     }
 }
 
@@ -42,11 +50,11 @@ struct ContentView: View {
         }
         .padding()
 
-        Button("Title") {
+        Button("Title") { [self]
             let a = 10;
             let str = "sfdsfs"
             debugPrint("OK")
-            print("ok\(a)")
+            print("ok\(a)\(self)")
         }
     }
 

@@ -2,5 +2,5 @@
     "vim.autoSwitchInputMethod.enable": false,
     "editor.lineNumbers": "relative",
     "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
-    "lldb.launch.expressions": "native",
+    "lldb.launch.expressions": "native"
 }

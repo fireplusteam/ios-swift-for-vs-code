@@ -1,7 +1,6 @@
 # ios_vs_code
 Write/Debug/Build iOS app on Visual Studio Code
 
-
 # Required VS Code extensions:
    CodeLLDB
    Swift - official extension
@@ -34,7 +33,7 @@ xcode-build-server config -scheme <XXX> -project *.xcodeproj
 
 5. Open the directory with your iOS project in Visual Studio Code. Autocompletion should work automatically.
 
-# Setup Keyboard Binding
+# Setup Keyboard Binding to Build And Run (Optional)
 
 1. In VS Code tap ⇧⌘P then enter "Open Keyboard Shortcuts (JSON)"
 
@@ -50,3 +49,25 @@ xcode-build-server config -scheme <XXX> -project *.xcodeproj
 ]
 ```
 So cmd+shift+b builds your project and cmd+r runs in on simulator, as in xCode
+F5 attach debug lldb
+Shift+F5 stop debug
+
+So each time after you run the app, you need to attach the debugger manually if you need. 
+This gives you a speed on launching app and attaching lldb only in cases when you have to debug
+
+# Setting Vim (Optional)
+Go to settings.json and add:
+
+```json
+"vim.insertModeKeyBindings": [
+        { //exit insert mode
+          "before": [
+            "j",
+            "k"
+          ],
+          "after": [
+            "<Esc>"
+          ]
+    }],
+    "keyboard.dispatch": "keyCode"
+```
