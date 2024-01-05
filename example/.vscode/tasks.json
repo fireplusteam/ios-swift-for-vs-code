@@ -6,19 +6,35 @@
         {
             "label": "Build iOS App",
             "type": "shell",
-            "command": "${workspaceFolder}/build_app.sh",
+            "command": "${workspaceFolder}/.vscode/build_app.sh",
+            "args": [
+                "TestVSCode.xcworkspace", // path
+                "TestVSCode", // Scheme,
+                "puzzle.TestVSCode" // Bundle Name
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
+             },
+             "options": {
+                "cwd": "${workspaceFolder}"
              }
         },
         {
             "label": "Run iOS App",
             "type": "shell",
-            "command": "${workspaceFolder}/run_app.sh",
+            "command": "${workspaceFolder}/.vscode/run_app.sh",
             "group": {
                 "kind": "build",
                 "isDefault": false
+             },
+             "args": [
+                "TestVSCode.xcworkspace", // project
+                "TestVSCode", // Scheme,
+                "puzzle.TestVSCode" // Bundle Name
+            ],
+             "options": {
+                "cwd": "${workspaceFolder}"
              }
         }
     ]

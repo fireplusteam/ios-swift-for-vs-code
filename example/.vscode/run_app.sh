@@ -1,6 +1,6 @@
-PROJECT_FILE=AdidasAppSuite.xcworkspace
-SCHEME=adidas
-BUNDLE_APP_NAME="com.adidas.app.stg"
+PROJECT_FILE="$1"
+SCHEME="$2"
+BUNDLE_APP_NAME="$3"
 
 PLATFORM="iOS Simulator"
 OS="17.0.1"
@@ -102,4 +102,4 @@ EOF
 
 echo "App logs: .vscode/app_log.txt"
 
-xcrun simctl spawn $SIMULATOR_UDID log stream --predicate "processID == $PID" > '.vscode/app_log.txt' 2>&1 &
+xcrun simctl spawn $SIMULATOR_UDID log stream --predicate "processID == $PID" > 'app_log.txt' 2>&1 &

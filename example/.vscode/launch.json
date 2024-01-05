@@ -5,7 +5,7 @@
             "type": "lldb",
             "request": "attach",
             "name": "Attach",
-            "pid": 11380,
+            "pid": 92564,
             "stopOnEntry": false
         },
         {
