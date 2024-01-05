@@ -28,5 +28,31 @@ fs.watchFile(filePath, (curr, prev) => {
     }
 });
 
+function watchFile(filepath, oncreate, ondelete, onchange) {
+    var
+      fs = require('fs'),
+      path = require('path'),
+      filedir = path.dirname(filepath),
+      filename = path.basename(filepath);
+  
+      fs.watch(filedir, function(event, who) {
+      if (event === 'rename' && who === filename) {
+        if (fs.existsSync(filepath)) {
+          oncreate();
+        } else {
+          ondelete();
+        }
+      } else if (event == 'change' && who == filename) {
+        onchange();
+      }
+    })
+}
+
+watchFile('.vscode/log.changed', function() {}, function() {}, function() {
+    console.clear();
+    lastKnownPosition = 0;
+    console.log('RELAUNCHING APPLICATION...');
+})
+
 // Initial print
 printNewLines();

@@ -6,6 +6,11 @@ PLATFORM="$4"
 OS="$5"
 DEVICE_NAME="$6"
 
+#pgrep -fl xcrun
+# clear log files
+echo "0" > .vscode/log.changed
+echo '' > .vscode/app.log
+
 DESTINATION="platform=$PLATFORM,OS=$OS,name=$DEVICE_NAME"
 
 echo $DESTINATION
