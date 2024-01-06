@@ -5,16 +5,19 @@
             "type": "lldb",
             "request": "attach",
             "name": "Attach",
-            "pid": 47998,
+            "pid": 99484,
             "stopOnEntry": false
         },
         {
             "name": "Show App Log",
             "type": "node",
             "request": "launch",
-            "program": ".vscode/show-app-log.js",
+            "program": ".vscode/l.js",
             "stopOnEntry": false,
-            "args": [".vscode/app.log"],
+            "args": [
+                ".vscode/app.log",
+                "TestVSCode"
+            ],
             "console": "internalConsole",
             "internalConsoleOptions": "neverOpen"
         }

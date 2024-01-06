@@ -1,6 +1,9 @@
 const fs = require('fs');
 const readline = require('readline');
 const filePath = process.argv[2];
+const scheme = process.argv[3];
+
+console.log(`PROJECT_SCEME: ${scheme}`)
 
 let lastKnownPosition = 0;
 
@@ -10,7 +13,7 @@ function filterLine(line) {
     if (line.includes("   Activity    "))
         return null;
 
-    const parts = line.split("TestVSCode");
+    const parts = line.split(scheme);
 
     // Extract the portion after "TestVSCode:"
     const result = parts.length > 1 ? parts[1] : line;

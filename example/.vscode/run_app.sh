@@ -88,14 +88,14 @@ cat << EOF > .vscode/launch.json
             "name": "Show App Log",
             "type": "node",
             "request": "launch",
-            "program": ".vscode/show-app-log.js",
+            "program": ".vscode/l.js",
             "stopOnEntry": false,
             "args": [
                 ".vscode/app.log",
+                "$PROJECT_SCHEME"
             ],
             "console": "internalConsole",
-            "internalConsoleOptions": "neverOpen",
-            "envFile": ".vscode/.env"
+            "internalConsoleOptions": "neverOpen"
         }
     ]
 }
