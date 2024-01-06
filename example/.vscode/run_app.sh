@@ -1,9 +1,8 @@
 source '.vscode/.env'
 
-#pgrep -fl xcrun
 # clear log files
-echo "0" > .vscode/log.changed
 echo '' > .vscode/app.log
+echo "0" > .vscode/log.changed
 
 DESTINATION="platform=$PLATFORM,OS=$PLATFORM_OS,name=$DEVICE_NAME"
 

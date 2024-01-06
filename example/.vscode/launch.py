@@ -75,8 +75,6 @@ async def read_stream(stream):
     return output
 
 async def main():
-    # Set your command
-
     # Run the command asynchronously
     return_code, stdout_output, stderr_output = await run_command(commandLaunch)
 
