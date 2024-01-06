@@ -2,16 +2,9 @@
     // See https://go.microsoft.com/fwlink/?LinkId=733558
     // for the documentation about the tasks.json format
     "version": "2.0.0",
-    
     "options": {
         "env": {
-            "PROJECT_FILE": "TestVSCode.xcworkspace",
-            "PROJECT_SCHEME": "TestVSCode",
-            "BUNDLE_NAME": "puzzle.TestVSCode",
-
-            "PLATFORM": "iOS Simulator",
-            "PLATFORM_OS": "17.0.1",
-            "DEVICE_NAME": "iPhone 15 Pro"
+            "envFile": ".vscode/.env"
         }
     },
     "tasks": [
@@ -19,21 +12,13 @@
             "label": "Build iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_app.sh",
-            "args": [
-                "${PROJECT_FILE}",
-                "${PROJECT_SCHEME}",
-                "${BUNDLE_NAME}",
-                "${PLATFORM}",
-                "${PLATFORM_OS}",
-                "${DEVICE_NAME}"
-            ],
             "group": {
                 "kind": "build",
                 "isDefault": true
-             },
-             "options": {
-                "cwd": "${workspaceFolder}",
-             }
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
         },
         {
             "label": "Run iOS App",
@@ -42,18 +27,10 @@
             "group": {
                 "kind": "build",
                 "isDefault": false
-             },
-             "args": [
-                "${PROJECT_FILE}",
-                "${PROJECT_SCHEME}",
-                "${BUNDLE_NAME}",
-                "${PLATFORM}",
-                "${PLATFORM_OS}",
-                "${DEVICE_NAME}"
-            ],
-             "options": {
+            },
+            "options": {
                 "cwd": "${workspaceFolder}"
-             }
+            }
         },
         {
             "label": "Generate xCode Server",
@@ -62,14 +39,10 @@
             "group": {
                 "kind": "build",
                 "isDefault": false
-             },
-             "args": [
-                "${PROJECT_FILE}",
-                "${PROJECT_SCHEME}"
-            ],
-             "options": {
+            },
+            "options": {
                 "cwd": "${workspaceFolder}"
-             }
+            }
         },
         {
             "label": "Bind Autocomplete",
@@ -79,7 +52,7 @@
                 "kind": "build",
                 "isDefault": false
             },
-            "dependsOn":[
+            "dependsOn": [
                 "Generate xCode Server"
             ]
         }

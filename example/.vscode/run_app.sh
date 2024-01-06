@@ -1,17 +1,11 @@
-PROJECT_FILE="$1"
-SCHEME="$2"
-BUNDLE_APP_NAME="$3"
-
-PLATFORM="$4"
-OS="$5"
-DEVICE_NAME="$6"
+source '.vscode/.env'
 
 #pgrep -fl xcrun
 # clear log files
 echo "0" > .vscode/log.changed
 echo '' > .vscode/app.log
 
-DESTINATION="platform=$PLATFORM,OS=$OS,name=$DEVICE_NAME"
+DESTINATION="platform=$PLATFORM,OS=$PLATFORM_OS,name=$DEVICE_NAME"
 
 echo $DESTINATION
 
@@ -28,13 +22,14 @@ is_empty() {
 }
 
 # GET BUILD PATH
-BUILD_DIR=$(xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
-APP_PATH="${BUILD_DIR}/$SCHEME.app"
+source '.vscode/.env'
+BUILD_DIR=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
+APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"
 echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"
 
-SIMULATOR_STRING=$(xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -showdestinations | grep -m 1 "$DEVICE_NAME" | grep -m 1 "$PLATFORM" | grep -m 1 "$OS" | awk '{print $0}')
+SIMULATOR_STRING=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -showdestinations | grep -m 1 "$DEVICE_NAME" | grep -m 1 "$PLATFORM" | grep -m 1 "$PLATFORM_OS" | awk '{print $0}')
 
 SIMULATOR_UDID=$(echo "$SIMULATOR_STRING" | grep -oE 'id:[^,]+' | awk -F':' '{print $2}')
 
@@ -43,7 +38,7 @@ echo "UUID of the device:${SIMULATOR_UDID}"
 is_empty "$SIMULATOR_UDID"
 
 # build a project
-xcodebuild -workspace $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.vscode/build.log'
+xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.vscode/build.log'
 
 # Check the exit status
 if [ $? -eq 0 ]; then
@@ -95,9 +90,12 @@ cat << EOF > .vscode/launch.json
             "request": "launch",
             "program": ".vscode/show-app-log.js",
             "stopOnEntry": false,
-            "args": [".vscode/app.log"],
+            "args": [
+                ".vscode/app.log",
+            ],
             "console": "internalConsole",
-            "internalConsoleOptions": "neverOpen"
+            "internalConsoleOptions": "neverOpen",
+            "envFile": ".vscode/.env"
         }
     ]
 }
