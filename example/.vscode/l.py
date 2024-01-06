@@ -22,6 +22,8 @@ def print_new_lines():
 
             last_known_position += len(line) + 1  # Add 1 for the newline character
 
+        sys.stdout.flush()
+
 
 # Watch for changes in the file
 def watch_file(filepath, on_delete, on_change):
@@ -41,7 +43,7 @@ def watch_file(filepath, on_delete, on_change):
 
 
 def on_delete():
-    on_change()
+    print(f'Log is deleted for Application {project_scheme}')
 
 def on_change():
     global last_known_position
