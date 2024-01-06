@@ -1,24 +1,34 @@
 const fs = require('fs');
 const readline = require('readline');
 const filePath = process.argv[2];
-const scheme = process.argv[3];
-
-console.log(`PROJECT_SCEME: ${scheme}`)
+const scheme = process.env.PROJECT_SCHEME;
 
 let lastKnownPosition = 0;
 
 function filterLine(line) {
-    if (line.includes("com.apple."))
+    // uncomment the code if you want to parse Device Logs
+    /*if (line.includes("com.apple."))
         return null;
     if (line.includes("   Activity    "))
         return null;
 
     const parts = line.split(scheme);
 
-    // Extract the portion after "TestVSCode:"
-    const result = parts.length > 1 ? parts[1] : line;
+    // Extract the portion after "Scheme"
+    result = line;
 
-    return result;
+    if (parts.length > 1) {
+        result = parts[1];
+        for(let i = 0;i < result.length;++i) {
+            if(result[i] == ')') {
+                result = result.slice(i + 2);
+                break;
+            }
+        }
+    }
+
+    return result;*/
+    return line
 }
 
 function printNewLines() {

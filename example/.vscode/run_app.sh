@@ -62,50 +62,18 @@ xcrun simctl install $SIMULATOR_UDID $APP_PATH
 
 # Get PID of run process
 
-BUNDLE_PID=$(xcrun simctl launch $SIMULATOR_UDID $BUNDLE_APP_NAME)
+python3 .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
 
-xcrun simctl spawn booted ps -e | grep BUNDLE_APP_NAME
+# Get Pid Id of the launched iOS App
+PID=$!
 
-PID=$(echo "$BUNDLE_PID" | grep -oE '[0-9]+' | awk '{print $1}')
-
-# Print the PID
-echo "PID of $BUNDLE_APP_NAME:$PID"
-
-# Generate the debugger launch
-
-cat << EOF > .vscode/launch.json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "attach",
-            "name": "Attach",
-            "pid": $PID,
-            "stopOnEntry": false
-        },
-        {
-            "name": "Show App Log",
-            "type": "node",
-            "request": "launch",
-            "program": ".vscode/l.js",
-            "stopOnEntry": false,
-            "args": [
-                ".vscode/app.log",
-                "$PROJECT_SCHEME"
-            ],
-            "console": "internalConsole",
-            "internalConsoleOptions": "neverOpen"
-        }
-    ]
-}
-EOF
-
-#xcrun simctl spawn $SIMULATOR_UDID log stream --predicate "processID == $PID" 2>&1 | tee app_log.txt
+sleep 1
 
 echo "App logs: .vscode/app.log"
 
+# if you want to see device log console, but that one you can get via Console App
 #Log Levels:
-#
 #default | info | debug
-xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .vscode/app.log 2>&1
+#xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .vscode/app.log 2>&1
+
+wait $PID

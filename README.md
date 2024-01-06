@@ -4,6 +4,10 @@ Write/Debug/Build iOS app on Visual Studio Code
 # Required VS Code extensions:
    CodeLLDB
    Swift - official extension
+   
+#Third party libs
+   npm install dotenv
+   
 
 # Configure xCode Server to make autocompletion work in Visual Studio
 original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-other-ides-like-neovim-or-vs-code
