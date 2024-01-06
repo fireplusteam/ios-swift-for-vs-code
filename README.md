@@ -6,7 +6,7 @@ Write/Debug/Build iOS app on Visual Studio Code
    Swift - official extension
    
 #Third party libs
-   npm install dotenv
+   python
    
 
 # Configure xCode Server to make autocompletion work in Visual Studio

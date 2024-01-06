@@ -6,8 +6,8 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal",
-            "args": ["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
+            "console": "internalConsole",
+            "args": [".vscode/app.log"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
             "justMyCode": true,
             "cwd": "${workspaceFolder}"
         },
@@ -20,9 +20,9 @@
         },
         {
             "name": "Show iOS App Log",
-            "type": "node",
+            "type": "python",
             "request": "launch",
-            "program": ".vscode/l.js",
+            "program": ".vscode/l.py",
             "stopOnEntry": false,
             "args": [
                 ".vscode/app.log",

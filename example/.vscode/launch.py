@@ -61,6 +61,8 @@ async def run_command(command):
     # Wait for the process to complete
     return await process.wait(), stdout, stderr
 
+log_file = open(".vscode/app.log", 'w')
+
 async def read_stream(stream):
     output = ""
     while True:
@@ -68,7 +70,8 @@ async def read_stream(stream):
         if not line:
             break
         #output += line.decode("utf-8")
-        print(line.decode("utf-8"))
+        log_file.write(line.decode("utf-8"))
+        log_file.flush()
     return output
 
 async def main():
@@ -86,6 +89,7 @@ async def main():
 
     print("\n=== Standard Error ===")
     print(stderr_output)
+    log_file.close()
 
 # Run the event loop
 asyncio.run(main())
