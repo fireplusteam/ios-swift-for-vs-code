@@ -4,7 +4,7 @@ source '.vscode/.env'
 echo '' > .vscode/app.log
 echo "0" > .vscode/log.changed
 
-DESTINATION="platform=$PLATFORM,OS=$PLATFORM_OS,name=$DEVICE_NAME"
+DESTINATION="id=$DEVICE_ID"
 
 echo $DESTINATION
 
@@ -27,9 +27,7 @@ echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"
 
-SIMULATOR_STRING=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -showdestinations | grep -m 1 "$DEVICE_NAME" | grep -m 1 "$PLATFORM" | grep -m 1 "$PLATFORM_OS" | awk '{print $0}')
-
-SIMULATOR_UDID=$(echo "$SIMULATOR_STRING" | grep -oE 'id:[^,]+' | awk -F':' '{print $2}')
+SIMULATOR_UDID=$DEVICE_ID
 
 echo "UUID of the device:${SIMULATOR_UDID}"
 

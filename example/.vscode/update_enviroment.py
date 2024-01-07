@@ -23,6 +23,8 @@ if type == "-destinationDevice":
             key = "PLATFORM_OS"
         elif key == "name":
             key = "DEVICE_NAME"
+        elif key == "id":
+            key = "DEVICE_ID"
         else:
             assert(False) 
 

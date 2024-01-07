@@ -36,25 +36,29 @@ is_device_selected = False
 for device_line in devices:
     formatted =  ''.join([' ' if char in "{}" else char for char in device_line]).strip().split(',')
     formatted = [x.strip() for x in formatted]
-    formatted_line = ""
+    formatted_key = ""
+    formatted_value = ""
     isValid = True
     for i in formatted:
         keyValue = i.split(':')
         if len(keyValue) != 2:
             isValid = False
             break
-        if keyValue[0] == "id":
-            continue
-        if len(formatted_line) != 0:
-            formatted_line += ','
-        formatted_line += keyValue[0] + "=" + keyValue[1]
+        if keyValue[0] != "id":
+            if len(formatted_key) != 0:
+                formatted_key += ','
+            formatted_key += keyValue[0] + "=" + keyValue[1]
+
+        if len(formatted_value) != 0:
+                formatted_value += ','
+        formatted_value += keyValue[0] + "=" + keyValue[1]
 
     if isValid:
-        item = {"label": formatted_line, "value": "|" + formatted_line + "|"}
-        if selected_destination == formatted_line and not is_device_selected:
+        item = {"label": formatted_key, "value": "|" + formatted_value + "|"}
+        if selected_destination == formatted_value and not is_device_selected:
             is_device_selected = True
             item["picked"] = True
-            item["label"] = "$(notebook-state-success) " + formatted_line
+            item["label"] = "$(notebook-state-success) " + formatted_key
         device_list.append(item)
 
 

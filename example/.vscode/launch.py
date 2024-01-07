@@ -15,7 +15,7 @@ cwd = os.getcwd()
 
 async def get_app_pid():
     try:
-        result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=120)
+        result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=500)
         output = result.stdout.splitlines()
         #xcrun returns each line in the following format
         #29474	0	UIKitApplication:puzzle.TestVSCode[2b19][rb-legacy]
@@ -30,7 +30,7 @@ async def get_app_pid():
             print("xcrun doensnt exist")
             return None
     except subprocess.TimeoutExpired:
-        print("Timeout of running process") 
+        print("Timeout of running process")
         return None
 
 

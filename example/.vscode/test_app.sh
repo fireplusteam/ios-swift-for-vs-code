@@ -1,6 +1,8 @@
 
 source '.vscode/.env'
-DESTINATION="platform=$PLATFORM,OS=$PLATFORM_OS,name=$DEVICE_NAME"
+
+DESTINATION="id=$DEVICE_ID"
+
 xcodebuild test -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" | tee '.vscode/tests.log'
 
 echo 'Your testing results are in: .vscode/tests.log'
