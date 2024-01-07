@@ -37,7 +37,7 @@
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "group": {
-                "kind": "build",
+                "kind": "test",
                 "isDefault": false,
                 "isTestCommand": true
             },
