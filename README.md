@@ -4,10 +4,11 @@
    Currently working only for xcworkspace
    
 # Required VS Code extensions:
-   CodeLLDB
-   Swift - official extension
+   CodeLLDB https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
+   Swift - https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang
    Python
    Git
+   Dynamic Input -> https://marketplace.visualstudio.com/items?itemName=igrek8.dynamic-inputs
    Output Link To File (Optional if you want links to files in output window)
    Bracket Pair Color DLW (Optional)
    Output Colorizer (Optional)
