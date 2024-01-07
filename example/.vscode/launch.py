@@ -41,53 +41,45 @@ async def updateSetting(pid: int):
     with open(file_path, 'w') as file:
         json.dump(settings, file, indent=2)
 
-async def run_command(command):
+async def install_app(command, log_file):
     # Start the subprocess
     
     process = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, text=False)
     print(process)
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
     pid = await get_app_pid()
+    print("iOS App Running")
+    print("iOS App log: .vscode/app.log")
     print(f"iOS APP PID: {pid}")
     await updateSetting(pid=pid)
-
     # Read stdout and stderr concurrently
     stdout, stderr = await asyncio.gather(
-        read_stream(process.stdout),
-        read_stream(process.stderr)
+        read_stream(process.stdout, log_file),
+        read_stream(process.stderr, log_file)
     )
 
     # Wait for the process to complete
     return await process.wait(), stdout, stderr
 
-log_file = open(".vscode/app.log", 'w')
 
-async def read_stream(stream):
-    output = ""
+async def read_stream(stream, log_file):
     while True:
         line = await stream.readline()
         if not line:
             break
-        #output += line.decode("utf-8")
         log_file.write(line.decode("utf-8"))
         log_file.flush()
-    return output
+    return None
 
 async def main():
     # Run the command asynchronously
-    return_code, stdout_output, stderr_output = await run_command(commandLaunch)
+    with open(".vscode/app.log", 'w') as log_file:
+        return_code, stdout_output, stderr_output = await install_app(commandLaunch, log_file)
 
-    # Print or process the output as needed
-    print("=== Return Code ===")
-    print(return_code)
+        # Print or process the output as needed
+        print(f"iOS App Finished with {return_code}")
 
-    print("\n=== Standard Output ===")
-    print(stdout_output)
-
-    print("\n=== Standard Error ===")
-    print(stderr_output)
-    log_file.close()
 
 # Run the event loop
 asyncio.run(main())

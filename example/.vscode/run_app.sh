@@ -68,8 +68,6 @@ PID=$!
 
 sleep 1
 
-echo "App logs: .vscode/app.log"
-
 # if you want to see device log console, but that one you can get via Console App
 #Log Levels:
 #default | info | debug
