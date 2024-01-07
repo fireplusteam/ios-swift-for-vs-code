@@ -1,0 +1,8 @@
+{
+  "vim.autoSwitchInputMethod.enable": false,
+  "editor.lineNumbers": "relative",
+  "lldb.library": "/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Versions/A/LLDB",
+  "lldb.launch.expressions": "native",
+  "cmake.configureOnOpen": false,
+  "iOS_PID": 69536
+}

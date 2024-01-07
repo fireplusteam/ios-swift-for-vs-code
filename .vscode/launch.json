@@ -1,22 +1,36 @@
 {
     "version": "0.2.0",
     "configurations": [
+        { // this is for testing python files
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "internalConsole",
+            "args": [".vscode/app.log"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}"
+        },
         {
             "type": "lldb",
             "request": "attach",
-            "name": "Attach",
-            "pid": 11380,
+            "name": "Debug iOS App",
+            "pid": "${config:iOS_PID}",
             "stopOnEntry": false
         },
         {
-            "name": "Show App Log",
-            "type": "node",
+            "name": "Show iOS App Log",
+            "type": "python",
             "request": "launch",
-            "program": ".vscode/show-app-log.js",
+            "program": ".vscode/l.py",
             "stopOnEntry": false,
-            "args": [".vscode/app_log.txt"],
+            "args": [
+                ".vscode/app.log",
+            ],
             "console": "internalConsole",
-            "internalConsoleOptions": "neverOpen"
+            "internalConsoleOptions": "neverOpen",
+            "envFile": "${workspaceFolder}/.vscode/.env",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
