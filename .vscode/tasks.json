@@ -33,6 +33,19 @@
             }
         },
         {
+            "label": "Test iOS App",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/test_app.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": false,
+                "isTestCommand": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
             "label": "Generate xCode Server",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_autocomplete.sh",

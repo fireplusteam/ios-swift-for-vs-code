@@ -45,12 +45,14 @@ def watch_file(filepath, on_delete, on_change):
 def on_delete():
     print(f'Log is deleted for Application {project_scheme}')
 
+
 def on_change():
     global last_known_position
     os.environ['TERM'] = 'xterm'  # Set the TERM variable to a reasonable default
     os.system('clear')  # Clear the console before printing to simulate an update
     last_known_position = 0
     print(f'RELAUNCHING {project_scheme} APPLICATION...')
+
 
 # Watch for changes in the file
 watch_file('.vscode/log.changed', on_delete, on_change)

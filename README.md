@@ -1,16 +1,26 @@
-# ios_vs_code
-Write/Debug/Build iOS app on Visual Studio Code
-
+# Bring iOS development to VS Code
+##Write/Debug/Build iOS app on Visual Studio Code
+   Install Visual Studio Code
+   Currently working only for xcworkspace
+   
 # Required VS Code extensions:
    CodeLLDB
    Swift - official extension
+   Python
+   Git
+   Output Link To File (Optional if you want links to files in output window)
+   Bracket Pair Color DLW (Optional)
+   Output Colorizer (Optional)
+   Vim (Optional if you want powerful editor)
    
-#Third party libs
-   python
+# Required Dependencies
+
+```bash
+brew install python
+```
    
 
 # Configure xCode Server to make autocompletion work in Visual Studio
-original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-other-ides-like-neovim-or-vs-code
 
 1. Build your project in Xcode.
 2. Download or clone the repository of xcode-build-server -> https://github.com/SolaWing/xcode-build-server. 
@@ -21,23 +31,10 @@ original url: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-
 ln -s PATH/TO/xcode-build-server /usr/local/bin
 ```
 
-4. Navigate to your project and run the following command:
-
-```bash
-xcode-build-server config -scheme <XXX> -workspace *.xcworkspace
-```
-   OR:
-```bash
-xcode-build-server config -scheme <XXX> -project *.xcodeproj
-```
-
-   Note: *.xcworkspace or *.xcodeproj should be unique. can be omit and will auto choose the unique workspace or project.
-   Note: current solution works only with xcworkspace
+NOTE: if you want to setup neovim follow this: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-other-ides-like-neovim-or-vs-code
 
 
-5. Open the directory with your iOS project in Visual Studio Code. Autocompletion should work automatically.
-
-# Setup Keyboard Binding to Build And Run (Optional)
+# Setup Keyboard Binding to Build And Run like in xCode
 
 1. In VS Code tap ⇧⌘P then enter "Open Keyboard Shortcuts (JSON)"
 
@@ -52,14 +49,42 @@ xcode-build-server config -scheme <XXX> -project *.xcodeproj
     }
 ]
 ```
-So cmd+shift+b builds your project and cmd+r runs in on simulator, as in xCode
-F5 attach debug lldb
-Shift+F5 stop debug
+3. Change default binding of cmd+r in keyboard preference to cmd+' or what ever you prefer
 
-So each time after you run the app, you need to attach the debugger manually if you need. 
-This gives you a speed on launching app and attaching lldb only in cases when you have to debug
+#Usage Guide: VS Code
+
+ 1. Copy .vscode folder to you root project folder where xcworkspace file is located
+ 2. Open root folder which contains root xcworkspace file with VS Code
+ 3. That's it, but you need to make the first build of app to make autocompletion works correct by pressing cmd+shift+b
+
+##Autocompletion Binding
+  if you found that autocompletion is not working, then you need to refresh it by
+  cmd+shift+p -> Run Task -> Bind Autocomplete
+
+##Compile
+  cmd+shift+b builds your project and refresh the Autocomplete
+
+##Run on iOS Device
+  cmd+r runs in on simulator, as in xCode, also build a project and refresh Autocomplete
+  
+##Debug
+  F5 attach debug lldb
+  Shift+F5 stop debug
+
+  You can configure F5 by choosing two options:
+    a. Debug iOS App -> runs lldb of the last running process triggered by cmd+r, you need to relaunch debugger after each cmd+r
+    b. Show iOS App Log -> displays iOS app stdout/stderr to Debug Console of VS Code. This can be done only once per dev session
+
+  So each time after you run the app, you need to attach the debugger manually if you need. 
+  This gives you a speed on launching app and attaching lldb only in cases when you have to debug
+
+##Run Tests
+  press cmd+shift+p -> Run Task -> Test iOS App 
+  
 
 # Setting Vim (Optional)
+Install Vim extension for VS Code
+
 Go to settings.json and add:
 
 ```json

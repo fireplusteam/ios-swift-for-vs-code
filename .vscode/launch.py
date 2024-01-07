@@ -12,6 +12,7 @@ commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bund
 commandPID = ["xcrun", "simctl", "spawn", device_uuid, "launchctl", "list"]    
 cwd = os.getcwd()
 
+
 async def get_app_pid():
     try:
         result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=5)
@@ -32,6 +33,7 @@ async def get_app_pid():
         print("Timeout of running process") 
         return None
 
+
 async def updateSetting(pid: int):
     file_path = '.vscode/settings.json'
     with open(file_path, 'r') as file:
@@ -40,6 +42,7 @@ async def updateSetting(pid: int):
     settings['iOS_PID'] = pid
     with open(file_path, 'w') as file:
         json.dump(settings, file, indent=2)
+
 
 async def install_app(command, log_file):
     # Start the subprocess
@@ -71,6 +74,7 @@ async def read_stream(stream, log_file):
         log_file.write(line.decode("utf-8"))
         log_file.flush()
     return None
+
 
 async def main():
     # Run the command asynchronously
