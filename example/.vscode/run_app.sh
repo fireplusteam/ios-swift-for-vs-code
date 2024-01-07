@@ -21,7 +21,6 @@ is_empty() {
 }
 
 # GET BUILD PATH
-source '.vscode/.env'
 BUILD_DIR=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
 APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"
 echo "Path to the built app: ${APP_PATH}"

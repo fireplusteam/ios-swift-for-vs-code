@@ -51,8 +51,16 @@ NOTE: if you want to setup neovim follow this: https://wojciechkulik.pl/ios/how-
 ```
 3. Change default binding of cmd+r in keyboard preference to cmd+' or what ever you prefer
 
-# Configure .vscode/ios_project_settings file with
-
+# Configure/create .vscode/.env file with your project specific keys
+Example of .env file
+```
+PROJECT_FILE="TestVSCode.xcworkspace"
+PROJECT_SCHEME="TestVSCode"
+BUNDLE_APP_NAME="puzzle.TestVSCode"
+PLATFORM="iOS Simulator"
+PLATFORM_OS="17.0.1"
+DEVICE_NAME="iPhone 15 Pro"
+```
 
 # Usage Guide: VS Code
 
