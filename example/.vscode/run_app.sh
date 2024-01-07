@@ -47,12 +47,14 @@ else
 fi
 
 # run the simulator
-open -a Simulator --args -CurrentDeviceUDID $SIMULATOR_UDID
+xcrun simctl boot $SIMULATOR_UDID
 
 # Wait until the simulator is booted
 while [ "$(xcrun simctl list devices | grep $SIMULATOR_UDID | grep -c 'Booted')" -eq 0 ]; do
     sleep 1
 done
+
+sleep 2
 
 # install on simulator
 

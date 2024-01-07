@@ -77,6 +77,44 @@
             "dependsOn": [
                 "Generate xCode Server"
             ]
+        },
+        {
+            "label": "Select Destination Device",
+            "type": "shell",
+            "command": ".vscode/update_enviroment.sh",
+            "args": [
+                "-destinationDevice",
+                "${input:myDestinationDevice}"
+            ],
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "myDestinationDevice",
+            "type": "command",
+            // first try to read from the disk or select again
+            "command": "dynamic-inputs.read",
+            "args": {
+                "command": "bash",
+                // a script which prints JSON array to stdout as the last line
+                "args": [
+                    "${workspaceFolder}/.vscode/populate_devices.sh"
+                ],
+                "envFile": "${workspaceFolder}/.vscode/.env",
+                "cwd": "${workspaceFolder}",
+                // memoize the selection for the future
+                "var": "myDestinationDevice",
+                // map options to values
+                "unwrap": "$[*].value",
+                "serializer": "plain",
+                "quickPickOptions": {
+                    "canPickMany": true, // should be false, but it's not working for some reason
+                    //"ignoreFocusOut": true,
+                    "placeHolder": "Please select Device",
+                    "title": "Device"
+                }
+            }
         }
     ]
 }
