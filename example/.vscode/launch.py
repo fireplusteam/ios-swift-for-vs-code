@@ -15,7 +15,7 @@ cwd = os.getcwd()
 
 async def get_app_pid():
     try:
-        result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=5)
+        result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=120)
         output = result.stdout.splitlines()
         #xcrun returns each line in the following format
         #29474	0	UIKitApplication:puzzle.TestVSCode[2b19][rb-legacy]

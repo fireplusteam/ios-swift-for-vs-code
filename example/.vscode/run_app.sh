@@ -46,8 +46,14 @@ else
     exit 1
 fi
 
+#xcrun simctl shutdown $SIMULATOR_UDID
+
+echo "Booting $SIMULATOR_UDID"
+
 # run the simulator
 xcrun simctl boot $SIMULATOR_UDID
+
+open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/
 
 # Wait until the simulator is booted
 while [ "$(xcrun simctl list devices | grep $SIMULATOR_UDID | grep -c 'Booted')" -eq 0 ]; do
