@@ -22,8 +22,10 @@ struct SomeAwesomeView: View {
     var subview: some View {
         Button("ok") {
             let b = 20;
-            print("\(b)")
+            print("\(b) WOW PRINT WAY DOWN")
+            debugPrint("WOW DEBUG PRINT")
             callMethod();
+            NSLog("WOW this is working")
         }
     }
 
