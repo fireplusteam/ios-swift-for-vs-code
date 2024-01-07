@@ -16,6 +16,9 @@
                 "kind": "build",
                 "isDefault": true
             },
+            "presentation": {
+                "clear": true
+            },
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -27,6 +30,9 @@
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "presentation": {
+                "clear": true
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -40,6 +46,9 @@
                 "kind": "test",
                 "isDefault": false,
                 "isTestCommand": true
+            },
+            "presentation": {
+                "clear": true
             },
             "options": {
                 "cwd": "${workspaceFolder}"
