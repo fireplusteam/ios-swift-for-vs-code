@@ -51,7 +51,10 @@ NOTE: if you want to setup neovim follow this: https://wojciechkulik.pl/ios/how-
 ```
 3. Change default binding of cmd+r in keyboard preference to cmd+' or what ever you prefer
 
-#Usage Guide: VS Code
+# Configure .vscode/ios_project_settings file with
+
+
+# Usage Guide: VS Code
 
  1. Copy .vscode folder to you root project folder where xcworkspace file is located
  2. Open root folder which contains root xcworkspace file with VS Code
