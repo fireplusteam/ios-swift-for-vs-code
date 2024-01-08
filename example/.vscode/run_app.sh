@@ -1,8 +1,10 @@
 source '.vscode/.env'
 
+mkdir -p .logs
+
 # clear log files
-echo '' > .vscode/app.log
-echo "0" > .vscode/log.changed
+echo '' > .logs/app.log
+echo "0" > .logs/log.changed
 
 DESTINATION="id=$DEVICE_ID"
 
@@ -34,7 +36,7 @@ echo "UUID of the device:${SIMULATOR_UDID}"
 is_empty "$SIMULATOR_UDID"
 
 # build a project
-xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.vscode/build.log'
+xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
 
 # Check the exit status
 if [ $? -eq 0 ]; then
@@ -76,6 +78,6 @@ sleep 1
 # if you want to see device log console, but that one you can get via Console App
 #Log Levels:
 #default | info | debug
-#xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .vscode/app.log 2>&1
+#xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .logs/app.log 2>&1
 
 wait $PID
