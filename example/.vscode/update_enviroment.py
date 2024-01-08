@@ -33,8 +33,6 @@ if type == "-destinationDevice":
     helper.safe_env_list(env_list)
 elif type == "-destinationScheme":
     scheme = sys.argv[2]
+    project_file = sys.argv[3]
     
-    env_list["PROJECT_SCHEME"] = "\"" + scheme + "\""
-    helper.safe_env_list(env_list)
-
-    print("update sheme")
+    helper.update_scheme(project_file, scheme)

@@ -22,6 +22,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Run iOS App",
@@ -36,7 +37,9 @@
             },
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "dependsOn":["Validate Enviroment"],
+            "dependsOrder": "sequence"
         },
         {
             "label": "Test iOS App",
@@ -52,7 +55,8 @@
             },
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Generate xCode Server",
@@ -64,7 +68,8 @@
             },
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Bind Autocomplete",
@@ -86,7 +91,8 @@
                 "-destinationDevice",
                 "${input:myDestinationDevice}"
             ],
-            "problemMatcher": []
+            "problemMatcher": [], 
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Select Scheme",
@@ -96,7 +102,13 @@
                 "-destinationScheme",
                 "${input:myDestinationScheme}"
             ],
-            "problemMatcher": []
+            "problemMatcher": [],
+            "dependsOn":["Validate Enviroment"]
+        },
+        {
+            "label": "Validate Enviroment",
+            "type": "shell",
+            "command": ".vscode/check_workspace.sh"
         }
     ],
     "inputs": [
