@@ -42,7 +42,7 @@ xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -des
 
 # Check the exit status
 if [ $? -eq 0 ]; then
-    echo "Build succeeded."
+    echo "OK"
 else
     python3 .vscode/print_errors.py
     echo "Build failed."
