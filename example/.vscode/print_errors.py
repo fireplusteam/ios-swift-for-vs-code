@@ -51,8 +51,9 @@ for line in lines:
 
     output += "\n"
 
-print(output)
+if len(lines) > 0:
+    print(output)
 
-with open(".logs/errors.log", 'w') as file:
-    file.write(pure_output)
+    with open(".logs/errors.log", 'w') as file:
+        file.write(pure_output)
     
