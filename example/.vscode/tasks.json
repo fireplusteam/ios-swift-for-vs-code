@@ -103,7 +103,8 @@
                 "${input:myDestinationScheme}"
             ],
             "problemMatcher": [],
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["Validate Enviroment"],
+            "runOptions": {"runOn": "folderOpen"}
         },
         {
             "label": "Validate Enviroment",
