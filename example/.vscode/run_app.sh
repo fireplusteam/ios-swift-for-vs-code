@@ -40,12 +40,19 @@ is_empty "$SIMULATOR_UDID"
 # build a project
 xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
 
-python3 .vscode/print_errors.py
-
 # Check the exit status
 if [ $? -eq 0 ]; then
     echo "Build succeeded."
 else
+    python3 .vscode/print_errors.py
+    echo "Build failed."
+    exit 1
+fi
+
+python3 .vscode/print_errors.py
+
+# Check the exit status
+if [ $? -eq 1 ]; then
     echo "Build failed."
     exit 1
 fi

@@ -8,4 +8,5 @@ TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-
 
 xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
 
+# Check the exit status
 python3 .vscode/print_errors.py

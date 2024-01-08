@@ -56,4 +56,6 @@ if len(lines) > 0:
 
     with open(".logs/errors.log", 'w') as file:
         file.write(pure_output)
+
+    exit(1)
     
