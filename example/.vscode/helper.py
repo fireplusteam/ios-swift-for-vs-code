@@ -37,7 +37,7 @@ def get_schemes(project_file):
 
 
 def get_bundle_identifier(project_file, scheme):
-    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme]
+    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme, "-configuration", "Debug"]
     process = subprocess.run(command, capture_output=True, text=True)
     for line in process.stdout.splitlines():
         line = line.strip()
