@@ -1,5 +1,5 @@
 #!/bin/bash
 
+echo "Killing sourcekit-lsp"
 killall sourcekit-lsp
-sleep 1
-sourcekit-lsp
+echo "sourcekit-lsp killed"

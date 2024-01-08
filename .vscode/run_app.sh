@@ -4,7 +4,7 @@ source '.vscode/.env'
 echo '' > .vscode/app.log
 echo "0" > .vscode/log.changed
 
-DESTINATION="platform=$PLATFORM,OS=$PLATFORM_OS,name=$DEVICE_NAME"
+DESTINATION="id=$DEVICE_ID"
 
 echo $DESTINATION
 
@@ -21,16 +21,13 @@ is_empty() {
 }
 
 # GET BUILD PATH
-source '.vscode/.env'
 BUILD_DIR=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
 APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"
 echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"
 
-SIMULATOR_STRING=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -showdestinations | grep -m 1 "$DEVICE_NAME" | grep -m 1 "$PLATFORM" | grep -m 1 "$PLATFORM_OS" | awk '{print $0}')
-
-SIMULATOR_UDID=$(echo "$SIMULATOR_STRING" | grep -oE 'id:[^,]+' | awk -F':' '{print $2}')
+SIMULATOR_UDID=$DEVICE_ID
 
 echo "UUID of the device:${SIMULATOR_UDID}"
 
@@ -47,13 +44,21 @@ else
     exit 1
 fi
 
+#xcrun simctl shutdown $SIMULATOR_UDID
+
+echo "Booting $SIMULATOR_UDID"
+
 # run the simulator
-open -a Simulator --args -CurrentDeviceUDID $SIMULATOR_UDID
+xcrun simctl boot $SIMULATOR_UDID
+
+open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/
 
 # Wait until the simulator is booted
 while [ "$(xcrun simctl list devices | grep $SIMULATOR_UDID | grep -c 'Booted')" -eq 0 ]; do
     sleep 1
 done
+
+sleep 2
 
 # install on simulator
 

@@ -15,22 +15,29 @@ cwd = os.getcwd()
 
 async def get_app_pid():
     try:
-        result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=5)
-        output = result.stdout.splitlines()
-        #xcrun returns each line in the following format
-        #29474	0	UIKitApplication:puzzle.TestVSCode[2b19][rb-legacy]
-        if output:
-            line = [line for line in output if bundle in line]
-            if line.count == 0:
-                print("${bundle} is not running")
+        while True:
+            result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=10)
+            output = result.stdout.splitlines()
+            #xcrun returns each line in the following format
+            #29474	0	UIKitApplication:puzzle.TestVSCode[2b19][rb-legacy]
+            if output:
+                line = [line for line in output if bundle in line]
+                                
+                if line.count == 0:
+                    print("${bundle} is not running")
+                    return None
+                if len(line) == 0:
+                    continue
+                pid_str = line[0].split()
+                if len(pid_str) == 0:
+                    continue
+                pid_str = pid_str[0]
+                return int(pid_str)
+            else:
+                print("xcrun doensnt exist")
                 return None
-            pid_str = line[0].split()[0]
-            return int(pid_str)
-        else:
-            print("xcrun doensnt exist")
-            return None
     except subprocess.TimeoutExpired:
-        print("Timeout of running process") 
+        print("Timeout of running process")
         return None
 
 

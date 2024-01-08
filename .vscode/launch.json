@@ -7,9 +7,10 @@
             "request": "launch",
             "program": "${file}",
             "console": "internalConsole",
-            "args": [".vscode/app.log"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
+            "args": ["-destinationDevice", "|platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro Max|"],//["TestVSCode.xcworkspace", "TestVSCode", "fgf"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
             "justMyCode": true,
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.vscode/.env"
         },
         {
             "type": "lldb",

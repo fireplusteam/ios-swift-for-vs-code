@@ -16,9 +16,13 @@
                 "kind": "build",
                 "isDefault": true
             },
+            "presentation": {
+                "clear": true
+            },
             "options": {
                 "cwd": "${workspaceFolder}"
             },
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Run iOS App",
@@ -28,22 +32,31 @@
                 "kind": "build",
                 "isDefault": false
             },
+            "presentation": {
+                "clear": true
+            },
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "dependsOn":["Validate Enviroment"],
+            "dependsOrder": "sequence"
         },
         {
             "label": "Test iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "group": {
-                "kind": "build",
+                "kind": "test",
                 "isDefault": false,
                 "isTestCommand": true
             },
+            "presentation": {
+                "clear": true
+            },
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Generate xCode Server",
@@ -55,7 +68,8 @@
             },
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "dependsOn":["Validate Enviroment"]
         },
         {
             "label": "Bind Autocomplete",
@@ -68,6 +82,87 @@
             "dependsOn": [
                 "Generate xCode Server"
             ]
+        },
+        {
+            "label": "Select Destination Device",
+            "type": "shell",
+            "command": ".vscode/update_enviroment.sh",
+            "args": [
+                "-destinationDevice",
+                "${input:myDestinationDevice}"
+            ],
+            "problemMatcher": [], 
+            "dependsOn":["Validate Enviroment"]
+        },
+        {
+            "label": "Select Scheme",
+            "type": "shell",
+            "command": ".vscode/update_enviroment.sh",
+            "args": [
+                "-destinationScheme",
+                "${input:myDestinationScheme}"
+            ],
+            "problemMatcher": [],
+            "dependsOn":["Validate Enviroment"]
+        },
+        {
+            "label": "Validate Enviroment",
+            "type": "shell",
+            "command": ".vscode/check_workspace.sh"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "myDestinationDevice",
+            "type": "command",
+            // first try to read from the disk or select again
+            "command": "dynamic-inputs.read",
+            "args": {
+                "command": "bash",
+                // a script which prints JSON array to stdout as the last line
+                "args": [
+                    "${workspaceFolder}/.vscode/populate_devices.sh"
+                ],
+                "envFile": "${workspaceFolder}/.vscode/.env",
+                "cwd": "${workspaceFolder}",
+                // memoize the selection for the future
+                "var": "myDestinationDevice",
+                // map options to values
+                "unwrap": "$[*].value",
+                "serializer": "plain",
+                "quickPickOptions": {
+                    "canPickMany": true, // should be false, but it's not working for some reason
+                    //"ignoreFocusOut": true,
+                    "placeHolder": "Please select Device",
+                    "title": "Device"
+                }
+            }
+        },
+        {
+            "id": "myDestinationScheme",
+            "type": "command",
+            // first try to read from the disk or select again
+            "command": "dynamic-inputs.read",
+            "args": {
+                "command": "bash",
+                // a script which prints JSON array to stdout as the last line
+                "args": [
+                    "${workspaceFolder}/.vscode/populate_schemes.sh"
+                ],
+                "envFile": "${workspaceFolder}/.vscode/.env",
+                "cwd": "${workspaceFolder}",
+                // memoize the selection for the future
+                "var": "myDestinationScheme",
+                // map options to values
+                "unwrap": "$[*].value",
+                "serializer": "plain",
+                "quickPickOptions": {
+                    "canPickMany": true, // should be false, but it's not working for some reason
+                    //"ignoreFocusOut": true,
+                    "placeHolder": "Please select Scheme",
+                    "title": "Scheme"
+                }
+            }
         }
     ]
 }
