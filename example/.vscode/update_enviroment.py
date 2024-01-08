@@ -31,5 +31,10 @@ if type == "-destinationDevice":
         env_list[key] = "\"" + value + "\""
     
     helper.safe_env_list(env_list)
-else:
+elif type == "-destinationScheme":
+    scheme = sys.argv[2]
+    
+    env_list["PROJECT_SCHEME"] = "\"" + scheme + "\""
+    helper.safe_env_list(env_list)
+
     print("update sheme")

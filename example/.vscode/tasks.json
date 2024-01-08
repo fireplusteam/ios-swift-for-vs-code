@@ -87,6 +87,16 @@
                 "${input:myDestinationDevice}"
             ],
             "problemMatcher": []
+        },
+        {
+            "label": "Select Scheme",
+            "type": "shell",
+            "command": ".vscode/update_enviroment.sh",
+            "args": [
+                "-destinationScheme",
+                "${input:myDestinationScheme}"
+            ],
+            "problemMatcher": []
         }
     ],
     "inputs": [
@@ -113,6 +123,32 @@
                     //"ignoreFocusOut": true,
                     "placeHolder": "Please select Device",
                     "title": "Device"
+                }
+            }
+        },
+        {
+            "id": "myDestinationScheme",
+            "type": "command",
+            // first try to read from the disk or select again
+            "command": "dynamic-inputs.read",
+            "args": {
+                "command": "bash",
+                // a script which prints JSON array to stdout as the last line
+                "args": [
+                    "${workspaceFolder}/.vscode/populate_schemes.sh"
+                ],
+                "envFile": "${workspaceFolder}/.vscode/.env",
+                "cwd": "${workspaceFolder}",
+                // memoize the selection for the future
+                "var": "myDestinationScheme",
+                // map options to values
+                "unwrap": "$[*].value",
+                "serializer": "plain",
+                "quickPickOptions": {
+                    "canPickMany": true, // should be false, but it's not working for some reason
+                    //"ignoreFocusOut": true,
+                    "placeHolder": "Please select Scheme",
+                    "title": "Scheme"
                 }
             }
         }
