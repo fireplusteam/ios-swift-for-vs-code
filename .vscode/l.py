@@ -55,4 +55,4 @@ def on_change():
 
 
 # Watch for changes in the file
-watch_file('.vscode/log.changed', on_delete, on_change)
+watch_file('.logs/log.changed', on_delete, on_change)

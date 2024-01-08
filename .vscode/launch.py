@@ -60,7 +60,7 @@ async def install_app(command, log_file):
     await asyncio.sleep(1)
     pid = await get_app_pid()
     print("iOS App Running")
-    print("iOS App log: .vscode/app.log")
+    print("iOS App log: .logs/app.log")
     print(f"iOS APP PID: {pid}")
     await updateSetting(pid=pid)
     # Read stdout and stderr concurrently
@@ -85,7 +85,7 @@ async def read_stream(stream, log_file):
 
 async def main():
     # Run the command asynchronously
-    with open(".vscode/app.log", 'w') as log_file:
+    with open(".logs/app.log", 'w') as log_file:
         return_code, stdout_output, stderr_output = await install_app(commandLaunch, log_file)
 
         # Print or process the output as needed
