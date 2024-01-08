@@ -33,9 +33,9 @@ async def get_app_pid():
                     continue
                 pid_str = pid_str[0]
                 return int(pid_str)
-        else:
-            print("xcrun doensnt exist")
-            return None
+            else:
+                print("xcrun doensnt exist")
+                return None
     except subprocess.TimeoutExpired:
         print("Timeout of running process")
         return None
