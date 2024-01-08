@@ -13,6 +13,7 @@
 import sys
 import subprocess
 import json
+import helper
 
 project_file = sys.argv[1]
 project_scheme = sys.argv[2]
@@ -20,7 +21,7 @@ project_scheme = sys.argv[2]
 selected_destination = sys.argv[3]
 print(selected_destination)
 
-command = ["xcodebuild", "-workspace", project_file, "-scheme", project_scheme, "-showdestinations"]    
+command = ["xcodebuild", helper.get_project_type(project_file), project_file, "-scheme", project_scheme, "-showdestinations"]    
 process = subprocess.run(command, capture_output=True, text=True, timeout=5)
 
 if process.returncode != 0:

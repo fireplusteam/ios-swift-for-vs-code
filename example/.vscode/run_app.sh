@@ -10,6 +10,8 @@ DESTINATION="id=$DEVICE_ID"
 
 echo $DESTINATION
 
+TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
+
 # Function to check if a variable is empty and exit with 1
 is_empty() {
     local variable=$1
@@ -23,7 +25,7 @@ is_empty() {
 }
 
 # GET BUILD PATH
-BUILD_DIR=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
+BUILD_DIR=$(xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
 APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"
 echo "Path to the built app: ${APP_PATH}"
 
@@ -36,7 +38,7 @@ echo "UUID of the device:${SIMULATOR_UDID}"
 is_empty "$SIMULATOR_UDID"
 
 # build a project
-xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
+xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
 
 # Check the exit status
 if [ $? -eq 0 ]; then

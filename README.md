@@ -3,6 +3,7 @@
    Install Visual Studio Code
    Currently working only for xcworkspace
    
+   
 # Required VS Code extensions:
    CodeLLDB https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
    Swift - https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang
@@ -112,3 +113,9 @@ Go to settings.json and add:
     }],
     "keyboard.dispatch": "keyCode"
 ```
+
+# Other tricks (Optional):
+
+If you want the search to be able to work on hidden files in VS Code, you need to set
+
+"search.useIgnoreFiles": false
