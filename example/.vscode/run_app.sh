@@ -24,6 +24,9 @@ is_empty() {
     fi
 }
 
+# Stop previously running app
+xcrun simctl terminate $DEVICE_ID $BUNDLE_APP_NAME
+
 # GET BUILD PATH
 BUILD_DIR=$(xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
 APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"

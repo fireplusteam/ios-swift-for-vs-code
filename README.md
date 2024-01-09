@@ -1,19 +1,21 @@
 # Bring iOS development to VS Code
 ##Write/Debug/Build iOS app on Visual Studio Code
-   Install Visual Studio Code
-   Currently working only for xcworkspace
+   Install Visual Studio Code and required extensions. Also you need python at least 3.9, xCode and xCode Server setup. 
    
    
 # Required VS Code extensions:
+ ##Required:
    CodeLLDB https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
    Swift - https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang
+   Launch Configs - https://marketplace.visualstudio.com/items?itemName=ArturoDent.launch-config
+   Dynamic Input -> https://marketplace.visualstudio.com/items?itemName=igrek8.dynamic-inputs
+ ##Optionals
    Python
    Git
-   Dynamic Input -> https://marketplace.visualstudio.com/items?itemName=igrek8.dynamic-inputs
-   Output Link To File (Optional if you want links to files in output window)
-   Bracket Pair Color DLW (Optional)
-   Output Colorizer (Optional)
-   Vim (Optional if you want powerful editor)
+   Output Link To File (if you want links to files in output window and terminal)
+   Bracket Pair Color DLW
+   Output Colorizer
+   Vim (if you want powerful editor)
    
 # Required Dependencies
 
@@ -47,7 +49,17 @@ NOTE: if you want to setup neovim follow this: https://wojciechkulik.pl/ios/how-
     {
         "key": "cmd+r",
         "command": "workbench.action.tasks.runTask",
+        "args": "Run & Debug iOS App"
+    },
+    {
+        "key": "cmd+shift+r",
+        "command": "workbench.action.tasks.runTask",
         "args": "Run iOS App"
+    },
+    {
+        "key": "cmd+'",
+        "command": "workbench.action.reloadWindow",
+        "when": "isDevelopment && !isAuxiliaryWindowFocusedContext"
     }
 ]
 ```
@@ -77,10 +89,14 @@ DEVICE_NAME="iPhone 15 Pro"
 ##Compile
   cmd+shift+b builds your project and refresh the Autocomplete
 
-##Run on iOS Device
+##Run & Debug on iOS Device
   cmd+r runs in on simulator, as in xCode, also build a project and refresh Autocomplete
+
+##Run Without Debugger Attached on iOS Device
+  cmd+shift+r runs in on simulator, as in xCode, also build a project and refresh Autocomplete
   
-##Debug
+  
+##Debug an earlier launched ios app session
   F5 attach debug lldb
   Shift+F5 stop debug
 
@@ -92,8 +108,13 @@ DEVICE_NAME="iPhone 15 Pro"
   This gives you a speed on launching app and attaching lldb only in cases when you have to debug
 
 ##Run Tests
-  press cmd+shift+p -> Run Task -> Test iOS App 
+  press cmd+shift+p -> Run Task -> Test iOS App
   
+##Select scheme
+  cmd+shift+p -> Run Task -> Select Scheme
+
+##Select iOS Simulator/Device
+  cmd+shift+p -> Run Task -> Select Destination Device
 
 # Setting Vim (Optional)
 Install Vim extension for VS Code
