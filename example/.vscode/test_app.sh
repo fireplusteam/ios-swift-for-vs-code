@@ -7,7 +7,10 @@ mkdir -p .logs
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
 
-xcodebuild test $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" | tee '.logs/tests.log'
+#export NSUnbufferedIO=YES
+#export XCT_PARALLEL_DEVICE_DESTINATIONS=1
+
+rm ./vscode/.bundle; xcodebuild test $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle build | tee '.logs/tests.log'
 
 # Check the exit status
 python3 .vscode/print_errors.py

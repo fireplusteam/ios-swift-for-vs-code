@@ -79,7 +79,7 @@ DEVICE_NAME="iPhone 15 Pro"
 # Usage Guide: VS Code
 
  1. Copy .vscode folder to you root project folder where xcworkspace file is located
- 2. Open root folder which contains root xcworkspace file with VS Code
+ 2. Open root folder which contains root xcworkspace or project file with VS Code
  3. That's it, but you need to make the first build of app to make autocompletion works correct by pressing cmd+shift+b
 
 ##Autocompletion Binding
@@ -92,21 +92,17 @@ DEVICE_NAME="iPhone 15 Pro"
 ##Run & Debug on iOS Device
   cmd+r runs in on simulator, as in xCode, also build a project and refresh Autocomplete
 
-##Run Without Debugger Attached on iOS Device
+##Run Without Debugger Attached on iOS Device (Very Fast)
   cmd+shift+r runs in on simulator, as in xCode, also build a project and refresh Autocomplete
   
-  
-##Debug an earlier launched ios app session
+##Debug an earlier launched iOS app session
   F5 attach debug lldb
   Shift+F5 stop debug
 
   You can configure F5 by choosing two options:
     a. Debug iOS App -> runs lldb of the last running process triggered by cmd+r, you need to relaunch debugger after each cmd+r
     b. Show iOS App Log -> displays iOS app stdout/stderr to Debug Console of VS Code. This can be done only once per dev session
-
-  So each time after you run the app, you need to attach the debugger manually if you need. 
-  This gives you a speed on launching app and attaching lldb only in cases when you have to debug
-
+  
 ##Run Tests
   press cmd+shift+p -> Run Task -> Test iOS App
   

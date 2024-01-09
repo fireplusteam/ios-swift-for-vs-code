@@ -3,18 +3,6 @@
     "configurations": [
         {
             "type": "lldb",
-            "request": "custom",
-            "name": "Custom launch",
-            "targetCreateCommands": [
-                "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCode.app"
-            ],
-            "processCreateCommands": [
-                "process attach --name TestVSCode --waitfor",
-                "continue"
-            ],
-        },
-        {
-            "type": "lldb",
             "request": "attach",
             "name": "Debug iOS App",
             "pid": "${config:iOS_PID}",
@@ -44,6 +32,18 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.vscode/.env"
+        },
+        {
+            "type": "lldb",
+            "request": "custom",
+            "name": "Custom launch",
+            "targetCreateCommands": [
+                "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCode.app"
+            ],
+            "processCreateCommands": [
+                "process attach --name TestVSCode --waitfor",
+                "continue"
+            ],
         },
     ]
 }
