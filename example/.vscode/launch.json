@@ -1,7 +1,18 @@
 {
     "version": "0.2.0",
     "configurations": [
-        
+        {
+            "type": "lldb",
+            "request": "custom",
+            "name": "Custom launch",
+            "targetCreateCommands": [
+                "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCode.app"
+            ],
+            "processCreateCommands": [
+                "process attach --name TestVSCode --waitfor",
+                "continue"
+            ],
+        },
         {
             "type": "lldb",
             "request": "attach",

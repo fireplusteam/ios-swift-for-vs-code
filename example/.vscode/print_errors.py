@@ -63,4 +63,8 @@ if len(lines) > 0:
     sys.stdout.flush()
 
     exit(1)
+else:
+    pure_output = "No errors!"
+    with open(".logs/errors.log", 'w') as file:
+        file.write(pure_output)
     
