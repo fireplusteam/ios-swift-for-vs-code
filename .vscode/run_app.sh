@@ -10,6 +10,8 @@ DESTINATION="id=$DEVICE_ID"
 
 echo $DESTINATION
 
+TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
+
 # Function to check if a variable is empty and exit with 1
 is_empty() {
     local variable=$1
@@ -22,8 +24,11 @@ is_empty() {
     fi
 }
 
+# Stop previously running app
+xcrun simctl terminate $DEVICE_ID $BUNDLE_APP_NAME
+
 # GET BUILD PATH
-BUILD_DIR=$(xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
+BUILD_DIR=$(xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
 APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"
 echo "Path to the built app: ${APP_PATH}"
 
@@ -36,12 +41,21 @@ echo "UUID of the device:${SIMULATOR_UDID}"
 is_empty "$SIMULATOR_UDID"
 
 # build a project
-xcodebuild -workspace $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
+xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator build | tee '.logs/build.log'
 
 # Check the exit status
 if [ $? -eq 0 ]; then
-    echo "Build succeeded."
+    echo "OK"
 else
+    python3 .vscode/print_errors.py
+    echo "Build failed."
+    exit 1
+fi
+
+python3 .vscode/print_errors.py
+
+# Check the exit status
+if [ $? -eq 1 ]; then
     echo "Build failed."
     exit 1
 fi
@@ -68,16 +82,18 @@ xcrun simctl install $SIMULATOR_UDID $APP_PATH
 
 # Get PID of run process
 
-python3 .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
+python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
 
 # Get Pid Id of the launched iOS App
 PID=$!
 
 sleep 1
 
+python3 .vscode/update_debug_launch_settings.py $SIMULATOR_UDID $BUNDLE_APP_NAME 
+
 # if you want to see device log console, but that one you can get via Console App
 #Log Levels:
 #default | info | debug
 #xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .logs/app.log 2>&1
 
-wait $PID
+#wait $PID

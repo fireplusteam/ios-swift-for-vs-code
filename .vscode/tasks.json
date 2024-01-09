@@ -38,8 +38,31 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"],
+            "dependsOn":["Stop Debug iOS App", "Validate Enviroment", "Start Show Logs"],
             "dependsOrder": "sequence"
+        },
+        {
+            "label": "Start Show Logs",
+            "command": "${command:launches.showIOSDebugLogs}",
+            "group": "none"
+        },
+        {
+            "label": "Run & Debug iOS App",
+            "type": "shell",
+            "command": "${command:launches.startIOSDebuging}",
+            "dependsOn": ["Run iOS App"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Stop Debug iOS App",
+            "type": "shell",
+            "command": "${command:launches.startIOSDebuging}",
+            "args": ["stop"],
+            "group": "none"
         },
         {
             "label": "Test iOS App",
@@ -92,7 +115,8 @@
                 "${input:myDestinationDevice}"
             ],
             "problemMatcher": [], 
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["Validate Enviroment"],
+            "group": "none"
         },
         {
             "label": "Select Scheme",
@@ -103,12 +127,15 @@
                 "${input:myDestinationScheme}"
             ],
             "problemMatcher": [],
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["Validate Enviroment"],
+            "runOptions": {"runOn": "folderOpen"},
+            "group": "none"
         },
         {
             "label": "Validate Enviroment",
             "type": "shell",
-            "command": ".vscode/check_workspace.sh"
+            "command": ".vscode/check_workspace.sh",
+            "group": "none"
         }
     ],
     "inputs": [

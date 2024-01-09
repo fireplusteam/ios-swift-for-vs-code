@@ -16,10 +16,18 @@ else:
 
     cwd = os.getcwd()
     files = os.listdir(cwd)
+    is_workspace = False
     for file in files:
         if ".xcworkspace" in file:
+            is_workspace = True
             helper.update_project_file(file)
-
+    print("Workspace existance: ", is_workspace)
+    if not is_workspace:
+        print(files, cwd)
+        for file in files:
+            if ".xcodeproj" in file:
+                helper.update_project_file(file) 
+                print(file)
 
 # validate build server
 if not helper.is_build_server_valid():

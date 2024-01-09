@@ -17,9 +17,13 @@ def safe_env_list(list):
         for key, value in list.items():
             file.write(key + "=" + value + "\n")
 
+def get_project_type(project_file):
+    if ".xcodeproj" in project_file:
+        return "-project"
+    return "-workspace"
 
 def get_schemes(project_file):
-    command = ["xcodebuild", "-list", "-workspace", project_file]
+    command = ["xcodebuild", "-list", get_project_type(project_file), project_file]
     process = subprocess.run(command, capture_output=True, text=True)
     schemes = []
     is_tail = False
@@ -33,7 +37,7 @@ def get_schemes(project_file):
 
 
 def get_bundle_identifier(project_file, scheme):
-    command = ["xcodebuild", "-showBuildSettings", "-workspace", project_file, "-scheme", scheme]
+    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme]
     process = subprocess.run(command, capture_output=True, text=True)
     for line in process.stdout.splitlines():
         line = line.strip()

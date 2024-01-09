@@ -116,7 +116,8 @@ DEVICE_NAME="iPhone 15 Pro"
 ##Select iOS Simulator/Device
   cmd+shift+p -> Run Task -> Select Destination Device
 
-# Setting Vim (Optional)
+
+## Setting Vim (Optional)
 Install Vim extension for VS Code
 
 Go to settings.json and add:

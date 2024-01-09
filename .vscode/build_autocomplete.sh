@@ -4,4 +4,6 @@ echo "BIND THE FOLLOWING:"
 echo $PROJECT_FILE
 echo $SCHEME
 
-xcode-build-server config -scheme $PROJECT_SCHEME -workspace $PROJECT_FILE
+TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
+
+xcode-build-server config -scheme $PROJECT_SCHEME $TYPE $PROJECT_FILE
