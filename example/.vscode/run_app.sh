@@ -82,9 +82,11 @@ xcrun simctl install $SIMULATOR_UDID $APP_PATH
 python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
 
 # Get Pid Id of the launched iOS App
-#PID=$!
+PID=$!
 
 sleep 1
+
+python3 .vscode/update_debug_launch_settings.py $SIMULATOR_UDID $BUNDLE_APP_NAME 
 
 # if you want to see device log console, but that one you can get via Console App
 #Log Levels:

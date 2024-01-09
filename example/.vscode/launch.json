@@ -1,17 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
-        { // this is for testing python files
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "internalConsole",
-            "args": ["-destinationDevice", "|platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro Max|"],//["TestVSCode.xcworkspace", "TestVSCode", "fgf"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
-            "justMyCode": true,
-            "cwd": "${workspaceFolder}",
-            "envFile": "${workspaceFolder}/.vscode/.env"
-        },
+        
         {
             "type": "lldb",
             "request": "attach",
@@ -32,6 +22,17 @@
             "internalConsoleOptions": "neverOpen",
             "envFile": "${workspaceFolder}/.vscode/.env",
             "cwd": "${workspaceFolder}"
-        }
+        },
+        { // this is for testing python files
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "internalConsole",
+            "args": ["-destinationDevice", "|platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro Max|"],//["TestVSCode.xcworkspace", "TestVSCode", "fgf"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.vscode/.env"
+        },
     ]
 }

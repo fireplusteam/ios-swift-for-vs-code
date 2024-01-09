@@ -38,8 +38,24 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"],
+            "dependsOn":["Stop Debug iOS App", "Validate Enviroment"],
             "dependsOrder": "sequence"
+        },
+        {
+            "label": "Run & Debug iOS App",
+            "type": "shell",
+            "command": "${command:workbench.action.debug.start}",
+            "dependsOn": ["Run iOS App"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Stop Debug iOS App",
+            "type": "shell",
+            "command": "${command:workbench.action.debug.stop}"
         },
         {
             "label": "Test iOS App",

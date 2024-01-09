@@ -54,7 +54,7 @@ NOTE: if you want to setup neovim follow this: https://wojciechkulik.pl/ios/how-
 3. Change default binding of cmd+r in keyboard preference to cmd+' or what ever you prefer
 
 # Configure/create .vscode/.env file with your project specific keys
-Example of .env file
+Example of .env file, but it should be generated automatically
 ```
 PROJECT_FILE="TestVSCode.xcworkspace"
 PROJECT_SCHEME="TestVSCode"
