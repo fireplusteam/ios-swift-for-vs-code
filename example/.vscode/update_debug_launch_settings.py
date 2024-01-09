@@ -47,7 +47,7 @@ async def updateSetting(pid: int):
     file_path = '.vscode/settings.json'
     with open(file_path, 'r') as file:
         settings = json.load(file)
-    
+
     settings['iOS_PID'] = pid
     with open(file_path, 'w') as file:
         json.dump(settings, file, indent=2)
@@ -58,6 +58,8 @@ async def main():
     print("iOS App Running")
     print("iOS App log: .logs/app.log")
     print(f"iOS APP PID: {pid}")
+    if pid is None: 
+        pid = 0
     await updateSetting(pid=pid)
 
 
