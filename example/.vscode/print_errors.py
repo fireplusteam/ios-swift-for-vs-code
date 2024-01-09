@@ -17,17 +17,20 @@ end_error_pattern = "^~~~~"
 def filter_lines(lines):
     filtered = []
     is_inside_error = False
+    added_followup_lines = 0
     for line in lines:
         if is_inside_error:
             if end_error_pattern in line:
                 is_inside_error = False
-            elif len(line.strip()) > 0:
+            elif len(line.strip()) > 0 and added_followup_lines < 1:
+                added_followup_lines += 1
                 filtered.append("\t" + line.strip())
 
         if error_pattern in line:
             if len(line.strip()) > 0:
                 filtered.append(line.strip())
             is_inside_error = True
+            added_followup_lines = 0
     return filtered
 
 lines = filter_lines(lines)
