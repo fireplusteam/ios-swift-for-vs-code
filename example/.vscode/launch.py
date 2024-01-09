@@ -15,7 +15,9 @@ cwd = os.getcwd()
 
 async def get_app_pid():
     try:
-        while True:
+        number_of_tries = 0
+        while number_of_tries < 20:
+            number_of_tries += 1
             result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=10)
             output = result.stdout.splitlines()
             #xcrun returns each line in the following format
@@ -27,9 +29,11 @@ async def get_app_pid():
                     print("${bundle} is not running")
                     return None
                 if len(line) == 0:
+                    await asyncio.sleep(3)
                     continue
                 pid_str = line[0].split()
                 if len(pid_str) == 0:
+                    await asyncio.sleep(3)
                     continue
                 pid_str = pid_str[0]
                 return int(pid_str)
