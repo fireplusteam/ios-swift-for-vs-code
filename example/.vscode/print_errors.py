@@ -1,7 +1,13 @@
 import sys
+import os
 
-with open(".logs/build.log") as file:
-    lines = file.readlines()
+file_path = ".logs/build.log"
+
+if not os.path.exists(file_path):
+    lines = []
+else:
+    with open(".logs/build.log") as file:
+        lines = file.readlines()
 
 class Color:
     HEADER = '\033[95m'
