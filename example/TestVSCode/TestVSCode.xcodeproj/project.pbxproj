@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5D64E0422B4DB99E009EBA46 /* SomeNewFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D64E0412B4DB99E009EBA46 /* SomeNewFile.swift */; };
 		5DD336A32B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DD336A22B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework */; };
 		5DD336A62B4B25AA00A8FF39 /* Media.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5DD336A52B4B25AA00A8FF39 /* Media.xcassets */; };
 		5DD336A82B4B25AA00A8FF39 /* ActionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD336A72B4B25AA00A8FF39 /* ActionViewController.swift */; };
@@ -60,6 +61,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		5D64E0412B4DB99E009EBA46 /* SomeNewFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomeNewFile.swift; sourceTree = "<group>"; };
 		5DD336A02B4B25AA00A8FF39 /* Action.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Action.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DD336A22B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		5DD336A52B4B25AA00A8FF39 /* Media.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Media.xcassets; sourceTree = "<group>"; };
@@ -176,6 +178,7 @@
 			isa = PBXGroup;
 			children = (
 				5DF53AF92B46B76600C8235B /* TestVSCodeTests.swift */,
+				5D64E0412B4DB99E009EBA46 /* SomeNewFile.swift */,
 			);
 			path = TestVSCodeTests;
 			sourceTree = "<group>";
@@ -368,6 +371,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5D64E0422B4DB99E009EBA46 /* SomeNewFile.swift in Sources */,
 				5DF53AFA2B46B76600C8235B /* TestVSCodeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

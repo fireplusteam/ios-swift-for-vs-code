@@ -1,15 +1,13 @@
 //
-//  TestVSCodeTests.swift
+//  SomeNewFile.swift
 //  TestVSCodeTests
 //
-//  Created by Ievgenii Mykhalevskyi on 04.01.2024.
+//  Created by Ievgenii Mykhalevskyi on 09.01.2024.
 //
 
 import XCTest
-@testable import TestVSCode
 
-
-final class TestVSCodeTests: XCTestCase {
+final class SomeNewFile: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
@@ -20,19 +18,12 @@ final class TestVSCodeTests: XCTestCase {
     }
 
     func testExample() throws {
-        XCTAssertTrue(true, "Failing Test")
-        XCTAssertTrue(true)
-    }
-
-    func testExample2() throws {
-        XCTAssertTrue(true, "Failing Test")
-        XCTAssertTrue(true)
-    }
-
-    func testExample3() throws {
-        XCTAssertTrue(true, "Failing Test")
-        XCTAssertTrue(true)
-        let a = 10
+        // This is an example of a functional test case.
+        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        // Any test you write for XCTest can be annotated as throws and async.
+        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
+        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+        XCTFail("Failed")
     }
 
     func testPerformanceExample() throws {
