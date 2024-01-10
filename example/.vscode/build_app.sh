@@ -10,11 +10,11 @@ rm .logs/build.log
 
 if [ $1 == "ALL" ] || [ "$1" == "TARGET" ]; then
     echo "dfs"
-    rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle | tee -a '.logs/build.log' | xcpretty
+    rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle | tee -a '.logs/build.log' | xcbeautify
 fi
 
 if [ "$1" == "ALL" ] || [ "$1" == "TESTING" ]; then
-    rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle build-for-testing | tee -a '.logs/build.log' | xcpretty
+    rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle build-for-testing | tee -a '.logs/build.log' | xcbeautify
 fi
 
 # Check the exit status
