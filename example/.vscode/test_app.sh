@@ -10,7 +10,9 @@ TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-
 #export NSUnbufferedIO=YES
 #export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 
-rm -r .vscode/.bundle; xcodebuild test $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log'
+rm -r .bundle.xcresult
+
+rm -r .vscode/.bundle; xcodebuild test $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | xcpretty
 
 # Check the exit status
 python3 .vscode/print_errors.py

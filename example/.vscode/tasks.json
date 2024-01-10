@@ -9,13 +9,48 @@
     },
     "tasks": [
         {
-            "label": "Build iOS App",
+            "label": "iOS: Build Selected Target",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_app.sh",
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             },
+            "args": ["TARGET"],
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn":["Validate Enviroment"]
+        },
+        {
+            "label": "iOS: Build ALL",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_app.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "args": ["ALL"],
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn":["Validate Enviroment"]
+        },
+        {
+            "label": "iOS: Build Tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_app.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "args": ["TESTING"],
             "presentation": {
                 "clear": true
             },
@@ -28,10 +63,6 @@
             "label": "Run iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/run_app.sh",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
             "presentation": {
                 "clear": true
             },
@@ -52,10 +83,6 @@
             "command": "${command:launches.startIOSDebuging}",
             "dependsOn": ["Run iOS App"],
             "dependsOrder": "sequence",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            }
         },
         {
             "label": "Stop Debug iOS App",
@@ -85,10 +112,6 @@
             "label": "Generate xCode Server",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_autocomplete.sh",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -98,10 +121,6 @@
             "label": "Bind Autocomplete",
             "type": "shell",
             "command": ".vscode/restart_lsp_swift.sh",
-            "group": {
-                "kind": "build",
-                "isDefault": false
-            },
             "dependsOn": [
                 "Generate xCode Server"
             ]

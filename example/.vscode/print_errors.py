@@ -28,7 +28,7 @@ def filter_lines(lines):
 
         if error_pattern in line:
             if len(line.strip()) > 0:
-                filtered.append(line.strip())
+                filtered.append("❌ " + line.strip())
             is_inside_error = True
             added_followup_lines = 0
     return filtered
