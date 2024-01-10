@@ -38,10 +38,34 @@
             "request": "custom",
             "name": "Custom launch",
             "targetCreateCommands": [
+                "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCodeUITests-Runner.app"
+            ],
+            "processCreateCommands": [
+                "process attach --name TestVSCodeUITests-Runner --waitfor",
+                "continue"
+            ],
+        },
+        {
+            "type": "lldb",
+            "request": "custom",
+            "name": "Custom launch Unit Tests",
+            "targetCreateCommands": [
                 "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCode.app"
             ],
             "processCreateCommands": [
                 "process attach --name TestVSCode --waitfor",
+                "continue"
+            ],
+        },
+        {
+            "type": "lldb",
+            "request": "custom",
+            "name": "Custom launch xcdebug",
+            "targetCreateCommands": [
+                "target create /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
+            ],
+            "processCreateCommands": [
+                "process launch -s -- test -workspace ${workspaceFolder}/TestVSCode.xcworkspace -scheme TestVSCode -configuration Debug -sdk iphonesimulator -destination \"id=698B2C6D-4FA9-4142-B802-C9DF3C41E049\"",
                 "continue"
             ],
         },
