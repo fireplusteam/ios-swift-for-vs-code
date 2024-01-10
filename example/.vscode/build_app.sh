@@ -6,7 +6,7 @@ mkdir -p .logs
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
 
-rm .vscode/build.log
+rm .logs/build.log
 
 if [ $1 == "ALL" ] || [ "$1" == "TARGET" ]; then
     echo "dfs"
