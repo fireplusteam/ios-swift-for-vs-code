@@ -22,7 +22,9 @@
 ```bash
 brew install python
 
-gem install xcpretty 
+gem install xcpretty
+
+brew install xcbeautify 
 ```
    
 
