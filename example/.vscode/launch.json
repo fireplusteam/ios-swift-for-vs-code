@@ -3,8 +3,24 @@
     "configurations": [
         {
             "type": "lldb",
+            "request": "custom",
+            "name": "iOS App Debug",
+            "targetCreateCommands": [
+                "${config:iOS_LLDB_TARGET}"
+            ],
+            "processCreateCommands": [
+                "process handle SIGKILL -n true -p true -s false",
+                "${config:iOS_LLDB_PROCESS_WAIT}",
+                "continue"
+            ],
+            "exitCommands": [
+                "process signal SIGTERM"
+            ]
+        },
+        {
+            "type": "lldb",
             "request": "attach",
-            "name": "Debug iOS App",
+            "name": "Attach iOS App To Debug",
             "pid": "${config:iOS_PID}",
             "stopOnEntry": false
         },
@@ -22,13 +38,13 @@
             "envFile": "${workspaceFolder}/.vscode/.env",
             "cwd": "${workspaceFolder}"
         },
-        { // this is for testing python files
+        { 
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "internalConsole",
-            "args": ["-destinationDevice", "|platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro Max|"],//["TestVSCode.xcworkspace", "TestVSCode", "fgf"],//["698B2C6D-4FA9-4142-B802-C9DF3C41E049","puzzle.TestVSCode"],
+            "args": ["-destinationDevice", "|platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro Max|"],
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.vscode/.env"
@@ -42,18 +58,6 @@
             ],
             "processCreateCommands": [
                 "process attach --name TestVSCodeUITests-Runner --waitfor",
-                "continue"
-            ],
-        },
-        {
-            "type": "lldb",
-            "request": "custom",
-            "name": "Custom launch Unit Tests",
-            "targetCreateCommands": [
-                "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCode.app"
-            ],
-            "processCreateCommands": [
-                "process attach --name TestVSCode --waitfor",
                 "continue"
             ],
         },

@@ -3,9 +3,11 @@
   "editor.lineNumbers": "relative",
   "lldb.launch.expressions": "native",
   "cmake.configureOnOpen": false,
-  "iOS_PID": 82658,
+  "iOS_PID": 43117,
   "launches": {
-    "startIOSDebuging": "Debug iOS App",
+    "startIOSDebuging": "iOS App Debug",
     "showIOSDebugLogs": "Show iOS App Log"
-  }
+  },
+  "iOS_LLDB_TARGET": "target create \"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCode.app\"",
+  "iOS_LLDB_PROCESS_WAIT": "process attach --name \"TestVSCode\" --waitfor"
 }

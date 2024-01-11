@@ -10,6 +10,9 @@ DESTINATION="id=$DEVICE_ID"
 
 echo $DESTINATION
 
+# Get the start time
+start_time=$(date +%s.%N)
+
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
 
 # Function to check if a variable is empty and exit with 1
@@ -23,9 +26,6 @@ is_empty() {
         echo "Good to proceed further"
     fi
 }
-
-# Stop previously running app
-xcrun simctl terminate $DEVICE_ID $BUNDLE_APP_NAME
 
 # GET BUILD PATH
 BUILD_DIR=$(xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
@@ -77,11 +77,25 @@ done
 sleep 2
 
 # install on simulator
-
 xcrun simctl install $SIMULATOR_UDID $APP_PATH
 
-# Get PID of run process
+# Get the end time
+end_time=$(date +%s.%N)
 
+# Calculate the execution time
+execution_time=$(echo "$end_time - $start_time" | bc)
+
+echo "Execution time $execution_time"
+
+if [ $1 == "LLDB_DEBUG" ]; then
+    # Check if the execution time is less than 5 seconds and sleep to wait lldb to init
+    if (( $(echo "$execution_time < 10" | bc -l) )); then
+        echo "Execution time was less than 10 seconds. Sleeping..."
+        sleep 5
+    fi
+fi
+
+# Get PID of run process
 python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
 
 # Get Pid Id of the launched iOS App

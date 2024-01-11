@@ -63,14 +63,39 @@
             "label": "Run iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/run_app.sh",
+            "args": ["RUNNING"],
             "presentation": {
                 "clear": true
             },
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Stop Debug iOS App", "Validate Enviroment", "Start Show Logs"],
+            "dependsOn":["Terminate Current iOS App", "Validate Enviroment", "Start Show Logs"],
             "dependsOrder": "sequence"
+        },
+        {
+            "label": "Run & Debug iOS App",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/run_app.sh",
+            "args": ["LLDB_DEBUG"],
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn":["Terminate Current iOS App", "Sleep", "Validate Enviroment", "Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOrder": "sequence"
+        },
+        { // needed to give a chance to vs code to update it's state
+            "label": "Sleep", 
+            "type": "shell",
+            "command": "sleep 1"
+        },
+        {
+            "label": "Terminate Current iOS App",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/terminate_current_running_app.sh"
         },
         {
             "label": "Start Show Logs",
@@ -78,17 +103,16 @@
             "group": "none"
         },
         {
-            "label": "Run & Debug iOS App",
+            "label": "Start LLDB Debugger iOS App",
             "type": "shell",
             "command": "${command:launches.startIOSDebuging}",
-            "dependsOn": ["Run iOS App"],
             "dependsOrder": "sequence",
         },
         {
-            "label": "Stop Debug iOS App",
+            "label": "Restart Debug iOS App",
             "type": "shell",
             "command": "${command:launches.startIOSDebuging}",
-            "args": ["stop"],
+            "args": ["restart"],
             "group": "none"
         },
         {

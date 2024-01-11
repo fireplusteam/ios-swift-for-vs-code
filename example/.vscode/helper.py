@@ -54,6 +54,18 @@ def update_scheme(project_file, scheme):
     safe_env_list(env_list)
 
 
+def update_setting(build_path, target):
+    file_path = '.vscode/settings.json'
+    with open(file_path, 'r') as file:
+        settings = json.load(file)
+
+    # update target settings    
+    settings['iOS_LLDB_TARGET']= f"target create \"{build_path}/Build/Products/Debug-iphonesimulator/{target}.app\""
+    settings['iOS_LLDB_PROCESS_WAIT'] = f"process attach --name \"{target}\" --waitfor"
+    with open(file_path, 'w') as file:
+        json.dump(settings, file, indent=2)
+
+
 def update_project_file(project_file):
     env_list = get_env_list()
     env_list["PROJECT_FILE"] = "\"" + project_file + "\""
