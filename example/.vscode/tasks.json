@@ -109,13 +109,6 @@
             "dependsOrder": "sequence",
         },
         {
-            "label": "Restart Debug iOS App",
-            "type": "shell",
-            "command": "${command:launches.startIOSDebuging}",
-            "args": ["restart"],
-            "group": "none"
-        },
-        {
             "label": "Test iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
