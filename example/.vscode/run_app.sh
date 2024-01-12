@@ -60,7 +60,7 @@ xcrun simctl install $SIMULATOR_UDID $APP_PATH
 end_time=$(date +%s.%N)
 
 # Get PID of run process
-python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
+python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME $1
 
 # Get Pid Id of the launched iOS App
 PID=$!

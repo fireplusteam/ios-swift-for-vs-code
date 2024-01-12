@@ -77,10 +77,12 @@ def watch_new_process(debugger, command, result, internal_dict):
 
     thread = threading.Thread(target=wait_for_process, args=(process_name, debugger, existing_pids))   
     thread.start()
+    helper.update_debugger_launch_config("status", "launched")
 
 
 def create_target(debugger, command, result, internal_dict):
     try:
+        helper.update_debugger_launch_config("status", "launching")
         global existing_pids
         result.AppendMessage("Start lldb watching new instance of App")
         

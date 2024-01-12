@@ -6,7 +6,7 @@
             "request": "custom",
             "name": "iOS App Debug",
             "targetCreateCommands": [
-                "command script import /Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/.vscode/attach_lldb.py",
+                "command script import .vscode/attach_lldb.py",
                 "command script add -f attach_lldb.create_target create_target",
                 "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
@@ -23,7 +23,7 @@
         {
             "type": "lldb",
             "request": "attach",
-            "name": "Attach iOS App To Debug",
+            "name": "Attach iOS App To Debugger",
             "pid": "${config:iOS_PID}",
             "stopOnEntry": false
         },
@@ -51,30 +51,6 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.vscode/.env"
-        },
-        {
-            "type": "lldb",
-            "request": "custom",
-            "name": "Custom launch",
-            "targetCreateCommands": [
-                "target create /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products/Debug-iphonesimulator/TestVSCodeUITests-Runner.app"
-            ],
-            "processCreateCommands": [
-                "process attach --name TestVSCodeUITests-Runner --waitfor",
-                "continue"
-            ],
-        },
-        {
-            "type": "lldb",
-            "request": "custom",
-            "name": "Custom launch xcdebug",
-            "targetCreateCommands": [
-                "target create /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild"
-            ],
-            "processCreateCommands": [
-                "process launch -s -- test -workspace ${workspaceFolder}/TestVSCode.xcworkspace -scheme TestVSCode -configuration Debug -sdk iphonesimulator -destination \"id=698B2C6D-4FA9-4142-B802-C9DF3C41E049\"",
-                "continue"
-            ],
-        },
+        }
     ]
 }

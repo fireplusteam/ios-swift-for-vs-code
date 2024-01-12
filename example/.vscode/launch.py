@@ -3,9 +3,11 @@ import sys
 import os
 import asyncio
 import json
+import helper
 
 device_uuid = sys.argv[1]
 bundle = sys.argv[2]
+debugger_arg = sys.argv[3]
 print("INPUT", device_uuid, bundle)
 
 commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
@@ -13,8 +15,11 @@ cwd = os.getcwd()
 
 
 async def install_app(command, log_file):
-    # Start the subprocess
+    # wait for debugger
+    if debugger_arg == "LLDB_DEBUG":
+        helper.wait_debugger_to_launch()
     
+    # Start the subprocess
     process = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, text=False)
     print(process)
 

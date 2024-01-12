@@ -1,7 +1,8 @@
 import subprocess
-import sys
 import json
 import os
+import time
+import sys
 
 file_path = '.vscode/.env'
 
@@ -95,6 +96,29 @@ def is_build_server_valid():
         return False
 
     return True
+
+#-----------------------------------------
+debugger_config_file = ".logs/debugger.launching"
+def wait_debugger_to_launch():
+    while True:
+        with open(debugger_config_file, 'r') as file:
+            config = json.load(file)
+
+        if config is not None and config["status"] == "launched":
+            break
+
+        time.sleep(1)
+
+def update_debugger_launch_config(key, value):
+    config = {}
+    if os.path.exists(debugger_config_file):
+        with open(debugger_config_file, "r+") as file:
+            config = json.load(file)
+    
+    config[key] = value
+    
+    with open(debugger_config_file, "w+") as file:
+        json.dump(config, file, indent=2)
 
 if __name__ == "__main__":
     print("ok")
