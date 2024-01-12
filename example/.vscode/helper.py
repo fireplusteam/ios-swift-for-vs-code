@@ -53,17 +53,20 @@ def update_scheme(project_file, scheme):
     env_list["BUNDLE_APP_NAME"] = "\"" + get_bundle_identifier(project_file, scheme) + "\""
     safe_env_list(env_list)
 
+def get_target_executable_impl(build_path, target):
+   return f"{build_path}/Build/Products/Debug-iphonesimulator/{target}.app"
 
-def update_setting(build_path, target):
-    file_path = '.vscode/settings.json'
+
+def get_target_executable():
+    file_path = 'buildServer.json'
+
     with open(file_path, 'r') as file:
-        settings = json.load(file)
+        config = json.load(file)
 
-    # update target settings    
-    settings['iOS_LLDB_TARGET']= f"target create \"{build_path}/Build/Products/Debug-iphonesimulator/{target}.app\""
-    settings['iOS_LLDB_PROCESS_WAIT'] = f"process attach --name \"{target}\" --waitfor"
-    with open(file_path, 'w') as file:
-        json.dump(settings, file, indent=2)
+    build_root = config["build_root"]
+    scheme = config["scheme"]
+
+    return get_target_executable_impl(build_path=build_root, target=scheme)
 
 
 def update_project_file(project_file):

@@ -6,15 +6,15 @@
             "request": "custom",
             "name": "iOS App Debug",
             "targetCreateCommands": [
-                "${config:iOS_LLDB_TARGET}",
                 "command script import /Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/.vscode/attach_lldb.py",
-                "command script add -f attach_lldb.attach_next_proccess attach_next_proccess"
+                "command script add -f attach_lldb.create_target create_target",
+                "command script add -f attach_lldb.terminate_debugger terminate_debugger",
+                "command script add -f attach_lldb.watch_new_process watch_new_process",
+                "create_target"
             ],
             "processCreateCommands": [
                 "process handle SIGKILL -n true -p true -s false",
-                "attach_next_proccess",
-                //"${config:iOS_LLDB_PROCESS_WAIT}",
-                //"continue"
+                "watch_new_process"
             ],
             "exitCommands": [
                 "process signal SIGTERM"

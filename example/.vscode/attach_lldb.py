@@ -32,26 +32,27 @@ with open(log_file, 'w') as file:
 
 def logMessage(message):
     with open(log_file, 'a') as file:
-        file.write(message + "\n")
+        file.write(str(message) + "\n")
 
 
-def performDebuggerCommand(debugger, command):
-    interpreter = debugger.GetCommandInterpreter()
-    returnObject = lldb.SBCommandReturnObject()
-    interpreter.HandleCommand(command, returnObject)
-    logMessage(str(returnObject)) 
+def perform_debugger_command(debugger, command):
+    logMessage("Debugger: " + str(debugger))
+    logMessage("Command: " + str(command))
+    try:
+        interpreter = debugger.GetCommandInterpreter()
+        returnObject = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand(command, returnObject)
+        logMessage("Result Command: " + str(returnObject))
+    except Exception as e:
+        logMessage("Error executing command:" + str(e))
 
 
 # workaround, killing debugservers causing that process to be killed to, so we can re-launch vs code debug session
-def kill_process():
+def kill_process(debugger):
+    perform_debugger_command(debugger, "terminate_debugger")
+
+def check_for_exit(debugger):
     try:
-        subprocess.run(["killall", "-9", "debugserver"])
-    except Exception as e:
-        logMessage(str(e))
-
-
-def wait_for_exit():
-    while True:
         with open(".logs/lldb_exit.changed", 'r') as file:
             config = json.load(file)
 
@@ -59,13 +60,17 @@ def wait_for_exit():
             time = config["session_end_time"]
             #TODO: 
             kill_process()
-
-        time.sleep(1)
+    except:
+        pass
 
 
 def wait_for_process(process_name, debugger, existing_pids):
     try:
+        #debugger = lldb.debugger
         while True:
+            #check_for_exit(debugger)
+            #kill_process(debugger)
+
             new_list = get_list_of_pids(process_name)
             new_list = [x for x in new_list if not x in existing_pids]
 
@@ -74,11 +79,8 @@ def wait_for_process(process_name, debugger, existing_pids):
             if len(new_list) > 0:
                 pid = new_list.pop()
                 attach_command = f"process attach --pid {pid}"
-                performDebuggerCommand(debugger, attach_command)
-                performDebuggerCommand(debugger, "continue")
-
-                thread = threading.Thread(target=wait_for_exit, args=())
-                thread.start()
+                perform_debugger_command(debugger, attach_command)
+                perform_debugger_command(debugger, "continue")
                 return
 
             time.sleep(1)
@@ -86,20 +88,41 @@ def wait_for_process(process_name, debugger, existing_pids):
         logMessage(str(e))
 
 
-def attach_next_proccess(debugger, command, result, internal_dict):
-    result.AppendMessage("Start lldb watching new instance of App")
+def watch_new_process(debugger, command, result, internal_dict):
+    logMessage("Debugger: " + str(debugger))
+    global existing_pids
 
     list = helper.get_env_list()
-
-    result.AppendMessage("Enviroment:" + str(list))
-
     process_name = list["PROJECT_SCHEME"].strip("\"")
     process_name = f"{process_name}.app/{process_name}"
-    existing_pids = get_list_of_pids(process_name)
-    
-    logMessage(str(existing_pids))
-
-    result.AppendMessage("Hello from my custom command!_next")
 
     thread = threading.Thread(target=wait_for_process, args=(process_name, debugger, existing_pids))   
     thread.start()
+
+
+def create_target(debugger, command, result, internal_dict):
+    try:
+        global existing_pids
+        result.AppendMessage("Start lldb watching new instance of App")
+        
+        list = helper.get_env_list()
+        result.AppendMessage(f"Enviroment: {list}")
+
+        process_name = list["PROJECT_SCHEME"].strip("\"")
+        process_name = f"{process_name}.app/{process_name}"
+        existing_pids = get_list_of_pids(process_name)
+
+
+        executable = helper.get_target_executable()
+        result.AppendMessage(f"Creating {executable}")
+        perform_debugger_command(debugger, f"target create \"{executable}\"")
+        result.AppendMessage(str(debugger.GetSelectedTarget()))
+        result.AppendMessage(f"Target created for {executable}")
+        
+    except Exception as e:
+        logMessage(str(e))
+
+
+def terminate_debugger(debugger, command, result, internal_dict):
+    target = debugger.GetSelectedTarget()
+    debugger.DeleteTarget(target)
