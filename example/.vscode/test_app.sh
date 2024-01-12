@@ -11,7 +11,7 @@ TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-
 export NSUnbufferedIO=YES
 export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 
-rm -r .bundle.xcresult
+rm -r .vscode/.bundle.xcresult
 
 rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle test | tee '.logs/build.log' | xcbeautify
 

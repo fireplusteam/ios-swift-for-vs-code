@@ -8,11 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		5D64E0422B4DB99E009EBA46 /* SomeNewFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D64E0412B4DB99E009EBA46 /* SomeNewFile.swift */; };
-		5DD336A32B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DD336A22B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework */; };
-		5DD336A62B4B25AA00A8FF39 /* Media.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5DD336A52B4B25AA00A8FF39 /* Media.xcassets */; };
-		5DD336A82B4B25AA00A8FF39 /* ActionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD336A72B4B25AA00A8FF39 /* ActionViewController.swift */; };
-		5DD336AB2B4B25AA00A8FF39 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5DD336A92B4B25AA00A8FF39 /* MainInterface.storyboard */; };
-		5DD336AF2B4B25AA00A8FF39 /* Action.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5DD336A02B4B25AA00A8FF39 /* Action.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5DF53AE92B46B76500C8235B /* TestVSCodeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF53AE82B46B76500C8235B /* TestVSCodeApp.swift */; };
 		5DF53AEB2B46B76500C8235B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DF53AEA2B46B76500C8235B /* ContentView.swift */; };
 		5DF53AED2B46B76600C8235B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5DF53AEC2B46B76600C8235B /* Assets.xcassets */; };
@@ -23,13 +18,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		5DD336AD2B4B25AA00A8FF39 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 5DF53ADD2B46B76500C8235B /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 5DD3369F2B4B25AA00A8FF39;
-			remoteInfo = Action;
-		};
 		5DF53AF62B46B76600C8235B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 5DF53ADD2B46B76500C8235B /* Project object */;
@@ -53,7 +41,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				5DD336AF2B4B25AA00A8FF39 /* Action.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -62,7 +49,6 @@
 
 /* Begin PBXFileReference section */
 		5D64E0412B4DB99E009EBA46 /* SomeNewFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomeNewFile.swift; sourceTree = "<group>"; };
-		5DD336A02B4B25AA00A8FF39 /* Action.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Action.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DD336A22B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UniformTypeIdentifiers.framework; path = System/Library/Frameworks/UniformTypeIdentifiers.framework; sourceTree = SDKROOT; };
 		5DD336A52B4B25AA00A8FF39 /* Media.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Media.xcassets; sourceTree = "<group>"; };
 		5DD336A72B4B25AA00A8FF39 /* ActionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionViewController.swift; sourceTree = "<group>"; };
@@ -81,14 +67,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		5DD3369D2B4B25AA00A8FF39 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5DD336A32B4B25AA00A8FF39 /* UniformTypeIdentifiers.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		5DF53AE22B46B76500C8235B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -150,7 +128,6 @@
 				5DF53AE52B46B76500C8235B /* TestVSCode.app */,
 				5DF53AF52B46B76600C8235B /* TestVSCodeTests.xctest */,
 				5DF53AFF2B46B76600C8235B /* TestVSCodeUITests.xctest */,
-				5DD336A02B4B25AA00A8FF39 /* Action.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -195,23 +172,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		5DD3369F2B4B25AA00A8FF39 /* Action */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 5DD336B32B4B25AA00A8FF39 /* Build configuration list for PBXNativeTarget "Action" */;
-			buildPhases = (
-				5DD3369C2B4B25AA00A8FF39 /* Sources */,
-				5DD3369D2B4B25AA00A8FF39 /* Frameworks */,
-				5DD3369E2B4B25AA00A8FF39 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = Action;
-			productName = Action;
-			productReference = 5DD336A02B4B25AA00A8FF39 /* Action.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		5DF53AE42B46B76500C8235B /* TestVSCode */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5DF53B092B46B76600C8235B /* Build configuration list for PBXNativeTarget "TestVSCode" */;
@@ -224,7 +184,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				5DD336AE2B4B25AA00A8FF39 /* PBXTargetDependency */,
 			);
 			name = TestVSCode;
 			productName = TestVSCode;
@@ -277,9 +236,6 @@
 				LastSwiftUpdateCheck = 1500;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					5DD3369F2B4B25AA00A8FF39 = {
-						CreatedOnToolsVersion = 15.0.1;
-					};
 					5DF53AE42B46B76500C8235B = {
 						CreatedOnToolsVersion = 15.0.1;
 					};
@@ -309,21 +265,11 @@
 				5DF53AE42B46B76500C8235B /* TestVSCode */,
 				5DF53AF42B46B76600C8235B /* TestVSCodeTests */,
 				5DF53AFE2B46B76600C8235B /* TestVSCodeUITests */,
-				5DD3369F2B4B25AA00A8FF39 /* Action */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		5DD3369E2B4B25AA00A8FF39 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5DD336A62B4B25AA00A8FF39 /* Media.xcassets in Resources */,
-				5DD336AB2B4B25AA00A8FF39 /* MainInterface.storyboard in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		5DF53AE32B46B76500C8235B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -350,14 +296,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		5DD3369C2B4B25AA00A8FF39 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5DD336A82B4B25AA00A8FF39 /* ActionViewController.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		5DF53AE12B46B76500C8235B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -388,11 +326,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		5DD336AE2B4B25AA00A8FF39 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 5DD3369F2B4B25AA00A8FF39 /* Action */;
-			targetProxy = 5DD336AD2B4B25AA00A8FF39 /* PBXContainerItemProxy */;
-		};
 		5DF53AF72B46B76600C8235B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 5DF53AE42B46B76500C8235B /* TestVSCode */;
@@ -417,56 +350,6 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		5DD336B12B4B25AA00A8FF39 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Action/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Action;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = puzzle.TestVSCode.Action;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		5DD336B22B4B25AA00A8FF39 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Action/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Action;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = puzzle.TestVSCode.Action;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		5DF53B072B46B76600C8235B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -719,15 +602,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		5DD336B32B4B25AA00A8FF39 /* Build configuration list for PBXNativeTarget "Action" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5DD336B12B4B25AA00A8FF39 /* Debug */,
-				5DD336B22B4B25AA00A8FF39 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		5DF53AE02B46B76500C8235B /* Build configuration list for PBXProject "TestVSCode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
