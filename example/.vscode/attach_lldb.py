@@ -47,30 +47,9 @@ def perform_debugger_command(debugger, command):
         logMessage("Error executing command:" + str(e))
 
 
-# workaround, killing debugservers causing that process to be killed to, so we can re-launch vs code debug session
-def kill_process(debugger):
-    perform_debugger_command(debugger, "terminate_debugger")
-
-def check_for_exit(debugger):
-    try:
-        with open(".logs/lldb_exit.changed", 'r') as file:
-            config = json.load(file)
-
-        if config is not None and "session_end_time" in config:
-            time = config["session_end_time"]
-            #TODO: 
-            kill_process()
-    except:
-        pass
-
-
 def wait_for_process(process_name, debugger, existing_pids):
     try:
-        #debugger = lldb.debugger
         while True:
-            #check_for_exit(debugger)
-            #kill_process(debugger)
-
             new_list = get_list_of_pids(process_name)
             new_list = [x for x in new_list if not x in existing_pids]
 
@@ -124,5 +103,4 @@ def create_target(debugger, command, result, internal_dict):
 
 
 def terminate_debugger(debugger, command, result, internal_dict):
-    target = debugger.GetSelectedTarget()
-    debugger.DeleteTarget(target)
+    pass # TODO

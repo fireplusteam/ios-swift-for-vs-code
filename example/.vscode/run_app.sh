@@ -10,9 +10,6 @@ DESTINATION="id=$DEVICE_ID"
 
 echo $DESTINATION
 
-# Get the start time
-start_time=$(date +%s.%N)
-
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
 
 # Function to check if a variable is empty and exit with 1
@@ -40,26 +37,6 @@ echo "UUID of the device:${SIMULATOR_UDID}"
 
 is_empty "$SIMULATOR_UDID"
 
-# build a project
-rm -r .vscode/.bundle; set -o pipefail && xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle build | tee '.logs/build.log' | xcbeautify
-
-# Check the exit status
-if [ $? -eq 0 ]; then
-    echo "OK"
-else
-    python3 .vscode/print_errors.py
-    echo "Build failed."
-    exit 1
-fi
-
-python3 .vscode/print_errors.py
-
-# Check the exit status
-if [ $? -eq 1 ]; then
-    echo "Build failed."
-    exit 1
-fi
-
 #xcrun simctl shutdown $SIMULATOR_UDID
 
 echo "Booting $SIMULATOR_UDID"
@@ -81,19 +58,6 @@ xcrun simctl install $SIMULATOR_UDID $APP_PATH
 
 # Get the end time
 end_time=$(date +%s.%N)
-
-# Calculate the execution time
-execution_time=$(echo "$end_time - $start_time" | bc)
-
-echo "Execution time $execution_time"
-
-if [ $1 == "LLDB_DEBUG" ]; then
-    # Check if the execution time is less than 5 seconds and sleep to wait lldb to init
-    if (( $(echo "$execution_time < 10" | bc -l) )); then
-        echo "Execution time was less than 10 seconds. Sleeping..."
-        sleep 5
-    fi
-fi
 
 # Get PID of run process
 python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME
