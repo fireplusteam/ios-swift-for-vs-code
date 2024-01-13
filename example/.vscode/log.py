@@ -1,6 +1,7 @@
 import os
 import time
 import sys
+import helper
 
 file_path = sys.argv[1]
 project_scheme = os.environ.get('PROJECT_SCHEME')
@@ -26,12 +27,14 @@ def print_new_lines():
 
 
 # Watch for changes in the file
-def watch_file(filepath, on_delete, on_change):
+def watch_file(filepath, start_time, on_delete, on_change):
     filedir, filename = os.path.split(filepath)
 
     stat = os.path.getmtime(filepath)
     while True:
         print_new_lines()
+        if not helper.is_debug_session_valid(start_time):
+            return
         time.sleep(1)
         try:
             if stat < os.path.getmtime(filepath):
@@ -55,4 +58,4 @@ def on_change():
 
 
 # Watch for changes in the file
-watch_file('.logs/log.changed', on_delete, on_change)
+watch_file('.logs/log.changed', time.time(), on_delete, on_change)

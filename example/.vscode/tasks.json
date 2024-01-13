@@ -71,7 +71,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Selected Target"],
+            "dependsOn":["Terminate Current iOS App", "iOS: Build Selected Target", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {
@@ -85,7 +85,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Selected Target", "Start LLDB Debugger iOS App"],
+            "dependsOn":["Terminate Current iOS App", "iOS: Build Selected Target", "Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         { // needed to give a chance to vs code to update it's state
@@ -124,7 +124,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App"],
+            "dependsOn":["Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {

@@ -30,7 +30,7 @@
             "name": "Show iOS App Log",
             "type": "python",
             "request": "launch",
-            "program": ".vscode/l.py",
+            "program": ".vscode/log.py",
             "stopOnEntry": false,
             "args": [
                 ".logs/app.log",

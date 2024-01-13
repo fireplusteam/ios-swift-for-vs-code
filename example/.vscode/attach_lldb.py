@@ -75,12 +75,12 @@ def wait_for_process(process_name, debugger, existing_pids, start_time):
             new_list = [x for x in new_list if not x in existing_pids]
 
             if len(new_list) > 0:
+                threading.Thread(target=wait_for_exit, args=(debugger, start_time)).start()
+
                 pid = new_list.pop()
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
                 perform_debugger_command(debugger, "continue")
-
-                threading.Thread(target=wait_for_exit, args=(debugger, start_time)).start()
                 return
 
             time.sleep(0.25)
