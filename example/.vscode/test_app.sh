@@ -19,13 +19,14 @@ if [ "$1" == "ALL" ]; then
     xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/build.log' | xcbeautify
 else
 
-TESTS=$(python3 .vscode/get_tests_list.py $@)
+echo "Input: $@"
+
+TESTS=$(python3 .vscode/get_tests_list.py $PROJECT_FILE $@)
 echo "Tests to be tested: $TESTS"
 
-xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/build.log' | xcbeautifyf
+#xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/build.log' | xcbeautifyf
 
 fi
-
 
 # Open Results
 REPORT_PATH='/.vscode/.bundle.xcresult'

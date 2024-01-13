@@ -25,8 +25,14 @@ is_empty() {
 }
 
 # GET BUILD PATH
-BUILD_DIR=$(xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -showBuildSettings | awk -F= '/CONFIGURATION_BUILD_DIR/ {print $2}' | tr -d '[:space:]')
-APP_PATH="${BUILD_DIR}/$PROJECT_SCHEME.app"
+APP_PATH=$(python3 <<EOF
+import sys
+sys.path.insert(0, '.vscode')
+import helper
+print(helper.get_target_executable())
+EOF
+)
+
 echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"

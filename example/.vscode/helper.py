@@ -18,10 +18,12 @@ def safe_env_list(list):
         for key, value in list.items():
             file.write(key + "=" + value + "\n")
 
+
 def get_project_type(project_file):
     if ".xcodeproj" in project_file:
         return "-project"
     return "-workspace"
+
 
 def get_schemes(project_file):
     command = ["xcodebuild", "-list", get_project_type(project_file), project_file]
@@ -54,6 +56,7 @@ def update_scheme(project_file, scheme):
     env_list["BUNDLE_APP_NAME"] = "\"" + get_bundle_identifier(project_file, scheme) + "\""
     safe_env_list(env_list)
 
+
 def get_target_executable_impl(build_path, target):
    return f"{build_path}/Build/Products/Debug-iphonesimulator/{target}.app"
 
@@ -77,6 +80,7 @@ def update_project_file(project_file):
     # update schemes
     schemes = get_schemes(project_file)
     update_scheme(project_file, schemes[0])
+
 
 def is_build_server_valid():
     env_list = get_env_list()

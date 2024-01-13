@@ -1,5 +1,6 @@
 import subprocess
 import json
+import xml.etree.ElementTree as ET
 import os
 import sys
 
@@ -56,11 +57,10 @@ class XCProjectPath:
             self._root = util.rootObject
 
         self._object = util.resolveObject(self._root)
-        self._index = 0
         self.value = self._object
 
     def __getitem__(self, key):
-        return XCProjectPath(project_util, root=self._object[key])
+        return XCProjectPath(self.util, root=self._object[key])
     
     def __iter__(self):
         self._index = 0
@@ -70,29 +70,75 @@ class XCProjectPath:
         if self._index < len(self._object):
             result = self._object[self._index]
             self._index += 1
-            return XCProjectPath(project_util, result)
+            return XCProjectPath(self.util, result)
         else:
             raise StopIteration
 
 
-#project_file = os.getenv("PROJECT_FILE")
-#project_scheme = os.getenv("PROJECT_SCHEME")
-#destination = f"id={os.getenv('DEVICE_ID')}"
+class XCWorkspaceUtil:
 
-project_util = XCProjectUtil("TestVSCode/TestVSCode.xcodeproj")
-xc_path = XCProjectPath(project_util)
+    def __init__(self, file_path):
+        self._path = file_path        
 
-for target in xc_path["targets"]:
-    name = target["name"]
-    print("Target name: " + str(name.value))
-    build_phases = target["buildPhases"]
-    for build_phase in build_phases:
-        files = build_phase["files"]
-        for file in files:
-            file_ref = file["fileRef"]
-            path = file_ref["path"]
-            print(path.value)
-          
+    def project_files(self):
+        file_path = self._path
+        project_files = []
+        if ".xcworkspace" in file_path:
+            file_path += "/contents.xcworkspacedata"
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+        
+            for ref in root.findall("FileRef"):
+                location = ref.attrib['location']
+                location = location.removeprefix("group:")
+                if ".xcodeproj" in location:
+                    project_files.append(location)
+        elif ".xcodeproj" in file_path:
+            project_files.append(file_path)
+        
+        return project_files
+
+
+def get_files_for_project(project_file):
+    project_files = XCWorkspaceUtil(project_file).project_files()
+    print(f"Found project files: {project_files}")
+
+    config = {}
+    for project in project_files:
+        project_util = XCProjectUtil(project)
+        xc_path = XCProjectPath(project_util)
+        
+        for target in xc_path["targets"]:
+            name = target["name"]
+            
+            all_files = []
+            build_phases = target["buildPhases"]
+            for build_phase in build_phases:
+                files = build_phase["files"]
+                for file in files:
+                    file_ref = file["fileRef"]
+                    path = file_ref["path"]
+                    all_files.append(path.value)
+
+            config[name.value] = all_files
+
+    return config
+
+# PARSE
+
+if __name__ == "__main__":
+    #project_file = os.getenv("PROJECT_FILE")
+
+    project_file = sys.argv[1]
+
+    config = get_files_for_project(project_file)
+
+    type_of_test_run = sys.argv[2]
+    file = sys.argv[3]
+
+    print(file)
+
+    print(config)
 
 #plutil -convert json -o project.json TestVSCode/TestVSCode.xcodeproj/project.pbxproj
 
