@@ -13,7 +13,9 @@ export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 
 rm -r .vscode/.bundle.xcresult
 
-rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle test | tee '.logs/build.log' | xcbeautify
+#rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle test | tee '.logs/build.log' | xcbeautify
+
+rm -r .vscode/.bundle; xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing TestVSCodeTests/TestVSCodeTests/testExample3 | tee '.logs/build.log' | xcbeautifyf
 
 # Open Results
 REPORT_PATH='/.vscode/.bundle.xcresult'

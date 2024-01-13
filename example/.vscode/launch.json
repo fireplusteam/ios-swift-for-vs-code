@@ -14,11 +14,10 @@
             ],
             "processCreateCommands": [
                 "process handle SIGKILL -n true -p true -s false",
+                "process handle SIGTERM -n true -p true -s false",
                 "watch_new_process"
             ],
-            "exitCommands": [
-                "process signal SIGTERM"
-            ]
+            "exitCommands": []
         },
         {
             "type": "lldb",

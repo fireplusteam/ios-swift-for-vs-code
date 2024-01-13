@@ -109,6 +109,19 @@ def wait_debugger_to_launch():
 
         time.sleep(1)
 
+def is_debug_session_valid(start_time) -> bool:
+    try:
+        with open(debugger_config_file, 'r') as file:
+            config = json.load(file)
+        if config["sessionEndTime"] >= start_time:
+            return False
+        return True
+    except: # no file or a key, so the session is valid
+        return True
+    
+def update_debug_session_time():
+    update_debugger_launch_config("sessionEndTime", time.time())
+
 def update_debugger_launch_config(key, value):
     config = {}
     if os.path.exists(debugger_config_file):

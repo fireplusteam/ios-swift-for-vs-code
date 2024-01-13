@@ -57,7 +57,8 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["Validate Enviroment"],
+            "dependsOrder": "sequence"
         },
         {
             "label": "Run iOS App",
@@ -123,7 +124,8 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App"],
+            "dependsOrder": "sequence"
         },
         {
             "label": "Generate xCode Server",

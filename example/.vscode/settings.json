@@ -8,5 +8,5 @@
     "startIOSDebuging": "iOS App Debug",
     "showIOSDebugLogs": "Show iOS App Log"
   },
-  "debug.saveBeforeStart": "allEditorsInActiveGroup",
+  "debug.saveBeforeStart": "allEditorsInActiveGroup"
 }
