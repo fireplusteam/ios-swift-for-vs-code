@@ -1,0 +1,35 @@
+{
+  "configurations" : [
+    {
+      "id" : "CD9F6377-EB2E-449D-960C-143B4B4258F2",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:TestVSCode.xcodeproj",
+      "identifier" : "5DF53AE42B46B76500C8235B",
+      "name" : "TestVSCode"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:TestVSCode.xcodeproj",
+        "identifier" : "5DF53AF42B46B76600C8235B",
+        "name" : "TestVSCodeTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:TestVSCode.xcodeproj",
+        "identifier" : "5DF53AFE2B46B76600C8235B",
+        "name" : "TestVSCodeUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -12,10 +12,20 @@ export NSUnbufferedIO=YES
 export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 
 rm -r .vscode/.bundle.xcresult
+rm -r .vscode/.bundle
 
-#rm -r .vscode/.bundle; xcodebuild $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle test | tee '.logs/build.log' | xcbeautify
 
-rm -r .vscode/.bundle; xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing TestVSCodeTests/TestVSCodeTests/testExample3 | tee '.logs/build.log' | xcbeautifyf
+if [ "$1" == "ALL" ]; then
+    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/build.log' | xcbeautify
+else
+
+TESTS=$(python3 .vscode/get_tests_list.py $@)
+echo "Tests to be tested: $TESTS"
+
+xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/build.log' | xcbeautifyf
+
+fi
+
 
 # Open Results
 REPORT_PATH='/.vscode/.bundle.xcresult'
@@ -25,7 +35,8 @@ URL=$LOCAL_PATH$REPORT_PATH
 URL=${URL// /%20}
 
 echo "Test  Report: $URL"
-open -a XCode  "file://$URL"
+# if you want to open a report in xcode, uncomment below line
+#open -a XCode  "file://$URL"
 
 # print errors
 # Check the exit status

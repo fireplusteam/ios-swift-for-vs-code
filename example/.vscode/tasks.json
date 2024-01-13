@@ -110,9 +110,32 @@
             "dependsOrder": "sequence",
         },
         {
-            "label": "Test iOS App",
+            "label": "iOS: Run All Tests",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
+            "args": ["ALL"],
+            "group": {
+                "kind": "test",
+                "isDefault": false,
+                "isTestCommand": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn":["Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOrder": "sequence"
+        },
+        {
+            "label": "iOS: Run Current Class Tests",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/test_app.sh",
+            "args": [
+                "CLASS",
+                "${fileDirname}${file}"
+            ],
             "group": {
                 "kind": "test",
                 "isDefault": false,

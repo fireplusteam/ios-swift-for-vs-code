@@ -30,9 +30,13 @@ final class TestVSCodeTests: XCTestCase {
     }
 
     func testExample3() throws {
-        XCTAssertTrue(true, "Failing Test")
+        let a = 20
+        print("ok")
+        XCTAssertTrue(false, "Failing Test")
+        XCTFail()
         XCTAssertTrue(true)
-        let a = 10
+        let b = a
+        print(b)
     }
 
     func testPerformanceExample() throws {
