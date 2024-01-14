@@ -102,35 +102,39 @@ def store_selected_tests(tests):
 
 
 if __name__ == "__main__":
-    project_file = sys.argv[1]
-    selected_file = sys.argv[2]
-
-    result = [project_file, selected_file]
-
-    with open(selected_file, 'r') as file:
-        lines = file.read()
-
-    tests = []
-
-    tests = get_tests(lines, get_test_name)
-
-    scheme = xcutil.get_scheme_by_file_name(project_file, selected_file)
-
-    tests = [{"test": test["name"], "class": get_test_class(lines, test["pos"])} for test in tests]
 
     pupulated_tests = []
-    for test in tests: 
-        populated_test = {"label": f"{test['test']} -> {test['class']} -> {scheme}", "value": f"{scheme}/{test['class']}/{test['test']}"}
-        picked_tests = selected_tests(scheme, test["class"])
-        if test["test"] in picked_tests:
-            populated_test["picked"] = True
-        
-        pupulated_tests.append(populated_test)
+    try:
+        project_file = sys.argv[1]
+        selected_file = sys.argv[2]
 
-    print(tests)
+        result = [project_file, selected_file]
 
-    ext = os.path.splitext(selected_file)[1]
-    if len(pupulated_tests) == 0 or ext != ".swift" or scheme is None:
+        with open(selected_file, 'r') as file:
+            lines = file.read()
+
+        tests = []
+
+        tests = get_tests(lines, get_test_name)
+
+        scheme = xcutil.get_scheme_by_file_name(project_file, selected_file)
+
+        tests = [{"test": test["name"], "class": get_test_class(lines, test["pos"])} for test in tests]
+
+        for test in tests: 
+            populated_test = {"label": f"{test['test']} -> {test['class']} -> {scheme}", "value": f"{scheme}/{test['class']}/{test['test']}"}
+            picked_tests = selected_tests(scheme, test["class"])
+            if test["test"] in picked_tests:
+                populated_test["picked"] = True
+            
+            pupulated_tests.append(populated_test)
+
+        print(tests)
+
+        ext = os.path.splitext(selected_file)[1]
+        if len(pupulated_tests) == 0 or ext != ".swift" or scheme is None:
+            raise "Not valid"
+    except:
         pupulated_tests = ["NO VALID TESTS FOR FILE"]
-
-    print(json.dumps(pupulated_tests))
+    finally:
+        print(json.dumps(pupulated_tests))

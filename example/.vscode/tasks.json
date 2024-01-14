@@ -23,7 +23,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["iOS: Validate Enviroment"]
         },
         {
             "label": "iOS: Build ALL",
@@ -40,7 +40,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["iOS: Validate Enviroment"]
         },
         {
             "label": "iOS: Build Tests",
@@ -57,7 +57,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"],
+            "dependsOn":["iOS: Validate Enviroment"],
             "dependsOrder": "sequence"
         },
         {
@@ -71,7 +71,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Selected Target", "Start Show Logs"],
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Selected Target", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {
@@ -85,7 +85,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Selected Target", "Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Selected Target", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         { // needed to give a chance to vs code to update it's state
@@ -94,7 +94,7 @@
             "command": "sleep 1"
         },
         {
-            "label": "Terminate Current iOS App",
+            "label": "iOS: Terminate Current iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/terminate_current_running_app.sh"
         },
@@ -104,13 +104,13 @@
             "group": "none"
         },
         {
-            "label": "Start LLDB Debugger iOS App",
+            "label": "iOS: Start LLDB Debugger iOS App",
             "type": "shell",
             "command": "${command:launches.startIOSDebuging}",
             "dependsOrder": "sequence",
         },
         {
-            "label": "iOS: Run All Tests",
+            "label": "iOS: Tests: Run All",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": ["ALL"],
@@ -125,11 +125,11 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Tests", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {
-            "label": "iOS: Run Current Class Tests",
+            "label": "iOS: Tests: Run Current Class",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": [
@@ -147,28 +147,28 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Store VS Config", "Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["Store VS Config", "iOS: Terminate Current iOS App", "iOS: Build Tests", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {
-            "label": "Generate xCode Server",
+            "label": "iOS: Generate xCode Server",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_autocomplete.sh",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Validate Enviroment"]
+            "dependsOn":["iOS: Validate Enviroment"]
         },
         {
-            "label": "Bind Autocomplete",
+            "label": "iOS: Bind Autocomplete",
             "type": "shell",
             "command": ".vscode/restart_lsp_swift.sh",
             "dependsOn": [
-                "Generate xCode Server"
+                "iOS: Generate xCode Server"
             ]
         },
         {
-            "label": "Select Destination Device",
+            "label": "iOS: Select Destination Device",
             "type": "shell",
             "command": ".vscode/update_enviroment.sh",
             "args": [
@@ -176,11 +176,11 @@
                 "${input:myDestinationDevice}"
             ],
             "problemMatcher": [], 
-            "dependsOn":["Validate Enviroment"],
+            "dependsOn":["iOS: Validate Enviroment"],
             "group": "none"
         },
         {
-            "label": "Select Scheme",
+            "label": "iOS: Select Scheme",
             "type": "shell",
             "command": ".vscode/update_enviroment.sh",
             "args": [
@@ -188,12 +188,12 @@
                 "${input:myDestinationScheme}"
             ],
             "problemMatcher": [],
-            "dependsOn":["Validate Enviroment"],
+            "dependsOn":["iOS: Validate Enviroment"],
             "runOptions": {"runOn": "folderOpen"},
             "group": "none"
         },
         {
-            "label": "Validate Enviroment",
+            "label": "iOS: Validate Enviroment",
             "type": "shell",
             "command": ".vscode/check_workspace.sh",
             "group": "none"
