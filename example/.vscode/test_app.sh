@@ -14,33 +14,44 @@ export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 rm -r .vscode/.bundle.xcresult
 rm -r .vscode/.bundle
 
+VALID_TESTS=1
 
 if [ "$1" == "ALL" ]; then
     xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/build.log' | xcbeautify
 else
+    echo "Input: $@"
 
-echo "Input: $@"
+    # get last line of output
+    TESTS_SCRIPT=$(.vscode/update_enviroment.sh "-destinationTests" "$@" | tail -n 1)
+    TESTS_LINE=$(echo "$TESTS_SCRIPT")
 
-TESTS=$(python3 .vscode/get_tests_list.py $PROJECT_FILE $@)
-echo "Tests to be tested: $TESTS"
+    TESTS="$TESTS_LINE"
 
-#xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/build.log' | xcbeautifyf
+    if [ $TESTS == "Not_defined" ]; then
+        echo "Tests are not defined for the given file"
+        VALID_TESTS=0
+    else
+        echo "Running tests: $TESTS" 
 
+        xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/build.log' | xcbeautifyf
+    fi
 fi
 
-# Open Results
-REPORT_PATH='/.vscode/.bundle.xcresult'
-LOCAL_PATH=$(pwd)
+if [ $VALID_TESTS -eq 1 ]; then
+    # Open Results
+    REPORT_PATH='/.vscode/.bundle.xcresult'
+    LOCAL_PATH=$(pwd)
 
-URL=$LOCAL_PATH$REPORT_PATH
-URL=${URL// /%20}
+    URL=$LOCAL_PATH$REPORT_PATH
+    URL=${URL// /%20}
 
-echo "Test  Report: $URL"
-# if you want to open a report in xcode, uncomment below line
-#open -a XCode  "file://$URL"
+    echo "Test  Report: $URL"
+    # if you want to open a report in xcode, uncomment below line
+    #open -a XCode  "file://$URL"
 
-# print errors
-# Check the exit status
-python3 .vscode/print_errors.py
+    # print errors
+    # Check the exit status
+    python3 .vscode/print_errors.py
 
-echo 'Your testing results are in: .logs/build.log'
+    echo 'Your testing results are in: .logs/build.log'
+fi

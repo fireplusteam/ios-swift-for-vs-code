@@ -124,22 +124,25 @@ def get_files_for_project(project_file):
 
     return config
 
+def get_scheme_by_file_name(project_file, file):
+    config = get_files_for_project(project_file)
+    file = os.path.basename(file)
+    
+    for scheme, files in config.items():
+        if file in files:
+            return scheme
+    return None
+
 # PARSE
 
 if __name__ == "__main__":
     #project_file = os.getenv("PROJECT_FILE")
 
     project_file = sys.argv[1]
-
-    config = get_files_for_project(project_file)
-
     type_of_test_run = sys.argv[2]
-    file = sys.argv[3]
+    selected_file = sys.argv[3]
 
-    print(file)
-
-    print(config)
-
+    print(get_scheme_by_file_name(project_file, selected_file))
 #plutil -convert json -o project.json TestVSCode/TestVSCode.xcodeproj/project.pbxproj
 
 #TestVSCodeTests/TestVSCodeTests/testExample3

@@ -9,7 +9,8 @@ import XCTest
 @testable import TestVSCode
 
 
-final class TestVSCodeTests: XCTestCase {
+final class 
+TestVSCodeTests_1 : XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
@@ -29,7 +30,14 @@ final class TestVSCodeTests: XCTestCase {
         XCTAssertTrue(true)
     }
 
-    func testExample3() throws {
+    class BB {
+        func bla() {}
+    }
+
+    func
+    
+     testExample3__546GFDDgd  
+     () throws {
         let a = 20
         print("ok")
         XCTAssertTrue(false, "Failing Test")

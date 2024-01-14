@@ -62,9 +62,6 @@ sleep 2
 # install on simulator
 xcrun simctl install $SIMULATOR_UDID $APP_PATH
 
-# Get the end time
-end_time=$(date +%s.%N)
-
 # Get PID of run process
 python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME $1
 

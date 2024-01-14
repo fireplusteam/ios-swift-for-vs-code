@@ -134,7 +134,7 @@
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": [
                 "CLASS",
-                "${fileDirname}${file}"
+                "${input:myTestsOfCurrentFile}"
             ],
             "group": {
                 "kind": "test",
@@ -147,7 +147,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["Store VS Config", "Terminate Current iOS App", "iOS: Build Tests", "Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {
@@ -197,6 +197,14 @@
             "type": "shell",
             "command": ".vscode/check_workspace.sh",
             "group": "none"
+        },
+        {
+            "label": "Store VS Config",
+            "type": "shell",
+            "command": ".vscode/store_vs_config.sh",
+            "args": [
+                "${file}"
+            ]
         }
     ],
     "inputs": [
@@ -251,6 +259,32 @@
                     "title": "Scheme"
                 }
             }
-        }
+        },
+        {
+            "id": "myTestsOfCurrentFile",
+            "type": "command",
+            // first try to read from the disk or select again
+            "command": "dynamic-inputs.read",
+            "args": {
+                "command": "bash",
+                // a script which prints JSON array to stdout as the last line
+                "args": [
+                    "${workspaceFolder}/.vscode/populate_tests_of_current_file.sh"
+                ],
+                "envFile": "${workspaceFolder}/.vscode/.env",
+                "cwd": "${workspaceFolder}",
+                // memoize the selection for the future
+                "var": "myTestsOfCurrentFile",
+                // map options to values
+                "unwrap": "$[*].value",
+                "serializer": "plain",
+                "quickPickOptions": {
+                    "canPickMany": true, // should be false, but it's not working for some reason
+                    //"ignoreFocusOut": true,
+                    "placeHolder": "Please select Tests",
+                    "title": "Tests"
+                }
+            }
+        } 
     ]
 }
