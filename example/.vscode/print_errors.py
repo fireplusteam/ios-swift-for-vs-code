@@ -3,10 +3,13 @@ import os
 
 file_path = ".logs/build.log"
 
+if len(sys.argv) > 1:
+    file_path = sys.argv[1] 
+
 if not os.path.exists(file_path):
     lines = []
 else:
-    with open(".logs/build.log") as file:
+    with open(file_path, 'r') as file:
         lines = file.readlines()
 
 class Color:

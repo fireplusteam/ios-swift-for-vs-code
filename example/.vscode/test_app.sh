@@ -16,8 +16,22 @@ rm -r .vscode/.bundle
 
 VALID_TESTS=1
 
+# uncomment below if you want to reset all cache on simulators
+
+#echo "Shutting down the simulator app"
+#osascript -e 'quit app "Simulator"'
+#
+#echo "Making sure ALL simulators are shutdown"
+#xcrun simctl list | grep Booted | grep -e "[0-9A-F\-]\{36\}" -o | xargs xcrun simctl shutdown
+#
+#echo "Erasing apps from all simulators and resetting back to clean state"
+#xcrun simctl erase all
+#
+#echo "Killing com.apple.CoreSimulator.CoreSimulatorService"
+#killall -9 com.apple.CoreSimulator.CoreSimulatorService
+
 if [ "$1" == "ALL" ]; then
-    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/build.log' | xcbeautify
+    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | xcbeautify
 else
     echo "Input: $@"
 
@@ -33,9 +47,11 @@ else
     else
         echo "Running tests: $TESTS" 
 
-        xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/build.log' | xcbeautifyf
+        xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/tests.log' | xcbeautify
     fi
 fi
+
+sh .vscode/terminate_current_running_app.sh
 
 if [ $VALID_TESTS -eq 1 ]; then
     # Open Results
@@ -51,7 +67,7 @@ if [ $VALID_TESTS -eq 1 ]; then
 
     # print errors
     # Check the exit status
-    python3 .vscode/print_errors.py
+    python3 .vscode/print_errors.py '.logs/tests.log'
 
-    echo 'Your testing results are in: .logs/build.log'
+    echo 'Your testing results are in: .logs/tests.log'
 fi
