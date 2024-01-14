@@ -46,7 +46,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "internalConsole",
-            "args": ["-destinationDevice", "|platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro| |platform=iOS Simulator,OS=17.0.1,name=iPhone 14 Pro Max|"],
+            "args": ["TestVSCode.xcworkspace", "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/TestVSCode/TestVSCodeTests/TestVSCodeTests.swift"],
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.vscode/.env"

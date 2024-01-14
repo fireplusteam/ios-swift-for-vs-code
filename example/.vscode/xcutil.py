@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
+from pprint import pprint
+
 class XCProjectUtil:
 
     def __init__(self, project_file):
@@ -118,8 +120,14 @@ def get_files_for_project(project_file):
                 files = build_phase["files"]
                 for file in files:
                     file_ref = file["fileRef"]
-                    path = file_ref["path"]
-                    all_files.append(path.value)
+                    try: 
+                        path = file_ref["path"]
+                        all_files.append(path.value)
+                    except KeyError:
+                        childrens = file_ref["children"]
+                        for children in childrens:
+                            path = children["path"]
+                            all_files.append(path.value)
 
             config[name.value] = all_files
 
@@ -128,6 +136,8 @@ def get_files_for_project(project_file):
 def get_scheme_by_file_name(project_file, file):
     config = get_files_for_project(project_file)
     file = os.path.basename(file)
+
+    #pprint(config)
     
     for scheme, files in config.items():
         if file in files:
@@ -140,8 +150,7 @@ if __name__ == "__main__":
     #project_file = os.getenv("PROJECT_FILE")
 
     project_file = sys.argv[1]
-    type_of_test_run = sys.argv[2]
-    selected_file = sys.argv[3]
+    selected_file = sys.argv[2]
 
     print(get_scheme_by_file_name(project_file, selected_file))
 #plutil -convert json -o project.json TestVSCode/TestVSCode.xcodeproj/project.pbxproj
