@@ -55,7 +55,8 @@ class XCProjectPath:
             self._root = root
         else:
             self._root = util.rootObject
-
+        
+        self._index = 0
         self._object = util.resolveObject(self._root)
         self.value = self._object
 
@@ -63,8 +64,8 @@ class XCProjectPath:
         return XCProjectPath(self.util, root=self._object[key])
     
     def __iter__(self):
-        self._index = 0
-        return self
+        iter = XCProjectPath(util=self.util, root=self._root)
+        return iter
     
     def __next__(self):
         if self._index < len(self._object):
