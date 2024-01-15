@@ -5,6 +5,8 @@ import subprocess
 
 project_file = sys.argv[1]
 
+os.makedirs('.logs', exist_ok=True)
+
 if os.path.exists(project_file):
     print("valid project file")
     schemes = helper.get_schemes(project_file)

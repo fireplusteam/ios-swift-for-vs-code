@@ -134,8 +134,6 @@ def update_debugger_launch_config(key, value):
     
     config[key] = value
     
-    os.makedirs('.logs')
-
     with open(debugger_config_file, "w+") as file:
         json.dump(config, file, indent=2)
 
