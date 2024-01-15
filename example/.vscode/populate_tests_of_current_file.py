@@ -67,14 +67,28 @@ def get_test_class(lines, test_pos):
     return None
 
 cache_file_path = ".vscode/.cache/tests_selection.json"
+last_selected_tests_key = "Last_selected_tests_@546&8! random_key"
+
+
+def get_tests_cache_config():
+    with open(cache_file_path, 'r') as file:
+        return json.load(file)
+    return {}
+
 
 def selected_tests(scheme_name, class_name):
     try:
-        with open(cache_file_path, 'r') as file:
-            config = json.load(file)
-        return config[f"{scheme_name}/{class_name}"]
+        return get_tests_cache_config()[f"{scheme_name}/{class_name}"]
     except:
         return {}
+    
+    
+def get_last_selected_tests():
+    try:
+        return get_tests_cache_config()[last_selected_tests_key]
+    except:
+        return {}
+    
 
 def store_selected_tests(tests):
     config = {}
@@ -94,6 +108,8 @@ def store_selected_tests(tests):
     
     for key, value in list.items():
         config[key] = value
+
+    config[last_selected_tests_key] = tests
 
     os.makedirs(os.path.dirname(cache_file_path), exist_ok=True)
  
@@ -119,20 +135,28 @@ if __name__ == "__main__":
 
         scheme = xcutil.get_scheme_by_file_name(project_file, selected_file)
 
-        tests = [{"test": test["name"], "class": get_test_class(lines, test["pos"])} for test in tests]
+        tests = [{"test": test["name"], "class": get_test_class(lines, test["pos"]), "scheme": scheme} for test in tests]
+        
+        ext = os.path.splitext(selected_file)[1]
+        is_last_tests = False
+        if len(tests) == 0 or ext != ".swift" or scheme is None:
+            is_last_tests = True
+            tests = get_last_selected_tests()
+            tests = [test.split('/') for test in tests]
+            tests = [{"test": test[2], "class": test[1], "scheme": test[0]} for test in tests]
 
         for test in tests: 
-            populated_test = {"label": f"{test['test']} -> {test['class']} -> {scheme}", "value": f"{scheme}/{test['class']}/{test['test']}"}
+            last_message = "@ " if is_last_tests else ""
+            populated_test = {"label": last_message + f"{test['test']} -> {test['class']} -> {test['scheme']}", "value": f"{test['scheme']}/{test['class']}/{test['test']}"}
             picked_tests = selected_tests(scheme, test["class"])
-            if test["test"] in picked_tests:
+            if test["test"] in picked_tests or is_last_tests:
                 populated_test["picked"] = True
             
             pupulated_tests.append(populated_test)
 
         print(tests)
 
-        ext = os.path.splitext(selected_file)[1]
-        if len(pupulated_tests) == 0 or ext != ".swift" or scheme is None:
+        if len(pupulated_tests) == 0:
             raise "Not valid"
     except:
         pupulated_tests = ["NO VALID TESTS FOR FILE"]

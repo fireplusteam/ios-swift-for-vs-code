@@ -29,12 +29,17 @@ brew install xcbeautify
 # Configure xCode Server to make autocompletion work in Visual Studio
 
 1. Build your project in Xcode.
-2. Download or clone the repository of xcode-build-server -> https://github.com/SolaWing/xcode-build-server. 
+2. Download or clone the repository of xcode-build-server -> https://github.com/SolaWing/xcode-build-server 
 3. Create a link file to xcode-build-server file from the downloaded directory:
 
    In the shell perform the following command:
 ```bash
 ln -s PATH/TO/xcode-build-server /usr/local/bin
+```
+
+   or in one line: 
+```bash
+git clone "https://github.com/SolaWing/xcode-build-server.git" && ln -s "$PWD"/xcode-build-server/xcode-build-server /usr/local/bin
 ```
 
 NOTE: if you want to setup neovim follow this: https://wojciechkulik.pl/ios/how-to-develop-ios-and-macos-apps-in-other-ides-like-neovim-or-vs-code

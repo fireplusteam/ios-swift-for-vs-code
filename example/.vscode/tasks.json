@@ -113,7 +113,10 @@
             "label": "iOS: Tests: Run All",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
-            "args": ["ALL"],
+            "args": [
+                "ALL",
+                "${input:selectDebbuger}"
+            ],
             "group": {
                 "kind": "test",
                 "isDefault": false,
@@ -134,7 +137,8 @@
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": [
                 "CLASS",
-                "${input:myTestsOfCurrentFile}"
+                "${input:myTestsOfCurrentFile}",
+                "${input:selectDebbuger}"
             ],
             "group": {
                 "kind": "test",
@@ -208,6 +212,16 @@
         }
     ],
     "inputs": [
+        {
+            "type": "pickString",
+            "id": "selectDebbuger",
+            "description": "Do you want to attach debugger?",
+            "options": [
+                {"label": "Debug", "value": "DEBUG_LLDB"},
+                {"label": "Run", "value": "RUNNING"}
+            ],
+            "default": "Debug"
+        },
         {
             "id": "myDestinationDevice",
             "type": "command",

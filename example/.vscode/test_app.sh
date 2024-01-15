@@ -30,8 +30,24 @@ VALID_TESTS=1
 #echo "Killing com.apple.CoreSimulator.CoreSimulatorService"
 #killall -9 com.apple.CoreSimulator.CoreSimulatorService
 
+if [ "$2" == "DEBUG_LLDB" ]; then
+
+python3 <<EOF
+import sys
+sys.path.insert(0, '.vscode')
+import helper
+helper.wait_debugger_to_launch()
+EOF
+
+else
+
+# terminate debug session otherwise
+sh .vscode/terminate_current_running_app.sh
+
+fi
+
 if [ "$1" == "ALL" ]; then
-    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | xcbeautify
+    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/build.log' | xcbeautify
 else
     echo "Input: $@"
 
