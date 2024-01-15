@@ -47,7 +47,7 @@ sh .vscode/terminate_current_running_app.sh
 fi
 
 if [ "$1" == "ALL" ]; then
-    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/build.log' | xcbeautify
+    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | xcbeautify
 else
     echo "Input: $@"
 

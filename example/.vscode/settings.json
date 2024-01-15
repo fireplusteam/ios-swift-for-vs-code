@@ -9,4 +9,10 @@
     "showIOSDebugLogs": "Show iOS App Log"
   },
   "debug.saveBeforeStart": "allEditorsInActiveGroup"
+  "debug.saveBeforeStart": "allEditorsInActiveGroup",
+  "files.exclude": {
+    "**/Build/*": true,
+    "**/*.framework/*": true, 
+    "**/*.xcframework/*": true
+  }
 }
