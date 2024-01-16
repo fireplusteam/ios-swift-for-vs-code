@@ -14,5 +14,6 @@
     "**/Build/*": true,
     "**/*.framework/*": true, 
     "**/*.xcframework/*": true
-  }
+  },
+  "search.useIgnoreFiles": false
 }
