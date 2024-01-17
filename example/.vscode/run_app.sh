@@ -2,6 +2,7 @@ source '.vscode/.env'
 
 mkdir -p .logs
 
+rm .logs/app.log
 # clear log files
 echo '' > .logs/app.log
 echo "0" > .logs/log.changed

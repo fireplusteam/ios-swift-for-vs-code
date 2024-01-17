@@ -16,14 +16,18 @@ def print_new_lines():
     global last_known_position
     with open(file_path, 'r') as file:
         file.seek(last_known_position)
-        for line in file:
-            to_track = filter_line(line.strip())
-            if to_track:
-                print(f"{to_track}")
+        try: 
+            for line in file:
+                to_track = filter_line(line.strip())
+                if to_track:
+                    print(f"{to_track}")
 
-            last_known_position += len(line) + 1  # Add 1 for the newline character
+                last_known_position += len(line) + 1  # Add 1 for the newline character
 
-        sys.stdout.flush()
+            sys.stdout.flush()
+        except Exception as e:
+            print(f"Exception reading file: {str(e)}")
+            last_known_position += 1
 
 
 # Watch for changes in the file

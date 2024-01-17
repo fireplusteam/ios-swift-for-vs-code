@@ -3,17 +3,34 @@
   "editor.lineNumbers": "relative",
   "lldb.launch.expressions": "native",
   "cmake.configureOnOpen": false,
-  "iOS_PID": 15196,
+  "iOS_PID": 81001,
   "launches": {
     "startIOSDebuging": "iOS App Debug",
     "showIOSDebugLogs": "Show iOS App Log"
   },
-  "debug.saveBeforeStart": "allEditorsInActiveGroup"
   "debug.saveBeforeStart": "allEditorsInActiveGroup",
   "files.exclude": {
     "**/Build/*": true,
-    "**/*.framework/*": true, 
-    "**/*.xcframework/*": true
+    "**/*.framework/*": true,
+    "**/*.xcframework/*": true,
+    "**/.*": false,
+    "**/.vscode*": false,
+    "**/.bundle*": true,
+    "**/.venv": true
   },
-  "search.useIgnoreFiles": false
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/.logs": true,
+    "**/Build": true,
+    "**/.bundle*": true,
+    "**/*.framework/*": true,
+    "**/*.xcframework/*": true,
+    "**/*.venv": true
+  },
+  "search.useIgnoreFiles": false,
+  "apple-swift-format.configSearchPaths": [
+    "${workspaceFolder}/.vscode/swift-format.json"
+  ]
 }

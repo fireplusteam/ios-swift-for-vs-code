@@ -4,6 +4,8 @@ import os
 import asyncio
 import json
 import helper
+import time
+import threading
 
 device_uuid = sys.argv[1]
 bundle = sys.argv[2]
@@ -13,6 +15,15 @@ print("INPUT", device_uuid, bundle)
 commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
 cwd = os.getcwd()
 
+start_time = time.time()
+
+def session_validation(process):
+    while True:
+        if not helper.is_debug_session_valid(start_time):
+            process.kill()
+            exit()
+        time.sleep(1)
+
 
 async def install_app(command, log_file):
     # wait for debugger
@@ -21,7 +32,8 @@ async def install_app(command, log_file):
     
     # Start the subprocess
     process = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, text=False)
-    print(process)
+    
+    threading.Thread(target=session_validation, args=(process)).start()
 
     await asyncio.sleep(1)
     # Read stdout and stderr concurrently
@@ -39,8 +51,11 @@ async def read_stream(stream, log_file):
         line = await stream.readline()
         if not line:
             break
-        log_file.write(line.decode("utf-8"))
-        log_file.flush()
+        try:
+            log_file.write(line.decode("utf-8"))
+            log_file.flush()
+        except Exception as e:
+            log_file.write(f"Exception while reading app output {str(e)}")
     return None
 
 

@@ -3,6 +3,8 @@ import sys
 import os
 import asyncio
 import json
+import time
+import helper
 
 device_uuid = sys.argv[1]
 bundle = sys.argv[2]
@@ -11,10 +13,14 @@ print("INPUT", device_uuid, bundle)
 commandPID = ["xcrun", "simctl", "spawn", device_uuid, "launchctl", "list"]    
 cwd = os.getcwd()
 
+start_time = time.time()
+
 async def get_app_pid():
     try:
         number_of_tries = 0
         while number_of_tries < 20:
+            if not helper.is_debug_session_valid(start_time):
+                return
             number_of_tries += 1
             result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=10)
             output = result.stdout.splitlines()
