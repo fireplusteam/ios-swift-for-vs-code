@@ -33,20 +33,23 @@
             "program": ".vscode/log.py",
             "stopOnEntry": false,
             "args": [
-                ".logs/app.log",
+                ".logs/app.log"
             ],
             "console": "internalConsole",
             "internalConsoleOptions": "neverOpen",
             "envFile": "${workspaceFolder}/.vscode/.env",
             "cwd": "${workspaceFolder}"
         },
-        { 
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "internalConsole",
-            "args": ["TestVSCode.xcworkspace", "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/TestVSCode/TestVSCodeTests/TestVSCodeTests.swift"],
+            "args": [
+                "TestVSCode.xcworkspace",
+                "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/TestVSCode/TestVSCodeTests/TestVSCodeTests.swift"
+            ],
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.vscode/.env"

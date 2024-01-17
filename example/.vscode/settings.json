@@ -30,8 +30,10 @@
     "**/*.venv": true
   },
   "search.useIgnoreFiles": false,
+  "apple-swift-format.enable": true,
   "apple-swift-format.configSearchPaths": [
     ".vscode/swift-format.json"
   ],
-  "apple-swift-format.enable": true
+  "swiftformat.enable": true,
+  "swiftformat.onlyEnableOnSwiftPMProjects": false,
 }
