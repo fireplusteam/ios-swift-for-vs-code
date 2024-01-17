@@ -14,6 +14,11 @@ export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 rm -r .vscode/.bundle.xcresult
 rm -r .vscode/.bundle
 
+# clear log files
+rm .logs/app.log
+echo '' > .logs/app.log
+echo "0" > .logs/log.changed
+
 VALID_TESTS=1
 
 # uncomment below if you want to reset all cache on simulators
@@ -47,7 +52,7 @@ sh .vscode/terminate_current_running_app.sh
 fi
 
 if [ "$1" == "ALL" ]; then
-    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | xcbeautify
+    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
 else
     echo "Input: $@"
 
@@ -63,11 +68,10 @@ else
     else
         echo "Running tests: $TESTS" 
 
-        xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/tests.log' | xcbeautify
+        xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle -only-testing  "$TESTS" | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
     fi
 fi
 
-sh .vscode/terminate_current_running_app.sh
 
 if [ $VALID_TESTS -eq 1 ]; then
     # Open Results
@@ -87,3 +91,6 @@ if [ $VALID_TESTS -eq 1 ]; then
 
     echo 'Your testing results are in: .logs/tests.log'
 fi
+
+sleep 3
+sh .vscode/terminate_current_running_app.sh
