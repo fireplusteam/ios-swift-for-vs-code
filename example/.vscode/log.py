@@ -13,28 +13,34 @@ def filter_line(line):
 
 
 def print_new_lines():
-    global last_known_position
-    with open(file_path, 'r') as file:
-        file.seek(last_known_position)
-        try: 
-            for line in file:
-                to_track = filter_line(line.strip())
-                if to_track:
-                    print(f"{to_track}")
+    try:
+        global last_known_position
+        with open(file_path, 'r') as file:
+            file.seek(last_known_position)
+            try: 
+                for line in file:
+                    to_track = filter_line(line.strip())
+                    if to_track:
+                        print(f"{to_track}")
 
-                last_known_position += len(line) + 1  # Add 1 for the newline character
+                    last_known_position += len(line) + 1  # Add 1 for the newline character
 
-            sys.stdout.flush()
-        except Exception as e:
-            print(f"Exception reading file: {str(e)}")
-            last_known_position += 1
+                sys.stdout.flush()
+            except Exception as e:
+                print(f"Exception reading file: {str(e)}")
+                last_known_position += 1
+    except: # no such file
+        pass
 
 
 # Watch for changes in the file
 def watch_file(filepath, start_time, on_delete, on_change):
     filedir, filename = os.path.split(filepath)
+    try:
+        stat = os.path.getmtime(filepath)
+    except:
+        stat = time.time()
 
-    stat = os.path.getmtime(filepath)
     while True:
         print_new_lines()
         if not helper.is_debug_session_valid(start_time):

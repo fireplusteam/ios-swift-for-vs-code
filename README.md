@@ -13,9 +13,12 @@
    Python
    Git
    Output Link To File (if you want links to files in output window and terminal)
-   Bracket Pair Color DLW
-   Output Colorizer
-   Vim (if you want powerful editor)
+   Output Colorizer -> https://marketplace.visualstudio.com/items?itemName=IBM.output-colorizer
+   Vim (if you want powerful editor) -> https://marketplace.visualstudio.com/items?itemName=vscodevim.vim
+   Apple Swift Format -> https://marketplace.visualstudio.com/items?itemName=vknabel.vscode-apple-swift-format
+   Syntax Xcode Project Data -> https://marketplace.visualstudio.com/items?itemName=mariomatheu.syntax-project-pbxproj
+   SwiftFormat -> https://marketplace.visualstudio.com/items?itemName=vknabel.vscode-swiftformat
+            brew install swiftformat
    
 # Required Dependencies
 
@@ -144,3 +147,7 @@ Go to settings.json and add:
 If you want the search to be able to work on hidden files in VS Code, you need to set
 
 "search.useIgnoreFiles": false
+
+
+Set to true if you want bracket pair to be highlighted
+Settings > Editor › Guides: Bracket Pairs > set to true or whatever you prefer
