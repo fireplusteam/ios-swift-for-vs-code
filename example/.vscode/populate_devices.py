@@ -29,6 +29,7 @@ if process.returncode != 0:
     exit(1)
 
 output = process.stdout.strip().splitlines()
+#print(output)
 
 devices =[x for x in output if "platform:" in x]
 
@@ -41,10 +42,11 @@ for device_line in devices:
     formatted_value = ""
     isValid = True
     for i in formatted:
-        keyValue = i.split(':')
-        if len(keyValue) != 2:
+        pos = i.find(":")
+        if pos == -1:
             isValid = False
             break
+        keyValue = [i[:pos], i[pos + 1:]]
         if keyValue[0] != "id":
             if len(formatted_key) != 0:
                 formatted_key += ','

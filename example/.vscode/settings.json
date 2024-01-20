@@ -1,6 +1,6 @@
 {
   "vim.autoSwitchInputMethod.enable": false,
-  "editor.lineNumbers": "relative",
+  "vim.smartRelativeLine": true,
   "lldb.launch.expressions": "native",
   "cmake.configureOnOpen": false,
   "iOS_PID": 81001,
