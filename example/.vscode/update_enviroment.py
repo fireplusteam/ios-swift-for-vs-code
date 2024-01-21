@@ -49,7 +49,11 @@ elif type == "-destinationTests":
 
         populate_tests_of_current_file.store_selected_tests(tests)
         
-        result = ','.join(tests)
+        result = ""
+        for test in tests:
+            result += f"-only-testing:{test}"
+            if test != test[-1]:
+                result += " "
     except Exception as e:
         print(str(e))
 
