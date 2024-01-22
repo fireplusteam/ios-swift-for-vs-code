@@ -125,7 +125,7 @@ def create_target(debugger, command, result, internal_dict):
         # Set commong breakpoints, so if tests are running with debuger, so it's catched
         # depracated
         #perform_debugger_command(debugger, "breakpoint set --selector recordFailureWithDescription:inFile:atLine:expected:")
-        perform_debugger_command(debugger, "breakpoint set --name _XCTFailureHandler")
+        #perform_debugger_command(debugger, "breakpoint set --name _XCTFailureHandler")
         
     except Exception as e:
         logMessage(str(e))
