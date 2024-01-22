@@ -43,8 +43,12 @@ elif type == "-destinationTests":
     result = error_message
     try:
         tests = sys.argv[4]
-
-        tests = tests.split()
+        
+        if tests == "CURRENTLY_SELECTED":
+            tests = populate_tests_of_current_file.get_last_selected_tests()
+        else:
+            tests = tests.split()
+        
         print("Tests: " + str(tests))
 
         populate_tests_of_current_file.store_selected_tests(tests)

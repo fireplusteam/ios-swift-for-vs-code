@@ -61,6 +61,27 @@
             "dependsOrder": "sequence"
         },
         {
+            "label": "iOS: Build Tests: Current File",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/build_app.sh",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "args": [
+                "TESTING_ONLY_TESTS",
+                "${input:myTestsOfCurrentFile}"
+            ],
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn":["Store VS Config", "iOS: Validate Enviroment"],
+            "dependsOrder": "sequence"
+        },
+        {
             "label": "Run iOS App",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/run_app.sh",
@@ -137,7 +158,7 @@
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": [
                 "CLASS",
-                "${input:myTestsOfCurrentFile}",
+                "CURRENTLY_SELECTED",
                 "${input:selectDebbuger}"
             ],
             "group": {
@@ -151,7 +172,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["Store VS Config", "iOS: Terminate Current iOS App", "iOS: Build Tests", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Tests: Current File", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
             "dependsOrder": "sequence"
         },
         {

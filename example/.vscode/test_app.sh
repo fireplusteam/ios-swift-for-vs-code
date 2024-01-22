@@ -35,7 +35,8 @@ VALID_TESTS=1
 #echo "Killing com.apple.CoreSimulator.CoreSimulatorService"
 #killall -9 com.apple.CoreSimulator.CoreSimulatorService
 
-if [ "$2" == "DEBUG_LLDB" ]; then
+
+if [ "$3" == "DEBUG_LLDB" ]; then
 
 python3 <<EOF
 import sys
@@ -46,10 +47,12 @@ EOF
 
 else
 
+echo "TERMINATING DEBUG SESSION"
 # terminate debug session otherwise
 sh .vscode/terminate_current_running_app.sh
 
 fi
+
 
 if [ "$1" == "ALL" ]; then
     xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
