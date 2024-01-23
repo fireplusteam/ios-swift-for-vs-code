@@ -101,7 +101,27 @@ def is_build_server_valid():
 
     return True
 
-#-----------------------------------------
+# --------GIT-------------------------------------
+
+def update_git_exlude(file):
+    if not os.path.exists(".git"):
+        return
+    os.makedirs(".git/info", exist_ok=True)
+    content = None
+    try:
+        with open(".git/info/exclude", 'r') as file:
+            content = file.readlines()
+    except: pass
+    
+    if content is None:
+        content = []
+    if len([x for x in content if f"{file}\n" == x]) == 0:
+        content.insert(0, f"{file}\n")
+        with open(".git/info/exclude", "w+") as file:
+            file.write(''.join(content))   
+
+
+#---------DEBUGGER--------------------------------
 debugger_config_file = ".logs/debugger.launching"
 def wait_debugger_to_launch():
     while True:

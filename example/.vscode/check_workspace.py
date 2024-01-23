@@ -3,6 +3,7 @@ import os
 import helper
 import subprocess
 
+
 project_file = sys.argv[1]
 
 os.makedirs('.logs', exist_ok=True)
@@ -38,3 +39,5 @@ if not helper.is_build_server_valid():
     process = subprocess.run(["sh", ".vscode/restart_lsp_swift.sh"], env=env)
 
     print("Build Server is outdated")
+    
+helper.update_git_exlude("buildServer.json")
