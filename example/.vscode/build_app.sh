@@ -46,4 +46,4 @@ else
     exit 1
 fi
 
- python3 .vscode/print_errors.py
+python3 .vscode/print_errors.py

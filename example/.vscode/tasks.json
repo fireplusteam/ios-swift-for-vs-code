@@ -43,6 +43,22 @@
             "dependsOn":["iOS: Validate Enviroment"]
         },
         {
+            "label": "iOS: Build: Current Scheme",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/compile_current_file.sh",
+            "args": [
+                "${file}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOrder": "sequence"
+        },
+        {
             "label": "iOS: Build Tests",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_app.sh",
