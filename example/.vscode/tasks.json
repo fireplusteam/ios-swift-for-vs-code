@@ -9,6 +9,14 @@
     },
     "tasks": [
         {
+            "label": "iOS: Clean Derived Data",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/clean_derived_data.sh",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            }
+        },
+        {
             "label": "iOS: Build Selected Target",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_app.sh",

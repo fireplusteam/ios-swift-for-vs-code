@@ -61,12 +61,21 @@ def get_target_executable_impl(build_path, target):
    return f"{build_path}/Build/Products/Debug-iphonesimulator/{target}.app"
 
 
-def get_target_executable():
+def get_project_config():
     file_path = 'buildServer.json'
-
     with open(file_path, 'r') as file:
-        config = json.load(file)
+       config = json.load(file)
+    return config
 
+
+def get_derived_data_path():
+    config = get_project_config()
+    return config["build_root"]
+
+
+def get_target_executable():
+    config = get_project_config()
+    
     build_root = config["build_root"]
     scheme = config["scheme"]
 
