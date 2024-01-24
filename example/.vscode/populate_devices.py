@@ -14,6 +14,7 @@ import sys
 import subprocess
 import json
 import helper
+from pprint import pprint
 
 project_file = sys.argv[1]
 project_scheme = sys.argv[2]
@@ -46,19 +47,20 @@ for device_line in devices:
         if pos == -1:
             isValid = False
             break
-        keyValue = [i[:pos], i[pos + 1:]]
-        if keyValue[0] != "id":
+        key, value = [i[:pos], i[pos + 1:]]
+        if key != "id":
             if len(formatted_key) != 0:
                 formatted_key += ','
-            formatted_key += keyValue[0] + "=" + keyValue[1]
+            formatted_key += key + "=" + value
 
-        if len(formatted_value) != 0:
+        if key == 'id':
+            if len(formatted_value) != 0:
                 formatted_value += ','
-        formatted_value += keyValue[0] + "=" + keyValue[1]
+            formatted_value += key + "=" + value
 
     if isValid:
-        item = {"label": formatted_key, "value": "|" + formatted_value + "|"}
-        if selected_destination == formatted_value and not is_device_selected:
+        item = {"label": formatted_key, "value": formatted_value}
+        if selected_destination in formatted_value and not is_device_selected:
             is_device_selected = True
             item["picked"] = True
             item["label"] = "$(notebook-state-success) " + formatted_key
