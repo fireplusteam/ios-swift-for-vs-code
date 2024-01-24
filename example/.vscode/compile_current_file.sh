@@ -19,6 +19,8 @@ import helper
 import xcutil
 
 scheme = xcutil.get_scheme_by_file_name("$PROJECT_FILE", "$SELECTED_FILE")
+if scheme is None and ".swift" in "$SELECTED_FILE":
+    scheme = "$PROJECT_SCHEME"
 print(scheme)
 
 EOF
@@ -35,8 +37,8 @@ fi
 
 rm .logs/build.log
 
-echo "Path to the built app: ${SCHEME_VALUE}"
+echo "UPDATING INDEXING FOR: ${SCHEME_VALUE}"
 
-xcodebuild $TYPE $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath "$BUNDLE" build | tee -a '.logs/build.log'
+xcodebuild $TYPE $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath "$BUNDLE" build 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
 
 python3 .vscode/print_errors.py

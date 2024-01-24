@@ -51,7 +51,7 @@
             "dependsOn":["iOS: Validate Enviroment"]
         },
         {
-            "label": "iOS: Build: Current Scheme",
+            "label": "iOS: Build: Update Indexes For Current Module",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/compile_current_file.sh",
             "args": [
