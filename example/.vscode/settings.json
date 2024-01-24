@@ -36,4 +36,9 @@
   ],
   "swiftformat.enable": true,
   "swiftformat.onlyEnableOnSwiftPMProjects": false,
+  "editor.renderLineHighlight": "all",
+  "swift.disableAutoResolve": true,
+  "swift.excludePathsFromPackageDependencies": [
+    "*"
+  ]
 }
