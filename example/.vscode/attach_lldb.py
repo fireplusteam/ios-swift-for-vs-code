@@ -6,8 +6,17 @@ import helper
 import threading
 import sys
 import json
+from app_log import AppLogger
 
 LOG_DEBUG = 1
+
+# GLOBAL
+app_logger = create_app_logger()
+
+log_file = ".logs/lldb.log"
+if LOG_DEBUG != 0:
+    with open(log_file, 'w') as file:
+        file.write("")
 
 def get_list_of_pids(process_name):
     proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
@@ -31,11 +40,6 @@ def get_list_of_pids(process_name):
             result.add(pid)
 
     return result
-
-
-log_file = ".logs/lldb.log"
-with open(log_file, 'w') as file:
-    file.write("")
 
 
 def logMessage(message):
@@ -74,20 +78,19 @@ def wait_for_exit(debugger, start_time):
         time.sleep(0.5)
 
 
-def printer(debugger, *values):
-    for val in values: 
-        perform_debugger_command(debugger, f"app_log \'{val}\'")
+def create_app_logger():
+    list = helper.get_env_list()
+    scheme = list["PROJECT_SCHEME"].strip("\"")
+    app_logger = AppLogger(".logs/app.log", scheme)
+    return app_logger
 
 
 def print_app_log(debugger):
+    global app_logger
     logMessage("Waiting for logs")
-    from app_log import AppLogger
-    
+        
     try:
-        list = helper.get_env_list()
-        scheme = list["PROJECT_SCHEME"].strip("\"")
-        app_log = AppLogger(".logs/app.log", scheme, lambda *values: printer(debugger, values))
-        app_log.watch_app_log()     
+        app_logger.watch_app_log()
     except Exception as e:
         print(f"Printer crashed: {str(e)}")
 
@@ -165,6 +168,7 @@ def create_target(debugger, command, result, internal_dict):
 
 
 def app_log(debugger, command, result, internal_dict):
+    global app_logger
     pass
 
 def terminate_debugger(debugger, command, result, internal_dict):
