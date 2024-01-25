@@ -3,7 +3,6 @@
   "vim.smartRelativeLine": true,
   "lldb.launch.expressions": "native",
   "cmake.configureOnOpen": false,
-  "iOS_PID": 81001,
   "launches": {
     "startIOSDebuging": "iOS App Debug",
     "showIOSDebugLogs": "Show iOS App Log"

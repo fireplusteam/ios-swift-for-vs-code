@@ -49,16 +49,6 @@ async def get_app_pid():
         return None
 
 
-async def updateSetting(pid: int):
-    file_path = '.vscode/settings.json'
-    with open(file_path, 'r') as file:
-        settings = json.load(file)
-
-    settings['iOS_PID'] = pid
-    with open(file_path, 'w') as file:
-        json.dump(settings, file, indent=2)
-
-
 async def main():
     pid = await get_app_pid()
     print("iOS App Running")
@@ -66,7 +56,6 @@ async def main():
     print(f"iOS APP PID: {pid}")
     if pid is None: 
         pid = 0
-    await updateSetting(pid=pid)
 
 
 # Run the event loop

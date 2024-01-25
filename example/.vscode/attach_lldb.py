@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import lldb
 import time
 import subprocess
@@ -5,6 +6,8 @@ import helper
 import threading
 import sys
 import json
+
+LOG_DEBUG = 1
 
 def get_list_of_pids(process_name):
     proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
@@ -36,11 +39,15 @@ with open(log_file, 'w') as file:
 
 
 def logMessage(message):
+    if LOG_DEBUG == 0:
+        return
     with open(log_file, 'a') as file:
         file.write(str(message) + "\n")
 
 
 def perform_debugger_command(debugger, command):
+    if isinstance(debugger, lldb.SBTarget):
+        debugger = debugger.GetDebugger()
     logMessage("Debugger: " + str(debugger))
     logMessage("Command: " + str(command))
     try:
@@ -50,6 +57,7 @@ def perform_debugger_command(debugger, command):
         logMessage("Result Command: " + str(returnObject))
     except Exception as e:
         logMessage("Error executing command:" + str(e))
+
 
 def kill_codelldb(debugger):
     perform_debugger_command(debugger, "target create .vscode/lldb_exe_stub")
@@ -64,7 +72,25 @@ def wait_for_exit(debugger, start_time):
             perform_debugger_command(debugger, "process detach")
             return
         time.sleep(0.5)
-            
+
+
+def printer(debugger, *values):
+    for val in values: 
+        perform_debugger_command(debugger, f"app_log \'{val}\'")
+
+
+def print_app_log(debugger):
+    logMessage("Waiting for logs")
+    from app_log import AppLogger
+    
+    try:
+        list = helper.get_env_list()
+        scheme = list["PROJECT_SCHEME"].strip("\"")
+        app_log = AppLogger(".logs/app.log", scheme, lambda *values: printer(debugger, values))
+        app_log.watch_app_log()     
+    except Exception as e:
+        print(f"Printer crashed: {str(e)}")
+
 
 def wait_for_process(process_name, debugger, existing_pids, start_time):
     logMessage("Start time:" + str(start_time))
@@ -81,11 +107,14 @@ def wait_for_process(process_name, debugger, existing_pids, start_time):
 
             if len(new_list) > 0:
                 threading.Thread(target=wait_for_exit, args=(debugger, start_time)).start()
-
+                
                 pid = new_list.pop()
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
                 perform_debugger_command(debugger, "continue")
+                
+                threading.Thread(target=print_app_log, args=(debugger)).start()
+                                
                 return
 
             time.sleep(0.25)
@@ -126,7 +155,6 @@ def create_target(debugger, command, result, internal_dict):
         perform_debugger_command(debugger, f"target create \"{executable}\"")
         result.AppendMessage(str(debugger.GetSelectedTarget()))
         result.AppendMessage(f"Target created for {executable}")
-        
         # Set commong breakpoints, so if tests are running with debuger, so it's catched
         # depracated
         #perform_debugger_command(debugger, "breakpoint set --selector recordFailureWithDescription:inFile:atLine:expected:")
@@ -136,5 +164,8 @@ def create_target(debugger, command, result, internal_dict):
         logMessage(str(e))
 
 
+def app_log(debugger, command, result, internal_dict):
+    pass
+
 def terminate_debugger(debugger, command, result, internal_dict):
-    pass # TODO
+    perform_debugger_command(debugger, "process detach")

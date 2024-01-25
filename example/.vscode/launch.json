@@ -10,6 +10,8 @@
                 "command script add -f attach_lldb.create_target create_target",
                 "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
+                "command script add -f attach_lldb.app_log app_log",
+
                 "create_target"
             ],
             "processCreateCommands": [
@@ -23,14 +25,14 @@
             "type": "lldb",
             "request": "attach",
             "name": "Attach iOS App To Debugger",
-            "pid": "${config:iOS_PID}",
+            "pid": "${command:pickMyProcess}",
             "stopOnEntry": false
         },
         {
             "name": "Show iOS App Log",
             "type": "python",
             "request": "launch",
-            "program": ".vscode/log.py",
+            "program": ".vscode/app_log.py",
             "stopOnEntry": false,
             "args": [
                 ".logs/app.log"
@@ -53,6 +55,15 @@
             "justMyCode": true,
             "cwd": "${workspaceFolder}",
             "envFile": "${workspaceFolder}/.vscode/.env"
+        },
+        {
+            "name": "Python: Attach",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            }
         }
     ]
 }
