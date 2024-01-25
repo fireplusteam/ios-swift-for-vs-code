@@ -173,7 +173,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Tests", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Tests", "iOS: Start LLDB Debugger iOS App"],
             "dependsOrder": "sequence"
         },
         {
@@ -196,7 +196,7 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Tests: Current File", "iOS: Start LLDB Debugger iOS App", "Start Show Logs"],
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Tests: Current File", "iOS: Start LLDB Debugger iOS App"],
             "dependsOrder": "sequence"
         },
         {
