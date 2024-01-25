@@ -10,6 +10,12 @@ from app_log import AppLogger
 
 LOG_DEBUG = 1
 
+def create_app_logger():
+    list = helper.get_env_list()
+    scheme = list["PROJECT_SCHEME"].strip("\"")
+    app_logger = AppLogger(".logs/app.log", scheme)
+    return app_logger
+
 # GLOBAL
 app_logger = create_app_logger()
 
@@ -76,13 +82,6 @@ def wait_for_exit(debugger, start_time):
             perform_debugger_command(debugger, "process detach")
             return
         time.sleep(0.5)
-
-
-def create_app_logger():
-    list = helper.get_env_list()
-    scheme = list["PROJECT_SCHEME"].strip("\"")
-    app_logger = AppLogger(".logs/app.log", scheme)
-    return app_logger
 
 
 def print_app_log(debugger):
