@@ -13,6 +13,11 @@ echo $DESTINATION
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
 
+if [ "$2" == "-DEVICES" ]; then
+    python3 .vscode/update_enviroment.py "$PROJECT_FILE" -multipleDestinationDevices "$3"
+    DESTINATION="$3"
+fi
+
 # Function to check if a variable is empty and exit with 1
 is_empty() {
     local variable=$1
@@ -24,6 +29,7 @@ is_empty() {
         echo "Good to proceed further"
     fi
 }
+
 
 # GET BUILD PATH
 APP_PATH=$(python3 <<EOF
@@ -38,40 +44,44 @@ echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"
 
-SIMULATOR_UDID=$DEVICE_ID
+for SINGLE_DESTINATION in $DESTINATION
+do
+    SIMULATOR_UDID=${SINGLE_DESTINATION#id=} # Removes prefix id=
 
-echo "UUID of the device:${SIMULATOR_UDID}"
+    echo "UUID of the device:${SIMULATOR_UDID}"
 
-is_empty "$SIMULATOR_UDID"
+    is_empty "$SIMULATOR_UDID"
 
-#xcrun simctl shutdown $SIMULATOR_UDID
+    #xcrun simctl shutdown $SIMULATOR_UDID
 
-echo "Booting $SIMULATOR_UDID"
+    echo "Booting $SIMULATOR_UDID"
 
-# run the simulator
-xcrun simctl boot $SIMULATOR_UDID
+    # run the simulator
+    xcrun simctl boot $SIMULATOR_UDID
 
-open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/
+    open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/
 
-# Wait until the simulator is booted
-while [ "$(xcrun simctl list devices | grep $SIMULATOR_UDID | grep -c 'Booted')" -eq 0 ]; do
+    # Wait until the simulator is booted
+    while [ "$(xcrun simctl list devices | grep $SIMULATOR_UDID | grep -c 'Booted')" -eq 0 ]; do
+        sleep 1
+    done
+
+    sleep 2
+
+    # install on simulator
+    xcrun simctl install $SIMULATOR_UDID $APP_PATH
+
+    # Get PID of run process
+    python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME $1
+
+    # Get Pid Id of the launched iOS App
+    PID=$!
+
     sleep 1
+
+    python3 .vscode/update_debug_launch_settings.py $SIMULATOR_UDID $BUNDLE_APP_NAME 
+
 done
-
-sleep 2
-
-# install on simulator
-xcrun simctl install $SIMULATOR_UDID $APP_PATH
-
-# Get PID of run process
-python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME $1
-
-# Get Pid Id of the launched iOS App
-PID=$!
-
-sleep 1
-
-python3 .vscode/update_debug_launch_settings.py $SIMULATOR_UDID $BUNDLE_APP_NAME 
 
 # if you want to see device log console, but that one you can get via Console App
 #Log Levels:

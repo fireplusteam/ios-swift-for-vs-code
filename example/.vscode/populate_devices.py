@@ -20,7 +20,15 @@ project_file = sys.argv[1]
 project_scheme = sys.argv[2]
 
 selected_destination = sys.argv[3]
-print(selected_destination)
+
+is_multi_selection = sys.argv[4]
+
+print("DEST DEVICES: " + selected_destination)
+
+if is_multi_selection == '-multi':
+    selected_destination = selected_destination.split(' ')
+else:
+    selected_destination = [selected_destination]
 
 command = ["xcodebuild", helper.get_project_type(project_file), project_file, "-scheme", project_scheme, "-showdestinations"]    
 process = subprocess.run(command, capture_output=True, text=True, timeout=5)
@@ -35,7 +43,6 @@ output = process.stdout.strip().splitlines()
 devices =[x for x in output if "platform:" in x]
 
 device_list = []
-is_device_selected = False
 for device_line in devices:
     formatted =  ''.join([' ' if char in "{}" else char for char in device_line]).strip().split(',')
     formatted = [x.strip() for x in formatted]
@@ -60,8 +67,8 @@ for device_line in devices:
 
     if isValid:
         item = {"label": formatted_key, "value": formatted_value}
-        if selected_destination in formatted_value and not is_device_selected:
-            is_device_selected = True
+        selected_list = [x for x in selected_destination if x in formatted_value]
+        if len(selected_list) > 0:
             item["picked"] = True
             item["label"] = "$(notebook-state-success) " + formatted_key
         device_list.append(item)

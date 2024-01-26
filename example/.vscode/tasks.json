@@ -14,7 +14,8 @@
             "command": "${workspaceFolder}/.vscode/clean_derived_data.sh",
             "options": {
                 "cwd": "${workspaceFolder}"
-            }
+            },
+            "group": "build"
         },
         {
             "label": "iOS: Build Selected Target",
@@ -131,6 +132,20 @@
                 "cwd": "${workspaceFolder}"
             },
             "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Selected Target", "iOS: Start LLDB Debugger iOS App"],
+            "dependsOrder": "sequence"
+        },
+        {   // assume that all destination devices have the same architecture so they can launch
+            "label": "iOS: Run on Multiple Devices",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/run_app.sh",
+            "args": ["RUNNING", "-DEVICES", "${input:myMultipleDestinationDevice}"],
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOn":["iOS: Terminate Current iOS App", "iOS: Build Selected Target"],
             "dependsOrder": "sequence"
         },
         { // needed to give a chance to vs code to update it's state
@@ -276,12 +291,40 @@
                 "command": "bash",
                 // a script which prints JSON array to stdout as the last line
                 "args": [
-                    "${workspaceFolder}/.vscode/populate_devices.sh"
+                    "${workspaceFolder}/.vscode/populate_devices.sh",
+                    "-single"
                 ],
                 "envFile": "${workspaceFolder}/.vscode/.env",
                 "cwd": "${workspaceFolder}",
                 // memoize the selection for the future
                 "var": "myDestinationDevice",
+                // map options to values
+                "unwrap": "$[*].value",
+                "serializer": "plain",
+                "quickPickOptions": {
+                    "canPickMany": true, // should be false, but it's not working for some reason
+                    //"ignoreFocusOut": true,
+                    "placeHolder": "Please select Device",
+                    "title": "Device"
+                }
+            }
+        },
+        {
+            "id": "myMultipleDestinationDevice",
+            "type": "command",
+            // first try to read from the disk or select again
+            "command": "dynamic-inputs.write",
+            "args": {
+                "command": "bash",
+                // a script which prints JSON array to stdout as the last line
+                "args": [
+                    "${workspaceFolder}/.vscode/populate_devices.sh",
+                    "-multi"
+                ],
+                "envFile": "${workspaceFolder}/.vscode/.env",
+                "cwd": "${workspaceFolder}",
+                // memoize the selection for the future
+                "var": "myMultipleDestinationDevice",
                 // map options to values
                 "unwrap": "$[*].value",
                 "serializer": "plain",

@@ -26,10 +26,13 @@ class FileLock:
 
 
 def get_env_list():
+    dict = {}
     with FileLock(file_path + '.lock'):
         with open(file_path, 'r') as file:
-            key_value = [line.strip().split('=') for line in file]
-    return dict(key_value)
+            for line in file:
+                pos = line.strip().find("=")
+                dict[line.strip()[:pos]] =  line.strip()[pos + 1:]
+    return dict
 
 
 def safe_env_list(list):
