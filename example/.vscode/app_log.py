@@ -9,6 +9,7 @@ class AppLogger:
         self.project_scheme = project_scheme
         self.last_known_position = 0
         self.printer = printer
+        self.enabled = True
     
     
     def filter_line(self, line):
@@ -22,14 +23,14 @@ class AppLogger:
                     file.seek(self.last_known_position)
                     try: 
                         for line in file:
-                            to_track = self.filter_line(line.strip())
-                            if to_track:
-                                to_track = to_track.splitlines()
-                                for line in to_track:
-                                    self.printer(f"{line}")
+                            if self.enabled:
+                                to_track = self.filter_line(line.strip())
+                                if to_track:
+                                    to_track = to_track.splitlines()
+                                    for line in to_track:
+                                        self.printer(f"{line}")
 
                             self.last_known_position += len(line) + 1  # Add 1 for the newline character
-                            sys.stdout.flush()
                     except Exception as e:
                         self.printer(f"Exception reading file: {str(e)}")
                         self.last_known_position += 1

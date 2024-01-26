@@ -1,5 +1,9 @@
 source '.vscode/.env'
 
+if [ "$2" == "CANCEL" ]; then
+    exit 0
+fi
+
 DESTINATION="id=$DEVICE_ID"
 
 mkdir -p .logs

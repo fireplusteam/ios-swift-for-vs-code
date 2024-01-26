@@ -278,7 +278,8 @@
             "description": "Do you want to attach debugger?",
             "options": [
                 {"label": "Debug", "value": "DEBUG_LLDB"},
-                {"label": "Run", "value": "RUNNING"}
+                {"label": "Run", "value": "RUNNING"},
+                {"label": "Cancel", "value": "CANCEL"}
             ],
             "default": "Debug"
         },

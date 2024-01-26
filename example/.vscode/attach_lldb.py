@@ -168,7 +168,14 @@ def create_target(debugger, command, result, internal_dict):
 
 def app_log(debugger, command, result, internal_dict):
     global app_logger
-    pass
+    if command == "on":
+        app_logger.enabled = True
+        result.AppendMessage("App Logger Turned On")
+    elif command == "off":
+        app_logger.enabled = False
+        result.AppendMessage("App Logger Turned Off")
+    else:
+        result.AppendMessage("Valid value of app_log command is <on/off>")
 
 def terminate_debugger(debugger, command, result, internal_dict):
     perform_debugger_command(debugger, "process detach")
