@@ -10,9 +10,9 @@ schemes = helper.get_schemes(project_file)
 output = []
 for scheme in schemes:
     if scheme == project_scheme:
-        output.append({ "label": "$(notebook-state-success) " + scheme, "value": scheme, "picked": True})
+        output.append("$(notebook-state-success) " + scheme)
     else:
-        output.append({"label": scheme, "value": scheme})
+        output.append(scheme)
 
 output = json.dumps(output)
 

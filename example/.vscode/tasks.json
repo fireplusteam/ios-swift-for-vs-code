@@ -303,7 +303,7 @@
                 "unwrap": "$[*].value",
                 "serializer": "plain",
                 "quickPickOptions": {
-                    "canPickMany": true, // should be false, but it's not working for some reason
+                    "canPickMany": false,
                     //"ignoreFocusOut": true,
                     "placeHolder": "Please select Device",
                     "title": "Device"
@@ -332,8 +332,8 @@
                 "quickPickOptions": {
                     "canPickMany": true, // should be false, but it's not working for some reason
                     //"ignoreFocusOut": true,
-                    "placeHolder": "Please select Device",
-                    "title": "Device"
+                    "placeHolder": "Please select Multiple Devices to Run You App",
+                    "title": "Devices"
                 }
             }
         },
@@ -356,7 +356,7 @@
                 "unwrap": "$[*].value",
                 "serializer": "plain",
                 "quickPickOptions": {
-                    "canPickMany": true, // should be false, but it's not working for some reason
+                    "canPickMany": false,
                     //"ignoreFocusOut": true,
                     "placeHolder": "Please select Scheme",
                     "title": "Scheme"
