@@ -17,21 +17,22 @@ class AppLogger:
 
     def print_new_lines(self):
         try:
-            with open(self.file_path, 'r') as file:
-                file.seek(self.last_known_position)
-                try: 
-                    for line in file:
-                        to_track = self.filter_line(line.strip())
-                        if to_track:
-                            to_track = to_track.splitlines()
-                            for line in to_track:
-                                self.printer(f"{line}")
+            with helper.FileLock(self.file_path + '.lock'):
+                with open(self.file_path, 'r') as file:
+                    file.seek(self.last_known_position)
+                    try: 
+                        for line in file:
+                            to_track = self.filter_line(line.strip())
+                            if to_track:
+                                to_track = to_track.splitlines()
+                                for line in to_track:
+                                    self.printer(f"{line}")
 
-                        self.last_known_position += len(line) + 1  # Add 1 for the newline character
-                        sys.stdout.flush()
-                except Exception as e:
-                    self.printer(f"Exception reading file: {str(e)}")
-                    self.last_known_position += 1
+                            self.last_known_position += len(line) + 1  # Add 1 for the newline character
+                            sys.stdout.flush()
+                    except Exception as e:
+                        self.printer(f"Exception reading file: {str(e)}")
+                        self.last_known_position += 1
         except: # no such file
             pass
 

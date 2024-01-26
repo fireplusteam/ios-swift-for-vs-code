@@ -25,7 +25,7 @@ def session_validation(process):
         time.sleep(1)
 
 
-async def install_app(command, log_file):
+async def install_app(command, log_file_path):
     # wait for debugger
     if debugger_arg == "LLDB_DEBUG":
         helper.wait_debugger_to_launch()
@@ -38,34 +38,35 @@ async def install_app(command, log_file):
     await asyncio.sleep(1)
     # Read stdout and stderr concurrently
     stdout, stderr = await asyncio.gather(
-        read_stream(process.stdout, log_file),
-        read_stream(process.stderr, log_file)
+        read_stream(process.stdout, log_file_path),
+        read_stream(process.stderr, log_file_path)
     )
 
     # Wait for the process to complete
     return await process.wait(), stdout, stderr
 
 
-async def read_stream(stream, log_file):
+async def read_stream(stream, log_file_path):
     while True:
         line = await stream.readline()
         if not line:
             break
         try:
-            log_file.write(line.decode("utf-8"))
-            log_file.flush()
+            with helper.FileLock(log_file_path + ".lock"):
+                with open(log_file_path, "a+") as file:
+                    file.write(line.decode("utf-8"))
+                    file.flush()
         except Exception as e:
-            log_file.write(f"Exception while reading app output {str(e)}")
+            pass
     return None
 
 
 async def main():
     # Run the command asynchronously
-    with open(".logs/app.log", 'w') as log_file:
-        return_code, stdout_output, stderr_output = await install_app(commandLaunch, log_file)
+    return_code, stdout_output, stderr_output = await install_app(commandLaunch, ".logs/app.log")
 
-        # Print or process the output as needed
-        print(f"iOS App Finished with {return_code}")
+    # Print or process the output as needed
+    print(f"iOS App Finished with {return_code}")
 
 
 # Run the event loop

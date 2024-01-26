@@ -6,17 +6,37 @@ import sys
 
 file_path = '.vscode/.env'
 
+class FileLock:
+    def __init__(self, file_name):
+        self.lock_file = f"{file_name}.lock"
+
+    def __enter__(self):
+        while True:
+            try:
+                # If the lock file can be created, it means there's no other one existing
+                self.fd = os.open(self.lock_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+                break;
+            except FileExistsError:
+                # If the creation fails because the file already exists the file is locked by another process
+                time.sleep(0.1)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.close(self.fd)
+        os.remove(self.lock_file)
+
 
 def get_env_list():
-    with open(file_path, 'r') as file:
-        key_value = [line.strip().split('=') for line in file]
+    with FileLock(file_path + '.lock'):
+        with open(file_path, 'r') as file:
+            key_value = [line.strip().split('=') for line in file]
     return dict(key_value)
 
 
 def safe_env_list(list):
-    with open(file_path, 'w') as file:
-        for key, value in list.items():
-            file.write(key + "=" + value + "\n")
+    with FileLock(file_path + '.lock'):
+        with open(file_path, 'w') as file:
+            for key, value in list.items():
+                file.write(key + "=" + value + "\n")
 
 
 def get_project_type(project_file):
@@ -134,8 +154,9 @@ def update_git_exlude(file):
 debugger_config_file = ".logs/debugger.launching"
 def wait_debugger_to_launch():
     while True:
-        with open(debugger_config_file, 'r') as file:
-            config = json.load(file)
+        with FileLock(debugger_config_file + '.lock'):
+            with open(debugger_config_file, 'r') as file:
+                config = json.load(file)
 
         if config is not None and config["status"] == "launched":
             break
@@ -144,8 +165,9 @@ def wait_debugger_to_launch():
 
 def is_debug_session_valid(start_time) -> bool:
     try:
-        with open(debugger_config_file, 'r') as file:
-            config = json.load(file)
+        with FileLock(debugger_config_file + '.lock'):
+            with open(debugger_config_file, 'r') as file:
+                config = json.load(file)
         if config["sessionEndTime"] >= start_time:
             return False
         return True
@@ -158,13 +180,15 @@ def update_debug_session_time():
 def update_debugger_launch_config(key, value):
     config = {}
     if os.path.exists(debugger_config_file):
-        with open(debugger_config_file, "r+") as file:
-            config = json.load(file)
+        with FileLock(debugger_config_file + '.lock'):
+            with open(debugger_config_file, "r+") as file:
+                config = json.load(file)
     
     config[key] = value
     
-    with open(debugger_config_file, "w+") as file:
-        json.dump(config, file, indent=2)
+    with FileLock(debugger_config_file + '.lock'):
+        with open(debugger_config_file, "w+") as file:
+            json.dump(config, file, indent=2)
 
 if __name__ == "__main__":
     print("ok")
