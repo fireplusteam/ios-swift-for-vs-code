@@ -23,7 +23,10 @@ class Color:
 error_pattern = "error:"
 end_error_pattern = "^"
 
+number_of_errors = 0
+
 def filter_lines(lines):
+    global number_of_errors
     filtered = []
     is_inside_error = False
     added_followup_lines = 0
@@ -39,13 +42,14 @@ def filter_lines(lines):
         if error_pattern in line:
             if len(line.strip()) > 0:
                 filtered.append("❌ " + line.strip())
+            number_of_errors += 1
             is_inside_error = True
             added_followup_lines = 0
     return filtered
 
 lines = filter_lines(lines)
 
-output = f"{Color.FAIL}LIST OF ERRORS: {Color.ENDC}\n"
+output = f"{Color.FAIL}LIST OF ERRORS: {number_of_errors}{Color.ENDC}\n"
 pure_output = "LIST OF ERRORS:\n"
 for line in lines:
     i = 0

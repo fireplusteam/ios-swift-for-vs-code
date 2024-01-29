@@ -2,6 +2,8 @@ source '.vscode/.env'
 
 DESTINATION="id=$DEVICE_ID"
 
+export continueBuildingAfterErrors=True
+
 mkdir -p .logs
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
