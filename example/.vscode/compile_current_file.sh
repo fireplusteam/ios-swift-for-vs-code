@@ -40,6 +40,7 @@ rm .logs/build.log
 echo "UPDATING INDEXING FOR: ${SCHEME_VALUE}"
 
 export continueBuildingAfterErrors=True
+export BUILD_XCODE_SINGLE_FILE_PATH="$SELECTED_FILE"
 
 xcodebuild $TYPE $PROJECT_FILE -scheme $SCHEME -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath "$BUNDLE" build 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
 

@@ -52,7 +52,7 @@
             "dependsOn":["iOS: Validate Enviroment"]
         },
         {
-            "label": "iOS: Build: Update Indexes For Current Module",
+            "label": "iOS: Build: Current File",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/compile_current_file.sh",
             "args": [
@@ -232,7 +232,7 @@
             ]
         },
         {
-            "label": "iOS: Select Destination Device",
+            "label": "iOS: Select DEBUG Destination Device",
             "type": "shell",
             "command": ".vscode/update_enviroment.sh",
             "args": [
@@ -305,7 +305,7 @@
                 "quickPickOptions": {
                     "canPickMany": false,
                     //"ignoreFocusOut": true,
-                    "placeHolder": "Please select Device",
+                    "placeHolder": "Please select Device for DEBUG",
                     "title": "Device"
                 }
             }
@@ -358,8 +358,8 @@
                 "quickPickOptions": {
                     "canPickMany": false,
                     //"ignoreFocusOut": true,
-                    "placeHolder": "Please select Scheme",
-                    "title": "Scheme"
+                    "placeHolder": "Please select Target",
+                    "title": "Target"
                 }
             }
         },
