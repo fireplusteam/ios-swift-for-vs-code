@@ -42,7 +42,7 @@ if [ "$SCHEME_VALUE" == "None" ]; then
 else
     echo "Scheme found!"
     # file is in project, update single file
-    #export BUILD_XCODE_SINGLE_FILE_PATH="$SELECTED_FILE"
+    export BUILD_XCODE_SINGLE_FILE_PATH="$SELECTED_FILE"
 fi
 
 rm .logs/build.log
