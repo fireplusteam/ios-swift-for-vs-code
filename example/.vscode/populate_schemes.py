@@ -10,7 +10,7 @@ schemes = helper.get_schemes(project_file)
 output = []
 for scheme in schemes:
     if scheme == project_scheme:
-        output.append("$(notebook-state-success) " + scheme)
+        output.append({"label": "$(notebook-state-success) " + scheme, "value": scheme})
     else:
         output.append(scheme)
 

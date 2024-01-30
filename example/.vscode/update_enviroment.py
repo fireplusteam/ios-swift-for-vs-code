@@ -11,13 +11,6 @@ env_list = helper.get_env_list()
 print(env_list)
 
 
-def label_value(value):
-    picked_prefix = "$(notebook-state-success) "
-    if value.startswith(picked_prefix):
-        value = value[len(picked_prefix):]
-    return value
-
-
 if type == "-multipleDestinationDevices":
     print("update multiple destination device")
     
@@ -30,20 +23,9 @@ if type == "-multipleDestinationDevices":
 elif type == "-destinationDevice":
     print("update destination device")
 
-    device = label_value(sys.argv[3])
+    device = sys.argv[3]
     
-    cache_file = ".cache/populated_devices.json"
-    with helper.FileLock(cache_file + '.lock'):
-        with open(cache_file, "r") as file:
-            config = json.load(file)
-    
-    for device_config in config:
-        label = label_value(device_config["label"])
-        if label == device:
-            device = device_config["value"]
-
     print(f"new selected device: {device}")
-    
     key, value = device.split('=')
     if key == "id":
         key = "DEVICE_ID"
@@ -54,7 +36,7 @@ elif type == "-destinationDevice":
     
     helper.safe_env_list(env_list)
 elif type == "-destinationScheme":
-    scheme = label_value(sys.argv[3])
+    scheme = sys.argv[3]
     print("Selected Target: " + scheme)
     helper.update_scheme(project_file, scheme)
 

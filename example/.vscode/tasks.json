@@ -300,7 +300,7 @@
                 // memoize the selection for the future
                 "var": "myDestinationDevice",
                 // map options to values
-                "unwrap": "$[*].value",
+                "unwrap": "$.value",
                 "serializer": "plain",
                 "quickPickOptions": {
                     "canPickMany": false,
@@ -353,7 +353,7 @@
                 // memoize the selection for the future
                 "var": "myDestinationScheme",
                 // map options to values
-                "unwrap": "$[*].value",
+                "unwrap": "$.value",
                 "serializer": "plain",
                 "quickPickOptions": {
                     "canPickMany": false,

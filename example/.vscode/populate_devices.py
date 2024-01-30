@@ -44,7 +44,6 @@ output = process.stdout.strip().splitlines()
 devices =[x for x in output if "platform:" in x]
 
 device_list_multi = []
-device_list = []
 for device_line in devices:
     formatted =  ''.join([' ' if char in "{}" else char for char in device_line]).strip().split(',')
     formatted = [x.strip() for x in formatted]
@@ -71,26 +70,15 @@ for device_line in devices:
         selected_list = [x for x in selected_destination if x in formatted_value]
         item_multi = {"label": formatted_key, "value": formatted_value}
         if len(selected_list) > 0:
-            item_multi["picked"] = True
+            if is_multi_selection == '-multi':
+                item_multi["picked"] = True    
             item_multi["label"] = "$(notebook-state-success) " + formatted_key
         
-        item = formatted_key 
-        if len(selected_list) > 0:
-            item = "$(notebook-state-success) " + formatted_key
-                 
+
         device_list_multi.append(item_multi)
-        device_list.append(item)
 
 
-if is_multi_selection == '-multi':
-    formattedJson = json.dumps(device_list_multi)
-else:
-    formattedJson = json.dumps(device_list)
-    cache_file = ".cache/populated_devices.json"
-    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-    with helper.FileLock(cache_file + '.lock'):
-        with open(cache_file, "w+") as file:
-            json.dump(device_list_multi, file, indent="\t")
+formattedJson = json.dumps(device_list_multi)
 
 print(formattedJson)
 # to test
