@@ -269,6 +269,18 @@
             "args": [
                 "${file}"
             ]
+        },
+        {
+            "label": "iOS: Print Last Compile Errors",
+            "type": "shell",
+            "command": "python3",
+            "args": [".vscode/print_errors.py"]
+        },
+        {
+            "label": "iOS: Print Last Test Errors",
+            "type": "shell",
+            "command": "python3",
+            "args": [".vscode/print_errors.py", ".logs/tests.logs"]
         }
     ],
     "inputs": [
