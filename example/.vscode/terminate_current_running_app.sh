@@ -1,3 +1,4 @@
+#!/bin/bash
 source '.vscode/.env'
 
 # Stop previously running app

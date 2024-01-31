@@ -1,3 +1,4 @@
+#!/bin/bash
 source '.vscode/.env'
 
 DESTINATION="id=$DEVICE_ID"
@@ -26,15 +27,12 @@ EOF
 
 SCHEME=$(echo "$SCHEME_SCRIPT" | tail -n 1)
 
-SCHEME_VALUE=$(echo "$SCHEME")
-
 export continueBuildingAfterErrors=True
 
-
-if [ "$SCHEME_VALUE" == "None" ]; then
+if [ "$SCHEME" == "None" ]; then
     if [[ "$SELECTED_FILE" == *.swift ]]; then
         echo "File is not found in target, main target is building instead"
-        SCHEME_VALUE=$PROJECT_SCHEME
+        SCHEME=$PROJECT_SCHEME
     else
         echo "No scheme is found for file: $SELECTED_FILE"
         exit 0
@@ -49,6 +47,7 @@ rm .logs/build.log
 
 echo "UPDATING INDEXING FOR: ${SCHEME_VALUE}, file: $SELECTED_FILE"
 
-xcodebuild $TYPE $PROJECT_FILE -scheme $SCHEME_VALUE -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath "$BUNDLE" build 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
+
+xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath "$BUNDLE" build 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
 
 python3 .vscode/print_errors.py

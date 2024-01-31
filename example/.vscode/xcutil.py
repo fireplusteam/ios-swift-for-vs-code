@@ -147,29 +147,35 @@ def get_scheme_by_file_name(project_file, file):
 
 # PARSE
 
+token = set()
+
 def find_key(project_file, md5_pattern):
     
     def check(value_to_check):
-        md5 = hashlib.md5((value_to_check+ "Debug").encode()).hexdigest()
+        md5 = hashlib.md5((value_to_check).encode()).hexdigest()
         if md5 == md5_pattern:
             raise Exception(value_to_check)
+        else:
+            token.add(value_to_check)
+            
+    def rec_check(u):
+        if isinstance(u, list):
+            for x in u:
+                rec_check(x)
+        if isinstance(u, dict):
+            for key, value in u.items():
+                check(key)
+                rec_check(u[key])
+        if isinstance(u, str):
+            check(u)
     
     project_files = XCWorkspaceUtil(project_file).project_files()
     
     for project in project_files:
         project_util = XCProjectUtil(project)
-        for obj in project_util.objects:
-            
-            def rec_check(u):
-                if isinstance(u, list):
-                    for x in u:
-                        rec_check(x)
-                if isinstance(u, dict):
-                    for key, value in u.items():
-                        check(key)
-                        rec_check(u[key])
-                if isinstance(u, str):
-                    check(u)
+        rec_check(project_util.rootObject)
+        for key, obj in project_util.objects.items():
+            rec_check(key)
             rec_check(obj)
                         
 

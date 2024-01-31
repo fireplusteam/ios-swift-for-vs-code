@@ -1,3 +1,5 @@
+#!/bin/bash
+
 source '.vscode/.env'
 source '.vscode/.vs_env'
 

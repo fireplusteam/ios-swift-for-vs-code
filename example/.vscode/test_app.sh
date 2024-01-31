@@ -1,3 +1,5 @@
+#!/bin/bash
+
 source '.vscode/.env'
 
 if [ "$2" == "CANCEL" ]; then
@@ -59,23 +61,22 @@ fi
 
 
 if [ "$1" == "ALL" ]; then
-    xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
+    xcodebuild test-without-building "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
 else
-    echo "Input: $@"
+    echo "Input: '$*'"
 
     # get last line of output
     TESTS_SCRIPT=$(.vscode/update_enviroment.sh "-destinationTests" "$@" | tail -n 1)
-    TESTS_LINE=$(echo "$TESTS_SCRIPT")
 
-    TESTS="$TESTS_LINE"
+    TESTS="$TESTS_SCRIPT"
 
-    if [ $TESTS == "Not_defined" ]; then
+    if [ "$TESTS" == "Not_defined" ]; then
         echo "Tests are not defined for the given file"
         VALID_TESTS=0
     else
         echo "Running tests: $TESTS" 
         
-        xcodebuild test-without-building $TYPE $PROJECT_FILE -scheme $PROJECT_SCHEME -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle $TESTS | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
+        xcodebuild test-without-building "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle "$TESTS" | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
     fi
 fi
 

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 source '.vscode/.env'
 
 mkdir -p .logs
@@ -9,9 +11,7 @@ echo "0" > .logs/log.changed
 
 DESTINATION="id=$DEVICE_ID"
 
-echo $DESTINATION
-
-TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
+echo "$DESTINATION"
 
 if [ "$2" == "-DEVICES" ]; then
     python3 .vscode/update_enviroment.py "$PROJECT_FILE" -multipleDestinationDevices "$3"
@@ -57,29 +57,26 @@ do
     echo "Booting $SIMULATOR_UDID"
 
     # run the simulator
-    xcrun simctl boot $SIMULATOR_UDID
+    xcrun simctl boot "$SIMULATOR_UDID"
 
     open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/
 
     # Wait until the simulator is booted
-    while [ "$(xcrun simctl list devices | grep $SIMULATOR_UDID | grep -c 'Booted')" -eq 0 ]; do
+    while [ "$(xcrun simctl list devices | grep "$SIMULATOR_UDID" | grep -c 'Booted')" -eq 0 ]; do
         sleep 1
     done
 
     sleep 2
 
     # install on simulator
-    xcrun simctl install $SIMULATOR_UDID $APP_PATH
+    xcrun simctl install "$SIMULATOR_UDID" "$APP_PATH"
 
     # Get PID of run process
-    python3 .vscode/async_launcher.py .vscode/launch.py $SIMULATOR_UDID $BUNDLE_APP_NAME $1
-
-    # Get Pid Id of the launched iOS App
-    PID=$!
+    python3 .vscode/async_launcher.py .vscode/launch.py "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
 
     sleep 1
 
-    python3 .vscode/update_debug_launch_settings.py $SIMULATOR_UDID $BUNDLE_APP_NAME 
+    python3 .vscode/update_debug_launch_settings.py "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" 
 
 done
 
@@ -87,5 +84,3 @@ done
 #Log Levels:
 #default | info | debug
 #xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .logs/app.log 2>&1
-
-#wait $PID

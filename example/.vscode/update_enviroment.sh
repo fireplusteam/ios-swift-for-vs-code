@@ -1,5 +1,7 @@
+#!/bin/bash
+
 source '.vscode/.env'
 
-echo "INPUT: $@"
+echo "INPUT: $*"
 
 python3 .vscode/update_enviroment.py "$PROJECT_FILE" "$@"

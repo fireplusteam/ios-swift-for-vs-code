@@ -1,3 +1,4 @@
+#!/bin/bash
 
 PATH_SCRIPT=$(python3 <<EOF
 import sys
