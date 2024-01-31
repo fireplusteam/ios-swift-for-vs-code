@@ -20,7 +20,11 @@ class AppLogger:
         try:
             with helper.FileLock(self.file_path + '.lock'):
                 with open(self.file_path, 'r') as file:
-                    file.seek(self.last_known_position)
+                    file_size = os.path.getsize(self.file_path)
+                    
+                    if self.last_known_position < file_size:
+                        file.seek(self.last_known_position)
+
                     try: 
                         for line in file:
                             if self.enabled:

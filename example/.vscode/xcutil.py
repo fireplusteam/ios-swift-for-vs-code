@@ -3,6 +3,7 @@ import json
 import xml.etree.ElementTree as ET
 import os
 import sys
+import hashlib
 
 from pprint import pprint
 
@@ -145,6 +146,32 @@ def get_scheme_by_file_name(project_file, file):
     return None
 
 # PARSE
+
+def find_key(project_file, md5_pattern):
+    
+    def check(value_to_check):
+        md5 = hashlib.md5((value_to_check+ "Debug").encode()).hexdigest()
+        if md5 == md5_pattern:
+            raise Exception(value_to_check)
+    
+    project_files = XCWorkspaceUtil(project_file).project_files()
+    
+    for project in project_files:
+        project_util = XCProjectUtil(project)
+        for obj in project_util.objects:
+            
+            def rec_check(u):
+                if isinstance(u, list):
+                    for x in u:
+                        rec_check(x)
+                if isinstance(u, dict):
+                    for key, value in u.items():
+                        check(key)
+                        rec_check(u[key])
+                if isinstance(u, str):
+                    check(u)
+            rec_check(obj)
+                        
 
 if __name__ == "__main__":
     #project_file = os.getenv("PROJECT_FILE")
