@@ -47,7 +47,7 @@ device_list_multi = []
 for device_line in devices:
     formatted =  ''.join([' ' if char in "{}" else char for char in device_line]).strip().split(',')
     formatted = [x.strip() for x in formatted]
-    formatted_key = ""
+    formatted_key = {}
     formatted_value = ""
     isValid = True
     for i in formatted:
@@ -56,10 +56,8 @@ for device_line in devices:
             isValid = False
             break
         key, value = [i[:pos], i[pos + 1:]]
-        if key != "id":
-            if len(formatted_key) != 0:
-                formatted_key += ','
-            formatted_key += key + "=" + value
+        if key == "OS" or key == "name":
+            formatted_key[key] =  value
 
         if key == 'id':
             if len(formatted_value) != 0:
@@ -68,6 +66,12 @@ for device_line in devices:
 
     if isValid:
         selected_list = [x for x in selected_destination if x in formatted_value]
+        
+        if "OS" in formatted_key and "name" in formatted_key:
+            formatted_key = f"{formatted_key['name']} - iOS {formatted_key['OS']}"
+        else:
+            formatted_key = formatted_key["name"]
+        
         item_multi = {"label": formatted_key, "value": formatted_value}
         if len(selected_list) > 0:
             if is_multi_selection == '-multi':
