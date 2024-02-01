@@ -1,3 +1,4 @@
+#!/bin/bash
 source '.vscode/.env'
 
 DESTINATION="id=$DEVICE_ID"
@@ -12,8 +13,9 @@ rm .logs/build.log
 rm -r .vscode/.bundle;
 
 if [ "$1" == "ALL" ] || [ "$1" == "TARGET" ]; then
-    echo "dfs"
+    set -o pipefail
     xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle | tee -a '.logs/build.log' | xcbeautify
+    COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
 fi
 
 if [ "$1" == "TESTING_ONLY_TESTS" ]; then
@@ -28,20 +30,22 @@ if [ "$1" == "TESTING_ONLY_TESTS" ]; then
         echo -e "${RED}Tests are not defined for the given file${NC}"
         exit 1  
     else
-        echo "Builing for tests: $TESTS" 
-        
+        echo "Builing for tests: $TESTS"
+
+        set -o pipefail
         xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle "$TESTS" build-for-testing | tee -a '.logs/build.log' | xcbeautify
+        COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
     fi
 fi
 
 if [ "$1" == "ALL" ] || [ "$1" == "TESTING" ]; then
+    set -o pipefail
     xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle build-for-testing | tee -a '.logs/build.log' | xcbeautify
+    COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
 fi
 
 # Check the exit status
-if [ $? -eq 0 ]; then
-    echo "Ok"
-else
+if [ "${COMMAND_EXIT_STATUS}" -ne 0 ]; then
     python3 .vscode/print_errors.py
     echo "Build failed."
     exit 1
