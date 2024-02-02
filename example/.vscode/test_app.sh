@@ -76,7 +76,7 @@ else
     else
         echo "Running tests: $TESTS" 
         
-        xcodebuild test-without-building "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle "$TESTS" | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
+        xcodebuild test-without-building "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle $TESTS | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
     fi
 fi
 

@@ -33,7 +33,7 @@ if [ "$1" == "TESTING_ONLY_TESTS" ]; then
         echo "Builing for tests: $TESTS"
 
         set -o pipefail
-        xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle "$TESTS" build-for-testing | tee -a '.logs/build.log' | xcbeautify
+        xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle $TESTS build-for-testing | tee -a '.logs/build.log' | xcbeautify
         COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
     fi
 fi

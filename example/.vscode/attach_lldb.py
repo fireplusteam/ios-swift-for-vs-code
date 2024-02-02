@@ -119,7 +119,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time):
                                 
                 return
 
-            time.sleep(0.25)
+            time.sleep(0.1)
     except Exception as e:
         logMessage(str(e))
 
