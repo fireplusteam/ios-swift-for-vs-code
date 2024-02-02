@@ -27,23 +27,31 @@ number_of_errors = 0
 
 def filter_lines(lines):
     global number_of_errors
+    global file_path
     filtered = []
     is_inside_error = False
     added_followup_lines = 0
-    for line in lines:
+    log_pos = -1
+    for indx, line in enumerate(lines):
         if is_inside_error:
             if end_error_pattern in line:
                 is_inside_error = False
-                filtered.append("\t" + line.rstrip())
-            elif len(line.strip()) > 0 and added_followup_lines < 1:
+                error_line = "\t" + line.rstrip()
+                error_line += f"\t->\t{file_path}:{log_pos + 1}"
+                filtered.append(error_line)
+            elif len(line.strip()) > 0 and added_followup_lines < 2:
                 added_followup_lines += 1
-                filtered.append("\t" + line.rstrip())
+                error_line = "\t" + line.rstrip()
+                if added_followup_lines > 1:
+                    error_line += f"\t->\t{file_path}:{log_pos + 1}"
+                filtered.append(error_line)
 
         if error_pattern in line:
             if len(line.strip()) > 0:
                 filtered.append("❌ " + line.strip())
             number_of_errors += 1
             is_inside_error = True
+            log_pos = indx
             added_followup_lines = 0
     return filtered
 
