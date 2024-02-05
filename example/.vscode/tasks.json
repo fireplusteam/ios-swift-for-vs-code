@@ -68,6 +68,18 @@
             "dependsOrder": "sequence"
         },
         {
+            "label": "iOS: Name Of Module By Current File",
+            "type": "shell",
+            "command": "${workspaceFolder}/.vscode/module_name_by_file.sh",
+            "args": [
+                "${file}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "dependsOrder": "sequence"
+        },
+        {
             "label": "iOS: Build Tests",
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/build_app.sh",
