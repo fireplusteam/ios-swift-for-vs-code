@@ -35,6 +35,9 @@
   ],
   "swiftformat.enable": true,
   "swiftformat.onlyEnableOnSwiftPMProjects": false,
+  "swiftformat.configSearchPaths": [
+    ".vscode/.swiftformat.config"
+  ],
   "editor.renderLineHighlight": "all",
   "swift.disableAutoResolve": true,
   "swift.excludePathsFromPackageDependencies": [
