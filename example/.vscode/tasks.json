@@ -25,7 +25,7 @@
                 "kind": "build",
                 "isDefault": false
             },
-            "args": ["TARGET"],
+            "args": ["-TARGET"],
             "presentation": {
                 "clear": true
             },
@@ -42,7 +42,7 @@
                 "kind": "build",
                 "isDefault": false
             },
-            "args": ["ALL"],
+            "args": ["-ALL"],
             "presentation": {
                 "clear": true
             },
@@ -87,7 +87,7 @@
                 "kind": "build",
                 "isDefault": false
             },
-            "args": ["TESTING"],
+            "args": ["-TESTING"],
             "presentation": {
                 "clear": true
             },
@@ -106,7 +106,7 @@
                 "isDefault": false
             },
             "args": [
-                "TESTING_ONLY_TESTS",
+                "-TESTING_ONLY_TESTS",
                 "${input:myTestsOfCurrentFile}"
             ],
             "presentation": {
@@ -186,8 +186,8 @@
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": [
-                "ALL",
-                "${input:selectDebbuger}"
+                "${input:selectDebbuger}",
+                "-ALL"
             ],
             "group": {
                 "kind": "test",
@@ -208,9 +208,9 @@
             "type": "shell",
             "command": "${workspaceFolder}/.vscode/test_app.sh",
             "args": [
-                "CLASS",
-                "CURRENTLY_SELECTED",
-                "${input:selectDebbuger}"
+                "${input:selectDebbuger}",
+                "-CLASS",
+                "CURRENTLY_SELECTED"
             ],
             "group": {
                 "kind": "test",
@@ -407,7 +407,7 @@
                 "serializer": "plain",
                 "quickPickOptions": {
                     "canPickMany": true, // should be false, but it's not working for some reason
-                    //"ignoreFocusOut": true,
+                    "ignoreFocusOut": true,
                     "placeHolder": "Please select Tests",
                     "title": "Tests"
                 }

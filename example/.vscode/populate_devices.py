@@ -31,7 +31,9 @@ if is_multi_selection == '-multi':
 else:
     selected_destination = [selected_destination]
 
-command = ["xcodebuild", helper.get_project_type(project_file), project_file, "-scheme", project_scheme, "-showdestinations"]    
+command = ["xcodebuild", "-scheme", project_scheme, "-showdestinations"]    
+if "-package" != helper.get_project_type(project_file):
+    command.extend([helper.get_project_type(project_file), project_file])
 process = subprocess.run(command, capture_output=True, text=True, timeout=5)
 
 if process.returncode != 0:
@@ -69,8 +71,10 @@ for device_line in devices:
         
         if "OS" in formatted_key and "name" in formatted_key:
             formatted_key = f"{formatted_key['name']} - iOS {formatted_key['OS']}"
-        else:
+        elif "name" in formatted_key:
             formatted_key = formatted_key["name"]
+        else:
+            continue
         
         item_multi = {"label": formatted_key, "value": formatted_value}
         if len(selected_list) > 0:

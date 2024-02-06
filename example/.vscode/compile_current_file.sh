@@ -1,15 +1,11 @@
 #!/bin/bash
 source '.vscode/.env'
-
-DESTINATION="id=$DEVICE_ID"
+source '.vscode/xcode_build_util.sh'
 
 mkdir -p .logs
 
-TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
-
-BUNDLE=".vscode/.bundle"
-
-rm -r "$BUNDLE"
+rm .logs/build.log
+rm -r .vscode/.bundle;
 
 SELECTED_FILE=$1
 
@@ -47,7 +43,8 @@ rm .logs/build.log
 
 echo "UPDATING INDEXING FOR: ${SCHEME_VALUE}, file: $SELECTED_FILE"
 
-
-xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath "$BUNDLE" build 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
+XCODECMD="xcodebuild -scheme \"$SCHEME\" $XCODECMD"
+echo "Base XCODECMD: $XCODECMD"
+eval "$XCODECMD build" 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
 
 python3 .vscode/print_errors.py

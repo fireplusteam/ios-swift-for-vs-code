@@ -97,7 +97,7 @@ def print_app_log(debugger):
 def wait_for_process(process_name, debugger, existing_pids, start_time):
     logMessage("Start time:" + str(start_time))
     try:
-        logMessage("Waiting for process:")
+        logMessage(f"Waiting for process: {process_name}")
         while True:
             
             if not helper.is_debug_session_valid(start_time):
@@ -125,15 +125,22 @@ def wait_for_process(process_name, debugger, existing_pids, start_time):
 
 start_time = time.time()
 
+
+def get_process_name():
+    list = helper.get_env_list()
+    if "-package" == helper.get_project_type(list["PROJECT_FILE"]):
+        process_name = "xctest"
+    else:
+        process_name = list["PROJECT_SCHEME"].strip("\"")
+        process_name = f"{process_name}.app/{process_name}"
+    return process_name
+
+
 def watch_new_process(debugger, command, result, internal_dict):
     logMessage("Debugger: " + str(debugger))
     global existing_pids
-
-    list = helper.get_env_list()
-    process_name = list["PROJECT_SCHEME"].strip("\"")
-    process_name = f"{process_name}.app/{process_name}"
-
-    thread = threading.Thread(target=wait_for_process, args=(process_name, debugger, existing_pids, start_time))   
+    
+    thread = threading.Thread(target=wait_for_process, args=(get_process_name(), debugger, existing_pids, start_time))   
     thread.start()
     helper.update_debugger_launch_config("status", "launched")
 
@@ -147,12 +154,12 @@ def create_target(debugger, command, result, internal_dict):
         list = helper.get_env_list()
         result.AppendMessage(f"Enviroment: {list}")
 
-        process_name = list["PROJECT_SCHEME"].strip("\"")
-        process_name = f"{process_name}.app/{process_name}"
+        process_name = get_process_name()
         existing_pids = get_list_of_pids(process_name)
 
 
         executable = helper.get_target_executable()
+        logMessage(f"Exe: {executable}")
         result.AppendMessage(f"Creating {executable}")
         perform_debugger_command(debugger, f"target create \"{executable}\"")
         result.AppendMessage(str(debugger.GetSelectedTarget()))

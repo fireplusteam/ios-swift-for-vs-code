@@ -4,6 +4,15 @@ import os
 import time
 import sys
 
+#-----------------------ARGS
+
+def get_arg_value_by_name(name: str):
+    for i, arg in enumerate(sys.argv):
+        if arg == name:
+            return sys.argv[i + 1]
+
+
+#-----------------------FILE_LOCK
 file_path = '.vscode/.env'
 
 class FileLock:
@@ -45,11 +54,17 @@ def safe_env_list(list):
 def get_project_type(project_file):
     if ".xcodeproj" in project_file:
         return "-project"
+    if "Package.swift" in project_file:
+        return "-package"
     return "-workspace"
 
 
 def get_schemes(project_file):
-    command = ["xcodebuild", "-list", get_project_type(project_file), project_file]
+    
+    command = ["xcodebuild", "-list"]
+    scheme_type = get_project_type(project_file)
+    if "-package" != scheme_type:
+        command.extend([get_project_type(project_file), project_file])
     process = subprocess.run(command, capture_output=True, text=True)
     schemes = []
     is_tail = False
@@ -76,7 +91,10 @@ def get_bundle_identifier(project_file, scheme):
 def update_scheme(project_file, scheme):
     env_list = get_env_list()
     env_list["PROJECT_SCHEME"] = "\"" + scheme + "\""
-    env_list["BUNDLE_APP_NAME"] = "\"" + get_bundle_identifier(project_file, scheme) + "\""
+    identifier = get_bundle_identifier(project_file, scheme)
+    if identifier is None:
+        identifier = ""
+    env_list["BUNDLE_APP_NAME"] = "\"" + identifier + "\""
     safe_env_list(env_list)
 
 
@@ -97,8 +115,11 @@ def get_derived_data_path():
 
 
 def get_target_executable():
-    config = get_project_config()
+    list = get_env_list()
+    if get_project_type(list["PROJECT_FILE"]) == "-package":
+        return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
     
+    config = get_project_config()
     build_root = config["build_root"]
     scheme = config["scheme"]
 
@@ -149,8 +170,11 @@ def update_git_exlude(file):
         content = []
     if len([x for x in content if f"{file}\n" == x]) == 0:
         content.insert(0, f"{file}\n")
-        with open(".git/info/exclude", "w+") as file:
-            file.write(''.join(content))   
+        try:
+            with open(".git/info/exclude", "w+") as file:
+                file.write(''.join(content))   
+        except Exception as e:
+            print(f"Git ignore update exception: {str(e)}")
 
 
 #---------DEBUGGER--------------------------------

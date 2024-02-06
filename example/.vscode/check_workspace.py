@@ -39,6 +39,13 @@ if __name__ == "__main__":
                     print(file)
                     project_file = file
                     should_update_settings = True
+        if should_update_settings == False:
+            for file in files:
+                if "Package.swift" in file:
+                    helper.update_project_file(file)
+                    print(file)
+                    project_file = file
+                    should_update_settings = True
         update_enviroment(project_file) 
 
 

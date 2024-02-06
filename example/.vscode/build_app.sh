@@ -1,25 +1,27 @@
 #!/bin/bash
 source '.vscode/.env'
-
-DESTINATION="id=$DEVICE_ID"
+source '.vscode/xcode_build_util.sh'
 
 export continueBuildingAfterErrors=True
 
 mkdir -p .logs
 
-TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
+XCODECMD="xcodebuild -scheme \"$PROJECT_SCHEME\" $XCODECMD"
+echo "Base XCODECMD: $XCODECMD"
 
 rm .logs/build.log
 rm -r .vscode/.bundle;
 
-if [ "$1" == "ALL" ] || [ "$1" == "TARGET" ]; then
+if [ "$1" == "-ALL" ] || [ "$1" == "-TARGET" ]; then
     set -o pipefail
-    xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle | tee -a '.logs/build.log' | xcbeautify
+    eval "$XCODECMD | tee -a '.logs/build.log' | xcbeautify"
     COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
 fi
 
-if [ "$1" == "TESTING_ONLY_TESTS" ]; then
+if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
     # get last line of output
+    #DEBUG_TESTS=$(.vscode/update_enviroment.sh "-destinationTests" "$@")
+    #echo "DEBUG_TESTS: $DEBUG_TESTS"
     TESTS_SCRIPT=$(.vscode/update_enviroment.sh "-destinationTests" "$@" | tail -n 1)
 
     TESTS="$TESTS_SCRIPT"
@@ -33,14 +35,14 @@ if [ "$1" == "TESTING_ONLY_TESTS" ]; then
         echo "Builing for tests: $TESTS"
 
         set -o pipefail
-        xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle $TESTS build-for-testing | tee -a '.logs/build.log' | xcbeautify
+        eval "$XCODECMD $TESTS build-for-testing | tee -a '.logs/build.log' | xcbeautify"
         COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
     fi
 fi
 
-if [ "$1" == "ALL" ] || [ "$1" == "TESTING" ]; then
+if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
     set -o pipefail
-    xcodebuild "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -destination "$DESTINATION" -sdk iphonesimulator -resultBundlePath .vscode/.bundle build-for-testing | tee -a '.logs/build.log' | xcbeautify
+    eval "$XCODECMD build-for-testing | tee -a '.logs/build.log' | xcbeautify"
     COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
 fi
 

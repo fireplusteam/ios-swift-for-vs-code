@@ -44,11 +44,10 @@ elif type == "-destinationTests":
     error_message = "Not_defined"
     result = error_message
     try:
-        tests = sys.argv[4]
-        
-        if tests == "CURRENTLY_SELECTED":
+        if helper.get_arg_value_by_name("-CLASS") == "CURRENTLY_SELECTED":
             tests = populate_tests_of_current_file.get_last_selected_tests()
         else:
+            tests = helper.get_arg_value_by_name("-TESTING_ONLY_TESTS")
             tests = tests.split()
         
         print("Tests: " + str(tests))

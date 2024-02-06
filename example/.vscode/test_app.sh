@@ -1,18 +1,17 @@
 #!/bin/bash
-
 source '.vscode/.env'
 
-if [ "$2" == "CANCEL" ]; then
+if [ "$1" == "CANCEL" ]; then
+    echo "TESTS RUNNING WAS CANCELED"
     exit 0
 fi
 
-DESTINATION="id=$DEVICE_ID"
-
-mkdir -p .logs
+source '.vscode/xcode_build_util.sh'
 
 rm .logs/build.log
 
-TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; else echo "-workspace"; fi)
+XCODECMD="xcodebuild test-without-building -scheme \"$PROJECT_SCHEME\" $XCODECMD"
+echo "Base XCODECMD: $XCODECMD"
 
 export NSUnbufferedIO=YES
 export XCT_PARALLEL_DEVICE_DESTINATIONS=1
@@ -41,9 +40,11 @@ VALID_TESTS=1
 #echo "Killing com.apple.CoreSimulator.CoreSimulatorService"
 #killall -9 com.apple.CoreSimulator.CoreSimulatorService
 
+echo "DEBUGGER_ARG: $1"
 
-if [ "$3" == "DEBUG_LLDB" ]; then
+if [ "$1" == "DEBUG_LLDB" ]; then
 
+echo "WAITING FOR DEBUGER"
 python3 <<EOF
 import sys
 sys.path.insert(0, '.vscode')
@@ -60,12 +61,14 @@ sh .vscode/terminate_current_running_app.sh
 fi
 
 
-if [ "$1" == "ALL" ]; then
-    xcodebuild test-without-building "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
+if [ "$2" == "-ALL" ]; then
+    eval "$XCODECMD | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
 else
     echo "Input: '$*'"
 
     # get last line of output
+    #DEBUG_STR=$(.vscode/update_enviroment.sh "-destinationTests" "$@")
+    #echo "$DEBUG_STR"
     TESTS_SCRIPT=$(.vscode/update_enviroment.sh "-destinationTests" "$@" | tail -n 1)
 
     TESTS="$TESTS_SCRIPT"
@@ -76,7 +79,7 @@ else
     else
         echo "Running tests: $TESTS" 
         
-        xcodebuild test-without-building "$TYPE" "$PROJECT_FILE" -scheme "$PROJECT_SCHEME" -configuration Debug -sdk iphonesimulator -destination "$DESTINATION" -resultBundlePath .vscode/.bundle $TESTS | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify
+        eval "$XCODECMD $TESTS | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
     fi
 fi
 

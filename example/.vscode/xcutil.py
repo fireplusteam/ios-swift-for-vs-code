@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 import hashlib
+import helper
 
 from pprint import pprint
 
@@ -134,7 +135,21 @@ def get_files_for_project(project_file):
 
     return config
 
-def get_scheme_by_file_name(project_file, file):
+def get_scheme_by_file_name(project_file, file: str):
+    if helper.get_project_type(project_file) == "-package":
+        scheme = None
+        path = file
+        while True:
+            path, folder = os.path.split(path)
+            if folder == "Sources":
+                return scheme
+            elif folder == "Tests":
+                return scheme
+            elif folder == "" or path == "":
+                return None
+            scheme = folder
+                
+         
     config = get_files_for_project(project_file)
     file = os.path.basename(file)
 
