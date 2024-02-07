@@ -170,11 +170,11 @@ def update_git_exlude(file_to_exclude):
     if content is None:
         content = []
     if len([x for x in content if f"{file_to_exclude}".strip() == x.strip()]) == 0:
-        content.insert(0, f"{file_to_exclude}")
+        content.insert(0, f"{file_to_exclude}\n")
         #print(f"CHANGED: {content}")
         try:
             with open(".git/info/exclude", "w+") as file:
-                file.write('\n'.join(content))   
+                file.write(''.join(content))   
         except Exception as e:
             print(f"Git ignore update exception: {str(e)}")
 
