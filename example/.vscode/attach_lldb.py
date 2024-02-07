@@ -127,13 +127,7 @@ start_time = time.time()
 
 
 def get_process_name():
-    list = helper.get_env_list()
-    if "-package" == helper.get_project_type(list["PROJECT_FILE"]):
-        process_name = "xctest"
-    else:
-        process_name = list["PROJECT_SCHEME"].strip("\"")
-        process_name = f"{process_name}.app/{process_name}"
-    return process_name
+    return helper.get_product_name()
 
 
 def watch_new_process(debugger, command, result, internal_dict):

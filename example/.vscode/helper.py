@@ -77,12 +77,28 @@ def get_schemes(project_file):
     return schemes
 
 
-def get_bundle_identifier(project_file, scheme):
+def get_project_settings(project_file, scheme):
     command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme, "-configuration", "Debug"]
     process = subprocess.run(command, capture_output=True, text=True)
-    for line in process.stdout.splitlines():
+    return process.stdout
+
+
+def get_bundle_identifier(project_file, scheme):
+    stdout = get_project_settings(project_file, scheme)
+    for line in stdout.splitlines():
         line = line.strip()
         if "BUNDLE_IDENTIFIER" in line:
+            return line.split("=")[1].strip()
+    
+    return None
+
+
+def get_product_name_imp(project_file, scheme):
+    stdout = get_project_settings(project_file, scheme)
+    #print("Out: " + stdout)
+    for line in stdout.splitlines():
+        line = line.strip()
+        if "PRODUCT_NAME" in line:
             return line.split("=")[1].strip()
     
     return None
@@ -98,8 +114,8 @@ def update_scheme(project_file, scheme):
     safe_env_list(env_list)
 
 
-def get_target_executable_impl(build_path, target):
-   return f"{build_path}/Build/Products/Debug-iphonesimulator/{target}.app"
+def get_target_executable_impl(build_path, product_name):
+   return f"{build_path}/Build/Products/Debug-iphonesimulator/{product_name}"
 
 
 def get_project_config():
@@ -118,12 +134,20 @@ def get_target_executable():
     list = get_env_list()
     if get_project_type(list["PROJECT_FILE"]) == "-package":
         return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
-    
+    product_name = get_product_name() 
     config = get_project_config()
     build_root = config["build_root"]
-    scheme = config["scheme"]
+    return get_target_executable_impl(build_path=build_root, product_name=product_name)
 
-    return get_target_executable_impl(build_path=build_root, target=scheme)
+
+def get_product_name():
+    list = get_env_list()
+    if get_project_type(list["PROJECT_FILE"]) == "-package":
+        return "xctest"
+    
+    config = get_project_config()
+    scheme = config["scheme"]
+    return get_product_name_imp(list["PROJECT_FILE"].strip("\""), scheme)
 
 
 def update_project_file(project_file):
