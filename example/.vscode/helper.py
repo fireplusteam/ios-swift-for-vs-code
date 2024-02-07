@@ -156,23 +156,25 @@ def is_build_server_valid():
 
 # --------GIT-------------------------------------
 
-def update_git_exlude(file):
+def update_git_exlude(file_to_exclude):
     if not os.path.exists(".git"):
         return
     os.makedirs(".git/info", exist_ok=True)
     content = None
     try:
+        
         with open(".git/info/exclude", 'r') as file:
             content = file.readlines()
     except: pass
-    
+    #print(f"Updating git ignore: {content}")
     if content is None:
         content = []
-    if len([x for x in content if f"{file}\n" == x]) == 0:
-        content.insert(0, f"{file}\n")
+    if len([x for x in content if f"{file_to_exclude}".strip() == x.strip()]) == 0:
+        content.insert(0, f"{file_to_exclude}")
+        #print(f"CHANGED: {content}")
         try:
             with open(".git/info/exclude", "w+") as file:
-                file.write(''.join(content))   
+                file.write('\n'.join(content))   
         except Exception as e:
             print(f"Git ignore update exception: {str(e)}")
 
