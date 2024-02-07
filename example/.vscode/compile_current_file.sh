@@ -35,8 +35,10 @@ if [ "$SCHEME" == "None" ]; then
     fi
 else
     echo "Scheme found!"
-    # file is in project, update single file
-    export BUILD_XCODE_SINGLE_FILE_PATH="$SELECTED_FILE"
+    if [ "$TYPE" != "-package" ]; then
+        # file is in project, update single file
+        export BUILD_XCODE_SINGLE_FILE_PATH="$SELECTED_FILE"
+    fi
 fi
 
 rm .logs/build.log

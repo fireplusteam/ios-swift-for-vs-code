@@ -4,6 +4,18 @@ source '.vscode/.env'
 
 mkdir -p .logs
 
+if [[ "$PROJECT_FILE" == *.swift ]]; then
+    RED='\033[0;31m'
+    NC='\033[0m' # No Color
+    echo -e "${RED}Package.swift doesn't support run${NC}"
+    echo "TERMINATING DEBUG SESSION"
+    # terminate debug session otherwise
+    sleep 2
+    sh .vscode/terminate_current_running_app.sh
+
+    exit 1
+fi
+
 # clear log files
 rm .logs/app.log
 echo '' > .logs/app.log
