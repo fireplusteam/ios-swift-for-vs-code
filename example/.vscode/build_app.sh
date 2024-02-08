@@ -12,10 +12,19 @@ echo "Base XCODECMD: $XCODECMD"
 rm .logs/build.log
 rm -r .vscode/.bundle;
 
+check_exit_status() {
+    local exit_status="$1"
+    if [ "${exit_status}" -ne 0 ]; then
+        python3 .vscode/print_errors.py
+        echo "Build failed."
+        exit 1
+    fi
+}
+
 if [ "$1" == "-ALL" ] || [ "$1" == "-TARGET" ]; then
     set -o pipefail
     eval "$XCODECMD | tee -a '.logs/build.log' | xcbeautify"
-    COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
+    check_exit_status "${PIPESTATUS[0]}"
 fi
 
 if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
@@ -36,21 +45,14 @@ if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
 
         set -o pipefail
         eval "$XCODECMD $TESTS build-for-testing | tee -a '.logs/build.log' | xcbeautify"
-        COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
+        check_exit_status "${PIPESTATUS[0]}"
     fi
 fi
 
 if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
     set -o pipefail
     eval "$XCODECMD build-for-testing | tee -a '.logs/build.log' | xcbeautify"
-    COMMAND_EXIT_STATUS=${PIPESTATUS[0]}
-fi
-
-# Check the exit status
-if [ "${COMMAND_EXIT_STATUS}" -ne 0 ]; then
-    python3 .vscode/print_errors.py
-    echo "Build failed."
-    exit 1
+    check_exit_status "${PIPESTATUS[0]}"
 fi
 
 python3 .vscode/print_errors.py
