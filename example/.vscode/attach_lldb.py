@@ -127,7 +127,10 @@ start_time = time.time()
 
 
 def get_process_name():
-    return helper.get_product_name()
+    process_name = helper.get_product_name()
+    if process_name == "xctest":
+        return process_name
+    return f"{process_name}.app/{process_name}"
 
 
 def watch_new_process(debugger, command, result, internal_dict):

@@ -115,7 +115,7 @@ def update_scheme(project_file, scheme):
 
 
 def get_target_executable_impl(build_path, product_name):
-   return f"{build_path}/Build/Products/Debug-iphonesimulator/{product_name}"
+   return f"{build_path}/Build/Products/Debug-iphonesimulator/{product_name}.app"
 
 
 def get_project_config():
@@ -147,7 +147,7 @@ def get_product_name():
     
     config = get_project_config()
     scheme = config["scheme"]
-    return get_product_name_imp(list["PROJECT_FILE"].strip("\""), scheme)
+    return get_product_name_imp(list["PROJECT_FILE"].strip("\""), scheme).removesuffix(".app")
 
 
 def update_project_file(project_file):
