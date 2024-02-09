@@ -17,11 +17,15 @@ cwd = os.getcwd()
 
 start_time = time.time()
 
-def session_validation(process):
+def session_validation(process: asyncio.subprocess.Process):
     while True:
         if not helper.is_debug_session_valid(start_time):
-            process.kill()
-            exit()
+            try:
+                process.kill()
+            except: pass
+            finally:
+                exit()
+                
         time.sleep(1)
 
 
