@@ -15,7 +15,11 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "group": "build"
+            "group": "build",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
         },
         {
             "label": "iOS: Build Selected Target",
@@ -27,7 +31,9 @@
             },
             "args": ["-TARGET"],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -44,7 +50,9 @@
             },
             "args": ["-ALL"],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -61,6 +69,10 @@
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -89,7 +101,9 @@
             },
             "args": ["-TESTING"],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -110,7 +124,9 @@
                 "${input:myTestsOfCurrentFile}"
             ],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -124,7 +140,9 @@
             "command": "${workspaceFolder}/.vscode/run_app.sh",
             "args": ["RUNNING"],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -138,7 +156,9 @@
             "command": "${workspaceFolder}/.vscode/run_app.sh",
             "args": ["LLDB_DEBUG"],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -152,7 +172,9 @@
             "command": "${workspaceFolder}/.vscode/run_app.sh",
             "args": ["RUNNING", "-DEVICES", "${input:myMultipleDestinationDevice}"],
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -163,23 +185,39 @@
         { // needed to give a chance to vs code to update it's state
             "label": "Sleep", 
             "type": "shell",
-            "command": "sleep 1"
+            "command": "sleep 1",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
         },
         {
             "label": "iOS: Terminate Current iOS App",
             "type": "shell",
-            "command": "${workspaceFolder}/.vscode/terminate_current_running_app.sh"
+            "command": "${workspaceFolder}/.vscode/terminate_current_running_app.sh",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
         },
         {
             "label": "Start Show Logs",
             "command": "${command:launches.showIOSDebugLogs}",
-            "group": "none"
+            "group": "none",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
         },
         {
             "label": "iOS: Start LLDB Debugger iOS App",
             "type": "shell",
             "command": "${command:launches.startIOSDebuging}",
             "dependsOrder": "sequence",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
         },
         {
             "label": "iOS: Tests: Run All",
@@ -195,7 +233,9 @@
                 "isTestCommand": true
             },
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -218,7 +258,9 @@
                 "isTestCommand": true
             },
             "presentation": {
-                "clear": true
+                "clear": true,
+                "reveal": "silent",
+                "revealProblems": "onProblem"
             },
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -233,12 +275,20 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            },
             "dependsOn":["iOS: Validate Enviroment"]
         },
         {
             "label": "iOS: Bind Autocomplete",
             "type": "shell",
             "command": ".vscode/restart_lsp_swift.sh",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            },
             "dependsOn": [
                 "iOS: Generate xCode Server"
             ]
@@ -251,6 +301,10 @@
                 "-destinationDevice",
                 "${input:myDestinationDevice}"
             ],
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            },
             "problemMatcher": [], 
             "dependsOn":["iOS: Validate Enviroment"],
             "group": "none"
@@ -263,6 +317,10 @@
                 "-destinationScheme",
                 "${input:myDestinationScheme}"
             ],
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            },
             "problemMatcher": [],
             "dependsOn":["iOS: Validate Enviroment"],
             "runOptions": {"runOn": "folderOpen"},
@@ -272,7 +330,11 @@
             "label": "iOS: Validate Enviroment",
             "type": "shell",
             "command": ".vscode/check_workspace.sh",
-            "group": "none"
+            "group": "none",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
         },
         {
             "label": "Store VS Config",
@@ -280,7 +342,11 @@
             "command": ".vscode/store_vs_config.sh",
             "args": [
                 "${file}"
-            ]
+            ],
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            },
         },
         {
             "label": "iOS: Print Last Compile Errors",
