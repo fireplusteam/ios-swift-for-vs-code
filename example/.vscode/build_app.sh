@@ -42,6 +42,9 @@ if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
         exit 1  
     else
         echo "Builing for tests: $TESTS"
+        
+        rm .logs/build.log
+        rm -r .vscode/.bundle;
 
         set -o pipefail
         eval "$XCODECMD $TESTS build-for-testing | tee -a '.logs/build.log' | xcbeautify"
@@ -50,6 +53,9 @@ if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
 fi
 
 if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
+    rm .logs/build.log
+    rm -r .vscode/.bundle;
+    
     set -o pipefail
     eval "$XCODECMD build-for-testing | tee -a '.logs/build.log' | xcbeautify"
     check_exit_status "${PIPESTATUS[0]}"
