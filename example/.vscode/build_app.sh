@@ -9,9 +9,6 @@ mkdir -p .logs
 XCODECMD="xcodebuild -scheme \"$PROJECT_SCHEME\" $XCODECMD"
 echo "Base XCODECMD: $XCODECMD"
 
-rm .logs/build.log
-rm -r .vscode/.bundle;
-
 check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
@@ -22,6 +19,9 @@ check_exit_status() {
 }
 
 if [ "$1" == "-ALL" ] || [ "$1" == "-TARGET" ]; then
+    rm .logs/build.log
+    rm -r .vscode/.bundle;
+
     set -o pipefail
     eval "$XCODECMD | tee -a '.logs/build.log' | xcbeautify"
     check_exit_status "${PIPESTATUS[0]}"
@@ -55,7 +55,7 @@ fi
 if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
     rm .logs/build.log
     rm -r .vscode/.bundle;
-    
+
     set -o pipefail
     eval "$XCODECMD build-for-testing | tee -a '.logs/build.log' | xcbeautify"
     check_exit_status "${PIPESTATUS[0]}"
