@@ -1,0 +1,81 @@
+{
+  "vim.autoSwitchInputMethod.enable": false,
+  "vim.smartRelativeLine": true,
+  "lldb.launch.expressions": "native",
+  "cmake.configureOnOpen": false,
+  "launches": {
+    "startIOSDebuging": "iOS App Debug",
+    "showIOSDebugLogs": "Show iOS App Log"
+  },
+  "debug.saveBeforeStart": "allEditorsInActiveGroup",
+  "files.exclude": {
+    "**/Confirmed/*": true,
+    "**/adidasChina/*": true,
+    "**/Retail/*": true,
+    "**/Harmony/*": true,
+    "**/Build/*": true,
+    "**/*.framework/*": true,
+    "**/*.xcframework/*": true,
+    "**/.*": false,
+    "**/.vscode*": false,
+    "**/.bundle*": true,
+    "**/.venv": true,
+
+    "**/xoSmash": true, // Don't exlude folders
+    "**/ioSmash": true, // Don't exlude folders
+    "**/BitcoinUp": true, // Don't exlude folders
+    "**/BattleBirds": true, // Don't exlude folders
+    "**/FlyingBirds": true, // Don't exlude folders
+    "**/BunWars": true, // Don't exlude folders
+    "**/MrBall": true, // Don't exlude folders
+    "**/SimpleJump": true, // Don't exlude folders
+    "**/SimpleJump2": true, // Don't exlude folders
+    "**/SmashBirds": true, // Don't exlude folders
+    "**/SmashBirds2": true, // Don't exlude folders
+    "**/SmashBirds3": true, // Don't exlude folders
+    "**/SmashBirds4": true, // Don't exlude folders
+    "**/SmashBuns": true, // Don't exlude folders
+    "**/SplashSmash": true, // Don't exlude folders
+    "**/libs": false, // Don't exclude libs folder
+    "**/libs/*": false, // Don't exclude any file within libs folder
+    "**/libsNative": false, // Don't exclude libs folder
+    "**/libsNative/*": false // Don't exclude any file within libs folder
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/.logs": true,
+    "**/Build": true,
+    "**/.bundle*": true,
+    "**/*.framework/*": true,
+    "**/*.xcframework/*": true,
+    "**/*.venv": true,
+
+  },
+  "search.useIgnoreFiles": false,
+  "apple-swift-format.enable": true,
+  "apple-swift-format.configSearchPaths": [
+    ".vscode/swift-format.json"
+  ],
+  "swiftformat.enable": true,
+  "swiftformat.onlyEnableOnSwiftPMProjects": false,
+  "swiftformat.configSearchPaths": [
+    ".vscode/.swiftformat.config"
+  ],
+  "editor.renderLineHighlight": "all",
+  "swift.disableAutoResolve": true,
+  "swift.searchSubfoldersForPackages": false,
+  "swift.excludePathsFromPackageDependencies": [
+    "*"
+  ],
+  "files.associations": {
+    "algorithm": "cpp",
+    "memory": "cpp",
+    "cstddef": "cpp",
+    "functional": "cpp",
+    "map": "cpp",
+    "__config": "cpp"
+  },
+  "jira-plugin.workingProject": ""
+}
