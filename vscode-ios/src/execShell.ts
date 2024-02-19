@@ -5,7 +5,19 @@ import {
 } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
-import { resolve } from "path";
+var kill = require("tree-kill");
+
+export class ExecutorTerminatedByUserError extends Error {
+  public constructor(message: string) {
+    super(message);
+  }
+}
+
+export class ExecutorRunningError extends Error {
+  public constructor(message: string) {
+    super(message);
+  }
+}
 
 export class Executor {
   private terminal: vscode.Terminal | undefined;
@@ -64,7 +76,10 @@ export class Executor {
 
   public terminateShell() {
     clearInterval(this.animationInterval);
-    this.childProc?.kill();
+    this.animationInterval = undefined;
+    if (this.childProc?.pid) {
+      kill(this.childProc?.pid);
+    }
     this.terminal?.dispose();
     this.terminal = undefined;
     this.writeEmitter = undefined;
@@ -92,8 +107,8 @@ export class Executor {
     args: string[] = []
   ) {
     if (this.childProc !== undefined) {
-      return new Promise((resolve) => {
-        resolve(false);
+      return new Promise((resolve, reject) => {
+        reject(new ExecutorRunningError("Task is running")); 
       });
     }
     const env = getEnv();
@@ -123,10 +138,16 @@ export class Executor {
       this.writeEmitter?.fire(this.dataToPrint(data.toString()));
     });
 
-    return new Promise((resolve) => {
-      proc.on("exit", (code) => {
+    return new Promise((resolve, reject) => {
+      proc.on("exit", (code, signal) => {
         this.childProc = undefined;
         clearInterval(this.animationInterval);
+
+        if (signal !== null) { 
+          reject(new ExecutorTerminatedByUserError("Terminated by a User"));
+          this.terminateShell();
+          return;
+        }
 
         this.writeEmitter?.fire(
           this.dataToPrint(`${commandName} exits with status code: ${code}\n`)

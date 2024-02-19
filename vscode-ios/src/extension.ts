@@ -3,12 +3,39 @@
 import * as vscode from "vscode";
 import { cleanDerivedData } from "./clean";
 import { getEnv } from "./env";
-import { buildSelectedTarget, checkWorkspace, generateXcodeServer } from "./commands";
-import { Executor } from "./execShell";
+import {
+  buildSelectedTarget,
+  checkWorkspace,
+  generateXcodeServer,
+} from "./commands";
+import { Executor, ExecutorRunningError } from "./execShell";
 
 function initialize() {}
 
 const projectExecutor = new Executor();
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function commandWrapper(commandClosure: () => Promise<void>) {
+  try {
+    await commandClosure();
+  } catch (err) {
+    if (err instanceof ExecutorRunningError) {
+      const choice = await vscode.window.showErrorMessage(
+        "To execute this task you need to terminate the current task. Do you want to terminate it to continue?",
+        "Terminate",
+        "Cancel"
+      );
+      if (choice === "Terminate") {
+        projectExecutor.terminateShell();
+        await sleep(2000);
+        commandClosure();
+      }
+    }
+  }
+}
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -29,16 +56,20 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.check.workspace", () => {
-      return checkWorkspace(projectExecutor);
+    vscode.commands.registerCommand("vscode-ios.check.workspace", async () => {
+      await commandWrapper(async () => {
+        await checkWorkspace(projectExecutor);
+      });
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "vscode-ios.check.generateXcodeServer",
-      () => {
-        return generateXcodeServer(projectExecutor);
+      async () => {
+        await commandWrapper(async () => {
+          await generateXcodeServer(projectExecutor);
+        });
       }
     )
   );
@@ -46,8 +77,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "vscode-ios.build.selectedTarget",
-      () => {
-        return buildSelectedTarget(projectExecutor);
+      async () => {
+        await commandWrapper(async () => {
+          await buildSelectedTarget(projectExecutor);
+        });
       }
     )
   );
