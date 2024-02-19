@@ -4,4 +4,4 @@ source '.vscode/.env'
 
 echo "INPUT: $*"
 
-python3 .vscode/update_enviroment.py "$PROJECT_FILE" "$@"
+python3 "$VS_IOS_SCRIPT_PATH/update_enviroment.py" "$PROJECT_FILE" "$@"

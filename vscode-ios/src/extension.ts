@@ -7,6 +7,7 @@ import {
   buildSelectedTarget,
   checkWorkspace,
   generateXcodeServer,
+  selectTarget,
 } from "./commands";
 import { Executor, ExecutorRunningError } from "./execShell";
 
@@ -45,13 +46,12 @@ export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "vscode-ios" is now active!');
 
   initialize();
-
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.clean.data", () => {
-      return cleanDerivedData(projectExecutor);
+    vscode.commands.registerCommand("vscode-ios.project.selectTarget", () => {
+      return selectTarget(projectExecutor);
     })
   );
 
@@ -72,6 +72,12 @@ export function activate(context: vscode.ExtensionContext) {
         });
       }
     )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.clean.data", () => {
+      return cleanDerivedData(projectExecutor);
+    })
   );
 
   context.subscriptions.push(

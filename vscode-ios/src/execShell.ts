@@ -19,6 +19,11 @@ export class ExecutorRunningError extends Error {
   }
 }
 
+export enum ExecutorReturnType {
+  statusCode,
+  stdout
+}
+
 export class Executor {
   private terminal: vscode.Terminal | undefined;
   private writeEmitter: vscode.EventEmitter<string> | undefined;
@@ -103,12 +108,13 @@ export class Executor {
   public async execShell(
     commandName: string,
     file: string,
+    args: string[] = [],
     showTerminal = false,
-    args: string[] = []
+    returnType = ExecutorReturnType.statusCode
   ) {
     if (this.childProc !== undefined) {
       return new Promise((resolve, reject) => {
-        reject(new ExecutorRunningError("Task is running")); 
+        reject(new ExecutorRunningError("Task is running"));
       });
     }
     const env = getEnv();
@@ -129,10 +135,13 @@ export class Executor {
     if (showTerminal) {
       terminal.show();
     }
-    this.writeEmitter?.fire(`COMMAND: ${commandName}`);
-
+    this.writeEmitter?.fire(`COMMAND: ${commandName}\n`);
+    let stdout = "";
     proc.stdout?.on("data", (data) => {
       this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+      if (returnType === ExecutorReturnType.stdout) {
+        stdout += data.toString();
+      }
     });
     proc.stderr?.on("data", (data) => {
       this.writeEmitter?.fire(this.dataToPrint(data.toString()));
@@ -143,7 +152,7 @@ export class Executor {
         this.childProc = undefined;
         clearInterval(this.animationInterval);
 
-        if (signal !== null) { 
+        if (signal !== null) {
           reject(new ExecutorTerminatedByUserError("Terminated by a User"));
           this.terminateShell();
           return;
@@ -153,11 +162,20 @@ export class Executor {
           this.dataToPrint(`${commandName} exits with status code: ${code}\n`)
         );
         if (code !== 0) {
-          this.changeNameEmitter?.fire(`❌ ${this.getTerminalName(commandName)}`);
+          this.changeNameEmitter?.fire(
+            `❌ ${this.getTerminalName(commandName)}`
+          );
           terminal.show();
         } else {
-          this.changeNameEmitter?.fire(`✅ ${this.getTerminalName(commandName)}`);
-          resolve(true);
+          this.changeNameEmitter?.fire(
+            `✅ ${this.getTerminalName(commandName)}`
+          );
+          switch (returnType) {
+            case ExecutorReturnType.statusCode:
+              resolve(true);
+            case ExecutorReturnType.stdout:
+              resolve(stdout);
+          }
         }
       });
     });

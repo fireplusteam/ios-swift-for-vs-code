@@ -20,9 +20,10 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-ios.clean.data",
-        "title": "iOS: Clean Derived Data"
+        "command": "vscode-ios.project.selectTarget",
+        "title": "iOS: Select Scheme"
       },
+      
       {
         "command": "vscode-ios.check.workspace",
         "title": "iOS: Validate Environment"
@@ -31,9 +32,16 @@
         "command": "vscode-ios.check.generateXcodeServer",
         "title": "iOS: Generate xCode Server"
       },
+
+      {
+        "command": "vscode-ios.clean.data",
+        "title": "iOS: Clean Derived Data",
+        "category": "build"
+      },
       {
         "command": "vscode-ios.build.selectedTarget",
-        "title": "iOS: Build Selected Target"
+        "title": "iOS: Build Selected Target",
+        "category": "build"
       }
     ],
     "debuggers": [
