@@ -23,7 +23,11 @@
         "command": "vscode-ios.project.selectTarget",
         "title": "iOS: Select Scheme"
       },
-      
+      {
+        "command": "vscode-ios.project.selectDevice",
+        "title": "iOS: Select DEBUG Device"
+      },
+   
       {
         "command": "vscode-ios.check.workspace",
         "title": "iOS: Validate Environment"

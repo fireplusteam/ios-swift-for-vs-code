@@ -7,6 +7,7 @@ import {
   buildSelectedTarget,
   checkWorkspace,
   generateXcodeServer,
+  selectDevice,
   selectTarget,
 } from "./commands";
 import { Executor, ExecutorRunningError } from "./execShell";
@@ -31,7 +32,7 @@ async function commandWrapper(commandClosure: () => Promise<void>) {
       );
       if (choice === "Terminate") {
         projectExecutor.terminateShell();
-        await sleep(2000);
+        await sleep(1500); // 1.5 seconds
         commandClosure();
       }
     }
@@ -50,9 +51,25 @@ export function activate(context: vscode.ExtensionContext) {
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.project.selectTarget", () => {
-      return selectTarget(projectExecutor);
-    })
+    vscode.commands.registerCommand(
+      "vscode-ios.project.selectTarget",
+      async () => {
+        await commandWrapper(async () => {
+          await selectTarget(projectExecutor);
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-ios.project.selectDevice",
+      async () => {
+        await commandWrapper(async () => {
+          await selectDevice(projectExecutor);
+        });
+      }
+    )
   );
 
   context.subscriptions.push(
@@ -75,8 +92,10 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.clean.data", () => {
-      return cleanDerivedData(projectExecutor);
+    vscode.commands.registerCommand("vscode-ios.clean.data", async () => {
+      await commandWrapper(async () => {
+        await cleanDerivedData(projectExecutor);
+      });
     })
   );
 

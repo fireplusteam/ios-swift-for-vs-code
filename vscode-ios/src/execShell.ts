@@ -166,6 +166,7 @@ export class Executor {
             `❌ ${this.getTerminalName(commandName)}`
           );
           terminal.show();
+          resolve(false);
         } else {
           this.changeNameEmitter?.fire(
             `✅ ${this.getTerminalName(commandName)}`
