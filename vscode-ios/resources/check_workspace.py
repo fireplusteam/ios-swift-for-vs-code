@@ -3,6 +3,8 @@ import os
 import helper
 import subprocess
 
+script = os.getenv("VS_IOS_SCRIPT_PATH")
+    
 
 def update_enviroment(project_file):
     schemes = helper.get_schemes(project_file)
@@ -15,15 +17,16 @@ def bind_autocomplete():
     if not helper.is_build_server_valid():
         print("RESTARTING XCODE BUILD SERVER")
         env = helper.get_env_list()
-        subprocess.run(["sh", ".vscode/build_autocomplete.sh"], env=env)
-        subprocess.run(["sh", ".vscode/restart_lsp_swift.sh"], env=env)
+        subprocess.run(["sh", f"{script}/build_autocomplete.sh"], env=env)
+        subprocess.run(["sh", f"{script}/restart_lsp_swift.sh"], env=env)
         print("Build Server is outdated")
 
 
 if __name__ == "__main__":
     
     project_file = sys.argv[1]
-
+    print(f"ENV_FILE: {script}", file=sys.stderr)
+    
     os.makedirs('.logs', exist_ok=True)
     if os.path.exists(project_file):
         print("valid project file")

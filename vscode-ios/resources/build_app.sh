@@ -1,6 +1,6 @@
 #!/bin/bash
 source '.vscode/.env'
-source '.vscode/xcode_build_util.sh'
+source "$VS_IOS_SCRIPT_PATH/xcode_build_util.sh"
 
 export continueBuildingAfterErrors=True
 
@@ -12,7 +12,7 @@ echo "Base XCODECMD: $XCODECMD"
 check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
-        python3 .vscode/print_errors.py
+        python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"
         echo "Build failed."
         exit 1
     fi
@@ -29,9 +29,9 @@ fi
 
 if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
     # get last line of output
-    #DEBUG_TESTS=$(.vscode/update_enviroment.sh "-destinationTests" "$@")
+    #DEBUG_TESTS=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@")
     #echo "DEBUG_TESTS: $DEBUG_TESTS"
-    TESTS_SCRIPT=$(.vscode/update_enviroment.sh "-destinationTests" "$@" | tail -n 1)
+    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@" | tail -n 1)
 
     TESTS="$TESTS_SCRIPT"
 
@@ -61,4 +61,4 @@ if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
     check_exit_status "${PIPESTATUS[0]}"
 fi
 
-python3 .vscode/print_errors.py
+python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"

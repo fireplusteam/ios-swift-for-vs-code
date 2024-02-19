@@ -26,6 +26,14 @@
       {
         "command": "vscode-ios.check.workspace",
         "title": "iOS: Validate Environment"
+      },
+      {
+        "command": "vscode-ios.check.generateXcodeServer",
+        "title": "iOS: Generate xCode Server"
+      },
+      {
+        "command": "vscode-ios.build.selectedTarget",
+        "title": "iOS: Build Selected Target"
       }
     ],
     "debuggers": [

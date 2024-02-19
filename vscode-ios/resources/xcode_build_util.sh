@@ -13,7 +13,7 @@ else
 
 PATH_SCRIPT=$(python3 <<EOF
 import sys
-sys.path.insert(0, '.vscode')
+sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
 
 path = helper.get_derived_data_path()
