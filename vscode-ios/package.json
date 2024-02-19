@@ -9,14 +9,35 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:Package.swift",
+    "workspaceContains:*..xcworkspace",
+    "workspaceContains:*.xcodeproj",
+    "workspaceContains:buildServer.json",
+    "onDebugResolve:xos-app-lldb"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "vscode-ios.helloWorld",
-        "title": "Hello World"
+        "command": "vscode-ios.clean.data",
+        "title": "iOS: Clean Derived Data"
+      },
+      {
+        "command": "vscode-ios.check.workspace",
+        "title": "iOS: Validate Environment"
       }
+    ],
+    "debuggers": [
+      {
+        "type": "ios",
+        "label": "iOS App"
+        
+      }
+    ],
+    "extensionDependencies": [
+      "vadimcn.vscode-lldb",
+      "swift-lang"
     ]
   },
   "scripts": {
