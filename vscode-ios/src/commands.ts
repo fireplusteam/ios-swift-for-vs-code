@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
+import { getEnvList } from "./env";
 
 export async function selectTarget(executor: Executor) {
   if ((await checkWorkspace(executor)) === false) {
@@ -34,8 +35,8 @@ export async function selectTarget(executor: Executor) {
   );
 }
 
-export async function selectDevice(executor: Executor) {
-  if ((await checkWorkspace(executor)) === false) {
+export async function selectDevice(executor: Executor, shouldCheckWorkspace = true) {
+  if (shouldCheckWorkspace === true && (await checkWorkspace(executor)) === false) {
     return false;
   }
   let stdout = (await executor.execShell(
@@ -67,7 +68,13 @@ export async function selectDevice(executor: Executor) {
 }
 
 export async function checkWorkspace(executor: Executor) {
-  return await executor.execShell("Validate Environment", "check_workspace.sh");
+  if (await executor.execShell("Validate Environment", "check_workspace.sh") === false) {
+    return false;
+  }
+  const env = getEnvList();
+  if (!env.hasOwnProperty("DEVICE_ID")) {
+    return selectDevice(executor, false);
+  }
 }
 
 export async function generateXcodeServer(executor: Executor) {
@@ -88,6 +95,18 @@ export async function buildSelectedTarget(executor: Executor) {
     "Build Selected Target",
     "build_app.sh",
     ["-TARGET"],
+    false
+  );
+}
+
+export async function runApp(executor: Executor) {
+  if ((await buildSelectedTarget(executor)) === false) {
+    return false;
+  }
+  return await executor.execShell(
+    "Run App",
+    "run_app.sh",
+    ["LLDB_DEBUG"],
     false
   );
 }

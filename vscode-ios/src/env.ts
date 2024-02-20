@@ -2,14 +2,6 @@ import path from 'path';
 import * as vscode from 'vscode';
 import fs from 'fs';
 
-function getProjectUniqKey() {
-    return `${Buffer.from(getWorkspacePath(), 'utf-8').toString('base64')}`;
-}
-
-function getTempPath() {
-    return path.join("/tmp", "vscode-ios", getProjectUniqKey());
-}
-
 export function getWorkspacePath() {
     const workspace = vscode.workspace.rootPath || "";
     return workspace; 
@@ -41,4 +33,14 @@ export function getScriptPath(script: string | undefined = undefined) {
         return path.join(__dirname, "..", "resources");
     }
     return path.join(__dirname, "..", "resources", script);
+}
+
+export function getEnvList() {
+    let dict: { [key: string]: string } = {};
+    const lines = fs.readFileSync(getEnvFilePath(), "utf-8");
+    for (let line in lines.split("\n")) {
+        const pos = line.trim().indexOf("=");
+        dict[line.trim().substring(0, pos)] = line.trim().substring(pos + 1);
+    }
+    return dict;
 }

@@ -2,11 +2,12 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import { cleanDerivedData } from "./clean";
-import { getEnv } from "./env";
+import { getEnv, getScriptPath } from "./env";
 import {
   buildSelectedTarget,
   checkWorkspace,
   generateXcodeServer,
+  runApp,
   selectDevice,
   selectTarget,
 } from "./commands";
@@ -52,6 +53,17 @@ export function activate(context: vscode.ExtensionContext) {
   // The commandId parameter must match the command field in package.json
   context.subscriptions.push(
     vscode.commands.registerCommand(
+      "vscode-ios.env.scriptPath",
+      async () => {
+        await commandWrapper(async () => {
+          getScriptPath();
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
       "vscode-ios.project.selectTarget",
       async () => {
         await commandWrapper(async () => {
@@ -92,7 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.clean.data", async () => {
+    vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
       await commandWrapper(async () => {
         await cleanDerivedData(projectExecutor);
       });
@@ -108,6 +120,14 @@ export function activate(context: vscode.ExtensionContext) {
         });
       }
     )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.app", async () => {
+      await commandWrapper(async () => {
+        await runApp(projectExecutor);
+      });
+    })
   );
 }
 

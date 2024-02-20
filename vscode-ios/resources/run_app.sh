@@ -11,7 +11,7 @@ if [[ "$PROJECT_FILE" == *.swift ]]; then
     echo "TERMINATING DEBUG SESSION"
     # terminate debug session otherwise
     sleep 2
-    sh .vscode/terminate_current_running_app.sh
+    sh "$VS_IOS_SCRIPT_PATH/terminate_current_running_app.sh"
 
     exit 1
 fi
@@ -26,7 +26,7 @@ DESTINATION="id=$DEVICE_ID"
 echo "$DESTINATION"
 
 if [ "$2" == "-DEVICES" ]; then
-    python3 .vscode/update_enviroment.py "$PROJECT_FILE" -multipleDestinationDevices "$3"
+    python3 "$VS_IOS_SCRIPT_PATH/update_enviroment.py" "$PROJECT_FILE" -multipleDestinationDevices "$3"
     DESTINATION="$3"
 fi
 
@@ -46,7 +46,7 @@ is_empty() {
 # GET BUILD PATH
 APP_PATH=$(python3 <<EOF
 import sys
-sys.path.insert(0, '.vscode')
+sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
 print(helper.get_target_executable())
 EOF
@@ -84,11 +84,11 @@ do
     xcrun simctl install "$SIMULATOR_UDID" "$APP_PATH"
 
     # Get PID of run process
-    python3 .vscode/async_launcher.py .vscode/launch.py "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
+    python3 "$VS_IOS_SCRIPT_PATH/async_launcher.py" "$VS_IOS_SCRIPT_PATH/launch.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
 
     sleep 1
 
-    python3 .vscode/update_debug_launch_settings.py "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" 
+    python3 "$VS_IOS_SCRIPT_PATH/update_debug_launch_settings.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" 
 
 done
 

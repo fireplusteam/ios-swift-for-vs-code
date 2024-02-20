@@ -67,7 +67,7 @@ for device_line in devices:
             formatted_value += key + "=" + value
 
     if isValid:
-        selected_list = [x for x in selected_destination if x in formatted_value]
+        selected_list = [x for x in selected_destination if x in formatted_value and x != "id="]
         
         if "OS" in formatted_key and "name" in formatted_key:
             formatted_key = f"{formatted_key['name']} - iOS {formatted_key['OS']}"
