@@ -126,6 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
       await commandWrapper(async () => {
         await runApp(projectExecutor);
       });
+      return ""; // we need to return string as it's going to be used for launch configuration
     })
   );
 }
