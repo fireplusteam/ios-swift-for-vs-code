@@ -55,9 +55,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.env.scriptPath",
       async () => {
-        await commandWrapper(async () => {
-          getScriptPath();
-        });
+        console.log("DEBUG STARTED: " + getScriptPath());
+        return getScriptPath();
       }
     )
   );

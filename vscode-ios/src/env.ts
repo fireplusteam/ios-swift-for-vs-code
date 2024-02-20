@@ -37,8 +37,10 @@ export function getScriptPath(script: string | undefined = undefined) {
 
 export function getEnvList() {
     let dict: { [key: string]: string } = {};
-    const lines = fs.readFileSync(getEnvFilePath(), "utf-8");
-    for (let line in lines.split("\n")) {
+    let lines = fs.readFileSync(getEnvFilePath(), "utf-8");
+    const list = lines.split("\n");
+    for (let i = 0; i < list.length;++i) {
+        const line = list[i];
         const pos = line.trim().indexOf("=");
         dict[line.trim().substring(0, pos)] = line.trim().substring(pos + 1);
     }

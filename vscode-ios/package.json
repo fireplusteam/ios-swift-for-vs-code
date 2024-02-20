@@ -24,6 +24,10 @@
         "title": "iOS: Select Scheme"
       },
       {
+        "command": "vscode-ios.env.scriptPath",
+        "title": "iOS: Script Path"
+      },
+      {
         "command": "vscode-ios.project.selectDevice",
         "title": "iOS: Select DEBUG Device"
       },
@@ -66,7 +70,7 @@
               "request": "custom",
               "name": "iOS App Debug",
               "targetCreateCommands": [
-                "^\"command script import '\\${iOSAttachScriptPath\\}/attach_lldb.py'\"",
+                "^\"command script import '\\${command:vscode-ios.env.scriptPath\\}/attach_lldb.py'\"",
                 "command script add -f attach_lldb.create_target create_target",
                 "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
@@ -82,10 +86,7 @@
               "preLaunchTask": "^\"\\${command:vscode-ios.run.app\\}\""
             }
           }
-        ],
-        "variables": {
-          "iOSAttachScriptPath": "vscode-ios.env.scriptPath"
-        }
+        ]
       }
     ],
     "extensionDependencies": [
