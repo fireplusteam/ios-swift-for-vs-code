@@ -79,16 +79,17 @@ do
     done
 
     sleep 2
-
     # install on simulator
     xcrun simctl install "$SIMULATOR_UDID" "$APP_PATH"
-
     # Get PID of run process
+    echo "LAUNCHING..."
     python3 "$VS_IOS_SCRIPT_PATH/async_launcher.py" "$VS_IOS_SCRIPT_PATH/launch.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
-
     sleep 1
-
-    python3 "$VS_IOS_SCRIPT_PATH/update_debug_launch_settings.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" 
+    if [ "$1" != "LLDB_DEBUG" ]; then
+        python3 "$VS_IOS_SCRIPT_PATH/update_debug_launch_settings.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" 
+    else
+        echo "WAITING DEBUGGER..."
+    fi
 
 done
 
