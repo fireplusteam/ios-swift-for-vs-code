@@ -18,6 +18,13 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "keybindings": [
+      {
+        "command": "vscode-ios.run.app.debug",
+        "key": "f5",
+        "when": "!inDebugMode && editorLangId == swift"
+      }
+    ],
     "commands": [
       {
         "command": "vscode-ios.project.selectTarget",
@@ -54,6 +61,10 @@
       {
         "command": "vscode-ios.run.app",
         "title": "iOS: Run App"
+      },
+      {
+        "command": "vscode-ios.run.app.debug",
+        "title": "iOS: Run & Debug App"
       }
     ],
     "debuggers": [

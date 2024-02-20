@@ -13,8 +13,9 @@ debugger_arg = sys.argv[3]
 print("INPUT", device_uuid, bundle)
 
 commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
-if debugger_arg == "LLDB_DEBUG":
-    commandLaunch.append("--wait-for-debugger")
+# this parameter is causing freeze if it debugger is not launched on time
+#if debugger_arg == "LLDB_DEBUG":
+#    commandLaunch.append("--wait-for-debugger")
     
 cwd = os.getcwd()
 
@@ -69,8 +70,8 @@ async def read_stream(stream, log_file_path):
 
 
 async def main():
-    if debugger_arg == "LLDB_DEBUG":
-        helper.update_debugger_launch_config("status", "launching")
+    #if debugger_arg == "LLDB_DEBUG":
+    #    helper.update_debugger_launch_config("status", "launching")
         
     # Run the command asynchronously
     return_code, stdout_output, stderr_output = await install_app(commandLaunch, ".logs/app.log")

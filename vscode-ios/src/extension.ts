@@ -12,6 +12,7 @@ import {
   selectTarget,
 } from "./commands";
 import { Executor, ExecutorRunningError } from "./execShell";
+import { endRunCommand, startIOSDebugger, terminateIOSDebugger } from "./debugger";
 
 function initialize() {}
 
@@ -127,6 +128,29 @@ export function activate(context: vscode.ExtensionContext) {
         await runApp(projectExecutor);
       });
       return ""; // we need to return string as it's going to be used for launch configuration
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
+      await commandWrapper(async () => {
+        startIOSDebugger();
+        await runApp(projectExecutor);
+      });
+      endRunCommand();
+      return ""; // we need to return string as it's going to be used for launch configuration
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.debug.onDidTerminateDebugSession((session) => {
+      terminateIOSDebugger(session.name, projectExecutor);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.debug.onDidChangeActiveDebugSession((session) => {
+      console.log("ok");
     })
   );
 }
