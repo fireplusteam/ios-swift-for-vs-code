@@ -24,6 +24,20 @@
         "when": "!inDebugMode && editorLangId == swift"
       }
     ],
+    "taskDefinitions": [
+      {
+        "type": "vscode-ios-tasks",
+        "required": [
+          "taskBuild"
+        ],
+        "properties": {
+          "taskBuild": {
+            "type": "string",
+            "description": "The build type"
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "vscode-ios.project.selectTarget",
@@ -37,7 +51,6 @@
         "command": "vscode-ios.project.selectDevice",
         "title": "iOS: Select DEBUG Device"
       },
-   
       {
         "command": "vscode-ios.check.workspace",
         "title": "iOS: Validate Environment"
@@ -46,7 +59,6 @@
         "command": "vscode-ios.check.generateXcodeServer",
         "title": "iOS: Generate xCode Server"
       },
-
       {
         "command": "vscode-ios.build.clean",
         "title": "iOS: Clean Derived Data",
@@ -70,7 +82,6 @@
       {
         "type": "xcode-lldb",
         "label": "iOS APP Debug",
-
         "configurationSnippets": [
           {
             "label": "CodeLLDB: Debug iOS App",
@@ -93,7 +104,7 @@
                 "watch_new_process"
               ],
               "exitCommands": [],
-              "preLaunchTask": "^\"\\${command:vscode-ios.run.app\\}\""
+              "preLaunchTask": "iOS: Build Selected Target"
             }
           }
         ]

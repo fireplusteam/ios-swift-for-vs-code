@@ -1,18 +1,24 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
 import { buildSelectedTarget, cleanDerivedData } from "./build";
-import { close } from "fs";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
+import { TaskDefinition } from "vscode";
 
-export class BuildTaskProvider {
+interface BuildTaskDefinition extends vscode.TaskDefinition {
+    taskBuild: string;
+}
+
+export class BuildTaskProvider implements vscode.TaskProvider {
+    static BuildScriptType = 'vscode-ios-tasks';
+
     private executor: Executor;
 
     constructor(executor: Executor) {
         this.executor = executor;
     }
 
-    public provideTasks() {
+    public provideTasks(token?: vscode.CancellationToken): vscode.ProviderResult<vscode.Task[]> {
         if (!isActivated()) {
             return [];
         }
@@ -23,16 +29,20 @@ export class BuildTaskProvider {
             }
         );
 
-        let cleanTask = this.createBuildTask("Clean Derived Data", async () => {
-            await cleanDerivedData(this.executor);
-        });
+        let cleanTask = this.createBuildTask(
+            "Clean Derived Data",
+            async () => {
+                await cleanDerivedData(this.executor);
+            }
+        );
 
         return [buildSelectedTargetTask, cleanTask];
     }
 
     private createBuildTask(title: string, commandClosure: () => Promise<void>) {
+        const def: BuildTaskDefinition = { type: BuildTaskProvider.BuildScriptType, taskBuild: title };
         let buildTask = new vscode.Task(
-            { type: "vscode-ios-tasks", name: title },
+            def,
             vscode.TaskScope.Workspace,
             title,
             "iOS",
@@ -47,7 +57,14 @@ export class BuildTaskProvider {
         return buildTask;
     }
 
-    public resolveTask(_task: any) {
+    public resolveTask(_task: vscode.Task) {
+        const taskBuild = _task.definition.taskBuild;
+        if (taskBuild) { 
+            // TODO: Implement resolver so a user can add tasks in his Task.json file
+            //const definition: BuildTaskDefinition = <any>_task.definition;
+            //return this.getTask(definition.flavor, definition.flags ? definition.flags : [], definition);
+            console.log(taskBuild);
+        }
         return undefined;
     }
 

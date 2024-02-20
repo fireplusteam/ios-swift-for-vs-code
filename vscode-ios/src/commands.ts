@@ -3,6 +3,7 @@ import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList } from "./env";
 import { buildSelectedTarget } from "./build";
+import { startIOSDebugger } from "./debugger";
 
 export async function selectTarget(executor: Executor) {
   if ((await checkWorkspace(executor)) === false) {
@@ -92,6 +93,7 @@ export async function runApp(executor: Executor) {
   if ((await buildSelectedTarget(executor)) === false) {
     return false;
   }
+  startIOSDebugger();
   return await executor.execShell(
     "Run App",
     "run_app.sh",

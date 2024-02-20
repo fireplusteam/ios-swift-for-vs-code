@@ -20,7 +20,7 @@ import {
 import { BuildTaskProvider } from "./BuildTaskProvider";
 import { commandWrapper } from "./commandWrapper";
 
-function initialize() {}
+function initialize() { }
 
 export const projectExecutor = new Executor();
 
@@ -38,8 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
   initialize();
 
   context.subscriptions.push(
-    vscode.tasks.registerTaskProvider("vscode-ios-tasks", new BuildTaskProvider(projectExecutor))
+    vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor))
   );
+
+  /*context.subscriptions.push(
+    vscode.debug.registerDebugConfigurationProvider("xcode-lldb", )
+  );*/
 
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
@@ -132,7 +136,6 @@ export function activate(context: vscode.ExtensionContext) {
         return false;
       }
       await commandWrapper(async () => {
-        startIOSDebugger();
         await runApp(projectExecutor);
       });
       endRunCommand();
@@ -148,4 +151,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }
