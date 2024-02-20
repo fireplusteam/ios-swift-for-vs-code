@@ -30,6 +30,8 @@ if is_multi_selection == '-multi':
     selected_destination = selected_destination.split(' ')
 else:
     selected_destination = [selected_destination]
+    
+print(f"SELECTED: {selected_destination}")
 
 command = ["xcodebuild", "-scheme", project_scheme, "-showdestinations"]    
 if "-package" != helper.get_project_type(project_file):
@@ -67,7 +69,7 @@ for device_line in devices:
             formatted_value += key + "=" + value
 
     if isValid:
-        selected_list = [x for x in selected_destination if x in formatted_value and x != "id="]
+        selected_list = [x for x in selected_destination if x in formatted_value and x != "id=" and x != '']
         
         if "OS" in formatted_key and "name" in formatted_key:
             formatted_key = f"{formatted_key['name']} - iOS {formatted_key['OS']}"

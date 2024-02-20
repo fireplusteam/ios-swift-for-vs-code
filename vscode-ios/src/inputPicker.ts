@@ -31,6 +31,11 @@ export async function showPicker(
       value = undefined;
     } else {
       if (canPickMany) {
+        const array = (selection as unknown as { [key: string]: any }[]).map((e) => {
+          return e["value"];
+        });
+        
+        value = array.join(" ");
       } else {
           const dict = selection as { [key: string]: any };
           value = dict["value"];

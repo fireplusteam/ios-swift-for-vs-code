@@ -89,7 +89,29 @@ export async function generateXcodeServer(executor: Executor) {
   );
 }
 
+export async function terminateCurrentIOSApp(executor: Executor) {
+  return await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh");
+}
+
 export async function runApp(executor: Executor) {
+  if ((await terminateCurrentIOSApp(executor)) === false) {
+    return false;
+  }
+  if ((await buildSelectedTarget(executor)) === false) {
+    return false;
+  }
+  return await executor.execShell(
+    "Run App",
+    "run_app.sh",
+    ["RUNNING"],
+    false
+  );
+}
+
+export async function runAppAndDebug(executor: Executor) {
+  if ((await terminateCurrentIOSApp(executor)) === false) {
+    return false;
+  } 
   if ((await buildSelectedTarget(executor)) === false) {
     return false;
   }
@@ -98,6 +120,44 @@ export async function runApp(executor: Executor) {
     "Run App",
     "run_app.sh",
     ["LLDB_DEBUG"],
+    false
+  );
+}
+
+export async function runAppOnMultipleDevices(executor: Executor) {
+  if ((await terminateCurrentIOSApp(executor)) === false) {
+    return false;
+  }
+  
+  let stdout = (await executor.execShell(
+    "Fetch Multiple Devices",
+    "populate_devices.sh",
+    ["-multi"],
+    false,
+    ExecutorReturnType.stdout
+  )) as string;
+
+  stdout = stdout.trim();
+  const lines = stdout.split("\n");
+  let option = await showPicker(
+    lines[lines.length - 1],
+    "Devices",
+    "Please select Multiple Devices to Run You App",
+    true
+  );
+
+  if (option === undefined || option === '') {
+    return false;
+  }
+
+  if ((await buildSelectedTarget(executor)) === false) {
+    return false;
+  }
+  
+  return await executor.execShell(
+    "Run App On Multiple Devices",
+    "run_app.sh",
+    ["RUNNING", "-DEVICES", `"${option}"`],
     false
   );
 }

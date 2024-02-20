@@ -7,6 +7,8 @@ import {
   checkWorkspace,
   generateXcodeServer,
   runApp,
+  runAppAndDebug,
+  runAppOnMultipleDevices,
   selectDevice,
   selectTarget,
 } from "./commands";
@@ -131,12 +133,21 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
+      await commandWrapper(async () => {
+        await runAppOnMultipleDevices(projectExecutor);
+      });
+      return ""; // we need to return string as it's going to be used for launch configuration
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
       if (!isActivated()) {
         return false;
       }
       await commandWrapper(async () => {
-        await runApp(projectExecutor);
+        await runAppAndDebug(projectExecutor);
       });
       endRunCommand();
       return true;
