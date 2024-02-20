@@ -1,44 +1,31 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { cleanDerivedData } from "./clean";
+import { buildOptions, cleanDerivedData } from "./build";
 import { getEnv, getScriptPath } from "./env";
 import {
-  buildSelectedTarget,
   checkWorkspace,
   generateXcodeServer,
   runApp,
   selectDevice,
   selectTarget,
 } from "./commands";
-import { Executor, ExecutorRunningError } from "./execShell";
-import { endRunCommand, startIOSDebugger, terminateIOSDebugger } from "./debugger";
+import { buildSelectedTarget } from "./build";
+import { Executor } from "./execShell";
+import {
+  endRunCommand,
+  startIOSDebugger,
+  terminateIOSDebugger,
+} from "./debugger";
+import { BuildTaskProvider } from "./BuildTaskProvider";
+import { commandWrapper } from "./commandWrapper";
 
 function initialize() {}
 
-const projectExecutor = new Executor();
+export const projectExecutor = new Executor();
 
-function sleep(ms: number) {
+export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function commandWrapper(commandClosure: () => Promise<void>) {
-  try {
-    await commandClosure();
-  } catch (err) {
-    if (err instanceof ExecutorRunningError) {
-      const choice = await vscode.window.showErrorMessage(
-        "To execute this task you need to terminate the current task. Do you want to terminate it to continue?",
-        "Terminate",
-        "Cancel"
-      );
-      if (choice === "Terminate") {
-        projectExecutor.terminateShell();
-        await sleep(1500); // 1.5 seconds
-        commandClosure();
-      }
-    }
-  }
 }
 
 // This method is called when your extension is activated
@@ -49,17 +36,19 @@ export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "vscode-ios" is now active!');
 
   initialize();
+
+  context.subscriptions.push(
+    vscode.tasks.registerTaskProvider("vscode-ios-tasks", new BuildTaskProvider(projectExecutor))
+  );
+
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "vscode-ios.env.scriptPath",
-      async () => {
-        console.log("DEBUG STARTED: " + getScriptPath());
-        return getScriptPath();
-      }
-    )
+    vscode.commands.registerCommand("vscode-ios.env.scriptPath", async () => {
+      console.log("DEBUG STARTED: " + getScriptPath());
+      return getScriptPath();
+    })
   );
 
   context.subscriptions.push(
@@ -102,7 +91,13 @@ export function activate(context: vscode.ExtensionContext) {
       }
     )
   );
-
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.build.options", async () => {
+      await commandWrapper(async () => {
+        await buildOptions(projectExecutor);
+      });
+    })
+  );
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
       await commandWrapper(async () => {
@@ -145,12 +140,6 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.debug.onDidTerminateDebugSession((session) => {
       terminateIOSDebugger(session.name, projectExecutor);
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.debug.onDidChangeActiveDebugSession((session) => {
-      console.log("ok");
     })
   );
 }

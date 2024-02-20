@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList } from "./env";
+import { buildSelectedTarget } from "./build";
 
 export async function selectTarget(executor: Executor) {
   if ((await checkWorkspace(executor)) === false) {
@@ -84,18 +85,6 @@ export async function generateXcodeServer(executor: Executor) {
   return await executor.execShell(
     "Generate xCode Server",
     "build_autocomplete.sh"
-  );
-}
-
-export async function buildSelectedTarget(executor: Executor) {
-  if ((await checkWorkspace(executor)) === false) {
-    return false;
-  }
-  return await executor.execShell(
-    "Build Selected Target",
-    "build_app.sh",
-    ["-TARGET"],
-    false
   );
 }
 

@@ -11,7 +11,7 @@ SELECTED_FILE=$1
 
 SCHEME_SCRIPT=$(python3 <<EOF
 import sys
-sys.path.insert(0, '.vscode')
+sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
 import xcutil
 

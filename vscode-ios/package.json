@@ -13,8 +13,7 @@
     "workspaceContains:Package.swift",
     "workspaceContains:*..xcworkspace",
     "workspaceContains:*.xcodeproj",
-    "workspaceContains:buildServer.json",
-    "onDebugResolve:xos-app-lldb"
+    "workspaceContains:buildServer.json"
   ],
   "main": "./out/extension.js",
   "contributes": {

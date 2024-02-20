@@ -47,7 +47,7 @@ if [ "$1" == "DEBUG_LLDB" ]; then
 echo "WAITING FOR DEBUGER"
 python3 <<EOF
 import sys
-sys.path.insert(0, '.vscode')
+sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
 helper.wait_debugger_to_launch()
 EOF
