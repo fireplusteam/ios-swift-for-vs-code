@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import { buildOptions, cleanDerivedData } from "./build";
-import { getEnv, getScriptPath } from "./env";
+import { getEnv, getScriptPath, isActivated } from "./env";
 import {
   checkWorkspace,
   generateXcodeServer,
@@ -128,12 +128,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
+      if (!isActivated()) {
+        return false;
+      }
       await commandWrapper(async () => {
         startIOSDebugger();
         await runApp(projectExecutor);
       });
       endRunCommand();
-      return ""; // we need to return string as it's going to be used for launch configuration
+      return true;
     })
   );
 

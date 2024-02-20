@@ -19,7 +19,7 @@ export async function selectTarget(executor: Executor) {
   stdout = stdout.trim();
   const lines = stdout.split("\n");
 
-  let option = await showPicker(lines[lines.length - 1], 
+  let option = await showPicker(lines[lines.length - 1],
     "Target",
     "Please select Target",
     false,
