@@ -28,7 +28,6 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 await buildSelectedTarget(this.executor);
             }
         );
-
         let cleanTask = this.createBuildTask(
             "Clean Derived Data",
             async () => {

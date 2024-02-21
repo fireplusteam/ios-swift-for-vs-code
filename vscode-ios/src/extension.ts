@@ -14,17 +14,14 @@ import {
 } from "./commands";
 import { buildSelectedTarget } from "./build";
 import { Executor } from "./execShell";
-import {
-  endRunCommand,
-  startIOSDebugger,
-  terminateIOSDebugger,
-} from "./debugger";
 import { BuildTaskProvider } from "./BuildTaskProvider";
 import { commandWrapper } from "./commandWrapper";
+import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 
 function initialize() { }
 
 export const projectExecutor = new Executor();
+export const debugConfiguration = new DebugConfigurationProvider(projectExecutor);
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,9 +46,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor))
   );
 
-  /*context.subscriptions.push(
-    vscode.debug.registerDebugConfigurationProvider("xcode-lldb", )
-  );*/
+  context.subscriptions.push(
+    vscode.debug.registerDebugConfigurationProvider(DebugConfigurationProvider.Type, debugConfiguration)
+  );
 
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
@@ -149,22 +146,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
-      if (!isActivated()) {
-        return false;
-      }
-      await commandWrapper(async () => {
-        await runAppAndDebug(projectExecutor);
-      });
-      endRunCommand();
+      debugConfiguration.startIOSDebugger(); 
       return true;
     })
   );
 
-  context.subscriptions.push(
-    vscode.debug.onDidTerminateDebugSession((session) => {
-      terminateIOSDebugger(session.name, projectExecutor);
-    })
-  );
 }
 
 // This method is called when your extension is deactivated

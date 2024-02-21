@@ -15,8 +15,12 @@ export async function commandWrapper(commandClosure: () => Promise<void>) {
       if (choice === "Terminate") {
         projectExecutor.terminateShell();
         await sleep(1500); // 1.5 seconds
-        commandClosure();
+        await commandClosure();
+      } else {
+        throw err;
       }
+    } else {
+      throw err;
     }
   }
 }

@@ -7,6 +7,7 @@
     "vscode": "^1.86.0"
   },
   "categories": [
+    "Debuggers",
     "Other"
   ],
   "activationEvents": [
@@ -18,11 +19,7 @@
   "main": "./out/extension.js",
   "contributes": {
     "keybindings": [
-      {
-        "command": "vscode-ios.run.app.debug",
-        "key": "f5",
-        "when": "!inDebugMode && editorLangId == swift"
-      }
+      
     ],
     "taskDefinitions": [
       {
@@ -85,30 +82,44 @@
     "debuggers": [
       {
         "type": "xcode-lldb",
-        "label": "iOS APP Debug",
+        "label": "iOS: APP Debug",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "target": [
+                "app",
+                "tests"
+              ]
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "xcode-lldb",
+            "name": "iOS: APP Debug",
+            "request": "launch",
+            "target": "app"
+          }
+        ],
         "configurationSnippets": [
           {
-            "label": "CodeLLDB: Debug iOS App",
+            "label": "iOS: APP Debug",
             "description": "Add a new configuration for iOS debugging",
             "body": {
-              "type": "lldb",
-              "request": "custom",
-              "name": "iOS App Debug",
-              "targetCreateCommands": [
-                "^\"command script import '\\${command:vscode-ios.env.scriptPath\\}/attach_lldb.py'\"",
-                "command script add -f attach_lldb.create_target create_target",
-                "command script add -f attach_lldb.terminate_debugger terminate_debugger",
-                "command script add -f attach_lldb.watch_new_process watch_new_process",
-                "command script add -f attach_lldb.app_log app_log",
-                "create_target"
-              ],
-              "processCreateCommands": [
-                "process handle SIGKILL -n true -p true -s false",
-                "process handle SIGTERM -n true -p true -s false",
-                "watch_new_process"
-              ],
-              "exitCommands": [],
-              "preLaunchTask": "iOS: Build Selected Target"
+              "type": "xcode-lldb",
+              "name": "iOS: APP Debug",
+              "request": "launch",
+              "target": "app"
+            }
+          },
+          {
+            "label": "iOS: Tests Debug",
+            "description": "Add a new configuration for iOS debugging",
+            "body": {
+              "type": "xcode-lldb",
+              "name": "iOS: Tests Debug",
+              "request": "launch",
+              "target": "tests"
             }
           }
         ]
