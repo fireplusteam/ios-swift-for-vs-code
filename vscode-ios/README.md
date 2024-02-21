@@ -1,6 +1,6 @@
 # vscode-ios README
 
-This is the README for your extension "vscode-ios". After writing up a brief description, we recommend including the following sections.
+Write/Build/Debug your xCode projects in VS Code with your favorite extensions
 
 ## Features
 
