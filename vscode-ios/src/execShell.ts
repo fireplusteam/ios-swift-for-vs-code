@@ -97,7 +97,10 @@ export class Executor {
     args: ReadonlyArray<string>,
     options: ExecFileSyncOptionsWithStringEncoding
   ) {
-    return spawn(file, args, options);
+    const quotedArgs = args.map((e) => {
+      return `"${e}"`;
+    });
+    return spawn(file, quotedArgs, options);
   }
 
   private dataToPrint(data: string) {

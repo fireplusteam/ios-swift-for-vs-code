@@ -157,7 +157,7 @@ export async function runAppOnMultipleDevices(executor: Executor) {
   return await executor.execShell(
     "Run App On Multiple Devices",
     "run_app.sh",
-    ["RUNNING", "-DEVICES", `"${option}"`],
+    ["RUNNING", "-DEVICES", `${option}`],
     false
   );
 }
