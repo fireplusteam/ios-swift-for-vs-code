@@ -64,6 +64,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, dbgConfig: vscode.DebugConfiguration, token: vscode.CancellationToken) {
+        if (!isActivated()) {
+            return null;
+        }
         if (dbgConfig.type !== DebugConfigurationProvider.Type) {
             return null;
         }
@@ -71,7 +74,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             this.executeAppCommand(async () => {
                 await runAppAndDebug(this.executor, true);
             });
-        } // TODO: add tests subtask
+        } // TODO: add tests subtask 
 
         return this.debugSession();
     }

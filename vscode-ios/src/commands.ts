@@ -1,25 +1,22 @@
-import * as vscode from "vscode";
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList } from "./env";
 import { buildSelectedTarget } from "./build";
+import { getLastLine } from "./utils";
 
 export async function selectTarget(executor: Executor) {
   if ((await checkWorkspace(executor)) === false) {
     return false;
   }
-  let stdout = (await executor.execShell(
+  let stdout = getLastLine((await executor.execShell(
     "Fetch Project Targets",
     "populate_schemes.sh",
     [],
     false,
     ExecutorReturnType.stdout
-  )) as string;
+  )) as string);
 
-  stdout = stdout.trim();
-  const lines = stdout.split("\n");
-
-  let option = await showPicker(lines[lines.length - 1],
+  let option = await showPicker(stdout,
     "Target",
     "Please select Target",
     false,
@@ -40,18 +37,16 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
   if (shouldCheckWorkspace === true && (await checkWorkspace(executor)) === false) {
     return false;
   }
-  let stdout = (await executor.execShell(
+  let stdout = getLastLine((await executor.execShell(
     "Fetch Devices",
     "populate_devices.sh",
     ["-single"],
     false,
     ExecutorReturnType.stdout
-  )) as string;
+  )) as string);
 
-  stdout = stdout.trim();
-  const lines = stdout.split("\n");
   let option = await showPicker(
-    lines[lines.length - 1],
+    stdout,
     "Device",
     "Please select Device for DEBUG",
     false
@@ -110,7 +105,7 @@ export async function runApp(executor: Executor) {
 export async function runAppAndDebug(executor: Executor, shouldBuild = true) {
   if ((await terminateCurrentIOSApp(executor)) === false) {
     return false;
-  } 
+  }
   if (shouldBuild === true && (await buildSelectedTarget(executor)) === false) {
     return false;
   }
@@ -126,19 +121,17 @@ export async function runAppOnMultipleDevices(executor: Executor) {
   if ((await terminateCurrentIOSApp(executor)) === false) {
     return false;
   }
-  
-  let stdout = (await executor.execShell(
+
+  let stdout = getLastLine((await executor.execShell(
     "Fetch Multiple Devices",
     "populate_devices.sh",
     ["-multi"],
     false,
     ExecutorReturnType.stdout
-  )) as string;
+  )) as string);
 
-  stdout = stdout.trim();
-  const lines = stdout.split("\n");
   let option = await showPicker(
-    lines[lines.length - 1],
+    stdout,
     "Devices",
     "Please select Multiple Devices to Run You App",
     true
@@ -151,7 +144,7 @@ export async function runAppOnMultipleDevices(executor: Executor) {
   if ((await buildSelectedTarget(executor)) === false) {
     return false;
   }
-  
+
   return await executor.execShell(
     "Run App On Multiple Devices",
     "run_app.sh",

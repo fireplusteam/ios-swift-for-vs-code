@@ -149,7 +149,7 @@ def create_target(debugger, command, result, internal_dict):
         result.AppendMessage("Start lldb watching new instance of App")
         
         list = helper.get_env_list()
-        result.AppendMessage(f"Enviroment: {list}")
+        result.AppendMessage(f"Environment: {list}")
 
         process_name = get_process_name()
         existing_pids = get_list_of_pids(process_name)
@@ -161,8 +161,8 @@ def create_target(debugger, command, result, internal_dict):
         perform_debugger_command(debugger, f"target create \"{executable}\"")
         result.AppendMessage(str(debugger.GetSelectedTarget()))
         result.AppendMessage(f"Target created for {executable}")
-        # Set commong breakpoints, so if tests are running with debuger, so it's catched
-        # depracated
+        # Set common breakpoints, so if tests are running with debugger, so it's caught
+        # deprecated
         #perform_debugger_command(debugger, "breakpoint set --selector recordFailureWithDescription:inFile:atLine:expected:")
         #perform_debugger_command(debugger, "breakpoint set --name _XCTFailureHandler")
         
