@@ -12,6 +12,7 @@ import { buildSelectedTarget } from "./build";
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 
     static Type = "xcode-lldb";
+    static lldbName = "iOS App Debugger NAME UNIQUE RANDOM";
 
     private executor: Executor;
 
@@ -24,7 +25,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     constructor(executor: Executor) {
         this.executor = executor;
         this.onDidStartDisposable = vscode.debug.onDidStartDebugSession((e) => {
-            if (e.name === "iOS App Debug") {
+            if (e.name === DebugConfigurationProvider.lldbName) {
                 this.activeSession = e;
             }
         });
@@ -38,16 +39,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         });
     }
 
-    private async executeAppCommand() {
+    private async executeAppCommand(commandClosure: () => Promise<void>) {
         try {
             this.isRunning = true;
             await commandWrapper(async () => {
-                await runAppAndDebug(this.executor, true);
+                await commandClosure();
             });
             this.isRunning = false;
         } catch (err) {
             await vscode.debug.stopDebugging(this.activeSession);
             this.isRunning = false;
+            this.activeSession = undefined;
         }
     }
 
@@ -66,8 +68,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
         if (dbgConfig.target === "app") {
-            this.executeAppCommand();
-        }
+            this.executeAppCommand(async () => {
+                await runAppAndDebug(this.executor, true);
+            });
+        } // TODO: add tests subtask
 
         return this.debugSession();
     }
@@ -76,7 +80,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         let debugSession: vscode.DebugConfiguration = {
             type: "lldb",
             request: "custom",
-            name: "iOS App Debug",
+            name: DebugConfigurationProvider.lldbName,
             program: "${workspaceFolder}/your-program.js",
             targetCreateCommands: [
                 `command script import '${getScriptPath()}/attach_lldb.py'`,
