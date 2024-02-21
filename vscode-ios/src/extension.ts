@@ -38,6 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "vscode-ios" is now active!');
 
   initialize();
+  let logChannel = vscode.window.createOutputChannel("VSCode-iOS");
+  context.subscriptions.push(
+    logChannel
+  );
+  logChannel.appendLine("Activated");
+  logChannel.show();
 
   context.subscriptions.push(
     vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor))
