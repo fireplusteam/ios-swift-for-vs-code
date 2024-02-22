@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
-import { buildSelectedTarget, cleanDerivedData } from "./build";
+import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, cleanDerivedData } from "./build";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
 import { TaskDefinition } from "vscode";
@@ -23,6 +23,23 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         if (!isActivated()) {
             return [];
         }
+
+        let buildAllTask = this.createBuildTask(
+            "Build All",
+            vscode.TaskGroup.Build,
+            async () => {
+                await buildAllTarget(this.executor);
+            }
+        );
+
+        let buildCurrentFileTask = this.createBuildTask(
+            "Build: Current File",
+            vscode.TaskGroup.Build,
+            async () => {
+                await buildCurrentFile(this.executor);
+            }
+        );
+
         let buildSelectedTargetTask = this.createBuildTask(
             "Build Selected Target",
             vscode.TaskGroup.Build,
@@ -30,6 +47,15 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 await buildSelectedTarget(this.executor);
             }
         );
+
+        let buildTestsTask = this.createBuildTask(
+            "Build Tests",
+            vscode.TaskGroup.Build,
+            async () => {
+                await buildTests(this.executor);
+            }
+        );
+
         let cleanTask = this.createBuildTask(
             "Clean Derived Data",
             vscode.TaskGroup.Clean,
@@ -38,7 +64,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             }
         );
 
-        return [buildSelectedTargetTask, cleanTask];
+        return [buildTestsTask, buildCurrentFileTask, buildAllTask, buildSelectedTargetTask, cleanTask];
     }
 
     private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: () => Promise<void>) {

@@ -1,6 +1,6 @@
 #!/bin/bash
 source '.vscode/.env'
-source '.vscode/xcode_build_util.sh'
+source "$VS_IOS_SCRIPT_PATH/xcode_build_util.sh"
 
 mkdir -p .logs
 
@@ -49,4 +49,4 @@ XCODECMD="xcodebuild -scheme \"$SCHEME\" $XCODECMD"
 echo "Base XCODECMD: $XCODECMD"
 eval "$XCODECMD build" 2> /dev/null | tee -a '.logs/build.log' &> /dev/null 2>&1
 
-python3 .vscode/print_errors.py
+python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"

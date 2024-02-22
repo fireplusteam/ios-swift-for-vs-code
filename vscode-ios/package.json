@@ -62,8 +62,23 @@
         "category": "build"
       },
       {
+        "command": "vscode-ios.build.all",
+        "title": "iOS: Build All",
+        "category": "build"
+      },
+      {
+        "command": "vscode-ios.build.currentFile",
+        "title": "iOS: Build All",
+        "category": "build"
+      },
+      {
         "command": "vscode-ios.build.selectedTarget",
-        "title": "iOS: Build Selected Target",
+        "title": "iOS: Build: Current File",
+        "category": "build"
+      },
+      {
+        "command": "vscode-ios.build.tests",
+        "title": "iOS: Build Tests",
         "category": "build"
       },
       {

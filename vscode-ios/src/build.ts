@@ -17,3 +17,39 @@ export async function buildSelectedTarget(executor: Executor) {
     false
   );
 }
+
+export async function buildAllTarget(executor: Executor) {
+  await checkWorkspace(executor);
+  await executor.execShell(
+    "Build All",
+    "build_app.sh",
+    ["-ALL"],
+    false
+  );
+}
+
+export async function buildCurrentFile(executor: Executor) {
+  await checkWorkspace(executor);
+  const fileUrl = vscode.window.activeTextEditor?.document.uri.fsPath;
+  if (fileUrl === undefined) {
+    throw new Error("In order to trigger a compile task for a file, select a file first please");
+  }
+  await executor.execShell(
+    "Build: Current File",
+    "compile_current_file.sh",
+    [fileUrl],
+    false
+  );
+}
+
+// TESTS
+
+export async function buildTests(executor: Executor) {
+  await checkWorkspace(executor);
+  await executor.execShell(
+    "Build Tests",
+    "build_app.sh",
+    ["-TESTING"],
+    false
+  );
+}

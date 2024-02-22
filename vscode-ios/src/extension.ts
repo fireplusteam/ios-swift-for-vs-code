@@ -10,7 +10,7 @@ import {
   selectDevice,
   selectTarget,
 } from "./commands";
-import { buildSelectedTarget, cleanDerivedData } from "./build";
+import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, cleanDerivedData } from "./build";
 import { Executor } from "./execShell";
 import { BuildTaskProvider } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
@@ -113,6 +113,39 @@ export function activate(context: vscode.ExtensionContext) {
       async () => {
         await runCommand(async () => {
           await buildSelectedTarget(projectExecutor);
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-ios.build.currentFile",
+      async () => {
+        await runCommand(async () => {
+          await buildCurrentFile(projectExecutor);
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-ios.build.all",
+      async () => {
+        await runCommand(async () => {
+          await buildAllTarget(projectExecutor);
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-ios.build.tests",
+      async () => {
+        await runCommand(async () => {
+          await buildTests(projectExecutor);
         });
       }
     )
