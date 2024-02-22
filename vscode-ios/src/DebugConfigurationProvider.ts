@@ -43,6 +43,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             if (this.isRunning && vscode.debug.activeDebugSession === undefined) {
                 this.executor.terminateShell();
                 this.isRunning = false;
+            } else {
+                vscode.debug.stopDebugging(this.activeSession);
             }
         }));
     }

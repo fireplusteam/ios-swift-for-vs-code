@@ -29,7 +29,7 @@
       {
         "name": "xcode",
         "owner": "xcode",
-        "source": "vscode-ios",
+        "source": "xcodebuild",
         "fileLocation": "absolute",
         "pattern": [
           {
