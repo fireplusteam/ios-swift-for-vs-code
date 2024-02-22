@@ -13,7 +13,7 @@ import {
 } from "./commands";
 import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, buildTestsForCurrentFile, cleanDerivedData } from "./build";
 import { Executor } from "./execShell";
-import { BuildTaskProvider } from "./BuildTaskProvider";
+import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
 
@@ -102,9 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
  
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
-      await runCommand(async () => {
-        await cleanDerivedData(projectExecutor);
-      });
+      executeTask("Clean Derived Data");
     })
   );
 
@@ -112,9 +110,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.selectedTarget",
       async () => {
-        await runCommand(async () => {
-          await buildSelectedTarget(projectExecutor);
-        });
+        executeTask("Build Selected Target");
       }
     )
   );
@@ -123,9 +119,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.currentFile",
       async () => {
-        await runCommand(async () => {
-          await buildCurrentFile(projectExecutor);
-        });
+        executeTask("Build: Current File");
       }
     )
   );
@@ -134,9 +128,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.all",
       async () => {
-        await runCommand(async () => {
-          await buildAllTarget(projectExecutor);
-        });
+        executeTask("Build All");
       }
     )
   );
@@ -145,9 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.tests",
       async () => {
-        await runCommand(async () => {
-          await buildTests(projectExecutor);
-        });
+        executeTask("Build Tests");
       }
     )
   );
@@ -156,9 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.tests.currentFile",
       async () => {
-        await runCommand(async () => {
-          await buildTestsForCurrentFile(projectExecutor);
-        });
+        executeTask("Build Tests: Current File");
       }
     )
   );

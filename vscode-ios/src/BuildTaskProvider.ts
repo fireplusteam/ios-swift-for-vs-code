@@ -11,6 +11,15 @@ interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
 }
 
+export async function executeTask(name: string) {
+    const tasks = await vscode.tasks.fetchTasks();
+    for (const task of tasks) {
+        if (task.name === name && task.definition.type === BuildTaskProvider.BuildScriptType) {
+            await vscode.tasks.executeTask(task);
+        }
+    }
+}
+
 export class BuildTaskProvider implements vscode.TaskProvider {
     static BuildScriptType = 'vscode-ios-tasks';
 

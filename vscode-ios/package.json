@@ -90,12 +90,12 @@
       },
       {
         "command": "vscode-ios.build.currentFile",
-        "title": "iOS: Build All",
+        "title": "iOS: Build: Current File",
         "category": "build"
       },
       {
         "command": "vscode-ios.build.selectedTarget",
-        "title": "iOS: Build: Current File",
+        "title": "iOS: Build Selected Target",
         "category": "build"
       },
       {
