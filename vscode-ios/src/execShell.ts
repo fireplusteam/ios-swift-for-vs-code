@@ -44,7 +44,7 @@ export class Executor {
   private childProc: ChildProcess | undefined;
   private animationInterval: NodeJS.Timeout | undefined;
 
-  public constructor() {}
+  public constructor() { }
 
   createTitleAnimation(terminalId: string) {
     // animation steps
@@ -194,15 +194,19 @@ export class Executor {
           );
         }
         if (code !== 0) {
-          this.changeNameEmitter?.fire(
-            `❌ ${this.getTerminalName(commandName)}`
-          );
+          if (mode != ExecutorMode.silently) {
+            this.changeNameEmitter?.fire(
+              `❌ ${this.getTerminalName(commandName)}`
+            );
+          }
           terminal.show();
-          reject(new ExecutorTaskError(`Task: ${this.getTerminalName(commandName) } exits with ${code}`, code));
+          reject(new ExecutorTaskError(`Task: ${this.getTerminalName(commandName)} exits with ${code}`, code));
         } else {
-          this.changeNameEmitter?.fire(
-            `✅ ${this.getTerminalName(commandName)}`
-          );
+          if (mode != ExecutorMode.silently) {
+            this.changeNameEmitter?.fire(
+              `✅ ${this.getTerminalName(commandName)}`
+            );
+          }
           switch (returnType) {
             case ExecutorReturnType.statusCode:
               resolve(true);

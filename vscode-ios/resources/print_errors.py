@@ -36,18 +36,21 @@ def filter_lines(lines):
     is_inside_error = False
     added_followup_lines = 0
     log_pos = -1
+    
+    start_line = "\t" if not problem_matcher else ""
+    
     for indx, line in enumerate(lines):
         if is_inside_error:
             if end_error_pattern in line:
                 is_inside_error = False
-                error_line = "\t" + line.rstrip()
-                error_line += f"\t->\t{file_path}:{log_pos + 1}"
+                error_line = start_line + line.rstrip()
+                error_line += f"{start_line}->\t{file_path}:{log_pos + 1}"
                 filtered.append(error_line)
             elif len(line.strip()) > 0 and added_followup_lines < 2:
                 added_followup_lines += 1
-                error_line = "\t" + line.rstrip()
+                error_line = start_line + line.rstrip()
                 if added_followup_lines > 1:
-                    error_line += f"\t->\t{file_path}:{log_pos + 1}"
+                    error_line += f"{start_line}->\t{file_path}:{log_pos + 1}"
                 filtered.append(error_line)
 
         if error_pattern in line:
@@ -62,7 +65,7 @@ def filter_lines(lines):
 lines = filter_lines(lines)
 
 output = f"{Color.FAIL}LIST OF ERRORS: {number_of_errors}{Color.ENDC}\n"
-pure_output = "LIST OF ERRORS:\n"
+pure_output = "LIST OF ERRORS:\n" if not problem_matcher else ""
 for line in lines:
     i = 0
     if end_error_pattern in line:
@@ -90,7 +93,20 @@ if len(lines) > 0:
         file.write(pure_output)
         
     if (problem_matcher):
-        print(pure_output)
+        matcher = pure_output.splitlines();
+        merged = "";
+        for i in range(0, len(matcher), 3):
+            if i + 2 < len(matcher):
+                single_line = matcher[i].strip() + "| ";
+                second_line = matcher[i + 1].rstrip()
+                index_of_error= matcher[i + 2].find("^")
+                if index_of_error != -1:
+                    second_line = second_line[:index_of_error] + '^' + second_line[index_of_error:]
+                single_line += second_line
+                
+                merged += single_line + "\n"
+        
+        print(merged)
         sys.stdout.flush();
         exit(0)
     else:
