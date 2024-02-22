@@ -25,6 +25,24 @@
         "when": "inDebugMode"
       }
     ],
+    "problemMatchers": [
+      {
+        "name": "xcode",
+        "owner": "xcode",
+        "source": "vscode-ios",
+        "fileLocation": "absolute",
+        "pattern": [
+          {
+            "regexp": "^(.*?):(\\d+)(?::(\\d+))?:\\s+(warning|error|note):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          }
+        ]
+      }
+    ],
     "taskDefinitions": [
       {
         "type": "vscode-ios-tasks",

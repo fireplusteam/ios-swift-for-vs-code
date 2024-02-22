@@ -32,6 +32,11 @@ export enum ExecutorReturnType {
   stdout
 }
 
+export enum ExecutorMode {
+  verbose,
+  silently
+}
+
 export class Executor {
   private terminal: vscode.Terminal | undefined;
   private writeEmitter: vscode.EventEmitter<string> | undefined;
@@ -58,15 +63,19 @@ export class Executor {
     return terminalId;
   }
 
-  private getTerminal(id: string) {
+  private getTerminal(id: string, mode: ExecutorMode) {
     const terminalId = this.getTerminalName(id);
     clearInterval(this.animationInterval);
     if (this.terminal) {
-      this.animationInterval = this.createTitleAnimation(terminalId);
+      if (mode !== ExecutorMode.silently) {
+        this.animationInterval = this.createTitleAnimation(terminalId);
+      }
       if (this.terminal.name === terminalId) {
         return this.terminal;
       }
-      this.changeNameEmitter?.fire(`${terminalId}`);
+      if (mode !== ExecutorMode.silently) {
+        this.changeNameEmitter?.fire(`${terminalId}`);
+      }
       return this.terminal;
     }
     this.writeEmitter = new vscode.EventEmitter<string>();
@@ -121,7 +130,8 @@ export class Executor {
     file: string,
     args: string[] = [],
     showTerminal = false,
-    returnType = ExecutorReturnType.statusCode
+    returnType = ExecutorReturnType.statusCode,
+    mode: ExecutorMode = ExecutorMode.verbose
   ): Promise<boolean | string> {
     if (this.childProc !== undefined) {
       return new Promise((resolve, reject) => {
@@ -133,7 +143,10 @@ export class Executor {
       ...process.env,
       ...env,
     };
-    const script = getScriptPath(file);
+    let script = getScriptPath(file);
+    if (script.indexOf(".py") !== -1) {
+      script = `python3 "${script}"`;
+    }
     const proc = this.execShellImp(script, args, {
       encoding: "utf-8",
       cwd: getWorkspacePath(),
@@ -142,20 +155,26 @@ export class Executor {
       stdio: "pipe",
     });
     this.childProc = proc;
-    const terminal = this.getTerminal(commandName);
+    const terminal = this.getTerminal(commandName, mode);
     if (showTerminal) {
       terminal.show();
     }
-    this.writeEmitter?.fire(`COMMAND: ${commandName}\n`);
+    if (mode === ExecutorMode.verbose) {
+      this.writeEmitter?.fire(`COMMAND: ${commandName}\n`);
+    }
     let stdout = "";
     proc.stdout?.on("data", (data) => {
-      this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+      if (mode === ExecutorMode.verbose) {
+        this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+      }
       if (returnType === ExecutorReturnType.stdout) {
         stdout += data.toString();
       }
     });
     proc.stderr?.on("data", (data) => {
-      this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+      if (mode === ExecutorMode.verbose) {
+        this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+      }
     });
 
     return new Promise((resolve, reject) => {
@@ -169,9 +188,11 @@ export class Executor {
           return;
         }
 
-        this.writeEmitter?.fire(
-          this.dataToPrint(`${this.getTerminalName(commandName)} exits with status code: ${code}\n`)
-        );
+        if (mode === ExecutorMode.verbose) {
+          this.writeEmitter?.fire(
+            this.dataToPrint(`${this.getTerminalName(commandName)} exits with status code: ${code}\n`)
+          );
+        }
         if (code !== 0) {
           this.changeNameEmitter?.fire(
             `❌ ${this.getTerminalName(commandName)}`

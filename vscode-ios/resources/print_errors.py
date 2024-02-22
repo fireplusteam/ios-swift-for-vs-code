@@ -3,8 +3,12 @@ import os
 
 file_path = ".logs/build.log"
 
+problem_matcher = False
 if len(sys.argv) > 1:
-    file_path = sys.argv[1] 
+    if sys.argv[1] == '-problemMatcher':
+        problem_matcher = True;
+    else:
+        file_path = sys.argv[1]
 
 if not os.path.exists(file_path):
     lines = []
@@ -48,7 +52,7 @@ def filter_lines(lines):
 
         if error_pattern in line:
             if len(line.strip()) > 0:
-                filtered.append("❌ " + line.strip())
+                filtered.append(("❌ " if not problem_matcher else " ") + line.strip())
             number_of_errors += 1
             is_inside_error = True
             log_pos = indx
@@ -78,16 +82,21 @@ for line in lines:
                 output += f"{Color.FAIL}{error_pattern}{Color.ENDC}"
                 pure_output += error_pattern
 
+    pure_output += "\n"
     output += "\n"
 
 if len(lines) > 0:
-    print(output)
-
     with open(".logs/errors.log", 'w') as file:
         file.write(pure_output)
+        
+    if (problem_matcher):
+        print(pure_output)
+        sys.stdout.flush();
+        exit(0)
+    else:
+        print(output)
     
-    sys.stdout.flush()
-
+    sys.stdout.flush();
     exit(1)
 else:
     pure_output = "No errors!"

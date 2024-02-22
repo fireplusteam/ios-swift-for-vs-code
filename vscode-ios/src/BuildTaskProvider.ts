@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import { Executor } from "./execShell";
+import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, buildTestsForCurrentFile, cleanDerivedData } from "./build";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
 import { TaskDefinition } from "vscode";
 import { title } from "process";
+import { getLastLine } from "./utils";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
@@ -89,13 +90,17 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             reveal: vscode.TaskRevealKind.Never,
             close: true
         };
-        buildTask.isBackground = true;
+        if (group === vscode.TaskGroup.Build) {
+            buildTask.problemMatchers = ["$xcode"];
+        } else {
+            buildTask.isBackground = true;
+        }
         return buildTask;
     }
 
     public resolveTask(_task: vscode.Task) {
         const taskBuild = _task.definition.taskBuild;
-        if (taskBuild) { 
+        if (taskBuild) {
             // TODO: Implement resolver so a user can add tasks in his Task.json file
             //const definition: BuildTaskDefinition = <any>_task.definition;
             //return this.getTask(definition.flavor, definition.flags ? definition.flags : [], definition);
@@ -113,14 +118,23 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                     open: async () => {
                         try {
                             await commandWrapper(commandClosure, successMessage);
-                            closeEmitter.fire(0);
                         } catch (err) {
-                            closeEmitter.fire(0);
                         }
+                        const stdout =
+                            await this.executor.execShell(
+                                "Print Errors",
+                                "print_errors.py",
+                                ["-problemMatcher"],
+                                false,
+                                ExecutorReturnType.stdout,
+                                ExecutorMode.silently
+                            ) as string;
+                        writeEmitter.fire(stdout);
+                        closeEmitter.fire(0);
                     },
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,
-                    close: () => {
+                    close: async () => {
                         this.executor.terminateShell();
                     },
                 };
