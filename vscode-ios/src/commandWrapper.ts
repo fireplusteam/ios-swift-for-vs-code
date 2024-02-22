@@ -10,9 +10,12 @@ export async function runCommand(commandClosure: () => Promise<void>) {
   }
 }
 
-export async function commandWrapper(commandClosure: () => Promise<void>) {
+export async function commandWrapper(commandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
   try {
     await commandClosure();
+    if (successMessage) {
+      vscode.window.showInformationMessage(successMessage);
+    }
   } catch (err) {
     if (err instanceof ExecutorRunningError) {
       const choice = await vscode.window.showErrorMessage(

@@ -1,18 +1,16 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { buildOptions, cleanDerivedData } from "./build";
-import { getEnv, getScriptPath, isActivated } from "./env";
+import { getScriptPath } from "./env";
 import {
   checkWorkspace,
   generateXcodeServer,
   runApp,
-  runAppAndDebug,
   runAppOnMultipleDevices,
   selectDevice,
   selectTarget,
 } from "./commands";
-import { buildSelectedTarget } from "./build";
+import { buildSelectedTarget, cleanDerivedData } from "./build";
 import { Executor } from "./execShell";
 import { BuildTaskProvider } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";

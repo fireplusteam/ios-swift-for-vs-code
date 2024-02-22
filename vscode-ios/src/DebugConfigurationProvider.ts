@@ -85,13 +85,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         if (dbgConfig.type !== DebugConfigurationProvider.Type) {
             return null;
         }
-        if (dbgConfig.target === "app") {
-            await this.executeAppCommand(async () => {
-                return await buildSelectedTarget(this.executor);
-            }, async () => {
-                return await runAppForDebug(this.executor);
-            });
-        } // TODO: add tests subtask 
+        try {
+            if (dbgConfig.target === "app") {
+                await this.executeAppCommand(async () => {
+                    return await buildSelectedTarget(this.executor);
+                }, async () => {
+                    return await runAppForDebug(this.executor);
+                });
+            } // TODO: add tests subtask 
+        } catch {
+            return null;
+        }
 
         return this.debugSession();
     }

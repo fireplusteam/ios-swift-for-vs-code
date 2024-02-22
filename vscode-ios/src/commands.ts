@@ -5,9 +5,7 @@ import { buildSelectedTarget } from "./build";
 import { getLastLine } from "./utils";
 
 export async function selectTarget(executor: Executor) {
-  if ((await checkWorkspace(executor)) === false) {
-    return false;
-  }
+  await checkWorkspace(executor);
   let stdout = getLastLine((await executor.execShell(
     "Fetch Project Targets",
     "populate_schemes.sh",
@@ -23,10 +21,10 @@ export async function selectTarget(executor: Executor) {
   );
 
   if (option === undefined) {
-    return false;
+    return;
   }
 
-  return await executor.execShell(
+  await executor.execShell(
     "Update Selected Target",
     "update_enviroment.sh",
     ["-destinationScheme", option]
@@ -64,7 +62,7 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
 }
 
 export async function checkWorkspace(executor: Executor) {
-  await executor.execShell("Validate Environment", "check_workspace.sh")
+  await executor.execShell("Validate Environment", "check_workspace.sh");
   const env = getEnvList();
   if (!env.hasOwnProperty("DEVICE_ID")) {
     await selectDevice(executor, false);

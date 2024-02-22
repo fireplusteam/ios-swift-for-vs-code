@@ -4,6 +4,7 @@ import { buildSelectedTarget, cleanDerivedData } from "./build";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
 import { TaskDefinition } from "vscode";
+import { title } from "process";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
@@ -24,12 +25,14 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         }
         let buildSelectedTargetTask = this.createBuildTask(
             "Build Selected Target",
+            vscode.TaskGroup.Build,
             async () => {
                 await buildSelectedTarget(this.executor);
             }
         );
         let cleanTask = this.createBuildTask(
             "Clean Derived Data",
+            vscode.TaskGroup.Clean,
             async () => {
                 await cleanDerivedData(this.executor);
             }
@@ -38,16 +41,16 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return [buildSelectedTargetTask, cleanTask];
     }
 
-    private createBuildTask(title: string, commandClosure: () => Promise<void>) {
+    private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: () => Promise<void>) {
         const def: BuildTaskDefinition = { type: BuildTaskProvider.BuildScriptType, taskBuild: title };
         let buildTask = new vscode.Task(
             def,
             vscode.TaskScope.Workspace,
             title,
             "iOS",
-            this.customExecution(commandClosure)
+            this.customExecution(`iOS: ${title}`, commandClosure)
         );
-        buildTask.group = vscode.TaskGroup.Build;
+        buildTask.group = group;
         buildTask.presentationOptions = {
             reveal: vscode.TaskRevealKind.Never,
             close: true
@@ -67,7 +70,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return undefined;
     }
 
-    private customExecution(commandClosure: () => Promise<void>) {
+    private customExecution(successMessage: string, commandClosure: () => Promise<void>) {
         return new vscode.CustomExecution(() => {
             return new Promise((resolved) => {
                 const writeEmitter = new vscode.EventEmitter<string>();
@@ -75,7 +78,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 const pty: vscode.Pseudoterminal = {
                     open: async () => {
                         try {
-                            await commandWrapper(commandClosure);
+                            await commandWrapper(commandClosure, successMessage);
                             closeEmitter.fire(0);
                         } catch (err) {
                             closeEmitter.fire(0);
