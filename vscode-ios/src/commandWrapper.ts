@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 import { ExecutorRunningError } from "./execShell";
 import { projectExecutor, sleep } from "./extension";
 
-export async function runCommand(commandClosure: () => Promise<void>) {
+export async function runCommand(commandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
   try {
-    await commandWrapper(commandClosure);
+    await commandWrapper(commandClosure, successMessage);
   } catch (err) {
     // command wrapper shows an error, no more need to propagate it further
   }

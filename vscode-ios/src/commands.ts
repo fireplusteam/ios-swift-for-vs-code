@@ -1,8 +1,18 @@
+import * as vscode from 'vscode';
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList } from "./env";
 import { buildSelectedTarget } from "./build";
 import { getLastLine } from "./utils";
+
+export async function storeVSConfig(executor: Executor) {
+  const fileUrl = vscode.window.activeTextEditor?.document.uri.fsPath;
+  if (fileUrl === undefined) {
+    throw new Error("In order to trigger a compile task for a file, select a file first please");
+  }
+
+  await executor.execShell("Store VS Config", "store_vs_config.sh", [fileUrl]);
+}
 
 export async function selectTarget(executor: Executor) {
   await checkWorkspace(executor);
@@ -79,6 +89,21 @@ export async function generateXcodeServer(executor: Executor) {
 
 export async function terminateCurrentIOSApp(executor: Executor) {
   await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh");
+}
+
+export async function nameOfModuleForFile(executor: Executor) {
+  const fileUrl = vscode.window.activeTextEditor?.document.uri.fsPath;
+  if (fileUrl === undefined) {
+    throw new Error("In order to get a name of module for a file, select the file first please");
+  }
+  const moduleName = getLastLine(await executor.execShell(
+    "Name Of Module By Current File",
+    "module_name_by_file.sh",
+    [fileUrl],
+    false,
+    ExecutorReturnType.stdout) as string
+  );
+  vscode.window.showInformationMessage(`Name of module is: ${moduleName}`);
 }
 
 export async function runApp(executor: Executor) {

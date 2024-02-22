@@ -82,6 +82,11 @@
         "category": "build"
       },
       {
+        "command": "vscode-ios.build.tests.currentFile",
+        "title": "iOS: Build Tests: Current File",
+        "category": "build"
+      },
+      {
         "command": "vscode-ios.run.app",
         "title": "iOS: Run App"
       },

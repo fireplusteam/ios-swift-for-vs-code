@@ -5,12 +5,13 @@ import { getScriptPath } from "./env";
 import {
   checkWorkspace,
   generateXcodeServer,
+  nameOfModuleForFile,
   runApp,
   runAppOnMultipleDevices,
   selectDevice,
   selectTarget,
 } from "./commands";
-import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, cleanDerivedData } from "./build";
+import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, buildTestsForCurrentFile, cleanDerivedData } from "./build";
 import { Executor } from "./execShell";
 import { BuildTaskProvider } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
@@ -146,6 +147,28 @@ export function activate(context: vscode.ExtensionContext) {
       async () => {
         await runCommand(async () => {
           await buildTests(projectExecutor);
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-ios.build.tests.currentFile",
+      async () => {
+        await runCommand(async () => {
+          await buildTestsForCurrentFile(projectExecutor);
+        });
+      }
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "vscode-ios.utils.file.nameOfModule",
+      async () => {
+        await runCommand(async () => {
+          await nameOfModuleForFile(projectExecutor);
         });
       }
     )

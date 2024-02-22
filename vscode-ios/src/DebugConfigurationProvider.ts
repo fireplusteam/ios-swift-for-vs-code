@@ -42,12 +42,14 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 this.activeSession = undefined;
             }
         }));
-        this.disposable.push(vscode.commands.registerCommand("workbench.action.debug.stop", (e) => {
+
+        // TODO: need more investigation
+        /*this.disposable.push(vscode.commands.registerCommand("workbench.action.debug.stop", (e) => {
             if (this.isRunning && vscode.debug.activeDebugSession === undefined) {
                 this.executor.terminateShell();
                 this.isRunning = false;
             }
-        }));
+        }));*/
     }
 
     private async executeAppCommand(syncCommand: () => Promise<void>, asyncCommandClosure: () => Promise<void>) {

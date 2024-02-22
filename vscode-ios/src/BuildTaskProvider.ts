@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
-import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, cleanDerivedData } from "./build";
+import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, buildTestsForCurrentFile, cleanDerivedData } from "./build";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
 import { TaskDefinition } from "vscode";
@@ -56,6 +56,14 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             }
         );
 
+        let buildTestsForCurrentFileTask = this.createBuildTask(
+            "Build Tests: Current File",
+            vscode.TaskGroup.Build,
+            async () => {
+                await buildTestsForCurrentFile(this.executor);
+            }
+        );
+
         let cleanTask = this.createBuildTask(
             "Clean Derived Data",
             vscode.TaskGroup.Clean,
@@ -64,7 +72,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             }
         );
 
-        return [buildTestsTask, buildCurrentFileTask, buildAllTask, buildSelectedTargetTask, cleanTask];
+        return [buildTestsForCurrentFileTask, buildTestsTask, buildCurrentFileTask, buildAllTask, buildSelectedTargetTask, cleanTask];
     }
 
     private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: () => Promise<void>) {
