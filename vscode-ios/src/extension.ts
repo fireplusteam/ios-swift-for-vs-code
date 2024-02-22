@@ -15,8 +15,8 @@ import {
 import { buildSelectedTarget } from "./build";
 import { Executor } from "./execShell";
 import { BuildTaskProvider } from "./BuildTaskProvider";
-import { commandWrapper } from "./commandWrapper";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
+import { runCommand } from "./commandWrapper";
 
 function initialize() { }
 
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.project.selectTarget",
       async () => {
-        await commandWrapper(async () => {
+        await runCommand(async () => {
           await selectTarget(projectExecutor);
         });
       }
@@ -75,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.project.selectDevice",
       async () => {
-        await commandWrapper(async () => {
+        await runCommand(async () => {
           await selectDevice(projectExecutor);
         });
       }
@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.check.workspace", async () => {
-      await commandWrapper(async () => {
+      await runCommand(async () => {
         await checkWorkspace(projectExecutor);
       });
     })
@@ -94,22 +94,16 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.check.generateXcodeServer",
       async () => {
-        await commandWrapper(async () => {
+        await runCommand(async () => {
           await generateXcodeServer(projectExecutor);
         });
       }
     )
   );
-  context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.build.options", async () => {
-      await commandWrapper(async () => {
-        await buildOptions(projectExecutor);
-      });
-    })
-  );
+ 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
-      await commandWrapper(async () => {
+      await runCommand(async () => {
         await cleanDerivedData(projectExecutor);
       });
     })
@@ -119,7 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.selectedTarget",
       async () => {
-        await commandWrapper(async () => {
+        await runCommand(async () => {
           await buildSelectedTarget(projectExecutor);
         });
       }
@@ -128,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app", async () => {
-      await commandWrapper(async () => {
+      await runCommand(async () => {
         await runApp(projectExecutor);
       });
       return ""; // we need to return string as it's going to be used for launch configuration
@@ -137,7 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
-      await commandWrapper(async () => {
+      await runCommand(async () => {
         await runAppOnMultipleDevices(projectExecutor);
       });
       return ""; // we need to return string as it's going to be used for launch configuration

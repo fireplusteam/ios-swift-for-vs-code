@@ -34,8 +34,8 @@ export async function selectTarget(executor: Executor) {
 }
 
 export async function selectDevice(executor: Executor, shouldCheckWorkspace = true) {
-  if (shouldCheckWorkspace === true && (await checkWorkspace(executor)) === false) {
-    return false;
+  if (shouldCheckWorkspace === true) {
+    await checkWorkspace(executor);
   }
   let stdout = getLastLine((await executor.execShell(
     "Fetch Devices",
@@ -64,37 +64,29 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
 }
 
 export async function checkWorkspace(executor: Executor) {
-  if (await executor.execShell("Validate Environment", "check_workspace.sh") === false) {
-    return false;
-  }
+  await executor.execShell("Validate Environment", "check_workspace.sh")
   const env = getEnvList();
   if (!env.hasOwnProperty("DEVICE_ID")) {
-    return selectDevice(executor, false);
+    await selectDevice(executor, false);
   }
 }
 
 export async function generateXcodeServer(executor: Executor) {
-  if ((await checkWorkspace(executor)) === false) {
-    return false;
-  }
-  return await executor.execShell(
+  await checkWorkspace(executor);
+  await executor.execShell(
     "Generate xCode Server",
     "build_autocomplete.sh"
   );
 }
 
 export async function terminateCurrentIOSApp(executor: Executor) {
-  return await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh");
+  await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh");
 }
 
 export async function runApp(executor: Executor) {
-  if ((await terminateCurrentIOSApp(executor)) === false) {
-    return false;
-  }
-  if ((await buildSelectedTarget(executor)) === false) {
-    return false;
-  }
-  return await executor.execShell(
+  await terminateCurrentIOSApp(executor);
+  await buildSelectedTarget(executor);
+  await executor.execShell(
     "Run App",
     "run_app.sh",
     ["RUNNING"],
@@ -102,14 +94,9 @@ export async function runApp(executor: Executor) {
   );
 }
 
-export async function runAppAndDebug(executor: Executor, shouldBuild = true) {
-  if ((await terminateCurrentIOSApp(executor)) === false) {
-    return false;
-  }
-  if (shouldBuild === true && (await buildSelectedTarget(executor)) === false) {
-    return false;
-  }
-  return await executor.execShell(
+export async function runAppAndDebug(executor: Executor) {
+  await terminateCurrentIOSApp(executor);
+  await executor.execShell(
     "Run App",
     "run_app.sh",
     ["LLDB_DEBUG"],
@@ -118,9 +105,7 @@ export async function runAppAndDebug(executor: Executor, shouldBuild = true) {
 }
 
 export async function runAppOnMultipleDevices(executor: Executor) {
-  if ((await terminateCurrentIOSApp(executor)) === false) {
-    return false;
-  }
+  await terminateCurrentIOSApp(executor);
 
   let stdout = getLastLine((await executor.execShell(
     "Fetch Multiple Devices",
@@ -138,14 +123,12 @@ export async function runAppOnMultipleDevices(executor: Executor) {
   );
 
   if (option === undefined || option === '') {
-    return false;
+    return;
   }
 
-  if ((await buildSelectedTarget(executor)) === false) {
-    return false;
-  }
+  await buildSelectedTarget(executor);
 
-  return await executor.execShell(
+  await executor.execShell(
     "Run App On Multiple Devices",
     "run_app.sh",
     ["RUNNING", "-DEVICES", `${option}`],

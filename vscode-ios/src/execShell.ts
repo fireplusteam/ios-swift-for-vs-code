@@ -19,6 +19,14 @@ export class ExecutorRunningError extends Error {
   }
 }
 
+export class ExecutorTaskError extends Error {
+  code: number | null;
+  public constructor(message: string, code: number | null) {
+    super(message);
+    this.code = code;
+  }
+}
+
 export enum ExecutorReturnType {
   statusCode,
   stdout
@@ -114,10 +122,10 @@ export class Executor {
     args: string[] = [],
     showTerminal = false,
     returnType = ExecutorReturnType.statusCode
-  ) {
+  ): Promise<boolean | string> {
     if (this.childProc !== undefined) {
       return new Promise((resolve, reject) => {
-        reject(new ExecutorRunningError("Task is running"));
+        reject(new ExecutorRunningError("Another task is running"));
       });
     }
     const env = getEnv();
@@ -156,20 +164,20 @@ export class Executor {
         clearInterval(this.animationInterval);
 
         if (signal !== null) {
-          reject(new ExecutorTerminatedByUserError("Terminated by a User"));
+          reject(new ExecutorTerminatedByUserError(`${this.getTerminalName(commandName)} is terminated by a User`));
           this.terminateShell();
           return;
         }
 
         this.writeEmitter?.fire(
-          this.dataToPrint(`${commandName} exits with status code: ${code}\n`)
+          this.dataToPrint(`${this.getTerminalName(commandName)} exits with status code: ${code}\n`)
         );
         if (code !== 0) {
           this.changeNameEmitter?.fire(
             `❌ ${this.getTerminalName(commandName)}`
           );
           terminal.show();
-          resolve(false);
+          reject(new ExecutorTaskError(`Task: ${this.getTerminalName(commandName) } exits with ${code}`, code));
         } else {
           this.changeNameEmitter?.fire(
             `✅ ${this.getTerminalName(commandName)}`

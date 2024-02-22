@@ -128,6 +128,10 @@
     "extensionDependencies": [
       "vadimcn.vscode-lldb",
       "swift-lang"
+    ],
+    "extensionPack": [
+      "vadimcn.vscode-lldb",
+      "swift-lang"
     ]
   },
   "scripts": {

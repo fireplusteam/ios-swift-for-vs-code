@@ -74,8 +74,12 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 const closeEmitter = new vscode.EventEmitter<number>();
                 const pty: vscode.Pseudoterminal = {
                     open: async () => {
-                        await commandWrapper(commandClosure);
-                        closeEmitter.fire(0);
+                        try {
+                            await commandWrapper(commandClosure);
+                            closeEmitter.fire(0);
+                        } catch (err) {
+                            closeEmitter.fire(0);
+                        }
                     },
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,

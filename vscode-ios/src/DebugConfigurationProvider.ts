@@ -3,12 +3,17 @@ import { CancellationToken } from "vscode";
 import { Executor } from "./execShell";
 import { getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
-import { runApp, runAppAndDebug } from "./commands";
+import { runApp, runAppAndDebug as runAppForDebug } from "./commands";
 import { resolve } from "path";
 import { BuildTaskProvider } from "./BuildTaskProvider";
 import { debug } from "console";
 import { buildSelectedTarget } from "./build";
 
+class ErrorDuringPreLaunchTask extends Error {
+    public constructor(message: string) {
+        super(message);
+    }
+}
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 
     static Type = "xcode-lldb";
@@ -16,41 +21,51 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     private executor: Executor;
 
-    private onDidTerminateDisposable: vscode.Disposable;
-    private onDidStartDisposable: vscode.Disposable;
+    private disposable: vscode.Disposable[] = [];
     private isRunning = false;
 
     private activeSession: vscode.DebugSession | undefined;
 
     constructor(executor: Executor) {
         this.executor = executor;
-        this.onDidStartDisposable = vscode.debug.onDidStartDebugSession((e) => {
+        this.disposable.push(vscode.debug.onDidStartDebugSession((e) => {
             if (e.name === DebugConfigurationProvider.lldbName) {
                 this.activeSession = e;
             }
-        });
-        this.onDidTerminateDisposable = vscode.debug.onDidTerminateDebugSession((e) => {
+        }));
+        this.disposable.push(vscode.debug.onDidTerminateDebugSession((e) => {
             if (e.id === this.activeSession?.id) {
                 if (this.isRunning) {
                     this.executor.terminateShell();
+                    this.isRunning = false;
                 }
                 this.activeSession = undefined;
             }
-        });
+        }));
+        this.disposable.push(vscode.commands.registerCommand("workbench.action.debug.stop", (e) => {
+            if (this.isRunning && vscode.debug.activeDebugSession === undefined) {
+                this.executor.terminateShell();
+                this.isRunning = false;
+            }
+        }));
     }
 
-    private async executeAppCommand(commandClosure: () => Promise<void>) {
+    private async executeAppCommand(syncCommand: () => Promise<void>, asyncCommandClosure: () => Promise<void>) {
         try {
             this.isRunning = true;
-            await commandWrapper(async () => {
-                await commandClosure();
-            });
+            await commandWrapper(syncCommand);
+            commandWrapper(asyncCommandClosure);
             this.isRunning = false;
         } catch (err) {
-            await vscode.debug.stopDebugging(this.activeSession);
-            this.isRunning = false;
-            this.activeSession = undefined;
+            await this.stopOnError();
+            throw err;
         }
+    }
+
+    private async stopOnError() {
+        await vscode.debug.stopDebugging(this.activeSession);
+        this.isRunning = false;
+        this.activeSession = undefined;
     }
 
     public startIOSDebugger() {
@@ -71,8 +86,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
         if (dbgConfig.target === "app") {
-            this.executeAppCommand(async () => {
-                await runAppAndDebug(this.executor, true);
+            await this.executeAppCommand(async () => {
+                return await buildSelectedTarget(this.executor);
+            }, async () => {
+                return await runAppForDebug(this.executor);
             });
         } // TODO: add tests subtask 
 
