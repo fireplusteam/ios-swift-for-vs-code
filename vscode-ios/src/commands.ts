@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList } from "./env";
-import { buildSelectedTarget } from "./build";
+import { buildSelectedTarget, buildTests } from "./build";
 import { getLastLine } from "./utils";
 
 export async function storeVSConfig(executor: Executor) {
@@ -155,6 +155,17 @@ export async function runAppOnMultipleDevices(executor: Executor) {
     "Run App On Multiple Devices",
     "run_app.sh",
     ["RUNNING", "-DEVICES", `${option}`],
+    false
+  );
+}
+
+export async function runAndDebugTests(executor: Executor) {
+  await terminateCurrentIOSApp(executor);
+
+  await executor.execShell(
+    "Run App",
+    "test_app.sh",
+    ["DEBUG_LLDB", "-ALL"],
     false
   );
 }

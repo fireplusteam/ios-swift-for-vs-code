@@ -168,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
       "vscode-ios.utils.file.nameOfModule",
       async () => {
         await runCommand(async () => {
-          await nameOfModuleForFile(projectExecutor);
+          await nameOfModuleForFile(new Executor());
         });
       }
     )
@@ -199,6 +199,12 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.tests.debug", async () => {
+      debugConfiguration.startIOSTestsDebugger();
+      return true;
+    })
+  );
 }
 
 // This method is called when your extension is deactivated

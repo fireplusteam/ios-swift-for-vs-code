@@ -1,13 +1,9 @@
 import * as vscode from "vscode";
-import { CancellationToken } from "vscode";
 import { Executor } from "./execShell";
 import { getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
-import { runApp, runAppAndDebug as runAppForDebug } from "./commands";
-import { resolve } from "path";
-import { BuildTaskProvider } from "./BuildTaskProvider";
-import { debug } from "console";
-import { buildSelectedTarget } from "./build";
+import { runAndDebugTests, runApp, runAppAndDebug as runAppForDebug } from "./commands";
+import { buildSelectedTarget, buildTests } from "./build";
 
 class ErrorDuringPreLaunchTask extends Error {
     public constructor(message: string) {
@@ -43,13 +39,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             }
         }));
 
-        // TODO: need more investigation
-        /*this.disposable.push(vscode.commands.registerCommand("workbench.action.debug.stop", (e) => {
+        this.disposable.push(vscode.commands.registerCommand("vscode-ios.stop.debug.session", (e) => {
             if (this.isRunning && vscode.debug.activeDebugSession === undefined) {
                 this.executor.terminateShell();
                 this.isRunning = false;
             }
-        }));*/
+        }));
     }
 
     private async executeAppCommand(syncCommand: () => Promise<void>, asyncCommandClosure: () => Promise<void>) {
@@ -80,6 +75,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         vscode.debug.startDebugging(undefined, debugSession);
     }
 
+    public startIOSTestsDebugger() {
+        let debugSession: vscode.DebugConfiguration = {
+            type: "xcode-lldb",
+            name: "iOS: APP Debug",
+            request: "launch",
+            target: "tests"
+        };
+        vscode.debug.startDebugging(undefined, debugSession);
+    }
+
     async resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, dbgConfig: vscode.DebugConfiguration, token: vscode.CancellationToken) {
         if (!isActivated()) {
             return null;
@@ -94,7 +99,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 }, async () => {
                     return await runAppForDebug(this.executor);
                 });
-            } // TODO: add tests subtask 
+            } else if(dbgConfig.target === "tests") {
+                await this.executeAppCommand(async () => {
+                    return await buildTests(this.executor);
+                }, async () => {
+                    return await runAndDebugTests(this.executor);
+                }); 
+            }
         } catch {
             return null;
         }
