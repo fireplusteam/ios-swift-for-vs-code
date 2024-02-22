@@ -22,7 +22,7 @@
       {
         "key": "shift+f5",
         "command": "vscode-ios.stop.debug.session",
-        "when": "inDebugMode"
+        "when": "inDebugMode && !focusedSessionIsAttach"
       }
     ],
     "problemMatchers": [
