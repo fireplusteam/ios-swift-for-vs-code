@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { Executor } from "./execShell";
 import { getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
-import { runAndDebugTests, runApp, runAppAndDebug as runAppForDebug } from "./commands";
-import { buildSelectedTarget, buildTests } from "./build";
+import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, runAppAndDebug as runAppForDebug } from "./commands";
+import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./build";
 
 class ErrorDuringPreLaunchTask extends Error {
     public constructor(message: string) {
@@ -51,6 +51,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         try {
             this.isRunning = true;
             await commandWrapper(syncCommand);
+            await this.setEnvVariables();
             commandWrapper(asyncCommandClosure);
             this.isRunning = false;
         } catch (err) {
@@ -85,6 +86,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         vscode.debug.startDebugging(undefined, debugSession);
     }
 
+    public startIOSTestsForCurrentFileDebugger() {
+        let debugSession: vscode.DebugConfiguration = {
+            type: "xcode-lldb",
+            name: "iOS: APP Debug",
+            request: "launch",
+            target: "testsForCurrentFile"
+        };
+        vscode.debug.startDebugging(undefined, debugSession);
+    }
+
+    async setEnvVariables() { 
+        await this.executor.execShell("Debugger Launching", "debugger_launching.sh");
+    }
+
     async resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, dbgConfig: vscode.DebugConfiguration, token: vscode.CancellationToken) {
         if (!isActivated()) {
             return null;
@@ -95,16 +110,22 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         try {
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async () => {
-                    return await buildSelectedTarget(this.executor);
+                    await buildSelectedTarget(this.executor);
                 }, async () => {
-                    return await runAppForDebug(this.executor);
+                    await runAppForDebug(this.executor);
                 });
             } else if(dbgConfig.target === "tests") {
                 await this.executeAppCommand(async () => {
-                    return await buildTests(this.executor);
+                    await buildTests(this.executor);
                 }, async () => {
-                    return await runAndDebugTests(this.executor);
-                }); 
+                    await runAndDebugTests(this.executor);
+                });
+            } else if (dbgConfig.target === "testsForCurrentFile") {
+                await this.executeAppCommand(async () => {
+                    await buildTestsForCurrentFile(this.executor);
+                }, async () => {
+                    await runAndDebugTestsForCurrentFile(this.executor);
+                });
             }
         } catch {
             return null;

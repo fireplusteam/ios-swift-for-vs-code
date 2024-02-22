@@ -110,6 +110,10 @@
       {
         "command": "vscode-ios.run.tests.debug",
         "title": "iOS: Tests & Debug"
+      },
+      {
+        "command": "vscode-ios.run.tests.currentFile.debug",
+        "title": "iOS: Tests: Run Current Class"
       }
     ],
     "debuggers": [
@@ -121,7 +125,8 @@
             "properties": {
               "target": [
                 "app",
-                "tests"
+                "tests",
+                "testsForCurrentFile"
               ]
             }
           }
@@ -147,12 +152,22 @@
           },
           {
             "label": "iOS: Tests Debug",
-            "description": "Add a new configuration for iOS debugging",
+            "description": "Add a new configuration for iOS Tests debugging",
             "body": {
               "type": "xcode-lldb",
               "name": "iOS: Tests Debug",
               "request": "launch",
               "target": "tests"
+            }
+          },
+          {
+            "label": "iOS: Tests Debug: Current File",
+            "description": "Add a new configuration for iOS Tests debugging",
+            "body": {
+              "type": "xcode-lldb",
+              "name": "iOS: Tests Debug: Current File",
+              "request": "launch",
+              "target": "testsForCurrentFile"
             }
           }
         ]

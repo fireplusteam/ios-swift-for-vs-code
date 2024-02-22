@@ -169,3 +169,14 @@ export async function runAndDebugTests(executor: Executor) {
     false
   );
 }
+
+export async function runAndDebugTestsForCurrentFile(executor: Executor) {
+  await terminateCurrentIOSApp(executor);
+
+  await executor.execShell(
+    "Run App",
+    "test_app.sh",
+    ["DEBUG_LLDB", "-CLASS", "CURRENTLY_SELECTED"],
+    false
+  );
+}

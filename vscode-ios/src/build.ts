@@ -74,7 +74,7 @@ export async function buildTestsForCurrentFile(executor: Executor) {
   );
 
   if (option === undefined || option === '') {
-    return;
+    throw Error("Tests are not picked");
   }
 
   await executor.execShell(

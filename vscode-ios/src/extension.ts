@@ -205,6 +205,13 @@ export function activate(context: vscode.ExtensionContext) {
       return true;
     })
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.tests.currentFile.debug", async () => {
+      debugConfiguration.startIOSTestsForCurrentFileDebugger();
+      return true;
+    })
+  );
 }
 
 // This method is called when your extension is deactivated
