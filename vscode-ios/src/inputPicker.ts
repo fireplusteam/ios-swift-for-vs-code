@@ -1,5 +1,10 @@
 import * as vscode from "vscode";
 
+export async function askIfDebuggable() {
+  const option = await vscode.window.showQuickPick(["Debug", "Run"]);
+  return option === "Debug";
+}
+
 export async function showPicker(
   json: string,
   title: string,

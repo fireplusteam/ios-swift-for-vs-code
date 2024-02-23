@@ -17,7 +17,7 @@ import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { askIfDebuggable } from "./utils";
+import { askIfDebuggable } from "./inputPicker";
 
 async function initialize() {
   if (!isActivated()) {

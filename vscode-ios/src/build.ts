@@ -9,8 +9,8 @@ import { getWorkspacePath } from './env';
 import path from 'path';
 
 export async function findDiagnosticProblems(problemResolver: ProblemDiagnosticResolver, type = ProblemDiagnosticLogType.build) {
-  const workPath = getWorkspacePath();
   try {
+    const workPath = getWorkspacePath();
     const fileName = type === ProblemDiagnosticLogType.build ? "build.log" : "tests.log";
     const stdout = fs.readFileSync(path.join(workPath, ".logs", fileName), "utf-8");
     problemResolver.parseBuildLog(stdout, type);
