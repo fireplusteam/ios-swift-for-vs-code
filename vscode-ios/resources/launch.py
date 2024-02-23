@@ -1,3 +1,5 @@
+import fcntl
+import subprocess
 import sys
 import os
 import asyncio
@@ -39,49 +41,46 @@ def session_validation():
         time.sleep(1)
 
 
-async def install_app(command, log_file_path):
-    # wait for debugger
-    if debugger_arg == "LLDB_DEBUG":
-        helper.wait_debugger_to_launch(session_id)
+def run_process(command: str, log_file_path):
     global process
-    # Start the subprocess
-    process = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, text=False)
-    
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     threading.Thread(target=session_validation, args=()).start()
+    # Set output to non-blocking
+    flags = fcntl.fcntl(process.stdout, fcntl.F_GETFL) # first get current process.stdout flags
+    fcntl.fcntl(process.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-    await asyncio.sleep(1)
-    # Read stdout and stderr concurrently
-    stdout, stderr = await asyncio.gather(
-        read_stream(process.stdout, log_file_path),
-        read_stream(process.stderr, log_file_path)
-    )
-
-    # Wait for the process to complete
-    return await process.wait(), stdout, stderr
-
-
-async def read_stream(stream, log_file_path):
+    is_ok = False 
+    index = 0
     while True:
-        line = await stream.readline()
-        if not line:
-            break
         try:
+            output = process.stdout.buffer.read()
+        except OSError:
+            time.sleep(0.1) # wait a short period of time then try again
+            continue
+        
+        if output == b'' and process.poll() is not None:
+            break
+        if output:
+            is_ok = True
             with helper.FileLock(log_file_path + ".lock"):
                 with open(log_file_path, "a+") as file:
-                    file.write(line.decode("utf-8"))
+                    file.buffer.write(output)
                     file.flush()
-        except Exception as e:
-            pass
-    return None
+        else:
+            index += 1
+            if index > 20:
+                time.sleep(0.1)
+                index = 0
+                
+    return process,is_ok
 
 
-async def main():
+def main():
     # Run the command asynchronously
-    return_code, stdout_output, stderr_output = await install_app(commandLaunch, ".logs/app.log")
+    return_code, is_ok = run_process(' '.join(commandLaunch), ".logs/app.log")
+    helper.update_debug_session_time(session_id)
 
     # Print or process the output as needed
-    print(f"iOS App Finished with {return_code}")
+    print(f"LAUNCHER: iOS App Finished with {return_code}")
 
-
-# Run the event loop
-asyncio.run(main())
+main()

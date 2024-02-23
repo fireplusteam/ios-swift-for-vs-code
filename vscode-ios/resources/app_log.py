@@ -13,10 +13,6 @@ class AppLogger:
         self.session_id = session_id
     
     
-    def filter_line(self, line):
-        return line
-
-
     def print_new_lines(self):
         try:
             with helper.FileLock(self.file_path + '.lock'):
@@ -25,19 +21,18 @@ class AppLogger:
                     
                     if self.last_known_position < file_size:
                         file.seek(self.last_known_position)
+                    else:
+                        return
 
                     try: 
-                        for line in file:
-                            if self.enabled:
-                                to_track = self.filter_line(line.strip())
-                                if to_track:
-                                    to_track = to_track.splitlines()
-                                    for line in to_track:
-                                        self.printer(f"{line}")
+                        line = file.buffer.read()
+                        if self.enabled:
+                            line_str = line.decode()
+                            self.printer(line_str, end='')
 
-                            self.last_known_position += len(line) + 1  # Add 1 for the newline character
+                        self.last_known_position += len(line)  # Add 1 for the newline character
                     except Exception as e:
-                        self.printer(f"Exception reading file: {str(e)}")
+                        self.printer(f"Exception reading file: {str(e)}, position: ${self.last_known_position}", end='')
                         self.last_known_position += 1
         except: # no such file
             pass

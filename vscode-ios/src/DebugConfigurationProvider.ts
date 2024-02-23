@@ -23,6 +23,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private disposable: vscode.Disposable[] = [];
     private isRunning = false;
     private sessionID = getSessionId("debugger");
+    private counter = 0;
 
     private setIsRunning(value: boolean) {
         this.isRunning = value;
@@ -112,6 +113,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async setEnvVariables() {
+        this.counter += 1;
+        this.sessionID = getSessionId(`debugger${this.counter}`);
         await this.executor.execShell("Debugger Launching", "debugger_launching.sh", [this.sessionID]);
     }
 
@@ -157,7 +160,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private runSession(): vscode.DebugConfiguration {
         return {
             name: "iOS App Log",
-            type: "python",
+            type: "debugpy",
             request: "launch",
             program: `${getScriptPath()}/app_log.py`,
             stopOnEntry: false,
