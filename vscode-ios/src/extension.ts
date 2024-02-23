@@ -18,6 +18,7 @@ import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable } from "./inputPicker";
+import { getSessionId } from "./utils";
 
 async function initialize() {
   if (!isActivated()) {
@@ -180,7 +181,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
       await runCommand(async () => {
-        await runAppOnMultipleDevices(projectExecutor, problemDiagnosticResolver);
+        const id = getSessionId("multiple_devices");
+        await runAppOnMultipleDevices(id, projectExecutor, problemDiagnosticResolver);
       });
       return ""; // we need to return string as it's going to be used for launch configuration
     })

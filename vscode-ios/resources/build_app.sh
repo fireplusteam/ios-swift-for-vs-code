@@ -29,9 +29,9 @@ fi
 
 if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
     # get last line of output
-    #DEBUG_TESTS=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@")
+    #DEBUG_TESTS=$("$VS_IOS_SCRIPT_PATH/update_environment.sh" "-destinationTests" "$@")
     #echo "DEBUG_TESTS: $DEBUG_TESTS"
-    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@" | tail -n 1)
+    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_environment.sh" "-destinationTests" "$@" | tail -n 1)
 
     TESTS="$TESTS_SCRIPT"
 

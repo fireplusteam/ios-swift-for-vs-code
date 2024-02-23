@@ -180,7 +180,7 @@ def is_build_server_valid():
 
 # --------GIT-------------------------------------
 
-def update_git_exlude(file_to_exclude):
+def update_git_exclude(file_to_exclude):
     if not os.path.exists(".git"):
         return
     os.makedirs(".git/info", exist_ok=True)
@@ -205,39 +205,47 @@ def update_git_exlude(file_to_exclude):
 
 #---------DEBUGGER--------------------------------
 debugger_config_file = ".logs/debugger.launching"
-def wait_debugger_to_launch():
+def wait_debugger_to_launch(session_id):
     while True:
         with FileLock(debugger_config_file + '.lock'):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
-
-        if config is not None and config["status"] == "launched":
+        if config is not None and not session_id in config:
+            break
+            
+        if config is not None and config[session_id]["status"] == "launched":
             break
 
         time.sleep(1)
 
-def is_debug_session_valid(start_time) -> bool:
+def is_debug_session_valid(session_id, start_time) -> bool:
     try:
         with FileLock(debugger_config_file + '.lock'):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
-        if config["sessionEndTime"] >= start_time:
+        if not session_id in config:
+            return False
+        if config[session_id]["sessionEndTime"] >= start_time:
             return False
         return True
     except: # no file or a key, so the session is valid
         return True
     
-def update_debug_session_time():
-    update_debugger_launch_config("sessionEndTime", time.time())
+def update_debug_session_time(session_id: str):
+    update_debugger_launch_config(session_id, "sessionEndTime", time.time())
 
-def update_debugger_launch_config(key, value):
+def update_debugger_launch_config(session_id, key, value):
     config = {}
     if os.path.exists(debugger_config_file):
         with FileLock(debugger_config_file + '.lock'):
             with open(debugger_config_file, "r+") as file:
                 config = json.load(file)
     
-    config[key] = value
+    if session_id in config:
+        config[session_id][key] = value;
+    else:
+        config[session_id] = {}
+        config[session_id][key] = value
     
     with FileLock(debugger_config_file + '.lock'):
         with open(debugger_config_file, "w+") as file:

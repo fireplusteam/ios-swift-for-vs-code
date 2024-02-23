@@ -49,6 +49,14 @@ export class ProblemDiagnosticResolver {
         }
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
+            switch (type) {
+                case ProblemDiagnosticLogType.build:
+                    this.diagnosticBuildCollection.clear();
+                    break;
+                case ProblemDiagnosticLogType.tests:
+                    this.diagnosticTestsCollection.clear();
+                    break;
+            }
             let matches = [...output.matchAll(rg)];
             for (const match of matches) {
                 const file = match[1];

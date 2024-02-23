@@ -4,18 +4,6 @@ source '.vscode/.env'
 
 mkdir -p .logs
 
-if [[ "$PROJECT_FILE" == *.swift ]]; then
-    RED='\033[0;31m'
-    NC='\033[0m' # No Color
-    echo -e "${RED}Package.swift doesn't support run${NC}"
-    echo "TERMINATING DEBUG SESSION"
-    # terminate debug session otherwise
-    sleep 2
-    sh "$VS_IOS_SCRIPT_PATH/terminate_current_running_app.sh"
-
-    exit 1
-fi
-
 # clear log files
 rm .logs/app.log
 echo '' > .logs/app.log
@@ -25,9 +13,9 @@ DESTINATION="id=$DEVICE_ID"
 
 echo "$DESTINATION"
 
-if [ "$2" == "-DEVICES" ]; then
-    python3 "$VS_IOS_SCRIPT_PATH/update_enviroment.py" "$PROJECT_FILE" -multipleDestinationDevices "$3"
-    DESTINATION="$3"
+if [ "$3" == "-DEVICES" ]; then
+    python3 "$VS_IOS_SCRIPT_PATH/update_environment.py" "$PROJECT_FILE" -multipleDestinationDevices "$4"
+    DESTINATION="$4"
 fi
 
 # Function to check if a variable is empty and exit with 1
@@ -83,10 +71,10 @@ do
     xcrun simctl install "$SIMULATOR_UDID" "$APP_PATH"
     # Get PID of run process
     echo "LAUNCHING..."
-    python3 "$VS_IOS_SCRIPT_PATH/async_launcher.py" "$VS_IOS_SCRIPT_PATH/launch.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
+    python3 "$VS_IOS_SCRIPT_PATH/async_launcher.py" "$VS_IOS_SCRIPT_PATH/launch.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$2" "$1"
     sleep 1
-    if [ "$1" != "LLDB_DEBUG" ]; then
-        python3 "$VS_IOS_SCRIPT_PATH/update_debug_launch_settings.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" 
+    if [ "$2" != "LLDB_DEBUG" ]; then
+        python3 "$VS_IOS_SCRIPT_PATH/update_debug_launch_settings.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
     else
         echo "WAITING DEBUGGER..."
     fi

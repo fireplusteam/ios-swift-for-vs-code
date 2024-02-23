@@ -13,7 +13,7 @@ LOG_DEBUG = 1
 def create_app_logger():
     list = helper.get_env_list()
     scheme = list["PROJECT_SCHEME"].strip("\"")
-    app_logger = AppLogger(".logs/app.log", scheme)
+    app_logger = AppLogger(".logs/app.log", scheme, "")
     return app_logger
 
 # GLOBAL
@@ -74,11 +74,11 @@ def kill_codelldb(debugger):
     perform_debugger_command(debugger, "process launch")
 
 
-def wait_for_exit(debugger, start_time):
+def wait_for_exit(debugger, start_time, session_id):
     logMessage("Waiting for exit")
     
     while True:
-        if not helper.is_debug_session_valid(start_time):
+        if not helper.is_debug_session_valid(session_id, start_time):
             perform_debugger_command(debugger, "process detach")
             return
         time.sleep(0.5)
@@ -94,13 +94,13 @@ def print_app_log(debugger):
         print(f"Printer crashed: {str(e)}")
 
 
-def wait_for_process(process_name, debugger, existing_pids, start_time):
+def wait_for_process(process_name, debugger, existing_pids, start_time, session_id):
     logMessage("Start time:" + str(start_time))
     try:
         logMessage(f"Waiting for process: {process_name}")
+        logMessage(f"Session_id: {session_id}") 
         while True:
-            
-            if not helper.is_debug_session_valid(start_time):
+            if not helper.is_debug_session_valid(session_id, start_time):
                 kill_codelldb(debugger)
                 return
 
@@ -108,7 +108,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time):
             new_list = [x for x in new_list if not x in existing_pids]
 
             if len(new_list) > 0:
-                threading.Thread(target=wait_for_exit, args=(debugger, start_time)).start()
+                threading.Thread(target=wait_for_exit, args=(debugger, start_time, session_id)).start()
                 
                 pid = new_list.pop()
                 attach_command = f"process attach --pid {pid}"
@@ -137,14 +137,19 @@ def watch_new_process(debugger, command, result, internal_dict):
     logMessage("Debugger: " + str(debugger))
     global existing_pids
     
-    thread = threading.Thread(target=wait_for_process, args=(get_process_name(), debugger, existing_pids, start_time))   
+    session_id = command
+    thread = threading.Thread(target=wait_for_process, args=(get_process_name(), debugger, existing_pids, start_time, session_id))   
     thread.start()
-    helper.update_debugger_launch_config("status", "launched")
+    helper.update_debugger_launch_config(session_id, "status", "launched")
 
 
 def create_target(debugger, command, result, internal_dict):
     try:
-        helper.update_debugger_launch_config("status", "launching")
+        global app_logger
+        session_id = command
+        app_logger.session_id = session_id
+        logMessage(f"Creating Session with session id: {session_id}")
+        helper.update_debugger_launch_config(session_id, "status", "launching")
         global existing_pids
         result.AppendMessage("Start lldb watching new instance of App")
         

@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # validate build server
     bind_autocomplete()
         
-    helper.update_git_exlude("buildServer.json")
-    helper.update_git_exlude(".logs")
-    helper.update_git_exlude(".vscode")
+    helper.update_git_exclude("buildServer.json")
+    helper.update_git_exclude(".logs")
+    helper.update_git_exclude(".vscode")
     

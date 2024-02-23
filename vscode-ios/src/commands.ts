@@ -65,7 +65,7 @@ export async function selectTarget(executor: Executor, ignoreFocusOut = false) {
 
   await executor.execShell(
     "Update Selected Target",
-    "update_enviroment.sh",
+    "update_environment.sh",
     ["-destinationScheme", option]
   );
 }
@@ -96,7 +96,7 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
 
   return await executor.execShell(
     "Update DEBUG Device",
-    "update_enviroment.sh",
+    "update_environment.sh",
     ["-destinationDevice", option]
   );
 }
@@ -117,9 +117,9 @@ export async function generateXcodeServer(executor: Executor) {
   );
 }
 
-export async function terminateCurrentIOSApp(executor: Executor) {
+export async function terminateCurrentIOSApp(sessionID: string, executor: Executor) {
   await killSpawnLaunchedProcesses();
-  await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh");
+  await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh", [sessionID]);
 }
 
 export async function nameOfModuleForFile(executor: Executor) {
@@ -137,16 +137,16 @@ export async function nameOfModuleForFile(executor: Executor) {
   vscode.window.showInformationMessage(`Name of module is: ${moduleName}`);
 }
 
-export async function runApp(executor: Executor, isDebuggable: boolean) {
+export async function runApp(sessionID: string, executor: Executor, isDebuggable: boolean) {
   await executor.execShell(
     "Run App",
     "run_app.sh",
-    [isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
+    [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
     false
   );
 }
 
-export async function runAppOnMultipleDevices(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
+export async function runAppOnMultipleDevices(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   let stdout = getLastLine((await executor.execShell(
     "Fetch Multiple Devices",
     "populate_devices.sh",
@@ -168,22 +168,22 @@ export async function runAppOnMultipleDevices(executor: Executor, problemResolve
 
   await buildSelectedTarget(executor, problemResolver);
 
-  await terminateCurrentIOSApp(executor);
+  await terminateCurrentIOSApp(sessionID, executor);
 
   await executor.execShell(
     "Run App On Multiple Devices",
     "run_app.sh",
-    ["RUNNING", "-DEVICES", `${option}`],
+    [sessionID, "RUNNING", "-DEVICES", `${option}`],
     false
   );
 }
 
-export async function runAndDebugTests(executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
+export async function runAndDebugTests(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   try {
     await executor.execShell(
       "Run Tests",
       "test_app.sh",
-      [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
+      [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
       false
     );
   } finally {
@@ -191,12 +191,12 @@ export async function runAndDebugTests(executor: Executor, problemResolver: Prob
   }
 }
 
-export async function runAndDebugTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
+export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   try {
     await executor.execShell(
       "Run Tests For Current File",
       "test_app.sh",
-      [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
+      [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
       false
     );
   } finally {

@@ -1,8 +1,6 @@
-import subprocess
 import sys
 import os
 import asyncio
-import json
 import helper
 import time
 import threading
@@ -10,7 +8,9 @@ import threading
 device_uuid = sys.argv[1]
 bundle = sys.argv[2]
 debugger_arg = sys.argv[3]
-print("INPUT", device_uuid, bundle)
+session_id = sys.argv[4]
+
+print("INPUT", device_uuid, bundle, session_id)
 
 commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
 # this parameter is causing freeze if it debugger is not launched on time
@@ -21,27 +21,33 @@ cwd = os.getcwd()
 
 start_time = time.time()
 
-def session_validation(process: asyncio.subprocess.Process):
+process = None
+
+def session_validation():
     while True:
-        if not helper.is_debug_session_valid(start_time):
+        global process
+        if not helper.is_debug_session_valid(session_id, start_time):
+            print("Should BE TERMINATED")
             try:
-                process.terminate()
+                process.kill()
             except: pass
             finally:
                 exit()
-                
+        else: 
+            print("RUNNING")
+            
         time.sleep(1)
 
 
 async def install_app(command, log_file_path):
     # wait for debugger
     if debugger_arg == "LLDB_DEBUG":
-        helper.wait_debugger_to_launch()
-
+        helper.wait_debugger_to_launch(session_id)
+    global process
     # Start the subprocess
     process = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=cwd, text=False)
     
-    threading.Thread(target=session_validation, args=(process)).start()
+    threading.Thread(target=session_validation, args=()).start()
 
     await asyncio.sleep(1)
     # Read stdout and stderr concurrently
@@ -70,9 +76,6 @@ async def read_stream(stream, log_file_path):
 
 
 async def main():
-    #if debugger_arg == "LLDB_DEBUG":
-    #    helper.update_debugger_launch_config("status", "launching")
-        
     # Run the command asynchronously
     return_code, stdout_output, stderr_output = await install_app(commandLaunch, ".logs/app.log")
 

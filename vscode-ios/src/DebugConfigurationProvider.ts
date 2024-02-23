@@ -5,7 +5,7 @@ import { commandWrapper } from "./commandWrapper";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./build";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { killSpawnLaunchedProcesses } from "./utils";
+import { getSessionId, killSpawnLaunchedProcesses } from "./utils";
 
 class ErrorDuringPreLaunchTask extends Error {
     public constructor(message: string) {
@@ -22,6 +22,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     private disposable: vscode.Disposable[] = [];
     private isRunning = false;
+    private sessionID = getSessionId("debugger");
 
     private setIsRunning(value: boolean) {
         this.isRunning = value;
@@ -43,7 +44,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 if (this.isRunning) {
                     this.executor.terminateShell();
                     this.setIsRunning(false);
-                    terminateCurrentIOSApp(this.executor);
+                    terminateCurrentIOSApp(this.sessionID, this.executor);
                 }
                 this.activeSession = undefined;
             }
@@ -53,17 +54,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             this.executor.terminateShell();
             this.setIsRunning(false);
             vscode.debug.stopDebugging(this.activeSession);
-            terminateCurrentIOSApp(this.executor);
+            terminateCurrentIOSApp(this.sessionID, this.executor);
         }));
     }
 
-    private async executeAppCommand(syncCommand: () => Promise<void>, asyncCommandClosure: () => Promise<void>) {
+    private async executeAppCommand(buildCommand: () => Promise<void>, runCommandClosure: () => Promise<void>) {
         try {
             this.setIsRunning(true);
-            await commandWrapper(syncCommand);
-            await terminateCurrentIOSApp(this.executor);
+            await commandWrapper(buildCommand);
+            await terminateCurrentIOSApp(this.sessionID, this.executor);
             await this.setEnvVariables();
-            commandWrapper(asyncCommandClosure);
+            commandWrapper(runCommandClosure);
             this.setIsRunning(false);
         } catch (err) {
             await this.stopOnError();
@@ -111,7 +112,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async setEnvVariables() {
-        await this.executor.execShell("Debugger Launching", "debugger_launching.sh");
+        await this.executor.execShell("Debugger Launching", "debugger_launching.sh", [this.sessionID]);
     }
 
     async resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, dbgConfig: vscode.DebugConfiguration, token: vscode.CancellationToken) {
@@ -128,19 +129,19 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 await this.executeAppCommand(async () => {
                     await buildSelectedTarget(this.executor, this.problemResolver);
                 }, async () => {
-                    await runApp(this.executor, isDebuggable);
+                    await runApp(this.sessionID, this.executor, isDebuggable);
                 });
             } else if (dbgConfig.target === "tests") {
                 await this.executeAppCommand(async () => {
                     await buildTests(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTests(this.executor, this.problemResolver, isDebuggable);
+                    await runAndDebugTests(this.sessionID, this.executor, this.problemResolver, isDebuggable);
                 });
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTestsForCurrentFile(this.executor, this.problemResolver, isDebuggable);
+                    await runAndDebugTestsForCurrentFile(this.sessionID, this.executor, this.problemResolver, isDebuggable);
                 });
             }
             if (isDebuggable === false) {
@@ -161,7 +162,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             program: `${getScriptPath()}/app_log.py`,
             stopOnEntry: false,
             args: [
-                ".logs/app.log"
+                ".logs/app.log",
+                this.sessionID
             ],
             console: "internalConsole",
             internalConsoleOptions: "neverOpen",
@@ -183,12 +185,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
                 "command script add -f attach_lldb.app_log app_log",
                 //`target create ${getScriptPath()}/lldb_exe_stub`,  // TODO: experiment with this              
-                "create_target",
+                `create_target ${this.sessionID}`,
             ],
             processCreateCommands: [
                 "process handle SIGKILL -n true -p true -s false",
                 "process handle SIGTERM -n true -p true -s false",
-                "watch_new_process",
+                `watch_new_process ${this.sessionID}`,
             ],
             exitCommands: []
         };

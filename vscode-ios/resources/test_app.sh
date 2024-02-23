@@ -1,7 +1,7 @@
 #!/bin/bash
 source '.vscode/.env'
 
-if [ "$1" == "CANCEL" ]; then
+if [ "$2" == "CANCEL" ]; then
     echo "TESTS RUNNING WAS CANCELED"
     exit 0
 fi
@@ -40,28 +40,22 @@ VALID_TESTS=1
 #echo "Killing com.apple.CoreSimulator.CoreSimulatorService"
 #killall -9 com.apple.CoreSimulator.CoreSimulatorService
 
-echo "DEBUGGER_ARG: $1"
+echo "DEBUGGER_ARG: $2"
 
-if [ "$1" == "DEBUG_LLDB" ]; then
+if [ "$2" == "DEBUG_LLDB" ]; then
 
 echo "WAITING FOR DEBUGER"
 python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
-helper.wait_debugger_to_launch()
+helper.wait_debugger_to_launch("$1")
 EOF
-
-else
-
-echo "TERMINATING DEBUG SESSION"
-# terminate debug session otherwise
-sh .vscode/terminate_current_running_app.sh
 
 fi
 
 
-if [ "$2" == "-ALL" ]; then
+if [ "$3" == "-ALL" ]; then
     eval "$XCODECMD | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
 else
     echo "Input: '$*'"
@@ -102,6 +96,3 @@ if [ $VALID_TESTS -eq 1 ]; then
 
     echo 'Your testing results are in: .logs/tests.log'
 fi
-
-sleep 3
-sh .vscode/terminate_current_running_app.sh

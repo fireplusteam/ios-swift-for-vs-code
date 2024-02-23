@@ -8,6 +8,7 @@ import helper
 
 device_uuid = sys.argv[1]
 bundle = sys.argv[2]
+session_id = sys.argv[3]
 print("INPUT", device_uuid, bundle)
 
 commandPID = ["xcrun", "simctl", "spawn", device_uuid, "launchctl", "list"]    
@@ -19,7 +20,7 @@ async def get_app_pid():
     try:
         number_of_tries = 0
         while number_of_tries < 20:
-            if not helper.is_debug_session_valid(start_time):
+            if not helper.is_debug_session_valid(session_id, start_time):
                 return
             number_of_tries += 1
             result = subprocess.run(commandPID, stdout=subprocess.PIPE, text=True, timeout=10)
@@ -42,7 +43,7 @@ async def get_app_pid():
                 pid_str = pid_str[0]
                 return int(pid_str)
             else:
-                print("xcrun doensnt exist")
+                print("xcrun doesn't exist")
                 return None
     except subprocess.TimeoutExpired:
         print("Timeout of running process")

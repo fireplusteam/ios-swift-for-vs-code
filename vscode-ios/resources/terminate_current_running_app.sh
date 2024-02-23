@@ -1,7 +1,7 @@
 #!/bin/bash
 source '.vscode/.env'
 
-python3 "$VS_IOS_SCRIPT_PATH/terminate_current_running_app.py"
+python3 "$VS_IOS_SCRIPT_PATH/terminate_current_running_app.py" "$1"
 
 # Stop previously running app
 #xcrun simctl terminate "$DEVICE_ID" "$BUNDLE_APP_NAME"

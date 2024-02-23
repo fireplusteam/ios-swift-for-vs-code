@@ -4,12 +4,13 @@ import sys
 import helper
 
 class AppLogger:
-    def __init__(self, file_path, project_scheme, printer = print) -> None:
+    def __init__(self, file_path, project_scheme, session_id, printer = print) -> None:
         self.file_path = file_path
         self.project_scheme = project_scheme
         self.last_known_position = 0
         self.printer = printer
         self.enabled = True
+        self.session_id = session_id
     
     
     def filter_line(self, line):
@@ -52,7 +53,7 @@ class AppLogger:
 
         while True:
             self.print_new_lines()
-            if not helper.is_debug_session_valid(start_time):
+            if not helper.is_debug_session_valid(self.session_id, start_time):
                 return
             time.sleep(1)
             try:
@@ -81,8 +82,9 @@ class AppLogger:
 
 if __name__ == "__main__":
     file_path = sys.argv[1]
+    session_id = sys.argv[2]
     project_scheme = os.environ.get('PROJECT_SCHEME')
     
-    logger = AppLogger(file_path, project_scheme)
+    logger = AppLogger(file_path, project_scheme, session_id)
     # Watch for changes in the file
     logger.watch_app_log()
