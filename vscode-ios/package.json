@@ -142,11 +142,19 @@
         "configurationAttributes": {
           "launch": {
             "properties": {
-              "target": [
-                "app",
-                "tests",
-                "testsForCurrentFile"
-              ]
+              "target": {
+                "type": "string",
+                "default": "app",
+                "enum": [
+                  "app",
+                  "tests",
+                  "testsForCurrentFile"
+                ]
+              },
+              "isDebuggable": {
+                "type": "boolean",
+                "default": true
+              }
             }
           }
         },
@@ -155,7 +163,8 @@
             "type": "xcode-lldb",
             "name": "iOS: APP Debug",
             "request": "launch",
-            "target": "app"
+            "target": "app",
+            "isDebuggable": true
           }
         ],
         "configurationSnippets": [
@@ -166,7 +175,8 @@
               "type": "xcode-lldb",
               "name": "iOS: APP Debug",
               "request": "launch",
-              "target": "app"
+              "target": "app",
+              "isDebuggable": true
             }
           },
           {
@@ -176,7 +186,8 @@
               "type": "xcode-lldb",
               "name": "iOS: Tests Debug",
               "request": "launch",
-              "target": "tests"
+              "target": "tests",
+              "isDebuggable": true
             }
           },
           {
@@ -186,7 +197,8 @@
               "type": "xcode-lldb",
               "name": "iOS: Tests Debug: Current File",
               "request": "launch",
-              "target": "testsForCurrentFile"
+              "target": "testsForCurrentFile",
+              "isDebuggable": true
             }
           }
         ]

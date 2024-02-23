@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Executor } from "./execShell";
 import { getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
-import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, runAppAndDebug as runAppForDebug } from "./commands";
+import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./build";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 
@@ -71,32 +71,35 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         this.activeSession = undefined;
     }
 
-    public startIOSDebugger() {
+    async startIOSDebugger(isDebuggable: boolean) {
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: APP Debug",
             request: "launch",
-            target: "app"
+            target: "app",
+            isDebuggable: isDebuggable
         };
         vscode.debug.startDebugging(undefined, debugSession);
     }
 
-    public startIOSTestsDebugger() {
+    async startIOSTestsDebugger(isDebuggable: boolean) {
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
-            name: "iOS: APP Debug",
+            name: "iOS: Tests Debug",
             request: "launch",
-            target: "tests"
+            target: "tests",
+            isDebuggable: isDebuggable
         };
         vscode.debug.startDebugging(undefined, debugSession);
     }
 
-    public startIOSTestsForCurrentFileDebugger() {
+    async startIOSTestsForCurrentFileDebugger(isDebuggable: boolean) {
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
-            name: "iOS: APP Debug",
+            name: "iOS: Tests Debug: Current File",
             request: "launch",
-            target: "testsForCurrentFile"
+            target: "testsForCurrentFile",
+            isDebuggable: isDebuggable
         };
         vscode.debug.startDebugging(undefined, debugSession);
     }
@@ -113,30 +116,52 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
         try {
+            const isDebuggable = dbgConfig.isDebuggable as boolean;
+
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async () => {
                     await buildSelectedTarget(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAppForDebug(this.executor);
+                    await runApp(this.executor, isDebuggable);
                 });
             } else if(dbgConfig.target === "tests") {
                 await this.executeAppCommand(async () => {
                     await buildTests(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTests(this.executor, this.problemResolver);
+                    await runAndDebugTests(this.executor, this.problemResolver, isDebuggable);
                 });
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTestsForCurrentFile(this.executor, this.problemResolver);
+                    await runAndDebugTestsForCurrentFile(this.executor, this.problemResolver, isDebuggable);
                 });
+            }
+            if (isDebuggable === false) {
+                return this.runSession();
             }
         } catch {
             return null;
         }
-
+        
         return this.debugSession();
+    }
+
+    private runSession(): vscode.DebugConfiguration {
+        return {
+            name: "iOS App Log",
+            type: "python",
+            request: "launch",
+            program: `${getScriptPath()}/app_log.py`,
+            stopOnEntry: false,
+            args: [
+                ".logs/app.log"
+            ],
+            console: "internalConsole",
+            internalConsoleOptions: "neverOpen",
+            envFile: "${workspaceFolder}/.vscode/.env",
+            cwd: "${workspaceFolder}"
+        };
     }
 
     private debugSession(): vscode.DebugConfiguration {

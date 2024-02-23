@@ -47,7 +47,6 @@ export class ProblemDiagnosticResolver {
         try {
             let matches = [...output.matchAll(rg)];
             for (const match of matches) {
-
                 const file = match[1];
                 const line = Number(match[2]) - 1;
                 const column = Number(match[3]) - 1;

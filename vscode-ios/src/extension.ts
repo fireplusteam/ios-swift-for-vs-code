@@ -17,6 +17,7 @@ import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
+import { askIfDebuggable } from "./utils";
 
 async function initialize() {
   if (!isActivated()) {
@@ -179,7 +180,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app", async () => {
       await runCommand(async () => {
-        await runApp(projectExecutor, problemDiagnosticResolver);
+        debugConfiguration.startIOSDebugger(false);
       });
       return ""; // we need to return string as it's going to be used for launch configuration
     })
@@ -196,21 +197,24 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
-      debugConfiguration.startIOSDebugger();
+      await askIfDebuggable();
+      await debugConfiguration.startIOSDebugger(true);
       return true;
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.tests.debug", async () => {
-      debugConfiguration.startIOSTestsDebugger();
+      await askIfDebuggable();
+      await debugConfiguration.startIOSTestsDebugger(true);
       return true;
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.tests.currentFile.debug", async () => {
-      debugConfiguration.startIOSTestsForCurrentFileDebugger();
+      await askIfDebuggable();
+      await debugConfiguration.startIOSTestsForCurrentFileDebugger(true);
       return true;
     })
   );

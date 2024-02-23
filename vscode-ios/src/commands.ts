@@ -14,7 +14,7 @@ export async function selectProjectFile(executor: Executor, ignoreFocusOut = fal
   const options = files.map((file) => {
     const name = path.join(file.fsPath, "..").split(path.sep);
     const projectPath = name.join(path.sep);
-    return { label: name[name.length - 1], value: projectPath};
+    return { label: name[name.length - 1], value: projectPath };
   });
 
   const json = JSON.stringify(options);
@@ -136,23 +136,12 @@ export async function nameOfModuleForFile(executor: Executor) {
   vscode.window.showInformationMessage(`Name of module is: ${moduleName}`);
 }
 
-export async function runApp(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
-  await terminateCurrentIOSApp(executor);
-  await buildSelectedTarget(executor, problemResolver);
-  await executor.execShell(
-    "Run App",
-    "run_app.sh",
-    ["RUNNING"],
-    false
-  );
-}
-
-export async function runAppAndDebug(executor: Executor) {
+export async function runApp(executor: Executor, isDebuggable: boolean) {
   await terminateCurrentIOSApp(executor);
   await executor.execShell(
     "Run App",
     "run_app.sh",
-    ["LLDB_DEBUG"],
+    [isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
     false
   );
 }
@@ -189,26 +178,26 @@ export async function runAppOnMultipleDevices(executor: Executor, problemResolve
   );
 }
 
-export async function runAndDebugTests(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
+export async function runAndDebugTests(executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   await terminateCurrentIOSApp(executor);
 
   await executor.execShell(
     "Run Tests",
     "test_app.sh",
-    ["DEBUG_LLDB", "-ALL"],
+    [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
     false
   );
 
   await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
 }
 
-export async function runAndDebugTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
+export async function runAndDebugTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   await terminateCurrentIOSApp(executor);
 
   await executor.execShell(
     "Run Tests For Current File",
     "test_app.sh",
-    ["DEBUG_LLDB", "-CLASS", "CURRENTLY_SELECTED"],
+    [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
     false
   );
 
