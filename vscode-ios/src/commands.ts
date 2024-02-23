@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList, updateProject } from "./env";
-import { buildSelectedTarget, buildTests } from "./build";
+import { buildSelectedTarget, buildTests, findDiagnosticProblems } from "./build";
 import { getLastLine } from "./utils";
 import * as path from 'path';
-import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
+import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 
 export async function selectProjectFile(executor: Executor, ignoreFocusOut = false) {
   const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj, Package.swift}";
@@ -189,24 +189,29 @@ export async function runAppOnMultipleDevices(executor: Executor, problemResolve
   );
 }
 
-export async function runAndDebugTests(executor: Executor) {
+export async function runAndDebugTests(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await terminateCurrentIOSApp(executor);
 
   await executor.execShell(
-    "Run App",
+    "Run Tests",
     "test_app.sh",
     ["DEBUG_LLDB", "-ALL"],
     false
   );
+
+  await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
 }
 
-export async function runAndDebugTestsForCurrentFile(executor: Executor) {
+export async function runAndDebugTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await terminateCurrentIOSApp(executor);
 
   await executor.execShell(
-    "Run App",
+    "Run Tests For Current File",
     "test_app.sh",
     ["DEBUG_LLDB", "-CLASS", "CURRENTLY_SELECTED"],
     false
   );
+
+  await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
 }
+

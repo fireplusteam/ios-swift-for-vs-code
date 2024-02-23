@@ -3,18 +3,17 @@ import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from './inputPicker';
 import { checkWorkspace, storeVSConfig } from "./commands";
 import { getLastLine } from './utils';
-import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
+import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import fs from "fs";
 import { getWorkspacePath } from './env';
 import path from 'path';
 
-
-async function findDiagnosticProblems(problemResolver: ProblemDiagnosticResolver) {
+export async function findDiagnosticProblems(problemResolver: ProblemDiagnosticResolver, type = ProblemDiagnosticLogType.build) {
   const workPath = getWorkspacePath();
   try {
-
-    const stdout = fs.readFileSync(path.join(workPath, ".logs", "build.log"), "utf-8");
-    problemResolver.parseBuildLog(stdout);
+    const fileName = type === ProblemDiagnosticLogType.build ? "build.log" : "tests.log";
+    const stdout = fs.readFileSync(path.join(workPath, ".logs", fileName), "utf-8");
+    problemResolver.parseBuildLog(stdout, type);
   } catch (err) {
     console.log(err);
   }

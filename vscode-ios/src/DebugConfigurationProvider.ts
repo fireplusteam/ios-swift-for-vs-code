@@ -123,13 +123,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 await this.executeAppCommand(async () => {
                     await buildTests(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTests(this.executor);
+                    await runAndDebugTests(this.executor, this.problemResolver);
                 });
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTestsForCurrentFile(this.executor);
+                    await runAndDebugTestsForCurrentFile(this.executor, this.problemResolver);
                 });
             }
         } catch {
