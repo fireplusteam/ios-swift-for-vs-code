@@ -31,11 +31,15 @@ export class ProblemDiagnosticResolver {
             return message;
         }
         tokens[1] = tokens[1].slice(matchStart?.index);
-        tokens[2] = tokens[2].slice( matchStart?.index);
+        tokens[2] = tokens[2].slice(matchStart?.index);
         matchStart = tokens[2].match(start);
 
         tokens[2] = "_".repeat(matchStart?.index || 0) + tokens[2].slice(matchStart?.index || 0);
         return tokens.join("\n");
+    }
+
+    private transformTestMessage(message: string, line: number) {
+        return message;
     }
 
     parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
@@ -51,7 +55,7 @@ export class ProblemDiagnosticResolver {
                 const line = Number(match[2]) - 1;
                 const column = Number(match[3]) - 1;
                 const severity = match[4];
-                const message = type === ProblemDiagnosticLogType.build ? this.transformBuildMessage(match[5]) : match[5];
+                const message = type === ProblemDiagnosticLogType.build ? this.transformBuildMessage(match[5]) : this.transformTestMessage(match[5], line);
                 let errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 switch (severity) {
@@ -71,7 +75,7 @@ export class ProblemDiagnosticResolver {
                     message,
                     errorSeverity
                 );
-                diagnostic.source = type === ProblemDiagnosticLogType.build ? "xcodebuild": "xcodebuild-tests";
+                diagnostic.source = type === ProblemDiagnosticLogType.build ? "xcodebuild" : "xcodebuild-tests";
                 const value = files[file] || [];
                 value.push(diagnostic);
                 files[file] = value;

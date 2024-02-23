@@ -2,9 +2,10 @@ import * as vscode from "vscode";
 import { Executor } from "./execShell";
 import { getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
-import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp } from "./commands";
+import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./build";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
+import { killSpawnLaunchedProcesses } from "./utils";
 
 class ErrorDuringPreLaunchTask extends Error {
     public constructor(message: string) {
@@ -22,6 +23,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private disposable: vscode.Disposable[] = [];
     private isRunning = false;
 
+    private setIsRunning(value: boolean) {
+        this.isRunning = value;
+        vscode.commands.executeCommand("setContext", "VSCode_iOS_debugStarted", value);
+    }
+
     private activeSession: vscode.DebugSession | undefined;
 
     constructor(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
@@ -36,29 +42,29 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             if (e.id === this.activeSession?.id) {
                 if (this.isRunning) {
                     this.executor.terminateShell();
-                    this.isRunning = false;
+                    this.setIsRunning(false);
+                    terminateCurrentIOSApp(this.executor);
                 }
                 this.activeSession = undefined;
             }
         }));
 
         this.disposable.push(vscode.commands.registerCommand("vscode-ios.stop.debug.session", (e) => {
-            if (this.isRunning && vscode.debug.activeDebugSession === undefined) {
-                this.executor.terminateShell();
-                this.isRunning = false;
-            } else {
-                vscode.debug.stopDebugging(this.activeSession);
-            }
+            this.executor.terminateShell();
+            this.setIsRunning(false);
+            vscode.debug.stopDebugging(this.activeSession);
+            terminateCurrentIOSApp(this.executor);
         }));
     }
 
     private async executeAppCommand(syncCommand: () => Promise<void>, asyncCommandClosure: () => Promise<void>) {
         try {
-            this.isRunning = true;
+            this.setIsRunning(true);
             await commandWrapper(syncCommand);
+            await terminateCurrentIOSApp(this.executor);
             await this.setEnvVariables();
             commandWrapper(asyncCommandClosure);
-            this.isRunning = false;
+            this.setIsRunning(false);
         } catch (err) {
             await this.stopOnError();
             throw err;
@@ -67,7 +73,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     private async stopOnError() {
         await vscode.debug.stopDebugging(this.activeSession);
-        this.isRunning = false;
+        this.setIsRunning(false);
         this.activeSession = undefined;
     }
 
@@ -104,7 +110,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         vscode.debug.startDebugging(undefined, debugSession);
     }
 
-    async setEnvVariables() { 
+    async setEnvVariables() {
         await this.executor.execShell("Debugger Launching", "debugger_launching.sh");
     }
 
@@ -124,7 +130,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 }, async () => {
                     await runApp(this.executor, isDebuggable);
                 });
-            } else if(dbgConfig.target === "tests") {
+            } else if (dbgConfig.target === "tests") {
                 await this.executeAppCommand(async () => {
                     await buildTests(this.executor, this.problemResolver);
                 }, async () => {
@@ -143,7 +149,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         } catch {
             return null;
         }
-        
+
         return this.debugSession();
     }
 

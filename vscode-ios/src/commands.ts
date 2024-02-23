@@ -3,7 +3,7 @@ import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getEnvList, updateProject } from "./env";
 import { buildSelectedTarget, buildTests, findDiagnosticProblems } from "./build";
-import { getLastLine } from "./utils";
+import { getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 
@@ -118,6 +118,7 @@ export async function generateXcodeServer(executor: Executor) {
 }
 
 export async function terminateCurrentIOSApp(executor: Executor) {
+  await killSpawnLaunchedProcesses();
   await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh");
 }
 
@@ -137,7 +138,6 @@ export async function nameOfModuleForFile(executor: Executor) {
 }
 
 export async function runApp(executor: Executor, isDebuggable: boolean) {
-  await terminateCurrentIOSApp(executor);
   await executor.execShell(
     "Run App",
     "run_app.sh",
@@ -147,8 +147,6 @@ export async function runApp(executor: Executor, isDebuggable: boolean) {
 }
 
 export async function runAppOnMultipleDevices(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
-  await terminateCurrentIOSApp(executor);
-
   let stdout = getLastLine((await executor.execShell(
     "Fetch Multiple Devices",
     "populate_devices.sh",
@@ -170,6 +168,8 @@ export async function runAppOnMultipleDevices(executor: Executor, problemResolve
 
   await buildSelectedTarget(executor, problemResolver);
 
+  await terminateCurrentIOSApp(executor);
+
   await executor.execShell(
     "Run App On Multiple Devices",
     "run_app.sh",
@@ -179,28 +179,28 @@ export async function runAppOnMultipleDevices(executor: Executor, problemResolve
 }
 
 export async function runAndDebugTests(executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
-  await terminateCurrentIOSApp(executor);
-
-  await executor.execShell(
-    "Run Tests",
-    "test_app.sh",
-    [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
-    false
-  );
-
-  await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
+  try {
+    await executor.execShell(
+      "Run Tests",
+      "test_app.sh",
+      [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
+      false
+    );
+  } finally {
+    await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
+  }
 }
 
 export async function runAndDebugTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
-  await terminateCurrentIOSApp(executor);
-
-  await executor.execShell(
-    "Run Tests For Current File",
-    "test_app.sh",
-    [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
-    false
-  );
-
-  await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
+  try {
+    await executor.execShell(
+      "Run Tests For Current File",
+      "test_app.sh",
+      [isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
+      false
+    );
+  } finally {
+    await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
+  }
 }
 
