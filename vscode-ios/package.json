@@ -56,6 +56,10 @@
     ],
     "commands": [
       {
+        "command": "vscode-ios.project.select",
+        "title": "iOS: Select Project/Workspace"
+      },
+      {
         "command": "vscode-ios.project.selectTarget",
         "title": "iOS: Select Scheme"
       },

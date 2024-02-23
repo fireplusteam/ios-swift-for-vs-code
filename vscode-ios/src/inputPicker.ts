@@ -4,7 +4,8 @@ export async function showPicker(
   json: string,
   title: string,
   placeholder: string,
-  canPickMany = false
+  canPickMany = false,
+  ignoreFocusOut = false
 ) {
   const items: vscode.QuickPickItem[] = JSON.parse(json);
   let selection = await vscode.window.showQuickPick<vscode.QuickPickItem>(
@@ -12,7 +13,8 @@ export async function showPicker(
     {
       title: title,
       placeHolder: placeholder,
-      canPickMany: canPickMany,
+      ignoreFocusOut: ignoreFocusOut,
+      canPickMany: canPickMany
     }
   );
 

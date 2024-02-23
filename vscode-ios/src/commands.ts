@@ -6,7 +6,7 @@ import { buildSelectedTarget, buildTests } from "./build";
 import { getLastLine } from "./utils";
 import * as path from 'path';
 
-export async function selectProjectFile(executor: Executor) {
+export async function selectProjectFile(executor: Executor, ignoreFocusOut = false) {
   const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj, Package.swift}";
   const files = await vscode.workspace.findFiles(include);
 
@@ -22,13 +22,14 @@ export async function selectProjectFile(executor: Executor) {
     json,
     "Select Project File",
     "Please select your project file",
-    false
+    false,
+    ignoreFocusOut
   );
   if (selection === undefined || selection === '') {
     return;
   }
   updateProject(selection);
-  await selectTarget(executor);
+  await selectTarget(executor, true);
 }
 
 export async function storeVSConfig(executor: Executor) {
@@ -40,8 +41,8 @@ export async function storeVSConfig(executor: Executor) {
   await executor.execShell("Store VS Config", "store_vs_config.sh", [fileUrl]);
 }
 
-export async function selectTarget(executor: Executor) {
-  await checkWorkspace(executor);
+export async function selectTarget(executor: Executor, ignoreFocusOut = false) {
+  await checkWorkspace(executor, ignoreFocusOut);
   let stdout = getLastLine((await executor.execShell(
     "Fetch Project Targets",
     "populate_schemes.sh",
@@ -54,6 +55,7 @@ export async function selectTarget(executor: Executor) {
     "Target",
     "Please select Target",
     false,
+    ignoreFocusOut
   );
 
   if (option === undefined) {
@@ -67,7 +69,7 @@ export async function selectTarget(executor: Executor) {
   );
 }
 
-export async function selectDevice(executor: Executor, shouldCheckWorkspace = true) {
+export async function selectDevice(executor: Executor, shouldCheckWorkspace = true, ignoreFocusOut = false) {
   if (shouldCheckWorkspace === true) {
     await checkWorkspace(executor);
   }
@@ -76,14 +78,15 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
     "populate_devices.sh",
     ["-single"],
     false,
-    ExecutorReturnType.stdout
+    ExecutorReturnType.stdout,
   )) as string);
 
   let option = await showPicker(
     stdout,
     "Device",
     "Please select Device for DEBUG",
-    false
+    false,
+    ignoreFocusOut
   );
 
   if (option === undefined) {
@@ -97,11 +100,11 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
   );
 }
 
-export async function checkWorkspace(executor: Executor) {
+export async function checkWorkspace(executor: Executor, ignoreFocusOut = false) {
   await executor.execShell("Validate Environment", "check_workspace.sh");
   const env = getEnvList();
   if (!env.hasOwnProperty("DEVICE_ID")) {
-    await selectDevice(executor, false);
+    await selectDevice(executor, false, ignoreFocusOut);
   }
 }
 

@@ -16,15 +16,17 @@ import { Executor } from "./execShell";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
+import { ProblemDiagnosticResolver } from "./diagnostic";
 
 async function initialize() {
   if (!isActivated()) {
-    await selectProjectFile(projectExecutor);
+    await selectProjectFile(projectExecutor, true);
   }
 }
 
 export const projectExecutor = new Executor();
 export const debugConfiguration = new DebugConfigurationProvider(projectExecutor);
+export const problemDiagnosticResolver = new ProblemDiagnosticResolver();
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -38,6 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "vscode-ios" is now active!');
 
   initialize();
+
   let logChannel = vscode.window.createOutputChannel("VSCode-iOS");
   context.subscriptions.push(
     logChannel
@@ -56,6 +59,13 @@ export function activate(context: vscode.ExtensionContext) {
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.project.select", async () => {
+      await selectProjectFile(projectExecutor);
+    })
+  );
+
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.env.scriptPath", async () => {
       console.log("DEBUG STARTED: " + getScriptPath());
@@ -106,7 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
-      executeTask("Clean Derived Data");
+      await executeTask("Clean Derived Data");
     })
   );
 
@@ -114,7 +124,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.selectedTarget",
       async () => {
-        executeTask("Build Selected Target");
+        await executeTask("Build Selected Target");
       }
     )
   );
@@ -123,7 +133,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.currentFile",
       async () => {
-        executeTask("Build: Current File");
+        await executeTask("Build: Current File");
       }
     )
   );
@@ -132,7 +142,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.all",
       async () => {
-        executeTask("Build All");
+        await executeTask("Build All");
       }
     )
   );
@@ -141,7 +151,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.tests",
       async () => {
-        executeTask("Build Tests");
+        await executeTask("Build Tests");
       }
     )
   );
@@ -150,7 +160,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(
       "vscode-ios.build.tests.currentFile",
       async () => {
-        executeTask("Build Tests: Current File");
+        await executeTask("Build Tests: Current File");
       }
     )
   );

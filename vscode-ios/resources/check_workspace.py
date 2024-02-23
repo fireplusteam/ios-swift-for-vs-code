@@ -9,9 +9,11 @@ script = os.getenv("VS_IOS_SCRIPT_PATH")
 def update_enviroment(project_file):
     schemes = helper.get_schemes(project_file)
     env_file = helper.get_env_list()
-    if not (env_file["PROJECT_SCHEME"].strip("\"") in schemes):
+    try: 
+        if not (env_file["PROJECT_SCHEME"].strip("\"") in schemes):
+            helper.update_scheme(project_file, schemes[0])
+    except KeyError:
         helper.update_scheme(project_file, schemes[0])
-
 
 def bind_autocomplete():
     if not helper.is_build_server_valid():

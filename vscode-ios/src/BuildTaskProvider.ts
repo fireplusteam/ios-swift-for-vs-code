@@ -6,6 +6,7 @@ import { isActivated } from "./env";
 import { TaskDefinition } from "vscode";
 import { title } from "process";
 import { getLastLine } from "./utils";
+import { log } from "console";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
@@ -15,7 +16,19 @@ export async function executeTask(name: string) {
     const tasks = await vscode.tasks.fetchTasks();
     for (const task of tasks) {
         if (task.name === name && task.definition.type === BuildTaskProvider.BuildScriptType) {
-            await vscode.tasks.executeTask(task);
+            let disposable: vscode.Disposable;
+            await new Promise(async (resolve, reject) => {
+                disposable = vscode.tasks.onDidEndTaskProcess(e => {
+                    if (e.execution.task.name === name) {
+                        if (e.exitCode !== 0) {
+                            reject(new Error(`Task ${name} failed with ${e.exitCode}`));
+                            return;
+                        }
+                        resolve(true);
+                    }
+                });
+                await vscode.tasks.executeTask(task);
+            });
         }
     }
 }
