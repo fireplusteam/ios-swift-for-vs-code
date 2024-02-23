@@ -16,7 +16,7 @@ import { Executor } from "./execShell";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
-import { ProblemDiagnosticResolver } from "./diagnostic";
+import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 
 async function initialize() {
   if (!isActivated()) {
@@ -25,8 +25,8 @@ async function initialize() {
 }
 
 export const projectExecutor = new Executor();
-export const debugConfiguration = new DebugConfigurationProvider(projectExecutor);
 export const problemDiagnosticResolver = new ProblemDiagnosticResolver();
+export const debugConfiguration = new DebugConfigurationProvider(projectExecutor, problemDiagnosticResolver);
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
   logChannel.show();
 
   context.subscriptions.push(
-    vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor))
+    vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor, problemDiagnosticResolver))
   );
 
   context.subscriptions.push(
@@ -179,7 +179,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app", async () => {
       await runCommand(async () => {
-        await runApp(projectExecutor);
+        await runApp(projectExecutor, problemDiagnosticResolver);
       });
       return ""; // we need to return string as it's going to be used for launch configuration
     })
@@ -188,7 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
       await runCommand(async () => {
-        await runAppOnMultipleDevices(projectExecutor);
+        await runAppOnMultipleDevices(projectExecutor, problemDiagnosticResolver);
       });
       return ""; // we need to return string as it's going to be used for launch configuration
     })

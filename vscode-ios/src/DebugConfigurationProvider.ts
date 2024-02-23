@@ -4,6 +4,7 @@ import { getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, runAppAndDebug as runAppForDebug } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./build";
+import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 
 class ErrorDuringPreLaunchTask extends Error {
     public constructor(message: string) {
@@ -16,14 +17,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     static lldbName = "iOS App Debugger NAME UNIQUE RANDOM";
 
     private executor: Executor;
+    private problemResolver: ProblemDiagnosticResolver;
 
     private disposable: vscode.Disposable[] = [];
     private isRunning = false;
 
     private activeSession: vscode.DebugSession | undefined;
 
-    constructor(executor: Executor) {
+    constructor(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
         this.executor = executor;
+        this.problemResolver = problemResolver;
         this.disposable.push(vscode.debug.onDidStartDebugSession((e) => {
             if (e.name === DebugConfigurationProvider.lldbName) {
                 this.activeSession = e;
@@ -112,19 +115,19 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         try {
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async () => {
-                    await buildSelectedTarget(this.executor);
+                    await buildSelectedTarget(this.executor, this.problemResolver);
                 }, async () => {
                     await runAppForDebug(this.executor);
                 });
             } else if(dbgConfig.target === "tests") {
                 await this.executeAppCommand(async () => {
-                    await buildTests(this.executor);
+                    await buildTests(this.executor, this.problemResolver);
                 }, async () => {
                     await runAndDebugTests(this.executor);
                 });
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
-                    await buildTestsForCurrentFile(this.executor);
+                    await buildTestsForCurrentFile(this.executor, this.problemResolver);
                 }, async () => {
                     await runAndDebugTestsForCurrentFile(this.executor);
                 });

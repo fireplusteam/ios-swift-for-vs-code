@@ -7,6 +7,7 @@ import { TaskDefinition } from "vscode";
 import { title } from "process";
 import { getLastLine } from "./utils";
 import { log } from "console";
+import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
@@ -37,9 +38,11 @@ export class BuildTaskProvider implements vscode.TaskProvider {
     static BuildScriptType = 'vscode-ios-tasks';
 
     private executor: Executor;
+    private problemResolver: ProblemDiagnosticResolver;
 
-    constructor(executor: Executor) {
+    constructor(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
         this.executor = executor;
+        this.problemResolver = problemResolver;
     }
 
     public provideTasks(token?: vscode.CancellationToken): vscode.ProviderResult<vscode.Task[]> {
@@ -51,7 +54,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build All",
             vscode.TaskGroup.Build,
             async () => {
-                await buildAllTarget(this.executor);
+                await buildAllTarget(this.executor, this.problemResolver);
             }
         );
 
@@ -59,7 +62,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build: Current File",
             vscode.TaskGroup.Build,
             async () => {
-                await buildCurrentFile(this.executor);
+                await buildCurrentFile(this.executor, this.problemResolver);
             }
         );
 
@@ -67,7 +70,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build Selected Target",
             vscode.TaskGroup.Build,
             async () => {
-                await buildSelectedTarget(this.executor);
+                await buildSelectedTarget(this.executor, this.problemResolver);
             }
         );
 
@@ -75,7 +78,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build Tests",
             vscode.TaskGroup.Build,
             async () => {
-                await buildTests(this.executor);
+                await buildTests(this.executor, this.problemResolver);
             }
         );
 
@@ -83,7 +86,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build Tests: Current File",
             vscode.TaskGroup.Build,
             async () => {
-                await buildTestsForCurrentFile(this.executor);
+                await buildTestsForCurrentFile(this.executor, this.problemResolver);
             }
         );
 
@@ -142,16 +145,6 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                             await commandWrapper(commandClosure, successMessage);
                         } catch (err) {
                         }
-                        const stdout =
-                            await this.executor.execShell(
-                                "Print Errors",
-                                "print_errors.py",
-                                ["-problemMatcher"],
-                                false,
-                                ExecutorReturnType.stdout,
-                                ExecutorMode.silently
-                            ) as string;
-                        writeEmitter.fire(stdout);
                         closeEmitter.fire(0);
                     },
                     onDidWrite: writeEmitter.event,

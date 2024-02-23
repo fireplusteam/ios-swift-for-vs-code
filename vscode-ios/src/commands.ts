@@ -5,6 +5,7 @@ import { getEnvList, updateProject } from "./env";
 import { buildSelectedTarget, buildTests } from "./build";
 import { getLastLine } from "./utils";
 import * as path from 'path';
+import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 
 export async function selectProjectFile(executor: Executor, ignoreFocusOut = false) {
   const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj, Package.swift}";
@@ -135,9 +136,9 @@ export async function nameOfModuleForFile(executor: Executor) {
   vscode.window.showInformationMessage(`Name of module is: ${moduleName}`);
 }
 
-export async function runApp(executor: Executor) {
+export async function runApp(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await terminateCurrentIOSApp(executor);
-  await buildSelectedTarget(executor);
+  await buildSelectedTarget(executor, problemResolver);
   await executor.execShell(
     "Run App",
     "run_app.sh",
@@ -156,7 +157,7 @@ export async function runAppAndDebug(executor: Executor) {
   );
 }
 
-export async function runAppOnMultipleDevices(executor: Executor) {
+export async function runAppOnMultipleDevices(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await terminateCurrentIOSApp(executor);
 
   let stdout = getLastLine((await executor.execShell(
@@ -178,7 +179,7 @@ export async function runAppOnMultipleDevices(executor: Executor) {
     return;
   }
 
-  await buildSelectedTarget(executor);
+  await buildSelectedTarget(executor, problemResolver);
 
   await executor.execShell(
     "Run App On Multiple Devices",
