@@ -178,15 +178,6 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.run.app", async () => {
-      await runCommand(async () => {
-        debugConfiguration.startIOSDebugger(false);
-      });
-      return ""; // we need to return string as it's going to be used for launch configuration
-    })
-  );
-
-  context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
       await runCommand(async () => {
         await runAppOnMultipleDevices(projectExecutor, problemDiagnosticResolver);
@@ -197,24 +188,24 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
-      await askIfDebuggable();
-      await debugConfiguration.startIOSDebugger(true);
+      const isDebuggable = await askIfDebuggable();
+      await debugConfiguration.startIOSDebugger(isDebuggable);
       return true;
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.tests.debug", async () => {
-      await askIfDebuggable();
-      await debugConfiguration.startIOSTestsDebugger(true);
+      const isDebuggable = await askIfDebuggable();
+      await debugConfiguration.startIOSTestsDebugger(isDebuggable);
       return true;
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.tests.currentFile.debug", async () => {
-      await askIfDebuggable();
-      await debugConfiguration.startIOSTestsForCurrentFileDebugger(true);
+      const isDebuggable = await askIfDebuggable();
+      await debugConfiguration.startIOSTestsForCurrentFileDebugger(isDebuggable);
       return true;
     })
   );

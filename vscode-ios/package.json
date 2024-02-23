@@ -115,10 +115,6 @@
         "category": "build"
       },
       {
-        "command": "vscode-ios.run.app",
-        "title": "iOS: Run App"
-      },
-      {
         "command": "vscode-ios.run.app.multiple.devices",
         "title": "iOS: Run App On Multiple Devices"
       },

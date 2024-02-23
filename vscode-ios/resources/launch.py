@@ -25,7 +25,7 @@ def session_validation(process: asyncio.subprocess.Process):
     while True:
         if not helper.is_debug_session_valid(start_time):
             try:
-                process.kill()
+                process.terminate()
             except: pass
             finally:
                 exit()
