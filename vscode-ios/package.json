@@ -11,10 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:Package.swift",
-    "workspaceContains:*.xcworkspace",
-    "workspaceContains:*.xcodeproj",
-    "workspaceContains:buildServer.json"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {

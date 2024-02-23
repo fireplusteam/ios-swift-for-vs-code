@@ -15,6 +15,13 @@ export function getEnvFilePath() {
   return path.join(getVSCodePath(), ".env");
 }
 
+export function updateProject(projectPath: string) {
+  const relative = path.relative(getWorkspacePath(), projectPath);
+  fs.mkdirSync(getVSCodePath(), { recursive: true });
+  const defaultContent = `PROJECT_FILE="${relative}"`;
+  fs.writeFileSync(getEnvFilePath(), defaultContent, "utf-8");
+}
+
 export function getEnv() {
   if (!fs.existsSync(getEnvFilePath())) {
     fs.mkdirSync(getVSCodePath(), { recursive: true });

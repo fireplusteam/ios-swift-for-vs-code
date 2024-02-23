@@ -63,19 +63,15 @@ export class Executor {
     return terminalId;
   }
 
-  private getTerminal(id: string, mode: ExecutorMode) {
+  private getTerminal(id: string) {
     const terminalId = this.getTerminalName(id);
     clearInterval(this.animationInterval);
     if (this.terminal) {
-      if (mode !== ExecutorMode.silently) {
-        this.animationInterval = this.createTitleAnimation(terminalId);
-      }
+      this.animationInterval = this.createTitleAnimation(terminalId);
       if (this.terminal.name === terminalId) {
         return this.terminal;
       }
-      if (mode !== ExecutorMode.silently) {
-        this.changeNameEmitter?.fire(`${terminalId}`);
-      }
+      this.changeNameEmitter?.fire(`${terminalId}`);
       return this.terminal;
     }
     this.writeEmitter = new vscode.EventEmitter<string>();
@@ -155,9 +151,9 @@ export class Executor {
       stdio: "pipe",
     });
     this.childProc = proc;
-    const terminal = this.getTerminal(commandName, mode);
+    const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(commandName );
     if (showTerminal) {
-      terminal.show();
+      terminal?.show();
     }
     if (mode === ExecutorMode.verbose) {
       this.writeEmitter?.fire(`COMMAND: ${commandName}\n`);
@@ -194,15 +190,15 @@ export class Executor {
           );
         }
         if (code !== 0) {
-          if (mode != ExecutorMode.silently) {
+          if (mode !== ExecutorMode.silently) {
             this.changeNameEmitter?.fire(
               `❌ ${this.getTerminalName(commandName)}`
             );
           }
-          terminal.show();
+          terminal?.show();
           reject(new ExecutorTaskError(`Task: ${this.getTerminalName(commandName)} exits with ${code}`, code));
         } else {
-          if (mode != ExecutorMode.silently) {
+          if (mode !== ExecutorMode.silently) {
             this.changeNameEmitter?.fire(
               `✅ ${this.getTerminalName(commandName)}`
             );

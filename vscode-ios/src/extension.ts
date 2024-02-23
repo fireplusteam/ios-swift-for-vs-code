@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { getScriptPath } from "./env";
+import { getScriptPath, isActivated } from "./env";
 import {
   checkWorkspace,
   generateXcodeServer,
@@ -9,15 +9,19 @@ import {
   runApp,
   runAppOnMultipleDevices,
   selectDevice,
+  selectProjectFile,
   selectTarget,
 } from "./commands";
-import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, buildTestsForCurrentFile, cleanDerivedData } from "./build";
 import { Executor } from "./execShell";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import { runCommand } from "./commandWrapper";
 
-function initialize() { }
+async function initialize() {
+  if (!isActivated()) {
+    await selectProjectFile(projectExecutor);
+  }
+}
 
 export const projectExecutor = new Executor();
 export const debugConfiguration = new DebugConfigurationProvider(projectExecutor);
@@ -99,7 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
     )
   );
- 
+
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
       executeTask("Clean Derived Data");
@@ -182,7 +186,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
-      debugConfiguration.startIOSDebugger(); 
+      debugConfiguration.startIOSDebugger();
       return true;
     })
   );

@@ -1,9 +1,35 @@
 import * as vscode from 'vscode';
 import { Executor, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
-import { getEnvList } from "./env";
+import { getEnvList, updateProject } from "./env";
 import { buildSelectedTarget, buildTests } from "./build";
 import { getLastLine } from "./utils";
+import * as path from 'path';
+
+export async function selectProjectFile(executor: Executor) {
+  const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj, Package.swift}";
+  const files = await vscode.workspace.findFiles(include);
+
+  const options = files.map((file) => {
+    const name = path.join(file.fsPath, "..").split(path.sep);
+    const projectPath = name.join(path.sep);
+    return { label: name[name.length - 1], value: projectPath};
+  });
+
+  const json = JSON.stringify(options);
+
+  const selection = await showPicker(
+    json,
+    "Select Project File",
+    "Please select your project file",
+    false
+  );
+  if (selection === undefined || selection === '') {
+    return;
+  }
+  updateProject(selection);
+  await selectTarget(executor);
+}
 
 export async function storeVSConfig(executor: Executor) {
   const fileUrl = vscode.window.activeTextEditor?.document.uri.fsPath;
