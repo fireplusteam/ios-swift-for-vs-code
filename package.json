@@ -206,11 +206,13 @@
     ],
     "extensionDependencies": [
       "vadimcn.vscode-lldb",
-      "swift-lang"
+      "swift-lang",
+      "debugpy"
     ],
     "extensionPack": [
       "vadimcn.vscode-lldb",
-      "swift-lang"
+      "swift-lang",
+      "debugpy"
     ]
   },
   "scripts": {

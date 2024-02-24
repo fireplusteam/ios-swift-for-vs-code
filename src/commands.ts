@@ -8,15 +8,25 @@ import * as path from 'path';
 import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 
 export async function selectProjectFile(executor: Executor, ignoreFocusOut = false) {
-  const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj, Package.swift}";
+  const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj,Package.swift}";
   const files = await vscode.workspace.findFiles(include);
 
   const options = files.map((file) => {
+    if (file.fsPath.endsWith("Package.swift")) {
+      const name = path.join(file.fsPath).split(path.sep);
+      const projectPath = name.join(path.sep);
+      return { label: name[name.length - 1], value: projectPath };  
+    }
     const name = path.join(file.fsPath, "..").split(path.sep);
     const projectPath = name.join(path.sep);
     return { label: name[name.length - 1], value: projectPath };
   });
-
+  if (options.length == 0) {
+    if (ignoreFocusOut == false) {
+      vscode.window.showErrorMessage("Workspace doesn't have any iOS project or workspace file");
+    }
+    return;
+  }
   const json = JSON.stringify(options);
 
   const selection = await showPicker(

@@ -13,8 +13,14 @@ For example if there is an image subfolder under your extension project workspac
 > Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
 ## Requirements
+To use this extension you need to install also:
+   CodeLLDB https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
+   Swift - https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang
+   Python Debugger - https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+```bash
+brew install xcbeautify 
+```
 
 ## Extension Settings
 

@@ -6,7 +6,7 @@ if [ "$2" == "CANCEL" ]; then
     exit 0
 fi
 
-source '.vscode/xcode_build_util.sh'
+source "$VS_IOS_SCRIPT_PATH/xcode_build_util.sh"
 
 rm .logs/build.log
 
@@ -61,9 +61,9 @@ else
     echo "Input: '$*'"
 
     # get last line of output
-    #DEBUG_STR=$(.vscode/update_enviroment.sh "-destinationTests" "$@")
+    #DEBUG_STR=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@")
     #echo "$DEBUG_STR"
-    TESTS_SCRIPT=$(.vscode/update_enviroment.sh "-destinationTests" "$@" | tail -n 1)
+    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@" | tail -n 1)
 
     TESTS="$TESTS_SCRIPT"
 
@@ -92,7 +92,7 @@ if [ $VALID_TESTS -eq 1 ]; then
 
     # print errors
     # Check the exit status
-    python3 .vscode/print_errors.py '.logs/tests.log'
+    python3 "$VS_IOS_SCRIPT_PATH/print_errors.py" '.logs/tests.log'
 
     echo 'Your testing results are in: .logs/tests.log'
 fi
