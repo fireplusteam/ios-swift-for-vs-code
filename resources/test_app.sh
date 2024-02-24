@@ -61,9 +61,9 @@ else
     echo "Input: '$*'"
 
     # get last line of output
-    #DEBUG_STR=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@")
+    #DEBUG_STR=$("$VS_IOS_SCRIPT_PATH/update_environment.sh" "-destinationTests" "$@")
     #echo "$DEBUG_STR"
-    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_enviroment.sh" "-destinationTests" "$@" | tail -n 1)
+    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_environment.sh" "-destinationTests" "$@" | tail -n 1)
 
     TESTS="$TESTS_SCRIPT"
 

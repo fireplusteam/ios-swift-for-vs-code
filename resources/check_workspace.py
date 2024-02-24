@@ -6,7 +6,7 @@ import subprocess
 script = os.getenv("VS_IOS_SCRIPT_PATH")
     
 
-def update_enviroment(project_file):
+def update_environment(project_file):
     schemes = helper.get_schemes(project_file)
     env_file = helper.get_env_list()
     try: 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     os.makedirs('.logs', exist_ok=True)
     if os.path.exists(project_file):
         print("valid project file")
-        update_enviroment(project_file)
+        update_environment(project_file)
     else:
         print(f"{project_file} is not valid")
         cwd = os.getcwd()
@@ -61,7 +61,7 @@ if __name__ == "__main__":
                         print(file)
                         project_file = file
                 
-        update_enviroment(project_file) 
+        update_environment(project_file) 
 
     print("UPDATE BINDING")
     # validate build server
