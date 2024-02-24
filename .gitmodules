@@ -1,0 +1,3 @@
+[submodule "xcode-build-server"]
+	path = xcode-build-server
+	url = https://github.com/fireplusteam/xcode-build-server.git
