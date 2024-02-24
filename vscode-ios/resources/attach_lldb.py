@@ -68,9 +68,11 @@ def perform_debugger_command(debugger, command):
     except Exception as e:
         logMessage("Error executing command:" + str(e))
 
+script_path = None
 
 def kill_codelldb(debugger):
-    perform_debugger_command(debugger, "target create .vscode/lldb_exe_stub")
+    global script_path
+    perform_debugger_command(debugger, f"target create {script_path}/lldb_exe_stub")
     perform_debugger_command(debugger, "process launch")
 
 
@@ -142,6 +144,11 @@ def watch_new_process(debugger, command, result, internal_dict):
     thread.start()
     helper.update_debugger_launch_config(session_id, "status", "launched")
 
+
+def setScriptPath(debugger, command, result, internal_dict):
+    global script_path
+    logMessage("Set Script Path to: " + str(command))
+    script_path = command
 
 def create_target(debugger, command, result, internal_dict):
     try:

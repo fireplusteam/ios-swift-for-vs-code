@@ -1,20 +1,22 @@
-import { resolve } from "path";
 import { getScriptPath, getWorkspacePath } from "./env";
 
 var find = require("find-process");
 var kill = require("tree-kill");
 
-export async function killSpawnLaunchedProcesses() {
+export async function killSpawnLaunchedProcesses(sessionId: string) {
     try {
         let processList = await find("name", `${getScriptPath()}/launch.py`);
         for (let process of processList) {
-            console.log(process);
-            //const cmd: string = process.cmd;
-            /*await new Promise((resolve) => {
+            console.log(`process is still running ${process.cmd}`);
+            const cmd = process.cmd as string;
+            if (cmd.indexOf(sessionId) === -1) {
+                continue;
+            }
+            await new Promise((resolve) => {
                 kill(process.pid, 'SIGKILL', (err: any) => {
                     resolve(true);
                 });
-            });*/
+            });
         }
     }
     catch(err) {

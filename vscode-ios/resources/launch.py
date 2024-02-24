@@ -23,28 +23,22 @@ cwd = os.getcwd()
 
 start_time = time.time()
 
-process = None
 
-def session_validation():
-    while True:
-        global process
-        if not helper.is_debug_session_valid(session_id, start_time):
-            print("Should BE TERMINATED")
-            try:
-                process.kill()
-            except: pass
-            finally:
-                exit()
-        else: 
-            print("RUNNING")
-            
-        time.sleep(1)
+def session_validation(process):
+    if not helper.is_debug_session_valid(session_id, start_time):
+        print("Should BE TERMINATED")
+        try:
+            process.kill()
+        except: pass
+        finally:
+            exit(0)
+    else: 
+        print("APP RUNNING")
 
 
 def run_process(command: str, log_file_path):
     global process
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    threading.Thread(target=session_validation, args=()).start()
     # Set output to non-blocking
     flags = fcntl.fcntl(process.stdout, fcntl.F_GETFL) # first get current process.stdout flags
     fcntl.fcntl(process.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -69,10 +63,11 @@ def run_process(command: str, log_file_path):
         else:
             index += 1
             if index > 20:
-                time.sleep(0.1)
+                time.sleep(0.15)
                 index = 0
-                
-    return process,is_ok
+                session_validation(process)
+    
+    return process.returncode,is_ok
 
 
 def main():
@@ -81,6 +76,6 @@ def main():
     helper.update_debug_session_time(session_id)
 
     # Print or process the output as needed
-    print(f"LAUNCHER: iOS App Finished with {return_code}")
+    print(f"LAUNCHER: iOS App Finished with {return_code}, session id {session_id}")
 
 main()

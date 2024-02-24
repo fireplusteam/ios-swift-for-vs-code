@@ -114,7 +114,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     async setEnvVariables() {
         this.counter += 1;
-        this.sessionID = getSessionId(`debugger${this.counter}`);
+        this.sessionID = getSessionId(`debugger`) + this.counter;
         await this.executor.execShell("Debugger Launching", "debugger_launching.sh", [this.sessionID]);
     }
 
@@ -186,6 +186,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 "command script add -f attach_lldb.create_target create_target",
                 "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
+                "command script add -f attach_lldb.setScriptPath setScriptPath",
                 "command script add -f attach_lldb.app_log app_log",
                 //`target create ${getScriptPath()}/lldb_exe_stub`,  // TODO: experiment with this              
                 `create_target ${this.sessionID}`,
@@ -193,7 +194,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             processCreateCommands: [
                 "process handle SIGKILL -n true -p true -s false",
                 "process handle SIGTERM -n true -p true -s false",
-                `watch_new_process ${this.sessionID}`,
+                `setScriptPath ${getScriptPath()}`,
+                `watch_new_process ${this.sessionID}`
             ],
             exitCommands: []
         };

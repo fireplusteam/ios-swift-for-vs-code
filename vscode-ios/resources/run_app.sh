@@ -72,13 +72,7 @@ do
     # Get PID of run process
     echo "LAUNCHING..."
     python3 "$VS_IOS_SCRIPT_PATH/async_launcher.py" "$VS_IOS_SCRIPT_PATH/launch.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$2" "$1"
-    sleep 1
-    if [ "$2" != "LLDB_DEBUG" ]; then
-        python3 "$VS_IOS_SCRIPT_PATH/update_debug_launch_settings.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$1"
-    else
-        echo "WAITING DEBUGGER..."
-    fi
-
+    echo "WAITING DEBUGGER..."
 done
 
 # if you want to see device log console, but that one you can get via Console App

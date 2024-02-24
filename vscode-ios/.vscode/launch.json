@@ -16,6 +16,21 @@
 				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"name": "Show IOS",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/resources/app_log.py",
+            "stopOnEntry": false,
+            "args": [
+                ".logs/app.log",
+                "this.sessionID"
+            ],
+            "console": "internalConsole",
+            "internalConsoleOptions": "neverOpen",
+            "envFile": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/.vscode/.env",
+            "cwd": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example"
 		}
 	]
 }
