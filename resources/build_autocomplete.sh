@@ -7,4 +7,4 @@ echo "$SCHEME"
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; elif [[ $PROJECT_FILE == *.swift ]]; then echo "-package"; else echo "-workspace"; fi)
 
-xcode-build-server config -scheme "$PROJECT_SCHEME" "$TYPE" "$PROJECT_FILE"
+"$VS_IOS_XCODE_BUILD_SERVER_PATH/xcode-build-server" config -scheme "$PROJECT_SCHEME" "$TYPE" "$PROJECT_FILE"

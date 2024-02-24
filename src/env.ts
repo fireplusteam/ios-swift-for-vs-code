@@ -32,6 +32,7 @@ export function getEnv() {
     VS_IOS_PROJECT_ENV_FILE: getEnvFilePath(),
     VS_IOS_WORKSPACE_PATH: getWorkspacePath(),
     VS_IOS_SCRIPT_PATH: getScriptPath(),
+    VS_IOS_XCODE_BUILD_SERVER_PATH: getXCodeBuildServerPath()
   }; // empty
 }
 
@@ -40,6 +41,10 @@ export function getScriptPath(script: string | undefined = undefined) {
     return path.join(__dirname, "..", "resources");
   }
   return path.join(__dirname, "..", "resources", script);
+}
+
+export function getXCodeBuildServerPath() {
+  return path.join(__dirname, "..", "xcode-build-server"); 
 }
 
 export function getEnvList() {
