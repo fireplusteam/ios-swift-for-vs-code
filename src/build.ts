@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from './inputPicker';
 import { checkWorkspace, storeVSConfig } from "./commands";
-import { getLastLine } from './utils';
+import { emptyBuildLog, emptyFile, getLastLine } from './utils';
 import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import fs from "fs";
 import { getWorkspacePath } from './env';
@@ -26,6 +26,7 @@ export async function cleanDerivedData(executor: Executor) {
 export async function buildSelectedTarget(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
   try {
+    emptyBuildLog();
     await executor.execShell(
       "Build Selected Target",
       "build_app.sh",
@@ -40,6 +41,7 @@ export async function buildSelectedTarget(executor: Executor, problemResolver: P
 export async function buildAllTarget(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
   try {
+    emptyBuildLog();
     await executor.execShell(
       "Build All",
       "build_app.sh",
@@ -57,6 +59,7 @@ export async function buildCurrentFile(executor: Executor, problemResolver: Prob
   if (fileUrl === undefined) {
     throw new Error("In order to trigger a compile task for a file, select a file first please");
   }
+  emptyBuildLog();
   try {
     await executor.execShell(
       "Build: Current File",
@@ -73,6 +76,7 @@ export async function buildCurrentFile(executor: Executor, problemResolver: Prob
 
 export async function buildTests(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
+  emptyBuildLog();
   try {
     await executor.execShell(
       "Build Tests",
@@ -107,6 +111,7 @@ export async function buildTestsForCurrentFile(executor: Executor, problemResolv
   if (option === undefined || option === '') {
     throw Error("Tests are not picked");
   }
+  emptyBuildLog();
   try {
     await executor.execShell(
       "Build Tests",

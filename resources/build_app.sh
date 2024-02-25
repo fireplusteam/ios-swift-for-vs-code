@@ -19,7 +19,6 @@ check_exit_status() {
 }
 
 if [ "$1" == "-ALL" ] || [ "$1" == "-TARGET" ]; then
-    rm .logs/build.log
     rm -r .vscode/.bundle;
 
     set -o pipefail
@@ -43,7 +42,6 @@ if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
     else
         echo "Builing for tests: $TESTS"
         
-        rm .logs/build.log
         rm -r .vscode/.bundle;
 
         set -o pipefail
@@ -53,7 +51,6 @@ if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
 fi
 
 if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
-    rm .logs/build.log
     rm -r .vscode/.bundle;
 
     set -o pipefail

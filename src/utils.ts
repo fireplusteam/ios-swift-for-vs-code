@@ -1,4 +1,6 @@
+import path from "path";
 import { getScriptPath, getWorkspacePath } from "./env";
+import fs from "fs";
 
 var find = require("find-process");
 var kill = require("tree-kill");
@@ -33,4 +35,16 @@ export function getLastLine(stdout: string) {
     stdout = stdout.trim();
     const lines = stdout.split("\n");
     return lines[lines.length - 1];
+}
+
+export function emptyFile(filePath: string, fileName: string){
+    if (fs.existsSync(filePath) === false) {
+        fs.mkdirSync(filePath, { recursive: true });
+    }
+    const fileFullPath = path.join(filePath, fileName);
+    fs.writeFileSync(fileFullPath, "", "utf-8");
+}
+
+export function emptyBuildLog() {
+    emptyFile(getWorkspacePath(), ".logs/build.log");
 }
