@@ -39,7 +39,7 @@ export class ProblemDiagnosticResolver {
         tokens[2] = tokens[2].slice(matchStart?.index);
         matchStart = tokens[2].match(start);
 
-        tokens[2] = "_".repeat(matchStart?.index || 0) + tokens[2].slice(matchStart?.index || 0);
+        tokens[2] = "_".repeat((matchStart?.index || 1) - 1) + tokens[2].slice(matchStart?.index || 0);
         return tokens.join("\n");
     }
 
