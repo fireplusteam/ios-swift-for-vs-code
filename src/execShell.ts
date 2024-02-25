@@ -127,7 +127,8 @@ export class Executor {
     args: string[] = [],
     showTerminal = false,
     returnType = ExecutorReturnType.statusCode,
-    mode: ExecutorMode = ExecutorMode.verbose
+    mode: ExecutorMode = ExecutorMode.verbose,
+    showTerminalOnError = true
   ): Promise<boolean | string> {
     if (this.childProc !== undefined) {
       return new Promise((resolve, reject) => {
@@ -195,7 +196,9 @@ export class Executor {
               `❌ ${this.getTerminalName(commandName)}`
             );
           }
-          terminal?.show();
+          if (showTerminalOnError) {
+            terminal?.show();
+          }
           reject(new ExecutorTaskError(`Task: ${this.getTerminalName(commandName)} exits with ${code}`, code));
         } else {
           if (mode !== ExecutorMode.silently) {

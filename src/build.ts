@@ -8,15 +8,9 @@ import fs from "fs";
 import { getWorkspacePath } from './env';
 import path from 'path';
 
-export async function findDiagnosticProblems(problemResolver: ProblemDiagnosticResolver, type = ProblemDiagnosticLogType.build) {
-  try {
-    const workPath = getWorkspacePath();
-    const fileName = type === ProblemDiagnosticLogType.build ? "build.log" : "tests.log";
-    const stdout = fs.readFileSync(path.join(workPath, ".logs", fileName), "utf-8");
-    problemResolver.parseBuildLog(stdout, type);
-  } catch (err) {
-    console.log(err);
-  }
+export function getFileNameLog(type = ProblemDiagnosticLogType.build) {
+  const fileName = path.join(".logs", type === ProblemDiagnosticLogType.build ? "build.log" : "tests.log");
+  return fileName;
 }
 
 export async function cleanDerivedData(executor: Executor) {
@@ -27,14 +21,19 @@ export async function buildSelectedTarget(executor: Executor, problemResolver: P
   await checkWorkspace(executor);
   try {
     emptyBuildLog();
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
     await executor.execShell(
       "Build Selected Target",
       "build_app.sh",
       ["-TARGET"],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems( problemResolver);
+    await problemResolver.finishParsingLogs();
   }
 }
 
@@ -42,14 +41,19 @@ export async function buildAllTarget(executor: Executor, problemResolver: Proble
   await checkWorkspace(executor);
   try {
     emptyBuildLog();
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
     await executor.execShell(
       "Build All",
       "build_app.sh",
       ["-ALL"],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems(problemResolver);
+    await problemResolver.finishParsingLogs();
   }
 }
 
@@ -59,16 +63,21 @@ export async function buildCurrentFile(executor: Executor, problemResolver: Prob
   if (fileUrl === undefined) {
     throw new Error("In order to trigger a compile task for a file, select a file first please");
   }
-  emptyBuildLog();
   try {
+    emptyBuildLog();
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
     await executor.execShell(
       "Build: Current File",
       "compile_current_file.sh",
       [fileUrl],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems(problemResolver);
+    await problemResolver.finishParsingLogs();
   }
 }
 
@@ -76,16 +85,21 @@ export async function buildCurrentFile(executor: Executor, problemResolver: Prob
 
 export async function buildTests(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
-  emptyBuildLog();
   try {
+    emptyBuildLog();
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
     await executor.execShell(
       "Build Tests",
       "build_app.sh",
       ["-TESTING"],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems(problemResolver);
+    await problemResolver.finishParsingLogs();
   }
 }
 
@@ -111,15 +125,20 @@ export async function buildTestsForCurrentFile(executor: Executor, problemResolv
   if (option === undefined || option === '') {
     throw Error("Tests are not picked");
   }
-  emptyBuildLog();
   try {
+    emptyBuildLog();
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
     await executor.execShell(
       "Build Tests",
       "build_app.sh",
       ["-TESTING_ONLY_TESTS", option],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems(problemResolver);
+    await problemResolver.finishParsingLogs();
   }
 }

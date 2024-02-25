@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { Executor, ExecutorReturnType } from "./execShell";
+import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
-import { getEnvList, updateProject } from "./env";
-import { buildSelectedTarget, buildTests, findDiagnosticProblems } from "./build";
+import { getEnvList, getWorkspacePath, updateProject } from "./env";
+import { buildSelectedTarget, getFileNameLog } from "./build";
 import { getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
@@ -15,7 +15,7 @@ export async function selectProjectFile(executor: Executor, ignoreFocusOut = fal
     if (file.fsPath.endsWith("Package.swift")) {
       const name = path.join(file.fsPath).split(path.sep);
       const projectPath = name.join(path.sep);
-      return { label: name[name.length - 1], value: projectPath };  
+      return { label: name[name.length - 1], value: projectPath };
     }
     const name = path.join(file.fsPath, "..").split(path.sep);
     const projectPath = name.join(path.sep);
@@ -193,27 +193,37 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
 
 export async function runAndDebugTests(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   try {
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
     await executor.execShell(
       "Run Tests",
       "test_app.sh",
       [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
+    await problemResolver.finishParsingLogs();
   }
 }
 
 export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   try {
+    const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
+    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
     await executor.execShell(
       "Run Tests For Current File",
       "test_app.sh",
       [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
+      false,
+      ExecutorReturnType.statusCode,
+      ExecutorMode.verbose,
       false
     );
   } finally {
-    await findDiagnosticProblems(problemResolver, ProblemDiagnosticLogType.tests);
+    await problemResolver.finishParsingLogs();
   }
 }
 

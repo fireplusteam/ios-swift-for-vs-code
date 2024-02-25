@@ -15,6 +15,7 @@ export class ProblemDiagnosticResolver {
     disposable: vscode.Disposable[] = [];
     diagnosticBuildCollection: vscode.DiagnosticCollection;
     diagnosticTestsCollection: vscode.DiagnosticCollection;
+    isErrorParsed = false;
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("xcodebuild");
@@ -48,7 +49,8 @@ export class ProblemDiagnosticResolver {
 
     private watcherProc: ChildProcess | undefined;
 
-    clear(type: ProblemDiagnosticLogType) {
+    private clear(type: ProblemDiagnosticLogType) {
+        this.isErrorParsed = false;
         switch (type) {
             case ProblemDiagnosticLogType.build:
                 this.diagnosticBuildCollection.clear();
@@ -59,7 +61,10 @@ export class ProblemDiagnosticResolver {
         }
     }
 
-    storeProblems(type: ProblemDiagnosticLogType, files: { [key: string]: vscode.Diagnostic[] }) {
+    private storeProblems(type: ProblemDiagnosticLogType, files: { [key: string]: vscode.Diagnostic[] }) {
+        if (Object.keys(files).length > 0) {
+            this.isErrorParsed = true;
+        }
         for (let file in files) {
             switch (type) {
                 case ProblemDiagnosticLogType.build:
@@ -124,9 +129,12 @@ export class ProblemDiagnosticResolver {
     }
 
     async finishParsingLogs() {
-        await sleep(1500);
+        await sleep(1000);
         this.watcherProc?.kill();
         this.watcherProc = undefined;
+        if (this.isErrorParsed) {
+            await vscode.commands.executeCommand('workbench.action.problems.focus');
+        }
     }
 
     private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
