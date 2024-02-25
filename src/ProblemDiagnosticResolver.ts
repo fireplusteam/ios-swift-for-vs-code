@@ -1,5 +1,9 @@
+import { ChildProcess, ChildProcessWithoutNullStreams, ExecFileSyncOptionsWithStringEncoding, exec, spawn } from 'child_process';
+import { parse } from 'path';
+import { stderr } from 'process';
 import { start } from 'repl';
 import * as vscode from 'vscode';
+import { sleep } from './extension';
 
 export enum ProblemDiagnosticLogType {
     build,
@@ -42,21 +46,96 @@ export class ProblemDiagnosticResolver {
         return message;
     }
 
-    parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
+    private watcherProc: ChildProcess | undefined;
+
+    clear(type: ProblemDiagnosticLogType) {
+        switch (type) {
+            case ProblemDiagnosticLogType.build:
+                this.diagnosticBuildCollection.clear();
+                break;
+            case ProblemDiagnosticLogType.tests:
+                this.diagnosticTestsCollection.clear();
+                break;
+        }
+    }
+
+    storeProblems(type: ProblemDiagnosticLogType, files: { [key: string]: vscode.Diagnostic[] }) {
+        for (let file in files) {
+            switch (type) {
+                case ProblemDiagnosticLogType.build:
+                    let list = [
+                        ...this.diagnosticBuildCollection.get(vscode.Uri.file(file)) || [],
+                        ...files[file]
+                    ];
+                    this.diagnosticBuildCollection.set(vscode.Uri.file(file), list);
+                    break;
+                case ProblemDiagnosticLogType.tests:
+                    let listTests = [
+                        ...this.diagnosticTestsCollection.get(vscode.Uri.file(file)) || [],
+                        ...files[file]
+                    ];
+                    this.diagnosticTestsCollection.set(vscode.Uri.file(file), listTests);
+                    break;
+            }
+        }
+    }
+
+    parseAsyncLogs(workspacePath: string, filePath: string, type: ProblemDiagnosticLogType) {
+        if (this.watcherProc !== undefined) {
+            throw Error("Logs are parsing");
+        }
+        const options: ExecFileSyncOptionsWithStringEncoding = {
+            encoding: "utf-8",
+            cwd: workspacePath,
+            shell: true,
+            stdio: "pipe"
+        }
+        const child = spawn(
+            `tail`,
+            ["-f", `"${filePath}"`],
+            options
+        );
+
+        this.clear(type);
+        var firstIndex = 0; 
+        var stdout = "";
+        child.stdout?.on("data", (data) => {
+            stdout += data.toString();
+            let lastErrorIndex = stdout.lastIndexOf("^", firstIndex);
+
+            switch (type) {
+                case ProblemDiagnosticLogType.build:
+                    break;
+                case ProblemDiagnosticLogType.tests:
+                    lastErrorIndex = stdout.lastIndexOf("\n", firstIndex);
+                    break;
+            }
+
+            if (lastErrorIndex !== -1) {
+                const problems = this.parseBuildLog(stdout.slice(0, lastErrorIndex + 1), type);
+                this.storeProblems(type, problems);
+                stdout = stdout.slice(lastErrorIndex + 1);
+                firstIndex = 0;
+            } else {
+                firstIndex = stdout.length;
+            }
+        });
+        this.watcherProc = child;
+    }
+
+    async finishParsingLogs() {
+        await sleep(1500);
+        this.watcherProc?.kill();
+        this.watcherProc = undefined;
+    }
+
+    private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
         let rg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?\^)/g;
         if (type === ProblemDiagnosticLogType.tests) {
             rg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)/g;
         }
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
-            switch (type) {
-                case ProblemDiagnosticLogType.build:
-                    this.diagnosticBuildCollection.clear();
-                    break;
-                case ProblemDiagnosticLogType.tests:
-                    this.diagnosticTestsCollection.clear();
-                    break;
-            }
             let matches = [...output.matchAll(rg)];
             for (const match of matches) {
                 const file = match[1];
@@ -88,19 +167,9 @@ export class ProblemDiagnosticResolver {
                 value.push(diagnostic);
                 files[file] = value;
             }
-
-            for (let file in files) {
-                switch (type) {
-                    case ProblemDiagnosticLogType.build:
-                        this.diagnosticBuildCollection.set(vscode.Uri.file(file), files[file]);
-                        break;
-                    case ProblemDiagnosticLogType.tests:
-                        this.diagnosticTestsCollection.set(vscode.Uri.file(file), files[file]);
-                        break;
-                }
-            }
         } catch (err) {
             console.log(err);
         }
+        return files;
     }
 }
