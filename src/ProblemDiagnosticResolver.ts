@@ -1,4 +1,4 @@
-import { ChildProcess, ChildProcessWithoutNullStreams, ExecFileSyncOptionsWithStringEncoding, exec, spawn } from 'child_process';
+import { ChildProcess, ChildProcessWithoutNullStreams, ExecFileSyncOptionsWithStringEncoding, SpawnOptions, exec, spawn } from 'child_process';
 import { parse } from 'path';
 import { stderr } from 'process';
 import { start } from 'repl';
@@ -93,8 +93,7 @@ export class ProblemDiagnosticResolver {
             this.watcherProc.kill();
             this.watcherProc = undefined;
         }
-        const options: ExecFileSyncOptionsWithStringEncoding = {
-            encoding: "utf-8",
+        const options: SpawnOptions = {
             cwd: workspacePath,
             shell: true,
             stdio: "pipe"
@@ -104,7 +103,7 @@ export class ProblemDiagnosticResolver {
             ["-f", `"${filePath}"`],
             options
         );
-
+        
         this.clear(type);
         var firstIndex = 0; 
         var stdout = "";
@@ -150,14 +149,15 @@ export class ProblemDiagnosticResolver {
         this.watcherProc = child;
     }
 
+    buildRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?\^)/g;
+    testRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)/g;
+
     private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
-        let rg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?\^)/g;
         if (type === ProblemDiagnosticLogType.tests) {
-            rg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)/g;
         }
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
-            let matches = [...output.matchAll(rg)];
+            let matches = [...output.matchAll(type == ProblemDiagnosticLogType.build ? this.buildRg : this.testRg)];
             for (const match of matches) {
                 const file = match[1];
                 const line = Number(match[2]) - 1;

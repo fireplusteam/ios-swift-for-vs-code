@@ -2,6 +2,7 @@ import {
   ExecFileSyncOptionsWithStringEncoding,
   spawn,
   ChildProcess,
+  SpawnOptions,
 } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
@@ -110,7 +111,7 @@ export class Executor {
   private execShellImp(
     file: string,
     args: ReadonlyArray<string>,
-    options: ExecFileSyncOptionsWithStringEncoding
+    options: SpawnOptions
   ) {
     const quotedArgs = args.map((e) => {
       return `"${e}"`;
@@ -146,7 +147,6 @@ export class Executor {
       script = `python3 "${script}"`;
     }
     const proc = this.execShellImp(script, args, {
-      encoding: "utf-8",
       cwd: getWorkspacePath(),
       shell: true,
       env: envOptions,
