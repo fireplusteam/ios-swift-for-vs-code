@@ -48,3 +48,7 @@ export function emptyFile(filePath: string, fileName: string){
 export function emptyBuildLog() {
     emptyFile(getWorkspacePath(), ".logs/build.log");
 }
+
+export function emptyTestsLog() {
+    emptyFile(getWorkspacePath(), ".logs/tests.log");
+}

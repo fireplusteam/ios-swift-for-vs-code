@@ -8,8 +8,6 @@ fi
 
 source "$VS_IOS_SCRIPT_PATH/xcode_build_util.sh"
 
-rm .logs/build.log
-
 XCODECMD="xcodebuild test-without-building -scheme \"$PROJECT_SCHEME\" $XCODECMD"
 echo "Base XCODECMD: $XCODECMD"
 

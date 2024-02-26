@@ -110,7 +110,6 @@ export class ProblemDiagnosticResolver {
         this.endDisposable = this.fireEnd.event((e) => {
             if (e) {
                 this.watcherProc?.kill();
-                this.watcherProc?.kill();
                 this.watcherProc = undefined;
                 if (this.isErrorParsed) {
                     vscode.commands.executeCommand('workbench.action.problems.focus');
@@ -121,17 +120,18 @@ export class ProblemDiagnosticResolver {
             stdout += data.toString();
             let lastErrorIndex = -1;
             let nextErrorIndex = firstIndex - 1; 
-            while (nextErrorIndex !== -1) {
+            while (nextErrorIndex !== -1 && nextErrorIndex < stdout.length) {
                 switch (type) {
                     case ProblemDiagnosticLogType.build:
-                        nextErrorIndex = stdout.indexOf("^", nextErrorIndex + 1);
+                        nextErrorIndex = Math.max(nextErrorIndex, stdout.indexOf("^", nextErrorIndex));
                         break;
                     case ProblemDiagnosticLogType.tests:
-                        nextErrorIndex = stdout.lastIndexOf("\n", nextErrorIndex + 1);
+                        nextErrorIndex = Math.max(nextErrorIndex, stdout.lastIndexOf("\n", nextErrorIndex));
                         break;
                 }
-                if (nextErrorIndex !== -1) {
+                if (nextErrorIndex !== -1 && nextErrorIndex < stdout.length) {
                     lastErrorIndex = nextErrorIndex;
+                    nextErrorIndex += 1;
                 }
             }
             if (stdout.indexOf("■") !== -1) {
