@@ -119,24 +119,24 @@ export class ProblemDiagnosticResolver {
         child.stdout?.on("data", (data) => {
             stdout += data.toString();
             let lastErrorIndex = -1;
-            let nextErrorIndex = firstIndex - 1;
-            while (nextErrorIndex !== -1 && nextErrorIndex < stdout.length) {
+            for (let i = firstIndex; i < stdout.length; ++i) {
+                let isMatch = false;
                 switch (type) {
                     case ProblemDiagnosticLogType.build:
-                        nextErrorIndex = stdout.indexOf("^", nextErrorIndex);
+                        isMatch = stdout[i] === "^";
                         break;
                     case ProblemDiagnosticLogType.tests:
-                        nextErrorIndex = stdout.indexOf("\n", nextErrorIndex);
+                        isMatch = stdout[i] === '\n';
                         break;
                 }
-                if (nextErrorIndex !== -1 && nextErrorIndex < stdout.length) {
-                    lastErrorIndex = nextErrorIndex;
-                    nextErrorIndex += 1;
+                if (isMatch) {
+                    lastErrorIndex = i;
                 }
             }
+
             const shouldEnd = stdout.indexOf("■") !== -1
             if (lastErrorIndex !== -1) {
-                const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), type);
+                const problems = this.parseBuildLog(stdout.substring(Math.max(0, lastErrorIndex - 50000), lastErrorIndex + 1), type);
                 this.storeProblems(type, problems);
                 stdout = stdout.substring(lastErrorIndex + 1);
                 firstIndex = 0;
