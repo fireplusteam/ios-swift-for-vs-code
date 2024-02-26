@@ -27,8 +27,7 @@ class AppLogger:
                     try: 
                         line = file.buffer.read()
                         if self.enabled:
-                            line_str = line.decode()
-                            self.printer(line_str, end='')
+                            self.printer(line.decode("utf-8", "replace"), end='')
 
                         self.last_known_position += len(line)  # Add 1 for the newline character
                     except Exception as e:

@@ -71,6 +71,9 @@ def run_process(command: str, log_file_path):
 
 
 def main():
+    if debugger_arg == "LLDB_DEBUG":
+        helper.wait_debugger_to_launch(session_id)
+    
     # Run the command asynchronously
     return_code, is_ok = run_process(' '.join(commandLaunch), ".logs/app.log")
     helper.update_debug_session_time(session_id)

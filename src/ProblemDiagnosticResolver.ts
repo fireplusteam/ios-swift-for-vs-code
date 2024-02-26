@@ -150,8 +150,8 @@ export class ProblemDiagnosticResolver {
         this.watcherProc = child;
     }
 
-    buildRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?\^)/g;
-    testRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)/g;
+    buildRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*\n.*\n.*?\^)/g;
+    testRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/g;
 
     private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
         if (type === ProblemDiagnosticLogType.tests) {
