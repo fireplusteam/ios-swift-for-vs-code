@@ -3,7 +3,7 @@ import { parse } from 'path';
 import { stderr } from 'process';
 import { start } from 'repl';
 import * as vscode from 'vscode';
-import { sleep } from './extension';
+import { problemDiagnosticResolver, sleep } from './extension';
 
 export enum ProblemDiagnosticLogType {
     build,
@@ -103,9 +103,9 @@ export class ProblemDiagnosticResolver {
             ["-f", `"${filePath}"`],
             options
         );
-        
+
         this.clear(type);
-        var firstIndex = 0; 
+        var firstIndex = 0;
         var stdout = "";
         this.endDisposable = this.fireEnd.event((e) => {
             if (e) {
@@ -119,14 +119,14 @@ export class ProblemDiagnosticResolver {
         child.stdout?.on("data", (data) => {
             stdout += data.toString();
             let lastErrorIndex = -1;
-            let nextErrorIndex = firstIndex - 1; 
+            let nextErrorIndex = firstIndex - 1;
             while (nextErrorIndex !== -1 && nextErrorIndex < stdout.length) {
                 switch (type) {
                     case ProblemDiagnosticLogType.build:
-                        nextErrorIndex = Math.max(nextErrorIndex, stdout.indexOf("^", nextErrorIndex));
+                        nextErrorIndex = stdout.indexOf("^", nextErrorIndex);
                         break;
                     case ProblemDiagnosticLogType.tests:
-                        nextErrorIndex = Math.max(nextErrorIndex, stdout.lastIndexOf("\n", nextErrorIndex));
+                        nextErrorIndex = stdout.indexOf("\n", nextErrorIndex);
                         break;
                 }
                 if (nextErrorIndex !== -1 && nextErrorIndex < stdout.length) {
@@ -134,9 +134,7 @@ export class ProblemDiagnosticResolver {
                     nextErrorIndex += 1;
                 }
             }
-            if (stdout.indexOf("■") !== -1) {
-                this.fireEnd.fire(true);
-            }
+            const shouldEnd = stdout.indexOf("■") !== -1
             if (lastErrorIndex !== -1) {
                 const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), type);
                 this.storeProblems(type, problems);
@@ -144,6 +142,9 @@ export class ProblemDiagnosticResolver {
                 firstIndex = 0;
             } else {
                 firstIndex = stdout.length;
+            }
+            if (shouldEnd) {
+                this.fireEnd.fire(true);
             }
         });
         this.watcherProc = child;
@@ -161,7 +162,8 @@ export class ProblemDiagnosticResolver {
             for (const match of matches) {
                 const file = match[1];
                 const line = Number(match[2]) - 1;
-                const column = Number(match[3]) - 1;
+                const columnStart = type === ProblemDiagnosticLogType.build ? Number(match[3]) - 1 : 0;
+                const columnEnd = type === ProblemDiagnosticLogType.build ? columnStart : 100000;
                 const severity = match[4];
                 const message = type === ProblemDiagnosticLogType.build ? this.transformBuildMessage(match[5]) : this.transformTestMessage(match[5], line);
                 let errorSeverity = vscode.DiagnosticSeverity.Error;
@@ -178,8 +180,8 @@ export class ProblemDiagnosticResolver {
 
                 const diagnostic = new vscode.Diagnostic(
                     new vscode.Range(
-                        new vscode.Position(line, column),
-                        new vscode.Position(line, column)),
+                        new vscode.Position(line, columnStart),
+                        new vscode.Position(line, columnEnd)),
                     message,
                     errorSeverity
                 );

@@ -139,12 +139,18 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     await buildTests(this.executor, this.problemResolver);
                 }, async () => {
                     await runAndDebugTests(this.sessionID, this.executor, this.problemResolver, isDebuggable);
+                    if (!isDebuggable) {
+                        vscode.debug.stopDebugging(this.activeSession);
+                    }
                 });
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.executor, this.problemResolver);
                 }, async () => {
                     await runAndDebugTestsForCurrentFile(this.sessionID, this.executor, this.problemResolver, isDebuggable);
+                    if (!isDebuggable) {
+                        vscode.debug.stopDebugging(this.activeSession);
+                    }
                 });
             }
             if (isDebuggable === false) {

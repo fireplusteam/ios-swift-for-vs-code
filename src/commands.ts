@@ -193,8 +193,8 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
 
 export async function runAndDebugTests(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
-  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
   emptyTestsLog();
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
   await executor.execShell(
     "Run Tests",
     "test_app.sh",
@@ -205,8 +205,8 @@ export async function runAndDebugTests(sessionID: string, executor: Executor, pr
 
 export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
   const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
-  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
   emptyTestsLog();
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
   await executor.execShell(
     "Run Tests For Current File",
     "test_app.sh",
