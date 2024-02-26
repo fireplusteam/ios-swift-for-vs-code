@@ -122,7 +122,7 @@ export class ProblemDiagnosticResolver {
             stdout += data.toString();
             let lastErrorIndex = -1;
             let nextErrorIndex = firstIndex - 1; 
-            do {
+            while (nextErrorIndex !== -1) {
                 switch (type) {
                     case ProblemDiagnosticLogType.build:
                         nextErrorIndex = stdout.indexOf("^", nextErrorIndex + 1);
@@ -135,14 +135,13 @@ export class ProblemDiagnosticResolver {
                     lastErrorIndex = nextErrorIndex;
                 }
             }
-            while (nextErrorIndex !== -1);
             if (stdout.indexOf("■") !== -1) {
                 this.fireEnd.fire(true);
             }
             if (lastErrorIndex !== -1) {
-                const problems = this.parseBuildLog(stdout.slice(0, lastErrorIndex + 1), type);
+                const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), type);
                 this.storeProblems(type, problems);
-                stdout = stdout.slice(lastErrorIndex + 1);
+                stdout = stdout.substring(lastErrorIndex + 1);
                 firstIndex = 0;
             } else {
                 firstIndex = stdout.length;
