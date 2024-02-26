@@ -59,13 +59,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         }));
     }
 
-    private async executeAppCommand(buildCommand: () => Promise<void>, runCommandClosure: () => Promise<void>) {
+    private async executeAppCommand(buildCommand: () => Promise<void>, runCommandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
         try {
             this.setIsRunning(true);
             await commandWrapper(buildCommand);
             await terminateCurrentIOSApp(this.sessionID, this.executor);
             await this.setEnvVariables();
-            commandWrapper(runCommandClosure);
+            commandWrapper(runCommandClosure, successMessage);
             this.setIsRunning(false);
         } catch (err) {
             await this.stopOnError();
@@ -138,20 +138,22 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 await this.executeAppCommand(async () => {
                     await buildTests(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTests(this.sessionID, this.executor, this.problemResolver, isDebuggable);
-                    if (!isDebuggable) {
-                        vscode.debug.stopDebugging(this.activeSession);
+                    try {
+                        await runAndDebugTests(this.sessionID, this.executor, this.problemResolver, isDebuggable);
+                    } finally {
+                        await terminateCurrentIOSApp(this.sessionID, this.executor);
                     }
-                });
+                }, "All Tests Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.executor, this.problemResolver);
                 }, async () => {
-                    await runAndDebugTestsForCurrentFile(this.sessionID, this.executor, this.problemResolver, isDebuggable);
-                    if (!isDebuggable) {
-                        vscode.debug.stopDebugging(this.activeSession);
+                    try {
+                        await runAndDebugTestsForCurrentFile(this.sessionID, this.executor, this.problemResolver, isDebuggable);
+                    } finally {
+                        await terminateCurrentIOSApp(this.sessionID, this.executor);
                     }
-                });
+                }, "All Tests Passed");
             }
             if (isDebuggable === false) {
                 return this.runSession();
