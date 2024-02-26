@@ -13,7 +13,7 @@ check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
         python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"
-        echo "Build failed."
+        echo "Build Sucsseded.■" >> .logs/build.log
         exit 1
     fi
 }
@@ -57,5 +57,7 @@ if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
     eval "$XCODECMD build-for-testing | tee -a '.logs/build.log' | xcbeautify"
     check_exit_status "${PIPESTATUS[0]}"
 fi
+
+echo "Build Sucsseded.■" >> .logs/build.log
 
 python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"

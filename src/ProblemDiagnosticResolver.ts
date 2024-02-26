@@ -85,9 +85,13 @@ export class ProblemDiagnosticResolver {
         }
     }
 
+    fireEnd = new vscode.EventEmitter<boolean>();
+    endDisposable: vscode.Disposable | null = null;
+
     parseAsyncLogs(workspacePath: string, filePath: string, type: ProblemDiagnosticLogType) {
         if (this.watcherProc !== undefined) {
-            throw Error("Logs are parsing");
+            this.watcherProc.kill();
+            this.watcherProc = undefined;
         }
         const options: ExecFileSyncOptionsWithStringEncoding = {
             encoding: "utf-8",
@@ -104,18 +108,37 @@ export class ProblemDiagnosticResolver {
         this.clear(type);
         var firstIndex = 0; 
         var stdout = "";
+        this.endDisposable = this.fireEnd.event((e) => {
+            if (e) {
+                this.watcherProc?.kill();
+                this.watcherProc?.kill();
+                this.watcherProc = undefined;
+                if (this.isErrorParsed) {
+                    vscode.commands.executeCommand('workbench.action.problems.focus');
+                }
+            }
+        });
         child.stdout?.on("data", (data) => {
             stdout += data.toString();
-            let lastErrorIndex = stdout.lastIndexOf("^", firstIndex);
-
-            switch (type) {
-                case ProblemDiagnosticLogType.build:
-                    break;
-                case ProblemDiagnosticLogType.tests:
-                    lastErrorIndex = stdout.lastIndexOf("\n", firstIndex);
-                    break;
+            let lastErrorIndex = -1;
+            let nextErrorIndex = firstIndex - 1; 
+            do {
+                switch (type) {
+                    case ProblemDiagnosticLogType.build:
+                        nextErrorIndex = stdout.indexOf("^", nextErrorIndex + 1);
+                        break;
+                    case ProblemDiagnosticLogType.tests:
+                        nextErrorIndex = stdout.lastIndexOf("\n", nextErrorIndex + 1);
+                        break;
+                }
+                if (nextErrorIndex !== -1) {
+                    lastErrorIndex = nextErrorIndex;
+                }
             }
-
+            while (nextErrorIndex !== -1);
+            if (stdout.indexOf("■") !== -1) {
+                this.fireEnd.fire(true);
+            }
             if (lastErrorIndex !== -1) {
                 const problems = this.parseBuildLog(stdout.slice(0, lastErrorIndex + 1), type);
                 this.storeProblems(type, problems);
@@ -126,15 +149,6 @@ export class ProblemDiagnosticResolver {
             }
         });
         this.watcherProc = child;
-    }
-
-    async finishParsingLogs() {
-        await sleep(1000);
-        this.watcherProc?.kill();
-        this.watcherProc = undefined;
-        if (this.isErrorParsed) {
-            await vscode.commands.executeCommand('workbench.action.problems.focus');
-        }
     }
 
     private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {

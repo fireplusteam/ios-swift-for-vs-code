@@ -19,42 +19,28 @@ export async function cleanDerivedData(executor: Executor) {
 
 export async function buildSelectedTarget(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
-  try {
-    emptyBuildLog();
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
-    await executor.execShell(
-      "Build Selected Target",
-      "build_app.sh",
-      ["-TARGET"],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  emptyBuildLog();
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
+  await executor.execShell(
+    "Build Selected Target",
+    "build_app.sh",
+    ["-TARGET"],
+    false
+  );
 }
 
 export async function buildAllTarget(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
-  try {
-    emptyBuildLog();
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
-    await executor.execShell(
-      "Build All",
-      "build_app.sh",
-      ["-ALL"],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  emptyBuildLog();
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
+  await executor.execShell(
+    "Build All",
+    "build_app.sh",
+    ["-ALL"],
+    false
+  );
 }
 
 export async function buildCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
@@ -63,44 +49,30 @@ export async function buildCurrentFile(executor: Executor, problemResolver: Prob
   if (fileUrl === undefined) {
     throw new Error("In order to trigger a compile task for a file, select a file first please");
   }
-  try {
-    emptyBuildLog();
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
-    await executor.execShell(
-      "Build: Current File",
-      "compile_current_file.sh",
-      [fileUrl],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  emptyBuildLog();
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
+  await executor.execShell(
+    "Build: Current File",
+    "compile_current_file.sh",
+    [fileUrl],
+    false
+  );
 }
 
 // TESTS
 
 export async function buildTests(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
   await checkWorkspace(executor);
-  try {
-    emptyBuildLog();
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
-    await executor.execShell(
-      "Build Tests",
-      "build_app.sh",
-      ["-TESTING"],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  emptyBuildLog();
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
+  await executor.execShell(
+    "Build Tests",
+    "build_app.sh",
+    ["-TESTING"],
+    false
+  );
 }
 
 export async function buildTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
@@ -125,20 +97,13 @@ export async function buildTestsForCurrentFile(executor: Executor, problemResolv
   if (option === undefined || option === '') {
     throw Error("Tests are not picked");
   }
-  try {
-    emptyBuildLog();
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
-    await executor.execShell(
-      "Build Tests",
-      "build_app.sh",
-      ["-TESTING_ONLY_TESTS", option],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  emptyBuildLog();
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.build);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.build);
+  await executor.execShell(
+    "Build Tests",
+    "build_app.sh",
+    ["-TESTING_ONLY_TESTS", option],
+    false
+  );
 }

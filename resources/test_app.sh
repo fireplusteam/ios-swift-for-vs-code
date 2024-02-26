@@ -77,6 +77,7 @@ else
     fi
 fi
 
+echo "Test Finished.■" >> .logs/tests.log
 
 if [ $VALID_TESTS -eq 1 ]; then
     # Open Results

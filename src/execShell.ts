@@ -21,9 +21,11 @@ export class ExecutorRunningError extends Error {
 
 export class ExecutorTaskError extends Error {
   code: number | null;
-  public constructor(message: string, code: number | null) {
+  terminal: vscode.Terminal | null;
+  public constructor(message: string, code: number | null, terminal: vscode.Terminal | null) {
     super(message);
     this.code = code;
+    this.terminal = terminal;
   }
 }
 
@@ -92,10 +94,10 @@ export class Executor {
     return this.terminal;
   }
 
-  public terminateShell() {
+  public terminateShell(killing = true) {
     clearInterval(this.animationInterval);
     this.animationInterval = undefined;
-    if (this.childProc?.pid) {
+    if (this.childProc?.pid && killing) {
       kill(this.childProc?.pid);
     }
     this.terminal?.dispose();
@@ -127,8 +129,7 @@ export class Executor {
     args: string[] = [],
     showTerminal = false,
     returnType = ExecutorReturnType.statusCode,
-    mode: ExecutorMode = ExecutorMode.verbose,
-    showTerminalOnError = true
+    mode: ExecutorMode = ExecutorMode.verbose
   ): Promise<boolean | string> {
     if (this.childProc !== undefined) {
       return new Promise((resolve, reject) => {
@@ -180,8 +181,8 @@ export class Executor {
         clearInterval(this.animationInterval);
 
         if (signal !== null) {
-          reject(new ExecutorTerminatedByUserError(`${this.getTerminalName(commandName)} is terminated by a User`));
           this.terminateShell();
+          reject(new ExecutorTerminatedByUserError(`${this.getTerminalName(commandName)} is terminated by a User`));
           return;
         }
 
@@ -196,10 +197,13 @@ export class Executor {
               `❌ ${this.getTerminalName(commandName)}`
             );
           }
-          if (showTerminalOnError) {
-            terminal?.show();
-          }
-          reject(new ExecutorTaskError(`Task: ${this.getTerminalName(commandName)} exits with ${code}`, code));
+          reject(
+            new ExecutorTaskError(
+              `Task: ${this.getTerminalName(commandName)} exits with ${code}`,
+              code,
+              terminal
+            )
+          );
         } else {
           if (mode !== ExecutorMode.silently) {
             this.changeNameEmitter?.fire(

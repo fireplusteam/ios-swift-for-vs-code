@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ExecutorRunningError } from "./execShell";
+import { ExecutorRunningError, ExecutorTaskError } from "./execShell";
 import { projectExecutor, sleep } from "./extension";
 
 export async function runCommand(commandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
@@ -30,6 +30,15 @@ export async function commandWrapper(commandClosure: () => Promise<void>, succes
       } else {
         throw err;
       }
+    } else if (err instanceof ExecutorTaskError) {
+      const error = err as ExecutorTaskError;
+      vscode.window.showErrorMessage(error.message, "Show log")
+        .then((option) => {
+          if (option === "Show log") {
+            error.terminal?.show();
+          }
+        });
+      throw err;
     } else {
       if ((err as Error).message) {
         vscode.window.showErrorMessage((err as Error).message);

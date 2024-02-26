@@ -192,38 +192,24 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
 }
 
 export async function runAndDebugTests(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
-  try {
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
-    await executor.execShell(
-      "Run Tests",
-      "test_app.sh",
-      [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
+  await executor.execShell(
+    "Run Tests",
+    "test_app.sh",
+    [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
+    false
+  );
 }
 
 export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
-  try {
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
-    await executor.execShell(
-      "Run Tests For Current File",
-      "test_app.sh",
-      [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
-      false,
-      ExecutorReturnType.statusCode,
-      ExecutorMode.verbose,
-      false
-    );
-  } finally {
-    await problemResolver.finishParsingLogs();
-  }
+  const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
+  problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
+  await executor.execShell(
+    "Run Tests For Current File",
+    "test_app.sh",
+    [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
+    false
+  );
 }
 
