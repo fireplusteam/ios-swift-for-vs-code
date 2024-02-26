@@ -15,7 +15,7 @@ class ErrorDuringPreLaunchTask extends Error {
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 
     static Type = "xcode-lldb";
-    static lldbName = "iOS App Debugger NAME UNIQUE RANDOM";
+    static lldbName = "iOS: App Debugger Console";
 
     private executor: Executor;
     private problemResolver: ProblemDiagnosticResolver;
