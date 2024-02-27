@@ -129,9 +129,9 @@ export class ProblemDiagnosticResolver {
         this.watcherProc = child;
     }
 
-    problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
+    private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
 
-    column(output: string, messageEnd: number, type: ProblemDiagnosticLogType) {
+    private column(output: string, messageEnd: number, type: ProblemDiagnosticLogType) {
         if (type === ProblemDiagnosticLogType.tests) {
             return [0, 10000];
         }
