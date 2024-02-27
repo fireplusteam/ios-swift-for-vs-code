@@ -18,9 +18,13 @@ def update_environment(project_file):
 def bind_autocomplete():
     if not helper.is_build_server_valid():
         print("RESTARTING XCODE BUILD SERVER")
-        env = helper.get_env_list()
-        subprocess.run(["sh", f"{script}/build_autocomplete.sh"], env=env)
-        subprocess.run(["sh", f"{script}/restart_lsp_swift.sh"], env=env)
+        print(script)
+        process = subprocess.run(f"{script}/build_autocomplete.sh", shell=True, capture_output=True)
+        print(process.stdout.decode("utf-8"))
+        print(process.stderr.decode("utf-8"))
+        process = subprocess.run(f"{script}/restart_lsp_swift.sh", shell=True, capture_output=True)
+        print(process.stdout.decode("utf-8"))
+        print(process.stderr.decode("utf-8"))
         print("Build Server is outdated")
 
 

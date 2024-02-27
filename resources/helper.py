@@ -176,6 +176,15 @@ def is_build_server_valid():
     if build_server["scheme"] != env_list["PROJECT_SCHEME"].strip("\""):
         return False
 
+    # path to xcode-build-server
+    lsp_argv = build_server["argv"]
+    is_valid_server_path = False
+    for arg in lsp_argv:
+        if os.getenv("VS_IOS_XCODE_BUILD_SERVER_PATH") in arg:
+            is_valid_server_path = True
+    if not is_valid_server_path:
+        return False;
+
     return True
 
 # --------GIT-------------------------------------
