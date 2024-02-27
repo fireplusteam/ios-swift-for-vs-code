@@ -28,25 +28,6 @@ export class ProblemDiagnosticResolver {
         }));
     }
 
-    private transformBuildMessage(message: string) {
-        const tokens = message.split("\n");
-        const start = /\S/;
-        let matchStart = tokens[1].match(start);
-        if (matchStart === undefined) {
-            return message;
-        }
-        tokens[1] = tokens[1].slice(matchStart?.index);
-        tokens[2] = tokens[2].slice(matchStart?.index);
-        matchStart = tokens[2].match(start);
-
-        tokens[2] = "_".repeat((matchStart?.index || 1) - 1) + tokens[2].slice(matchStart?.index || 0);
-        return tokens.join("\n");
-    }
-
-    private transformTestMessage(message: string, line: number) {
-        return message;
-    }
-
     private watcherProc: ChildProcess | undefined;
 
     private clear(type: ProblemDiagnosticLogType) {
@@ -116,27 +97,25 @@ export class ProblemDiagnosticResolver {
                 }
             }
         });
+        let triggerCharacter = type === ProblemDiagnosticLogType.build ? "^" : "\n";
+        let decoder = new TextDecoder("utf-8");
         child.stdout?.on("data", (data) => {
-            stdout += data.toString();
+            stdout += decoder.decode(data);
             let lastErrorIndex = -1;
             for (let i = firstIndex; i < stdout.length; ++i) {
-                let isMatch = false;
-                switch (type) {
-                    case ProblemDiagnosticLogType.build:
-                        isMatch = stdout[i] === "^";
-                        break;
-                    case ProblemDiagnosticLogType.tests:
-                        isMatch = stdout[i] === '\n';
-                        break;
-                }
-                if (isMatch) {
+                if (stdout[i] === triggerCharacter) {
                     lastErrorIndex = i;
+                    if (type === ProblemDiagnosticLogType.build && triggerCharacter === '^') {
+                        triggerCharacter = "\n";
+                        lastErrorIndex = -1;
+                    }
                 }
             }
 
-            const shouldEnd = stdout.indexOf("■") !== -1
+            const shouldEnd = stdout.indexOf("■") !== -1;
             if (lastErrorIndex !== -1) {
-                const problems = this.parseBuildLog(stdout.substring(Math.max(0, lastErrorIndex - 50000), lastErrorIndex + 1), type);
+                triggerCharacter = type === ProblemDiagnosticLogType.build ? "^" : "\n";
+                const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), type);
                 this.storeProblems(type, problems);
                 stdout = stdout.substring(lastErrorIndex + 1);
                 firstIndex = 0;
@@ -150,22 +129,58 @@ export class ProblemDiagnosticResolver {
         this.watcherProc = child;
     }
 
-    buildRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*\n.*\n.*?\^)/g;
-    testRg = /(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/g;
+    problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
+
+    column(output: string, messageEnd: number, type: ProblemDiagnosticLogType) {
+        if (type === ProblemDiagnosticLogType.tests) {
+            return [0, 10000];
+        }
+        let newLineCounter = 0;
+        let str = ""
+        let shouldBreak = false;
+        for (let i = messageEnd; i < output.length; ++i) {
+            if (output[i] === '\n') {
+                if (shouldBreak) {
+                    break;
+                }
+                str = "";
+                newLineCounter += 1;
+            } else {
+                str += output[i];
+            }
+            if (output[i] === '^') {
+                shouldBreak = true;
+            }
+            if (newLineCounter >= 3) {
+                break;
+            }
+        }
+        let start = str.length, end = 0;
+        for (let i = 0; i < str.length; ++i) {
+            if (str[i] !== ' ') {
+                start = Math.min(i, start);
+                end = Math.max(end, i);
+            }
+        }
+        if (start > end) {
+            return [0, 10000];
+        }
+        return [start, end];
+    }
 
     private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
         if (type === ProblemDiagnosticLogType.tests) {
         }
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
-            let matches = [...output.matchAll(type == ProblemDiagnosticLogType.build ? this.buildRg : this.testRg)];
+            let matches = [...output.matchAll(this.problemPattern)];
             for (const match of matches) {
                 const file = match[1];
                 const line = Number(match[2]) - 1;
-                const columnStart = type === ProblemDiagnosticLogType.build ? Number(match[3]) - 1 : 0;
-                const columnEnd = type === ProblemDiagnosticLogType.build ? columnStart : 100000;
+                const column = this.column(output, (match?.index || 0) + match[0].length, type);
+
                 const severity = match[4];
-                const message = type === ProblemDiagnosticLogType.build ? this.transformBuildMessage(match[5]) : this.transformTestMessage(match[5], line);
+                const message = match[5];
                 let errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 switch (severity) {
@@ -180,8 +195,8 @@ export class ProblemDiagnosticResolver {
 
                 const diagnostic = new vscode.Diagnostic(
                     new vscode.Range(
-                        new vscode.Position(line, columnStart),
-                        new vscode.Position(line, columnEnd)),
+                        new vscode.Position(line, column[0]),
+                        new vscode.Position(line, column[1])),
                     message,
                     errorSeverity
                 );
