@@ -4,19 +4,21 @@ Write/Build/Debug your xCode projects in VS Code with your favorite extensions
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- Swift/Objective-C/C++ autocompletion
+- Compatibility with CodeLLDB
+- Debug/Run iOS app
+- Debug/Run tests
+- Run single/multiple tests for a class
+- Support project/workspace and iOS Package.swift
+- Support launch configuration for app/tests
 
 ## Requirements
 To use this extension you need to install also:
-   CodeLLDB https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb
-   Swift - https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang
-   Python Debugger - https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy
+   * [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
+   * [Swift](https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang)
+   * [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy)
+
+Install xcbeautify tool to prettify the building log output:
 
 ```bash
 brew install xcbeautify 
