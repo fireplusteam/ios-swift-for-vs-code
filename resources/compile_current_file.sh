@@ -4,7 +4,6 @@ source "$VS_IOS_SCRIPT_PATH/xcode_build_util.sh"
 
 mkdir -p .logs
 
-rm .logs/build.log
 rm -r .vscode/.bundle;
 
 SELECTED_FILE=$1
@@ -40,8 +39,6 @@ else
         export BUILD_XCODE_SINGLE_FILE_PATH="$SELECTED_FILE"
     fi
 fi
-
-rm .logs/build.log
 
 echo "UPDATING INDEXING FOR: ${SCHEME_VALUE}, file: $SELECTED_FILE"
 
