@@ -141,7 +141,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     try {
                         await runAndDebugTests(this.sessionID, this.executor, this.problemResolver, isDebuggable);
                     } finally {
-                        await terminateCurrentIOSApp(this.sessionID, this.executor);
+                        await terminateCurrentIOSApp(this.sessionID, this.executor, true);
                     }
                 }, "All Tests Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
@@ -151,7 +151,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     try {
                         await runAndDebugTestsForCurrentFile(this.sessionID, this.executor, this.problemResolver, isDebuggable);
                     } finally {
-                        await terminateCurrentIOSApp(this.sessionID, this.executor);
+                        await terminateCurrentIOSApp(this.sessionID, this.executor, true);
                     }
                 }, "All Tests Passed");
             }

@@ -52,9 +52,19 @@ EOF
 
 fi
 
+check_exit_status() {
+    local exit_status="$1"
+    if [ "${exit_status}" -ne 0 ]; then
+        python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"
+        echo "Test Finished.■" >> .logs/tests.log
+        exit 1
+    fi
+}
 
 if [ "$3" == "-ALL" ]; then
+    set -o pipefail
     eval "$XCODECMD | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
+    check_exit_status "${PIPESTATUS[0]}"
 else
     echo "Input: '$*'"
 
@@ -71,11 +81,12 @@ else
     else
         echo "Running tests: $TESTS" 
         
+        set -o pipefail
         eval "$XCODECMD $TESTS | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
+        check_exit_status "${PIPESTATUS[0]}"
     fi
 fi
 
-echo "Test Finished.■" >> .logs/tests.log
 
 if [ $VALID_TESTS -eq 1 ]; then
     # Open Results

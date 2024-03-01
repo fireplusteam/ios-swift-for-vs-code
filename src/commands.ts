@@ -127,8 +127,15 @@ export async function generateXcodeServer(executor: Executor) {
   );
 }
 
-export async function terminateCurrentIOSApp(sessionID: string, executor: Executor) {
-  await executor.execShell("Terminate Current iOS App", "terminate_current_running_app.sh", [sessionID]);
+export async function terminateCurrentIOSApp(sessionID: string, executor: Executor, silent = false) {
+  await executor.execShell(
+    "Terminate Current iOS App",
+    "terminate_current_running_app.sh",
+    [sessionID],
+    false,
+    ExecutorReturnType.statusCode,
+    silent ? ExecutorMode.silently : ExecutorMode.verbose
+  );
   await killSpawnLaunchedProcesses(sessionID);
 }
 
