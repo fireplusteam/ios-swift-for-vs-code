@@ -37,41 +37,16 @@ class AppLogger:
             pass
 
 
-    # Watch for changes in the file
-    def _watch_file(self, filepath, start_time, on_delete, on_change):
-        #filedir, filename = os.path.split(filepath)
-        try:
-            stat = os.path.getmtime(filepath)
-        except:
-            stat = time.time()
-
+    def _watch_file(self, start_time):
         while True:
             self.print_new_lines()
             if not helper.is_debug_session_valid(self.session_id, start_time):
                 return
             time.sleep(1)
-            try:
-                if stat < os.path.getmtime(filepath):
-                    stat = os.path.getmtime(filepath)
-                    on_change()
-            except FileNotFoundError:
-                on_delete()
-                continue
             
     
-    def watch_app_log(self, file_path = '.logs/log.changed', start_time = time.time()):
-        self._watch_file(file_path, start_time, self.on_delete, self.on_change)
-
-
-    def on_delete(self):
-        self.printer(f'Log is deleted for Application {self.project_scheme}')
-
-
-    def on_change(self):
-        os.environ['TERM'] = 'xterm'  # Set the TERM variable to a reasonable default
-        os.system('clear')  # Clear the console before printing to simulate an update
-        self.last_known_position = 0
-        self.printer(f'RELAUNCHING {self.project_scheme} APPLICATION...')
+    def watch_app_log(self, start_time = time.time()):
+        self._watch_file(start_time)
 
 
 if __name__ == "__main__":

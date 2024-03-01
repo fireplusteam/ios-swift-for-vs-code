@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ExecutorRunningError, ExecutorTaskError } from "./execShell";
 import { projectExecutor, sleep } from "./extension";
+import { AutocompleteWatcher } from "./AutocompleteWatcher";
 
 export async function runCommand(commandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
   try {
@@ -18,11 +19,17 @@ export async function commandWrapper(commandClosure: () => Promise<void>, succes
     }
   } catch (err) {
     if (err instanceof ExecutorRunningError) {
-      const choice = await vscode.window.showErrorMessage(
-        "To execute this task you need to terminate the current task. Do you want to terminate it to continue?",
-        "Terminate",
-        "Cancel"
-      );
+      const executingCommand =  err.commandName
+      let choice: string | undefined;
+      if (executingCommand === AutocompleteWatcher.AutocompleteCommandName) {
+        choice = "Terminate";
+      } else {
+        choice = await vscode.window.showErrorMessage(
+          "To execute this task you need to terminate the current task. Do you want to terminate it to continue?",
+          "Terminate",
+          "Cancel"
+        );
+      }
       if (choice === "Terminate") {
         projectExecutor.terminateShell();
         await sleep(1500); // 1.5 seconds

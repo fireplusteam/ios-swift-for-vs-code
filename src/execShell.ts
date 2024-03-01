@@ -15,8 +15,10 @@ export class ExecutorTerminatedByUserError extends Error {
 }
 
 export class ExecutorRunningError extends Error {
-  public constructor(message: string) {
+  commandName: string | undefined;
+  public constructor(message: string, commandName: string | undefined) {
     super(message);
+    this.commandName = commandName;
   }
 }
 
@@ -41,11 +43,13 @@ export enum ExecutorMode {
 }
 
 export class Executor {
+  private executingCommand: string | undefined;
   private terminal: vscode.Terminal | undefined;
   private writeEmitter: vscode.EventEmitter<string> | undefined;
   private changeNameEmitter: vscode.EventEmitter<string> | undefined;
   private childProc: ChildProcess | undefined;
   private animationInterval: NodeJS.Timeout | undefined;
+  private errorOnKill: Error | undefined;
 
   public constructor() { }
 
@@ -95,10 +99,11 @@ export class Executor {
     return this.terminal;
   }
 
-  public terminateShell(killing = true) {
+  public terminateShell(errorOnKill: Error | undefined = undefined) {
     clearInterval(this.animationInterval);
     this.animationInterval = undefined;
-    if (this.childProc?.pid && killing) {
+    if (this.childProc?.pid) {
+      this.errorOnKill = errorOnKill;
       kill(this.childProc?.pid);
     }
     this.terminal?.dispose();
@@ -106,6 +111,7 @@ export class Executor {
     this.writeEmitter = undefined;
     this.childProc = undefined;
     this.changeNameEmitter = undefined;
+    this.executingCommand = undefined;
   }
 
   private execShellImp(
@@ -134,7 +140,7 @@ export class Executor {
   ): Promise<boolean | string> {
     if (this.childProc !== undefined) {
       return new Promise((resolve, reject) => {
-        reject(new ExecutorRunningError("Another task is running"));
+        reject(new ExecutorRunningError("Another task is running", this.executingCommand));
       });
     }
     const env = getEnv();
@@ -152,7 +158,9 @@ export class Executor {
       env: envOptions,
       stdio: "pipe",
     });
+    this.executingCommand = commandName;
     this.childProc = proc;
+    this.errorOnKill = undefined;
     const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(commandName );
     if (showTerminal) {
       terminal?.show();
@@ -177,12 +185,17 @@ export class Executor {
 
     return new Promise((resolve, reject) => {
       proc.on("exit", (code, signal) => {
+        this.executingCommand = undefined;
         this.childProc = undefined;
         clearInterval(this.animationInterval);
 
         if (signal !== null) {
           this.terminateShell();
-          reject(new ExecutorTerminatedByUserError(`${this.getTerminalName(commandName)} is terminated by a User`));
+          if (this.errorOnKill !== undefined) {
+            reject(this.errorOnKill);
+          } else {
+            reject(new ExecutorTerminatedByUserError(`${this.getTerminalName(commandName)} is terminated by a User`));
+          }
           return;
         }
 

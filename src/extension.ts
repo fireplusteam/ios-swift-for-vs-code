@@ -1,12 +1,13 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { getScriptPath, isActivated } from "./env";
+import { isActivated } from "./env";
 import {
   checkWorkspace,
   generateXcodeServer,
   nameOfModuleForFile,
-  runApp,
+  openXCode,
+  restartLSP,
   runAppOnMultipleDevices,
   selectDevice,
   selectProjectFile,
@@ -19,16 +20,30 @@ import { runCommand } from "./commandWrapper";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable } from "./inputPicker";
 import { getSessionId } from "./utils";
+import { AutocompleteWatcher } from "./AutocompleteWatcher";
+import { ProjectManager } from "./ProjectManager";
 
 async function initialize() {
   if (!isActivated()) {
-    await selectProjectFile(projectExecutor, true);
+    try {
+      await selectProjectFile(projectExecutor, projectManager, true);
+    } catch {
+      vscode.window.showErrorMessage("Project was not loaded due to error");
+    }
+  } else {
+    restartLSP();
   }
 }
 
 export const projectExecutor = new Executor();
 export const problemDiagnosticResolver = new ProblemDiagnosticResolver();
 export const debugConfiguration = new DebugConfigurationProvider(projectExecutor, problemDiagnosticResolver);
+const projectManager = new ProjectManager();
+const autocompleteWatcher = new AutocompleteWatcher(
+  projectExecutor,
+  problemDiagnosticResolver,
+  projectManager
+);
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -39,8 +54,6 @@ export function sleep(ms: number) {
 export function activate(context: vscode.ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "vscode-ios" is now active!');
-
   initialize();
 
   let logChannel = vscode.window.createOutputChannel("VSCode-iOS");
@@ -49,6 +62,10 @@ export function activate(context: vscode.ExtensionContext) {
   );
   logChannel.appendLine("Activated");
   logChannel.show();
+
+  context.subscriptions.push(projectManager.onProjectUpdate.event(e => {
+    autocompleteWatcher.triggerIncrementalBuild();
+  }));
 
   context.subscriptions.push(
     vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor, problemDiagnosticResolver))
@@ -64,14 +81,17 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("vscode-ios.project.select", async () => {
-      await selectProjectFile(projectExecutor);
+      try {
+        await selectProjectFile(projectExecutor, projectManager);
+      } catch {
+        vscode.window.showErrorMessage("Project was not loaded due to error");
+      }
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("vscode-ios.env.scriptPath", async () => {
-      console.log("DEBUG STARTED: " + getScriptPath());
-      return getScriptPath();
+    vscode.commands.registerCommand("vscode-ios.env.open.xcode", async () => {
+      openXCode();
     })
   );
 
@@ -209,6 +229,22 @@ export function activate(context: vscode.ExtensionContext) {
       const isDebuggable = await askIfDebuggable();
       await debugConfiguration.startIOSTestsForCurrentFileDebugger(isDebuggable);
       return true;
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.project.add.file", async () => {
+      projectManager.addAFileToXcodeProject(vscode.window.activeTextEditor?.document.uri);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("vscode-ios.run.project.reload", async () => {
+      try {
+        await projectManager.loadProjectFiles();
+      } catch {
+        vscode.window.showErrorMessage("Project was not reloaded due to error");
+      }
     })
   );
 }

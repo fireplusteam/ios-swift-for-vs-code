@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
-import { getScriptPath, isActivated } from "./env";
+import { getDeviceId, getEnvList, getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./build";
@@ -82,7 +82,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     async startIOSDebugger(isDebuggable: boolean) {
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
-            name: "iOS: APP Debug",
+            name: "iOS: Run App & Debug",
             request: "launch",
             target: "app",
             isDebuggable: isDebuggable
@@ -93,7 +93,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     async startIOSTestsDebugger(isDebuggable: boolean) {
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
-            name: "iOS: Tests Debug",
+            name: "iOS: Run Tests & Debug",
             request: "launch",
             target: "tests",
             isDebuggable: isDebuggable
@@ -104,7 +104,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     async startIOSTestsForCurrentFileDebugger(isDebuggable: boolean) {
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
-            name: "iOS: Tests Debug: Current File",
+            name: "iOS: Run Tests & Debug: Current File",
             request: "launch",
             target: "testsForCurrentFile",
             isDebuggable: isDebuggable
@@ -143,7 +143,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     } finally {
                         await terminateCurrentIOSApp(this.sessionID, this.executor, true);
                     }
-                }, "All Tests Passed");
+                }, "All Tests Are Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.executor, this.problemResolver);
@@ -153,7 +153,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     } finally {
                         await terminateCurrentIOSApp(this.sessionID, this.executor, true);
                     }
-                }, "All Tests Passed");
+                }, "All Tests Are Passed");
             }
             if (isDebuggable === false) {
                 return this.runSession();
@@ -173,7 +173,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             program: `${getScriptPath()}/app_log.py`,
             stopOnEntry: false,
             args: [
-                ".logs/app.log",
+                `.logs/app_${getDeviceId()}.log`,
                 this.sessionID
             ],
             console: "internalConsole",
@@ -196,12 +196,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
                 "command script add -f attach_lldb.setScriptPath setScriptPath",
                 "command script add -f attach_lldb.app_log app_log",
-                //`target create ${getScriptPath()}/lldb_exe_stub`,  // TODO: experiment with this              
-                `create_target ${this.sessionID}`,
+                "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
+                `create_target ${this.sessionID}`
             ],
             processCreateCommands: [
-                "process handle SIGKILL -n true -p true -s false",
-                "process handle SIGTERM -n true -p true -s false",
+                //"process handle SIGKILL -n true -p true -s false",
+                //"process handle SIGTERM -n true -p true -s false",
                 `setScriptPath ${getScriptPath()}`,
                 `watch_new_process ${this.sessionID}`
             ],

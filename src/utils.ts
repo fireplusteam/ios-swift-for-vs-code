@@ -52,3 +52,16 @@ export function emptyBuildLog() {
 export function emptyTestsLog() {
     emptyFile(getWorkspacePath(), ".logs/tests.log");
 }
+
+export function emptyAutobuildLog() {
+    emptyFile(getWorkspacePath(), ".logs/autocomplete.log");
+}
+
+export function fileNameFromPath(filePath: string) {
+    const list = path.join(filePath).split(path.sep);
+    return list[list.length - 1];
+}
+
+export function emptyAppLog(deviceId: string) {
+    emptyFile(getWorkspacePath(), `.logs/app_${deviceId}.log`);
+}

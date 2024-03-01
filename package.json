@@ -19,6 +19,16 @@
   },
   "publisher": "fireplusteam",
   "contributes": {
+    "configuration": {
+      "title": "iOS IDE",
+      "properties": {
+        "vscode-ios.watcher": {
+          "type": "boolean",
+          "default": true,
+          "description": "Xcodebuild Watch. Build automatically while editing project files. Needed for updating indexes"
+        }
+      }
+    },
     "keybindings": [
       {
         "key": "shift+f5",
@@ -68,10 +78,6 @@
         "title": "iOS: Select Scheme"
       },
       {
-        "command": "vscode-ios.env.scriptPath",
-        "title": "iOS: Script Path"
-      },
-      {
         "command": "vscode-ios.project.selectDevice",
         "title": "iOS: Select DEBUG Device"
       },
@@ -82,6 +88,10 @@
       {
         "command": "vscode-ios.check.generateXcodeServer",
         "title": "iOS: Generate xCode Server"
+      },
+      {
+        "command": "vscode-ios.env.open.xcode",
+        "title": "iOS: Open Xcode"
       },
       {
         "command": "vscode-ios.build.clean",
@@ -124,15 +134,23 @@
       },
       {
         "command": "vscode-ios.run.app.debug",
-        "title": "iOS: Run & Debug App"
+        "title": "iOS: Run App & Debug"
       },
       {
         "command": "vscode-ios.run.tests.debug",
-        "title": "iOS: Tests & Debug"
+        "title": "iOS: Run Tests & Debug"
       },
       {
         "command": "vscode-ios.run.tests.currentFile.debug",
-        "title": "iOS: Tests: Run Current Class"
+        "title": "iOS: Run Tests & Debug: Current Class"
+      },
+      {
+        "command": "vscode-ios.run.project.add.file",
+        "title": "iOS: Project: Add File"
+      },
+      {
+        "command": "vscode-ios.run.project.reload",
+        "title": "iOS: Project: Reload"
       }
     ],
     "debuggers": [
@@ -161,7 +179,7 @@
         "initialConfigurations": [
           {
             "type": "xcode-lldb",
-            "name": "iOS: APP Debug",
+            "name": "iOS: Run App & Debug",
             "request": "launch",
             "target": "app",
             "isDebuggable": true
@@ -169,22 +187,22 @@
         ],
         "configurationSnippets": [
           {
-            "label": "iOS: APP Debug",
+            "label": "iOS: Run App & Debug",
             "description": "Add a new configuration for iOS debugging",
             "body": {
               "type": "xcode-lldb",
-              "name": "iOS: APP Debug",
+              "name": "iOS: Run App & Debug",
               "request": "launch",
               "target": "app",
               "isDebuggable": true
             }
           },
           {
-            "label": "iOS: Tests Debug",
+            "label": "iOS: Run Tests & Debug",
             "description": "Add a new configuration for iOS Tests debugging",
             "body": {
               "type": "xcode-lldb",
-              "name": "iOS: Tests Debug",
+              "name": "iOS: Run Tests & Debug",
               "request": "launch",
               "target": "tests",
               "isDebuggable": true
@@ -195,7 +213,7 @@
             "description": "Add a new configuration for iOS Tests debugging",
             "body": {
               "type": "xcode-lldb",
-              "name": "iOS: Tests Debug: Current File",
+              "name": "iOS: Run Tests & Debug: Current File",
               "request": "launch",
               "target": "testsForCurrentFile",
               "isDebuggable": true
@@ -235,7 +253,9 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "fast-xml-parser": "^4.3.5",
     "find-process": "^1.4.7",
+    "glob": "^10.3.10",
     "tree-kill": "^1.2.2"
   }
 }

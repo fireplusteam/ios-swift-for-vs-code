@@ -40,7 +40,7 @@ def get_env_list():
         with open(file_path, 'r') as file:
             for line in file:
                 pos = line.strip().find("=")
-                dict[line.strip()[:pos]] =  line.strip()[pos + 1:]
+                dict[line.strip()[:pos]] = line.strip()[pos + 1:]
     return dict
 
 
@@ -195,7 +195,6 @@ def update_git_exclude(file_to_exclude):
     os.makedirs(".git/info", exist_ok=True)
     content = None
     try:
-        
         with open(".git/info/exclude", 'r') as file:
             content = file.readlines()
     except: pass

@@ -13,7 +13,8 @@ LOG_DEBUG = 1
 def create_app_logger():
     list = helper.get_env_list()
     scheme = list["PROJECT_SCHEME"].strip("\"")
-    app_logger = AppLogger(".logs/app.log", scheme, "")
+    device = list["DEVICE_ID"].strip("\"")
+    app_logger = AppLogger(f".logs/app_{device}.log", scheme, "")
     return app_logger
 
 # GLOBAL
@@ -143,12 +144,16 @@ def watch_new_process(debugger, command, result, internal_dict):
     thread = threading.Thread(target=wait_for_process, args=(get_process_name(), debugger, existing_pids, start_time, session_id))   
     thread.start()
     helper.update_debugger_launch_config(session_id, "status", "launched")
+    env_list = helper.get_env_list()
+    device_id = env_list["DEVICE_ID"].strip("\n")
+    perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
 
 
 def setScriptPath(debugger, command, result, internal_dict):
     global script_path
     logMessage("Set Script Path to: " + str(command))
     script_path = command
+    
 
 def create_target(debugger, command, result, internal_dict):
     try:
@@ -177,6 +182,9 @@ def create_target(debugger, command, result, internal_dict):
         # deprecated
         #perform_debugger_command(debugger, "breakpoint set --selector recordFailureWithDescription:inFile:atLine:expected:")
         #perform_debugger_command(debugger, "breakpoint set --name _XCTFailureHandler")
+        # catch the runtime crash
+        perform_debugger_command(debugger, "breakpoint set --name __exceptionPreprocess")
+        
         
     except Exception as e:
         logMessage(str(e))
@@ -195,3 +203,34 @@ def app_log(debugger, command, result, internal_dict):
 
 def terminate_debugger(debugger, command, result, internal_dict):
     perform_debugger_command(debugger, "process detach")
+
+# ---------------------------FOCUS-SIMULATOR
+
+def start_monitor(debugger, command, exe_ctx, result, internal_dict):
+    "Start monitor to manage simulator window focus while debugging. (Usage: simulator-focus-monitor Simulator)"
+    process = exe_ctx.GetProcess()
+
+    def focus_simulator(udid):
+        logMessage(f"UDID: {udid}")
+        subprocess.run(['open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', udid])
+
+    # Focus simulator if the process is currently running
+    if (process.GetState() == lldb.eStateRunning):
+        focus_simulator(command)
+            
+    # Method to wait for state changes
+    def listen_process_events():
+        try: 
+            state = None
+            while True:
+                process = debugger.GetSelectedTarget().GetProcess()
+                if (process.GetState() == lldb.eStateRunning and state != process.GetState()):
+                    focus_simulator(command)
+                state = process.GetState()
+                time.sleep(0.05)
+        except Exception as e:
+            logMessage(f"LISTENER_ERROR {str(e)}")
+
+    event_listener = threading.Thread(target=listen_process_events)
+    event_listener.daemon = True
+    event_listener.start()

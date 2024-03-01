@@ -36,7 +36,7 @@ print(f"SELECTED: {selected_destination}")
 command = ["xcodebuild", "-scheme", project_scheme, "-showdestinations"]    
 if "-package" != helper.get_project_type(project_file):
     command.extend([helper.get_project_type(project_file), project_file])
-process = subprocess.run(command, capture_output=True, text=True, timeout=5)
+process = subprocess.run(command, capture_output=True, text=True)
 
 if process.returncode != 0:
     print(f"Error by Getting the list of devices: {process.returncode}")

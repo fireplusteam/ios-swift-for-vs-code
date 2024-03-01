@@ -40,7 +40,39 @@ export function getScriptPath(script: string | undefined = undefined) {
   if (script === undefined) {
     return path.join(__dirname, "..", "resources");
   }
+  if (script === "python3") {
+    return script;
+  }
   return path.join(__dirname, "..", "resources", script);
+}
+
+export function getFilePathInWorkspace(fileName: string) {
+  return path.join(getWorkspacePath(), fileName);
+}
+
+export function getProjectFileName() {
+  return getEnvList()["PROJECT_FILE"].replace(/^"|"$/g, '');
+}
+
+export function getProjectScheme() {
+  return getEnvList()["PROJECT_SCHEME"].replace(/^"|"$/g, '');
+}
+
+export function getDeviceId() {
+  return getEnvList()["DEVICE_ID"].replace(/^"|"$/g, '');
+}
+
+export function getProjectPath() { 
+  return path.join(getWorkspacePath(), getProjectFileName());
+}
+
+export function getWorkspaceId() {
+  return getProjectFileName().replaceAll(path.sep, ".");
+}
+
+export function getProjectFolderPath() {
+  const folder = getProjectFileName().split(path.sep).slice(0, -1).join(path.sep);
+  return folder;
 }
 
 export function getXCodeBuildServerPath() {

@@ -22,10 +22,8 @@ def bind_autocomplete():
         process = subprocess.run(f"{script}/build_autocomplete.sh", shell=True, capture_output=True)
         print(process.stdout.decode("utf-8"))
         print(process.stderr.decode("utf-8"))
-        process = subprocess.run(f"{script}/restart_lsp_swift.sh", shell=True, capture_output=True)
-        print(process.stdout.decode("utf-8"))
-        print(process.stderr.decode("utf-8"))
-        print("Build Server is outdated")
+        return True
+    return False
 
 
 if __name__ == "__main__":
@@ -47,7 +45,7 @@ if __name__ == "__main__":
                 is_workspace = True
                 helper.update_project_file(file)
                 project_file = file
-        print("Workspace existance: ", is_workspace)
+        print("Workspace existence: ", is_workspace)
         if not is_workspace:
             print(files, cwd)
             is_project = False
@@ -69,9 +67,11 @@ if __name__ == "__main__":
 
     print("UPDATE BINDING")
     # validate build server
-    bind_autocomplete()
-        
     helper.update_git_exclude("buildServer.json")
     helper.update_git_exclude(".logs")
     helper.update_git_exclude(".vscode")
+    if bind_autocomplete():
+        print("Restarting LSP")
+        
+
     

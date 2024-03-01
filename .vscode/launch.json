@@ -31,6 +31,12 @@
             "internalConsoleOptions": "neverOpen",
             "envFile": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/.vscode/.env",
             "cwd": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example"
+		}, 
+		{
+			"type": "ruby_lsp",
+			"request": "launch",
+			"name": "Debug Ruby program",
+			"program": "ruby resources/project_helper.rb add_file '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/AdidasAppSuite.xcodeproj' Drops '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/Experiences/Drops/Sources/UI/some_test.swift'"
 		}
 	]
 }

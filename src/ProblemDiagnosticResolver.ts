@@ -1,9 +1,5 @@
-import { ChildProcess, ChildProcessWithoutNullStreams, ExecFileSyncOptionsWithStringEncoding, SpawnOptions, exec, spawn } from 'child_process';
-import { parse } from 'path';
-import { stderr } from 'process';
-import { start } from 'repl';
+import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
-import { problemDiagnosticResolver, sleep } from './extension';
 
 export enum ProblemDiagnosticLogType {
     build,
@@ -16,6 +12,8 @@ export class ProblemDiagnosticResolver {
     diagnosticBuildCollection: vscode.DiagnosticCollection;
     diagnosticTestsCollection: vscode.DiagnosticCollection;
     isErrorParsed = false;
+
+    buildErrors = new Set<string>();
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("xcodebuild");
@@ -34,7 +32,10 @@ export class ProblemDiagnosticResolver {
         this.isErrorParsed = false;
         switch (type) {
             case ProblemDiagnosticLogType.build:
-                this.diagnosticBuildCollection.clear();
+                this.buildErrors.clear();
+                this.diagnosticBuildCollection.forEach((uri, _) => {
+                    this.buildErrors.add(uri.fsPath);
+                });
                 break;
             case ProblemDiagnosticLogType.tests:
                 this.diagnosticTestsCollection.clear();
@@ -42,38 +43,90 @@ export class ProblemDiagnosticResolver {
         }
     }
 
+    private uniqueProblems(list: vscode.Diagnostic[], sourcekitList: vscode.Diagnostic[]) {
+        function compareRanges(range1: vscode.Range, range2: vscode.Range): number {
+            if (range1.start.line !== range2.start.line)
+                return range1.start.line - range2.start.line;
+            if (range1.start.character !== range2.start.character)
+                return range1.start.character - range2.start.character;
+            if (range1.end.line !== range2.end.line)
+                return range1.end.line - range2.end.line;
+            if (range1.end.character !== range2.end.character)
+                return range1.end.character - range2.end.character;
+            return 0;
+        }
+        
+        function comp(a: vscode.Diagnostic, b: vscode.Diagnostic, comp: (a: vscode.Range, b: vscode.Range) => number = compareRanges) {
+            if (a.message.toLowerCase() !== b.message.toLowerCase()) {
+                return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
+            }
+            if (a.severity !== b.severity) {
+                return a.severity - b.severity;
+            }
+            if (a.range.isEqual(b.range) === false) {
+                return comp(a.range, b.range);
+            }
+            return 0;
+        }
+        list.sort(comp);
+        let res: vscode.Diagnostic[] = [];
+        for (let i = 0; i < list.length; ++i) {
+            if (res.length == 0 || comp(list[i], res[res.length - 1]) !== 0) {
+                if (sourcekitList.find((v) => {
+                    return comp(v, list[i], (a, b) => {
+                        if (a.start.line !== b.start.line)
+                            return a.start.line - b.start.line;
+                        if (a.end.line !== b.end.line)
+                            return a.end.line - b.end.line;
+                        return 0;
+                    }) === 0;
+                }) === undefined) {
+                    res.push(list[i]);
+                }
+            }
+        }
+        return res;
+    }
+
+    private globalProblems(file: vscode.Uri) {
+        return vscode.languages.getDiagnostics(file).filter((e) => {
+            return e.source !== "xcodebuild" && e.source !== "xcodebuild-tests";
+        });
+    }
+
     private storeProblems(type: ProblemDiagnosticLogType, files: { [key: string]: vscode.Diagnostic[] }) {
         if (Object.keys(files).length > 0) {
             this.isErrorParsed = true;
         }
         for (let file in files) {
+            const fileUri = vscode.Uri.file(file); 
             switch (type) {
                 case ProblemDiagnosticLogType.build:
+                    if (this.buildErrors.delete(file)) {
+                        this.diagnosticBuildCollection.delete(fileUri);
+                    }
                     let list = [
-                        ...this.diagnosticBuildCollection.get(vscode.Uri.file(file)) || [],
+                        ...this.diagnosticBuildCollection.get(fileUri) || [],
                         ...files[file]
                     ];
-                    this.diagnosticBuildCollection.set(vscode.Uri.file(file), list);
+                    this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, this.globalProblems(fileUri)));
                     break;
                 case ProblemDiagnosticLogType.tests:
                     let listTests = [
-                        ...this.diagnosticTestsCollection.get(vscode.Uri.file(file)) || [],
+                        ...this.diagnosticTestsCollection.get(fileUri) || [],
                         ...files[file]
                     ];
-                    this.diagnosticTestsCollection.set(vscode.Uri.file(file), listTests);
+                    this.diagnosticTestsCollection.set(fileUri, this.uniqueProblems(listTests, this.globalProblems(fileUri)));
                     break;
             }
         }
     }
 
-    fireEnd = new vscode.EventEmitter<boolean>();
-    endDisposable: vscode.Disposable | null = null;
-
-    parseAsyncLogs(workspacePath: string, filePath: string, type: ProblemDiagnosticLogType) {
+    parseAsyncLogs(workspacePath: string, filePath: string, type: ProblemDiagnosticLogType, showProblemPanelOnError = true) {
         if (this.watcherProc !== undefined) {
             this.watcherProc.kill();
-            this.watcherProc = undefined;
         }
+        
         const options: SpawnOptions = {
             cwd: workspacePath,
             shell: true,
@@ -88,18 +141,9 @@ export class ProblemDiagnosticResolver {
         this.clear(type);
         var firstIndex = 0;
         var stdout = "";
-        this.endDisposable = this.fireEnd.event((e) => {
-            if (e) {
-                this.watcherProc?.kill();
-                this.watcherProc = undefined;
-                if (this.isErrorParsed) {
-                    vscode.commands.executeCommand('workbench.action.problems.focus');
-                }
-            }
-        });
         let triggerCharacter = type === ProblemDiagnosticLogType.build ? "^" : "\n";
         let decoder = new TextDecoder("utf-8");
-        child.stdout?.on("data", (data) => {
+        child.stdout?.on("data", async (data) => {
             stdout += decoder.decode(data);
             let lastErrorIndex = -1;
             for (let i = firstIndex; i < stdout.length; ++i) {
@@ -123,7 +167,21 @@ export class ProblemDiagnosticResolver {
                 firstIndex = stdout.length;
             }
             if (shouldEnd) {
-                this.fireEnd.fire(true);
+                if (type === ProblemDiagnosticLogType.build) {
+                    for (let file of this.buildErrors) {
+                        this.diagnosticBuildCollection.delete(vscode.Uri.file(file));
+                    }
+                    this.buildErrors.clear;
+                }
+                child.kill();
+            }
+        });
+        child.on("exit", () => {
+            if (child === this.watcherProc) {
+                this.watcherProc = undefined;
+                if (showProblemPanelOnError && this.isErrorParsed) {
+                    vscode.commands.executeCommand('workbench.action.problems.focus');
+                }
             }
         });
         this.watcherProc = child;

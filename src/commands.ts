@@ -1,26 +1,49 @@
 import * as vscode from 'vscode';
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
-import { getEnvList, getWorkspacePath, updateProject } from "./env";
+import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getWorkspacePath, updateProject } from "./env";
 import { buildSelectedTarget, getFileNameLog } from "./build";
-import { emptyTestsLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
+import { emptyAppLog, emptyTestsLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
+import { exec } from 'child_process';
+import { ProjectManager } from './ProjectManager';
+import { glob } from 'glob';
 
-export async function selectProjectFile(executor: Executor, ignoreFocusOut = false) {
-  const include: vscode.GlobPattern = "{*.xcworkspace/contents.xcworkspacedata,*.xcodeproj/project.pbxproj,Package.swift}";
-  const files = await vscode.workspace.findFiles(include);
-
-  const options = files.map((file) => {
-    if (file.fsPath.endsWith("Package.swift")) {
-      const name = path.join(file.fsPath).split(path.sep);
-      const projectPath = name.join(path.sep);
-      return { label: name[name.length - 1], value: projectPath };
+export async function selectProjectFile(executor: Executor, projectManager: ProjectManager, ignoreFocusOut = false) {
+  const workspaceEnd = ".xcworkspace/contents.xcworkspacedata"; 
+  const projectEnd = ".xcodeproj/project.pbxproj";
+  const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
+  const files = await glob(
+    include,
+    {
+      absolute: true,
+      cwd: getWorkspacePath(),
+      nodir: true
     }
-    const name = path.join(file.fsPath, "..").split(path.sep);
-    const projectPath = name.join(path.sep);
-    return { label: name[name.length - 1], value: projectPath };
-  });
+  );
+
+  const options = files
+    .filter(file => {
+      if (file.endsWith(projectEnd)) {
+        for (let checkFile of files) {
+          if (checkFile.endsWith(workspaceEnd) &&
+            checkFile.slice(0, -workspaceEnd.length) == file.slice(0, -projectEnd.length))
+            return false;
+        }
+      }
+      return true;
+    })
+    .map((file) => {
+      if (file.endsWith("Package.swift")) {
+        return { label: file, value: file };
+      }
+      const relativeProjectPath = path.relative(getWorkspacePath(), file)
+        .split(path.sep)
+        .slice(0, -1)
+        .join(path.sep);
+      return { label: relativeProjectPath, value: file.split(path.sep).slice(0, -1).join(path.sep) };
+    });
   if (options.length == 0) {
     if (ignoreFocusOut == false) {
       vscode.window.showErrorMessage("Workspace doesn't have any iOS project or workspace file");
@@ -40,6 +63,7 @@ export async function selectProjectFile(executor: Executor, ignoreFocusOut = fal
     return;
   }
   updateProject(selection);
+  await projectManager.loadProjectFiles(true);
   await selectTarget(executor, true);
 }
 
@@ -52,8 +76,10 @@ export async function storeVSConfig(executor: Executor) {
   await executor.execShell("Store VS Config", "store_vs_config.sh", [fileUrl]);
 }
 
-export async function selectTarget(executor: Executor, ignoreFocusOut = false) {
-  await checkWorkspace(executor, ignoreFocusOut);
+export async function selectTarget(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
+  if (shouldCheckWorkspace) {
+    await checkWorkspace(executor, ignoreFocusOut);
+  }
   let stdout = getLastLine((await executor.execShell(
     "Fetch Project Targets",
     "populate_schemes.sh",
@@ -78,6 +104,8 @@ export async function selectTarget(executor: Executor, ignoreFocusOut = false) {
     "update_environment.sh",
     ["-destinationScheme", option]
   );
+
+  await checkWorkspace(executor);
 }
 
 export async function selectDevice(executor: Executor, shouldCheckWorkspace = true, ignoreFocusOut = false) {
@@ -111,8 +139,28 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
   );
 }
 
+export async function restartLSP() {
+  await vscode.commands.executeCommand("swift.restartLSPServer");
+}
+
 export async function checkWorkspace(executor: Executor, ignoreFocusOut = false) {
-  await executor.execShell("Validate Environment", "check_workspace.sh");
+  try {
+    if (getProjectScheme().length == 0) {
+      await selectTarget(executor, true, false);
+    }
+  } catch {
+    await selectTarget(executor, true, false);
+  }
+  const command = getLastLine(await executor.execShell(
+    "Validate Environment",
+    "check_workspace.sh",
+    [],
+    false,
+    ExecutorReturnType.stdout
+  ) as string);
+  if (command === "Restarting LSP") {
+    restartLSP();
+  }
   const env = getEnvList();
   if (!env.hasOwnProperty("DEVICE_ID")) {
     await selectDevice(executor, false, ignoreFocusOut);
@@ -125,6 +173,10 @@ export async function generateXcodeServer(executor: Executor) {
     "Generate xCode Server",
     "build_autocomplete.sh"
   );
+}
+
+export async function openXCode() {
+  exec(`open '${getProjectPath()}'`);
 }
 
 export async function terminateCurrentIOSApp(sessionID: string, executor: Executor, silent = false) {
@@ -155,6 +207,7 @@ export async function nameOfModuleForFile(executor: Executor) {
 }
 
 export async function runApp(sessionID: string, executor: Executor, isDebuggable: boolean) {
+  emptyAppLog(getDeviceId());
   await executor.execShell(
     "Run App",
     "run_app.sh",
@@ -190,6 +243,9 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
   await terminateCurrentIOSApp(`${sessionID}${counterMultiDeviceRunner}`, executor);
   counterMultiDeviceRunner += 1;
 
+  for (let device of option.split(" ")) {
+    emptyAppLog(device.substring("id=".length));
+  }
   await executor.execShell(
     "Run App On Multiple Devices",
     "run_app.sh",
@@ -202,6 +258,7 @@ export async function runAndDebugTests(sessionID: string, executor: Executor, pr
   const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
   emptyTestsLog();
   problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
+  emptyAppLog(getDeviceId());
   await executor.execShell(
     "Run Tests",
     "test_app.sh",
@@ -214,6 +271,7 @@ export async function runAndDebugTestsForCurrentFile(sessionID: string, executor
   const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
   emptyTestsLog();
   problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
+  emptyAppLog(getDeviceId());
   await executor.execShell(
     "Run Tests For Current File",
     "test_app.sh",

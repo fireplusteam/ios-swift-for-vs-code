@@ -17,11 +17,6 @@ export XCT_PARALLEL_DEVICE_DESTINATIONS=1
 rm -r .vscode/.bundle.xcresult
 rm -r .vscode/.bundle
 
-# clear log files
-rm .logs/app.log
-echo '' > .logs/app.log
-echo "0" > .logs/log.changed
-
 VALID_TESTS=1
 
 # uncomment below if you want to reset all cache on simulators
@@ -55,15 +50,15 @@ fi
 check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
-        python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"
-        echo "Test Finished.■" >> .logs/tests.log
+        echo "Test Failed.■" >> .logs/tests.log
+        python3 "$VS_IOS_SCRIPT_PATH/print_errors.py" '.logs/tests.log'
         exit 1
     fi
 }
 
 if [ "$3" == "-ALL" ]; then
     set -o pipefail
-    eval "$XCODECMD | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
+    eval "$XCODECMD | tee '.logs/tests.log' | tee '.logs/app_$DEVICE_ID.log' | xcbeautify"
     check_exit_status "${PIPESTATUS[0]}"
 else
     echo "Input: '$*'"
@@ -82,11 +77,12 @@ else
         echo "Running tests: $TESTS" 
         
         set -o pipefail
-        eval "$XCODECMD $TESTS | tee '.logs/tests.log' | tee '.logs/app.log' | xcbeautify"
+        eval "$XCODECMD $TESTS | tee '.logs/tests.log' | tee '.logs/app_$DEVICE_ID.log' | xcbeautify"
         check_exit_status "${PIPESTATUS[0]}"
     fi
 fi
 
+echo "Test Finished.■" >> .logs/tests.log
 
 if [ $VALID_TESTS -eq 1 ]; then
     # Open Results

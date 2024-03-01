@@ -21,9 +21,12 @@ To use this extension you need to install also:
 Install xcbeautify tool to prettify the building log output:
 
 ```bash
-brew install xcbeautify 
+brew install xcbeautify
 ```
-
+Also you need to install xcodeproj library to make possible to add/delete/rename files in your Xcode project directly from vs code
+```bash
+gem install xcodeproj
+```
 ## Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
