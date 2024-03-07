@@ -126,7 +126,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
         try {
-            const isDebuggable = dbgConfig.isDebuggable as boolean;
+            const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
 
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async () => {
