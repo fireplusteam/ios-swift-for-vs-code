@@ -18,7 +18,7 @@ export class ProjectTree {
         const components = filePath.split(path.sep);
         if (components.length <= 1) {
             return;
-        } 
+        }
         this.add(this.root, components, false, 0);
     }
 

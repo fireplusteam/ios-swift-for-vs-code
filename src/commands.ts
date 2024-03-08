@@ -222,8 +222,6 @@ export async function runApp(sessionID: string, executor: Executor, isDebuggable
     );
 }
 
-let counterMultiDeviceRunner = 0;
-
 export async function runAppOnMultipleDevices(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver) {
     let stdout = getLastLine((await executor.execShell(
         "Fetch Multiple Devices",
@@ -247,9 +245,7 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
     }
 
     await buildSelectedTarget(executor, problemResolver);
-
-    await terminateCurrentIOSApp(`${sessionID}${counterMultiDeviceRunner}`, executor);
-    counterMultiDeviceRunner += 1;
+    await terminateCurrentIOSApp(sessionID, executor);
 
     for (let device of option.split(" ")) {
         emptyAppLog(device.substring("id=".length));
@@ -257,7 +253,7 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
     await executor.execShell(
         "Run App On Multiple Devices",
         "run_app.sh",
-        [`${sessionID}${counterMultiDeviceRunner}`, "RUNNING", "-DEVICES", `${option}`],
+        [sessionID, "RUNNING", "-DEVICES", `${option}`],
         false
     );
 }

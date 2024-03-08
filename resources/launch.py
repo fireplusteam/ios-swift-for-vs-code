@@ -30,14 +30,14 @@ start_time = time.time()
 
 def session_validation(process):
     if not helper.is_debug_session_valid(session_id, start_time):
-        print("Should BE TERMINATED")
+        logMessage(f"Should BE TERMINATED {session_id}, {start_time}")
         try:
             process.kill()
         except: pass
         finally:
             exit(0)
     else: 
-        print("APP RUNNING")
+        logMessage("APP RUNNING")
 
 
 def run_process(command: str, log_file_path):

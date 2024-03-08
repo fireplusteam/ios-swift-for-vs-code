@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ExecutorReturnType, ExecutorRunningError} from "./execShell";
+import { Executor, ExecutorMode, ExecutorReturnType, ExecutorRunningError } from "./execShell";
 import { getWorkspacePath, getProjectScheme } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
