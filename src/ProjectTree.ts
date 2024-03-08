@@ -35,6 +35,9 @@ export class ProjectTree {
         function excludedFiles(node: Node | undefined, filePath: string) {
             if (node === undefined)
                 return;
+            if (node.isLeaf && node.isVisible) {
+                return;
+            }
             if (node.edges === null) {
                 if (!node.isVisible) {
                     list.push(filePath);
@@ -61,7 +64,7 @@ export class ProjectTree {
             if (!isVisible) {
                 return;
             }
-            this.makeVisibleTail(node);
+            node.isLeaf = true; // if it's visible, tells that's a leaf
             return;
         }
         if (isVisible) {
@@ -81,17 +84,5 @@ export class ProjectTree {
         node.edges = edges;
         const key = edges.get(components[index].toLowerCase());
         this.add(key?.[1], components, isVisible, index + 1);
-    }
-
-    private makeVisibleTail(node: Node | undefined) {
-        if (node === undefined) {
-            return;
-        }
-        node.isVisible = true;
-        if (node.edges === null)
-            return;
-        for (let [key, value] of node.edges) {
-            this.makeVisibleTail(value[1]);
-        }
     }
 }
