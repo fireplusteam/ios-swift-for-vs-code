@@ -1,54 +1,81 @@
 import * as vscode from "vscode";
+import { quickPickWithHistory } from "./quickPickHistory";
 
 export async function askIfDebuggable() {
-  const option = await vscode.window.showQuickPick(["Debug", "Run"]);
-  return option === "Debug";
+    const items: QuickPickItem[] = [{ label: "Debug", value: "Debug" }, { label: "Run", value: "Run" }];
+    const option = await showPicker(items, "Debug?", "", false, false, true);
+    return option === "Debug";
+}
+
+let extContext: vscode.ExtensionContext;
+
+export function setContext(context: vscode.ExtensionContext) {
+    extContext = context;
+}
+
+export interface QuickPickItem extends vscode.QuickPickItem {
+    value: string;
 }
 
 export async function showPicker(
-  json: string,
-  title: string,
-  placeholder: string,
-  canPickMany = false,
-  ignoreFocusOut = false
+    json: string | QuickPickItem[],
+    title: string,
+    placeholder: string,
+    canPickMany = false,
+    ignoreFocusOut = false,
+    useHistory = false
 ) {
-  const items: vscode.QuickPickItem[] = JSON.parse(json);
-  let selection = await vscode.window.showQuickPick<vscode.QuickPickItem>(
-    items,
-    {
-      title: title,
-      placeHolder: placeholder,
-      ignoreFocusOut: ignoreFocusOut,
-      canPickMany: canPickMany
-    }
-  );
-
-  if (selection === undefined) {
-    return undefined;
-  }
-
-  let value: string | undefined;
-
-  if (typeof selection === "string") {
-    value = selection as string;
-  }
-
-  if (typeof selection === "object") {
-    if (selection === null) {
-      value = undefined;
+    let items: QuickPickItem[]
+    if (typeof json === 'string' || json instanceof String) {
+        items = JSON.parse(json as string);
     } else {
-      if (canPickMany) {
-        const array = (selection as unknown as { [key: string]: any }[]).map((e) => {
-          return e["value"];
-        });
-        
-        value = array.join(" ");
-      } else {
-          const dict = selection as { [key: string]: any };
-          value = dict["value"];
-      }
+        items = json;
     }
-  }
 
-  return value;
+    const selectionClosure = async (items: QuickPickItem[]) => {
+        return await vscode.window.showQuickPick<QuickPickItem>(
+            items,
+            {
+                title: title,
+                placeHolder: placeholder,
+                ignoreFocusOut: ignoreFocusOut,
+                canPickMany: canPickMany
+            }
+        );
+    }
+    let selection: vscode.QuickPickItem | undefined;
+    if (useHistory) {
+        selection = await quickPickWithHistory(items, extContext, title, selectionClosure);
+    } else {
+        selection = await selectionClosure(items);
+    }
+
+    if (selection === undefined) {
+        return undefined;
+    }
+
+    let value: string | undefined;
+
+    if (typeof selection === "string") {
+        value = selection as string;
+    }
+
+    if (typeof selection === "object") {
+        if (selection === null) {
+            value = undefined;
+        } else {
+            if (canPickMany) {
+                const array = (selection as unknown as { [key: string]: any }[]).map((e) => {
+                    return e["value"];
+                });
+
+                value = array.join(" ");
+            } else {
+                const dict = selection as { [key: string]: any };
+                value = dict["value"];
+            }
+        }
+    }
+
+    return value;
 }

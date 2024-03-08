@@ -10,5 +10,6 @@
     "typescript.tsc.autoDetect": "off",
     "cmake.configureOnOpen": false,
     "rubyLsp.rubyVersionManager": "rbenv",
-    "rubyLsp.formatter": "syntax_tree"
+    "rubyLsp.formatter": "syntax_tree",
+    "editor.detectIndentation": false
 }
