@@ -262,7 +262,6 @@ export async function runAndDebugTests(sessionID: string, executor: Executor, pr
     const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
     emptyTestsLog();
     problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
-    emptyAppLog(getDeviceId());
     await executor.execShell(
         "Run Tests",
         "test_app.sh",
@@ -275,7 +274,6 @@ export async function runAndDebugTestsForCurrentFile(sessionID: string, executor
     const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
     emptyTestsLog();
     problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
-    emptyAppLog(getDeviceId());
     await executor.execShell(
         "Run Tests For Current File",
         "test_app.sh",
