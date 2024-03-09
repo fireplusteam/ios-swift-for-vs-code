@@ -11,5 +11,5 @@ SCHEME=$1
 export continueBuildingAfterErrors=True
 
 XCODECMD="xcodebuild -scheme \"$SCHEME\" $XCODECMD -jobs 4"
-eval "$XCODECMD build | tee -a '.logs/autocomplete.log'"
-echo "Build Sucsseded.■" >> .logs/autocomplete.log
+eval "$XCODECMD build-for-testing | tee -a '.logs/autocomplete.log'"
+echo "Build Succeeded.■" >> .logs/autocomplete.log

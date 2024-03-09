@@ -5,6 +5,7 @@ import { isActivated } from "./env";
 import {
     checkWorkspace,
     generateXcodeServer,
+    ksdiff,
     nameOfModuleForFile,
     openXCode,
     restartLSP,
@@ -22,6 +23,8 @@ import { askIfDebuggable, setContext } from "./inputPicker";
 import { getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager";
+import { TestProvider } from "./TestsProvider/TestProvider";
+import path from "path";
 
 async function initialize() {
     if (!isActivated()) {
@@ -45,6 +48,14 @@ const autocompleteWatcher = new AutocompleteWatcher(
     projectManager
 );
 
+const testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
+    if (tests) {
+        return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable);
+    } else {
+        return await debugConfiguration.startIOSTestsDebugger(isDebuggable);
+    }
+});
+
 export function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -55,8 +66,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     setContext(context);
-    
+
     initialize();
+
+    testProvider.activateTests(context);
 
     let logChannel = vscode.window.createOutputChannel("VSCode-iOS");
     context.subscriptions.push(
@@ -67,6 +80,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(projectManager.onProjectUpdate.event(e => {
         autocompleteWatcher.triggerIncrementalBuild();
+    }));
+
+    context.subscriptions.push(projectManager.onProjectLoaded.event(e => {
+        testProvider.initialize();
     }));
 
     context.subscriptions.push(
@@ -88,6 +105,12 @@ export function activate(context: vscode.ExtensionContext) {
             } catch {
                 vscode.window.showErrorMessage("Project was not loaded due to error");
             }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.ksdiff", async (name: string, path1: string, path2: string) => {
+            ksdiff(name, path1, path2);
         })
     );
 
@@ -182,15 +205,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand(
-            "vscode-ios.build.tests.currentFile",
-            async () => {
-                await executeTask("Build Tests: Current File");
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
             "vscode-ios.utils.file.nameOfModule",
             async () => {
                 await runCommand(async () => {
@@ -214,22 +228,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
             const isDebuggable = await askIfDebuggable();
             await debugConfiguration.startIOSDebugger(isDebuggable);
-            return true;
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.run.tests.debug", async () => {
-            const isDebuggable = await askIfDebuggable();
-            await debugConfiguration.startIOSTestsDebugger(isDebuggable);
-            return true;
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.run.tests.currentFile.debug", async () => {
-            const isDebuggable = await askIfDebuggable();
-            await debugConfiguration.startIOSTestsForCurrentFileDebugger(isDebuggable);
             return true;
         })
     );

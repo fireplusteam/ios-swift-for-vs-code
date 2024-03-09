@@ -127,25 +127,12 @@
         "category": "build"
       },
       {
-        "command": "vscode-ios.build.tests.currentFile",
-        "title": "iOS: Build Tests: Current File",
-        "category": "build"
-      },
-      {
         "command": "vscode-ios.run.app.multiple.devices",
         "title": "iOS: Run App On Multiple Devices"
       },
       {
         "command": "vscode-ios.run.app.debug",
         "title": "iOS: Run App & Debug"
-      },
-      {
-        "command": "vscode-ios.run.tests.debug",
-        "title": "iOS: Run Tests & Debug"
-      },
-      {
-        "command": "vscode-ios.run.tests.currentFile.debug",
-        "title": "iOS: Run Tests & Debug: Current Class"
       },
       {
         "command": "vscode-ios.run.project.add.file",
@@ -167,9 +154,7 @@
                 "type": "string",
                 "default": "app",
                 "enum": [
-                  "app",
-                  "tests",
-                  "testsForCurrentFile"
+                  "app"
                 ]
               },
               "isDebuggable": {
@@ -197,28 +182,6 @@
               "name": "iOS: Run App & Debug",
               "request": "launch",
               "target": "app",
-              "isDebuggable": true
-            }
-          },
-          {
-            "label": "iOS: Run Tests & Debug",
-            "description": "Add a new configuration for iOS Tests debugging",
-            "body": {
-              "type": "xcode-lldb",
-              "name": "iOS: Run Tests & Debug",
-              "request": "launch",
-              "target": "tests",
-              "isDebuggable": true
-            }
-          },
-          {
-            "label": "iOS: Tests Debug: Current File",
-            "description": "Add a new configuration for iOS Tests debugging",
-            "body": {
-              "type": "xcode-lldb",
-              "name": "iOS: Run Tests & Debug: Current File",
-              "request": "launch",
-              "target": "testsForCurrentFile",
               "isDebuggable": true
             }
           }

@@ -1,10 +1,6 @@
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
 
-export enum ProblemDiagnosticLogType {
-    build,
-    tests
-}
 
 export class ProblemDiagnosticResolver {
 
@@ -27,18 +23,11 @@ export class ProblemDiagnosticResolver {
 
     private watcherProc: ChildProcess | undefined;
 
-    private clear(type: ProblemDiagnosticLogType) {
-        switch (type) {
-            case ProblemDiagnosticLogType.build:
-                this.buildErrors.clear();
-                this.diagnosticBuildCollection.forEach((uri, _) => {
-                    this.buildErrors.add(uri.fsPath);
-                });
-                break;
-            case ProblemDiagnosticLogType.tests:
-                this.diagnosticTestsCollection.clear();
-                break;
-        }
+    private clear() {
+        this.buildErrors.clear();
+        this.diagnosticBuildCollection.forEach((uri, _) => {
+            this.buildErrors.add(uri.fsPath);
+        });
     }
 
     private uniqueProblems(list: vscode.Diagnostic[], sourcekitList: vscode.Diagnostic[]) {
@@ -92,32 +81,21 @@ export class ProblemDiagnosticResolver {
         });
     }
 
-    private storeProblems(type: ProblemDiagnosticLogType, files: { [key: string]: vscode.Diagnostic[] }) {
+    private storeProblems(files: { [key: string]: vscode.Diagnostic[] }) {
         for (let file in files) {
             const fileUri = vscode.Uri.file(file);
-            switch (type) {
-                case ProblemDiagnosticLogType.build:
-                    if (this.buildErrors.delete(file)) {
-                        this.diagnosticBuildCollection.delete(fileUri);
-                    }
-                    let list = [
-                        ...this.diagnosticBuildCollection.get(fileUri) || [],
-                        ...files[file]
-                    ];
-                    this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, this.globalProblems(fileUri)));
-                    break;
-                case ProblemDiagnosticLogType.tests:
-                    let listTests = [
-                        ...this.diagnosticTestsCollection.get(fileUri) || [],
-                        ...files[file]
-                    ];
-                    this.diagnosticTestsCollection.set(fileUri, this.uniqueProblems(listTests, this.globalProblems(fileUri)));
-                    break;
+            if (this.buildErrors.delete(file)) {
+                this.diagnosticBuildCollection.delete(fileUri);
             }
+            let list = [
+                ...this.diagnosticBuildCollection.get(fileUri) || [],
+                ...files[file]
+            ];
+            this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, this.globalProblems(fileUri)));
         }
     }
 
-    async parseAsyncLogs(workspacePath: string, filePath: string, type: ProblemDiagnosticLogType, showProblemPanelOnError = true) {
+    async parseAsyncLogs(workspacePath: string, filePath: string, showProblemPanelOnError = true) {
         return new Promise<void>((resolve, reject) => {
             if (this.watcherProc !== undefined) {
                 this.watcherProc.kill();
@@ -134,10 +112,10 @@ export class ProblemDiagnosticResolver {
                 options
             );
 
-            this.clear(type);
+            this.clear();
             var firstIndex = 0;
             var stdout = "";
-            let triggerCharacter = type === ProblemDiagnosticLogType.build ? "^" : "\n";
+            let triggerCharacter = "^";
             let decoder = new TextDecoder("utf-8");
             let isError = false;
 
@@ -147,7 +125,7 @@ export class ProblemDiagnosticResolver {
                 for (let i = firstIndex; i < stdout.length; ++i) {
                     if (stdout[i] === triggerCharacter) {
                         lastErrorIndex = i;
-                        if (type === ProblemDiagnosticLogType.build && triggerCharacter === '^') {
+                        if (triggerCharacter === '^') {
                             triggerCharacter = "\n";
                             lastErrorIndex = -1;
                         }
@@ -156,26 +134,24 @@ export class ProblemDiagnosticResolver {
 
                 const shouldEnd = stdout.indexOf("■") !== -1;
                 if (lastErrorIndex !== -1) {
-                    triggerCharacter = type === ProblemDiagnosticLogType.build ? "^" : "\n";
-                    const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), type);
+                    triggerCharacter = "^";
+                    const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1));
                     for (let problem in problems) {
                         isError = isError || problems[problem].filter(e => {
                             return e.severity === vscode.DiagnosticSeverity.Error;
                         }).length > 0
                     }
-                    this.storeProblems(type, problems);
+                    this.storeProblems(problems);
                     stdout = stdout.substring(lastErrorIndex + 1);
                     firstIndex = 0;
                 } else {
                     firstIndex = stdout.length;
                 }
                 if (shouldEnd) {
-                    if (type === ProblemDiagnosticLogType.build) {
-                        for (let file of this.buildErrors) {
-                            this.diagnosticBuildCollection.delete(vscode.Uri.file(file));
-                        }
-                        this.buildErrors.clear();
+                    for (let file of this.buildErrors) {
+                        this.diagnosticBuildCollection.delete(vscode.Uri.file(file));
                     }
+                    this.buildErrors.clear();
                     child.kill();
                 }
             });
@@ -196,10 +172,7 @@ export class ProblemDiagnosticResolver {
 
     private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
 
-    private column(output: string, messageEnd: number, type: ProblemDiagnosticLogType) {
-        if (type === ProblemDiagnosticLogType.tests) {
-            return [0, 10000];
-        }
+    private column(output: string, messageEnd: number) {
         let newLineCounter = 0;
         let str = ""
         let shouldBreak = false;
@@ -233,16 +206,14 @@ export class ProblemDiagnosticResolver {
         return [start, end];
     }
 
-    private parseBuildLog(output: string, type: ProblemDiagnosticLogType) {
-        if (type === ProblemDiagnosticLogType.tests) {
-        }
+    private parseBuildLog(output: string) {
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
             let matches = [...output.matchAll(this.problemPattern)];
             for (const match of matches) {
                 const file = match[1];
                 const line = Number(match[2]) - 1;
-                const column = this.column(output, (match?.index || 0) + match[0].length, type);
+                const column = this.column(output, (match?.index || 0) + match[0].length);
 
                 const severity = match[4];
                 const message = match[5];
@@ -265,7 +236,7 @@ export class ProblemDiagnosticResolver {
                     message,
                     errorSeverity
                 );
-                diagnostic.source = type === ProblemDiagnosticLogType.build ? "xcodebuild" : "xcodebuild-tests";
+                diagnostic.source = "xcodebuild";
                 const value = files[file] || [];
                 value.push(diagnostic);
                 files[file] = value;

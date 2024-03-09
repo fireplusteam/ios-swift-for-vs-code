@@ -13,7 +13,7 @@ check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
         python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"
-        echo "Build Sucsseded.■" >> .logs/build.log
+        echo "Build Succeeded.■" >> .logs/build.log
         exit 1
     fi
 }
@@ -28,11 +28,7 @@ fi
 
 if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
     # get last line of output
-    #DEBUG_TESTS=$("$VS_IOS_SCRIPT_PATH/update_environment.sh" "-destinationTests" "$@")
-    #echo "DEBUG_TESTS: $DEBUG_TESTS"
-    TESTS_SCRIPT=$("$VS_IOS_SCRIPT_PATH/update_environment.sh" "-destinationTests" "$@" | tail -n 1)
-
-    TESTS="$TESTS_SCRIPT"
+    TESTS="$2"
 
     if [ "$TESTS" == "Not_defined" ]; then
         RED='\033[0;31m'
@@ -40,7 +36,7 @@ if [ "$1" == "-TESTING_ONLY_TESTS" ]; then
         echo -e "${RED}Tests are not defined for the given file${NC}"
         exit 1  
     else
-        echo "Builing for tests: $TESTS"
+        echo "Building for tests: $TESTS"
         
         rm -r .vscode/.bundle;
 
@@ -58,6 +54,6 @@ if [ "$1" == "-ALL" ] || [ "$1" == "-TESTING" ]; then
     check_exit_status "${PIPESTATUS[0]}"
 fi
 
-echo "Build Sucsseded.■" >> .logs/build.log
+echo "Build Succeeded.■" >> .logs/build.log
 
 python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"

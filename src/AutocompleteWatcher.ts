@@ -3,7 +3,7 @@ import { Executor, ExecutorMode, ExecutorReturnType, ExecutorRunningError } from
 import { getWorkspacePath, getProjectScheme } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
-import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
+import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager";
 
 class AutocompleteCancel extends Error {
@@ -106,7 +106,6 @@ export class AutocompleteWatcher {
             this.problemResolver.parseAsyncLogs(
                 getWorkspacePath(),
                 ".logs/autocomplete.log",
-                ProblemDiagnosticLogType.build,
                 false
             );
             await this.buildExecutor.execShell(
@@ -120,7 +119,7 @@ export class AutocompleteWatcher {
         } catch (err) {
             if (err instanceof ExecutorRunningError) {
                 if (this.buildId === buildId && err.commandName === AutocompleteWatcher.AutocompleteCommandName) {
-                    this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
+                    await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
                     await sleep(1500);
                     return await this.incrementalBuild(this.buildId);
                 }

@@ -6,6 +6,11 @@ import {
 } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
+import { resolve } from "path";
+import { assert } from "console";
+import { on } from "stream";
+import { AssertionError } from "assert";
+import { sleep } from "./extension";
 var kill = require("tree-kill");
 
 export class ExecutorTerminatedByUserError extends Error {
@@ -51,6 +56,10 @@ export class Executor {
     private animationInterval: NodeJS.Timeout | undefined;
     private errorOnKill: Error | undefined;
 
+    private disposedTerminal: vscode.Terminal | undefined;
+
+    private onExit = new vscode.EventEmitter<void>();
+
     public constructor() { }
 
     createTitleAnimation(terminalId: string) {
@@ -89,7 +98,8 @@ export class Executor {
             onDidChangeName: this.changeNameEmitter.event,
             open: () => this.writeEmitter?.fire(`\x1b[31${terminalId}\x1b[0m`),
             close: () => {
-                this.terminateShell();
+                if(this.disposedTerminal !== this.terminal) 
+                    kill(this.childProc?.pid);
             },
         };
         this.terminal = vscode.window.createTerminal({
@@ -99,19 +109,34 @@ export class Executor {
         return this.terminal;
     }
 
-    public terminateShell(errorOnKill: Error | undefined = undefined) {
+    private async terminateShellImp() {
         clearInterval(this.animationInterval);
         this.animationInterval = undefined;
-        if (this.childProc?.pid) {
-            this.errorOnKill = errorOnKill;
-            kill(this.childProc?.pid);
-        }
+        this.disposedTerminal = this.terminal;
         this.terminal?.dispose();
+        await sleep(500);
         this.terminal = undefined;
         this.writeEmitter = undefined;
         this.childProc = undefined;
         this.changeNameEmitter = undefined;
         this.executingCommand = undefined;
+        this.onExit.fire();
+    }
+
+    public async terminateShell(errorOnKill: Error | undefined = undefined) {
+        if (this.childProc?.pid) {
+            const childId = this.childProc?.pid;
+            this.errorOnKill = errorOnKill;
+            let dis: vscode.Disposable | undefined;
+            return await new Promise<void>(resolve => {
+                dis = this.onExit.event(() => {
+                    resolve();
+                });
+                kill(childId);
+            });
+        }
+
+        return;
     }
 
     private execShellImp(
@@ -184,13 +209,16 @@ export class Executor {
         });
 
         return new Promise((resolve, reject) => {
-            proc.on("exit", (code, signal) => {
+            proc.on("exit", async (code, signal) => {
+                if (this.childProc !== proc) {
+                    console.log("Error, wrong child process terminated")
+                }
                 this.executingCommand = undefined;
                 this.childProc = undefined;
                 clearInterval(this.animationInterval);
 
                 if (signal !== null) {
-                    this.terminateShell();
+                    await this.terminateShellImp();
                     if (this.errorOnKill !== undefined) {
                         reject(this.errorOnKill);
                     } else {

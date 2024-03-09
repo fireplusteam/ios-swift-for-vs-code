@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as fs from 'fs';
-import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "./env";
+import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getProjectScheme, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "./env";
 import * as parser from 'fast-xml-parser';
 import { exec } from "child_process";
 import path, { resolve } from "path";
@@ -17,6 +17,7 @@ export class ProjectManager {
     private projectCache = new ProjectsCache();
 
     onProjectUpdate = new vscode.EventEmitter<void>();
+    onProjectLoaded = new vscode.EventEmitter<void>();
 
     constructor() {
         this.disposable.push(vscode.workspace.onDidCreateFiles(async e => {
@@ -52,6 +53,19 @@ export class ProjectManager {
     }
 
     async listTargetsForFile(file: string) {
+        let schemeType = getProjectType(getProjectFileName());
+        if (schemeType === "-package") {
+            return await new Promise<string[]>(resolve => {
+                let pathParts = file.split(path.sep);
+                for (let i = pathParts.length - 1;i >= 0; --i) {
+                    if (pathParts[i] == "Sources" || pathParts[i] == "Tests") {
+                        resolve([pathParts[i + 1]]);
+                        return;
+                    }
+                }
+                resolve([]);
+            });
+        }
         const projects = this.projectCache.getProjects();
         for (let project of projects) {
             if (this.projectCache.getList(project).has(file)) {
@@ -214,6 +228,8 @@ export class ProjectManager {
                             await this.openXCodeWorkspace(this.xCodeWorkspacePath());
                             reject(new Error("Opening in Workspace")); // xcode workspace is reloading, reject further execution
                             return;
+                        } else {
+                            this.onProjectLoaded.fire();
                         }
                         resolve();
                     } else {
@@ -298,6 +314,36 @@ export class ProjectManager {
         }
     }
 
+    async getProjects() {
+        return await getProjectFiles(getProjectPath());
+    }
+
+    async getProjectTargets() {
+        let schemeType = getProjectType(getProjectFileName());
+        if (schemeType === "-package")
+            return await getTargets(getProjectFileName(), getWorkspacePath());
+        else {
+            for (const proj of await this.getProjects()) {
+                return await getProjectTargets(getFilePathInWorkspace(proj));
+            }
+            return [];
+        }
+    }
+
+    async getFilesForTarget(targetName: string) {
+        let schemeType = getProjectType(getProjectFileName());
+        if (schemeType === "-package") {
+            let path = targetName.endsWith("Tests") ? "Tests" : `Sources`;
+            return (await vscode.workspace.findFiles(`${path}/${targetName}/**/*.swift`)).map(e => {
+                return e.fsPath;
+            });
+        }
+        for (const proj of await this.getProjects()) {
+            return await listFilesFromTarget(getFilePathInWorkspace(proj), targetName);
+        }
+        return [];
+    }
+
     async addAFileToXcodeProject(file: vscode.Uri | undefined) {
         if (file === undefined) {
             return;
@@ -376,7 +422,7 @@ function getProjectFiles(project: string) {
             return path.join(getProjectFolderPath(), p);
         });
     } else {
-        return [project];
+        return [path.relative(getWorkspacePath(), project)];
     }
 }
 
@@ -417,6 +463,12 @@ export async function listFilesFromProject(projectFile: string) {
     return stdout.split("\n");
 }
 
+export async function listFilesFromTarget(projectFile: string, targetName: String) {
+    const stdout = await executeRuby(`list_files_for_target '${projectFile}' '${targetName}'`);
+    return stdout.split("\n");
+}
+
+
 async function deleteFileFromProject(projectFile: string, file: string) {
     return executeRuby(`delete_file '${projectFile}' '${file}'`);
 }
@@ -424,4 +476,46 @@ async function deleteFileFromProject(projectFile: string, file: string) {
 async function listTargetsForFile(projectFile: string, file: string) {
     const stdout = await executeRuby(`list_targets_for_file '${projectFile}' '${file}'`);
     return stdout.split("\n");
+}
+
+
+/// helpers using xcodebuild as Package
+
+function getProjectType(projectFile: string): string {
+    if (projectFile.includes(".xcodeproj")) {
+        return "-project";
+    }
+    if (projectFile.includes("Package.swift")) {
+        return "-package";
+    }
+    return "-workspace";
+}
+
+async function getTargets(projectFile: string, cwd: string) {
+    let command = ["xcodebuild", "-list"];
+    let schemeType = getProjectType(projectFile);
+    if (schemeType != "-package") {
+        command.push(schemeType);
+        command.push(projectFile);
+    }
+
+    return new Promise<string[]>((resolve, reject) => {
+        exec(command.join(' '), { encoding: "utf-8", cwd: cwd }, (error, stdout) => {
+            if (error !== null) {
+                reject(error);
+                return;
+            }
+            let schemes: string[] = [];
+            let isTail = false;
+
+            for (let x of stdout.split('\n')) {
+                if (isTail && x.trim().length > 0)
+                    schemes.push(x.trim());
+
+                if (x.includes("Schemes:"))
+                    isTail = true;
+            }
+            resolve(schemes);
+        });
+    });
 }

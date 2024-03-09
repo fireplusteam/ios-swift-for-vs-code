@@ -162,13 +162,25 @@ def delete_group(project, group_path)
 end
 
 def list_targets(project)
-  project.targets.each { |target| puts target.name }
+  project.targets.each do |target| 
+    puts target.name 
+  end
 end
 
 def list_files(project)
   project.files.each do |file|
     puts get_real_path(file, project)
     #puts file.path.to_s
+  end
+end
+
+def list_files_for_target(project, target_name)
+  project.targets.each do |target|
+    if target_name == target.name
+      target.source_build_phase.files_references.each do |file|
+        puts get_real_path(file, project)
+      end
+    end
   end
 end
 
@@ -195,6 +207,11 @@ end
 def handle_action(project, action)
   if action == "list_files"
     list_files(project)
+    exit
+  end
+
+  if action == "list_files_for_target"
+    list_files_for_target(project, ARGV[2])
     exit
   end
 

@@ -7,10 +7,12 @@ Write/Build/Debug your xCode projects in VS Code with your favorite extensions
 - Swift/Objective-C/C++ autocompletion
 - Compatibility with CodeLLDB
 - Debug/Run iOS app
-- Debug/Run tests
-- Run single/multiple tests for a class
+- Debug/Run unit/snapshot tests. Support running single/multiple tests for a class/target/set of classes
+- Run an application on multiple simulator with a single command
 - Support project/workspace and iOS Package.swift
-- Support launch configuration for app/tests
+- Support launch configuration for app
+- Support diff snapshots testing
+- Add/Delete/Rename files inside vscode
 
 ## Requirements
 To use this extension you need to install also:
@@ -27,6 +29,7 @@ Also you need to install xcodeproj library to make possible to add/delete/rename
 ```bash
 gem install xcodeproj
 ```
+
 ## Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.

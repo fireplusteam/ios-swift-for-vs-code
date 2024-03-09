@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getWorkspacePath, updateProject } from "./env";
-import { buildSelectedTarget, getFileNameLog } from "./build";
-import { emptyAppLog, emptyTestsLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
+import { buildSelectedTarget, getFileNameLog } from "./buildCommands";
+import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
-import { ProblemDiagnosticLogType, ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
+import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { exec } from 'child_process';
 import { ProjectManager } from './ProjectManager';
 import { glob } from 'glob';
@@ -36,7 +36,8 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
         })
         .map((file) => {
             if (file.endsWith("Package.swift")) {
-                return { label: file, value: file };
+                const relativeProjectPath = path.relative(getWorkspacePath(), file)
+                return { label: relativeProjectPath, value: file };
             }
             const relativeProjectPath = path.relative(getWorkspacePath(), file)
                 .split(path.sep)
@@ -68,7 +69,7 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
     }
     updateProject(selection);
     await projectManager.loadProjectFiles(true);
-    await selectTarget(executor, true);
+    await selectTarget(executor, true, false);
 }
 
 export async function storeVSConfig(executor: Executor) {
@@ -84,6 +85,7 @@ export async function selectTarget(executor: Executor, ignoreFocusOut = false, s
     if (shouldCheckWorkspace) {
         await checkWorkspace(executor, ignoreFocusOut);
     }
+
     let stdout = getLastLine((await executor.execShell(
         "Fetch Project Targets",
         "populate_schemes.sh",
@@ -258,10 +260,7 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
     );
 }
 
-export async function runAndDebugTests(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
-    emptyTestsLog();
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
+export async function runAndDebugTests(sessionID: string, executor: Executor, isDebuggable: boolean) {
     await executor.execShell(
         "Run Tests",
         "test_app.sh",
@@ -270,15 +269,24 @@ export async function runAndDebugTests(sessionID: string, executor: Executor, pr
     );
 }
 
-export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver, isDebuggable: boolean) {
-    const filePath = getFileNameLog(ProblemDiagnosticLogType.tests);
-    emptyTestsLog();
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath, ProblemDiagnosticLogType.tests);
+export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, isDebuggable: boolean, tests: string[]) {
+    const option = tests.map(e => {
+        return `-only-testing:${e}`;
+    }).join(" ");
     await executor.execShell(
         "Run Tests For Current File",
         "test_app.sh",
-        [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-CLASS", "CURRENTLY_SELECTED"],
+        [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-SELECTED", option],
         false
     );
 }
 
+// diff
+export async function ksdiff(name: string, path1: string, path2: string) {
+    const filePrefix = "file://";
+    if (path1.startsWith(filePrefix))
+        path1 = path1.slice(filePrefix.length);
+    if (path2.startsWith(filePrefix))
+        path2 = path2.slice(filePrefix.length);
+    vscode.commands.executeCommand("vscode.diff", vscode.Uri.file(path1), vscode.Uri.file(path2), name);
+}

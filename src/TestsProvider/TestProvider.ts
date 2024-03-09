@@ -1,228 +1,209 @@
 import * as vscode from 'vscode';
-import { getContentFromFilesystem, TestCase, testData, TestFile } from './testTree';
+import { TestFile } from './TestFile';
+import { TestCase } from './TestCase';
+import { TestProject } from './TestProject';
+import { ProjectManager } from '../ProjectManager';
+import { url } from 'inspector';
+import { TestTarget } from './TestTarget';
+import { emptyTestsLog } from '../utils';
+import { TestCaseAsyncParser } from './TestCaseAsyncParser';
+import { getWorkspacePath } from '../env';
+import { TestTreeContext } from './TestTreeContext';
+import { TestCaseProblemParser } from './TestCaseProblemParser';
+import path from 'path';
 
-export async function activateTests(context: vscode.ExtensionContext) {
-    const ctrl = vscode.tests.createTestController('mathTestController', 'Markdown Math');
-    context.subscriptions.push(ctrl);
 
-    const fileChangedEmitter = new vscode.EventEmitter<vscode.Uri>();
-    const watchingTests = new Map<vscode.TestItem | 'ALL', vscode.TestRunProfile | undefined>();
-    fileChangedEmitter.event(uri => {
-        if (watchingTests.has('ALL')) {
-            startTestRun(new vscode.TestRunRequest(undefined, undefined, watchingTests.get('ALL'), true));
-            return;
-        }
+export class TestProvider {
+    projectManager: ProjectManager
+    executeTests: (tests: string[] | undefined, isDebuggable: boolean) => Promise<boolean>;
+    context = new TestTreeContext();
+    asyncParser = new TestCaseAsyncParser()
+    asyncTestCaseParser = new TestCaseProblemParser();
 
-        const include: vscode.TestItem[] = [];
-        let profile: vscode.TestRunProfile | undefined;
-        for (const [item, thisProfile] of watchingTests) {
-            const cast = item as vscode.TestItem;
-            if (cast.uri?.toString() == uri.toString()) {
-                include.push(cast);
-                profile = thisProfile;
-            }
-        }
+    constructor(projectManager: ProjectManager, executeTests: (tests: string[] | undefined, isDebuggable: boolean) => Promise<boolean>) {
+        this.projectManager = projectManager;
+        this.executeTests = executeTests;
+    }
 
-        if (include.length) {
-            startTestRun(new vscode.TestRunRequest(include, undefined, profile, true));
-        }
-    });
+    activateTests(context: vscode.ExtensionContext) {
+        const ctrl = this.context.ctrl;
+        context.subscriptions.push(ctrl);
 
-    const runHandler = (request: vscode.TestRunRequest, cancellation: vscode.CancellationToken) => {
-        if (!request.continuous) {
-            return startTestRun(request);
-        }
-
-        if (request.include === undefined) {
-            watchingTests.set('ALL', request.profile);
-            cancellation.onCancellationRequested(() => watchingTests.delete('ALL'));
-        } else {
-            request.include.forEach(item => watchingTests.set(item, request.profile));
-            cancellation.onCancellationRequested(() => request.include!.forEach(item => watchingTests.delete(item)));
-        }
-    };
-
-    const startTestRun = (request: vscode.TestRunRequest) => {
-        const queue: { test: vscode.TestItem; data: TestCase }[] = [];
-        const run = ctrl.createTestRun(request);
-        // map of file uris to statements on each line:
-        const coveredLines = new Map</* file uri */ string, (vscode.StatementCoverage | undefined)[]>();
-
-        const discoverTests = async (tests: Iterable<vscode.TestItem>) => {
-            for (const test of tests) {
-                if (request.exclude?.includes(test)) {
-                    continue;
-                }
-
-                const data = testData.get(test);
-                if (data instanceof TestCase) {
-                    run.enqueued(test);
-                    queue.push({ test, data });
-                } else {
-                    if (data instanceof TestFile && !data.didResolve) {
-                        await data.updateFromDisk(ctrl, test);
-                    }
-
-                    await discoverTests(gatherTestItems(test.children));
-                }
-
-                if (test.uri && !coveredLines.has(test.uri.toString())) {
-                    try {
-                        const lines = (await getContentFromFilesystem(test.uri)).split('\n');
-                        coveredLines.set(
-                            test.uri.toString(),
-                            lines.map((lineText, lineNo) =>
-                                lineText.trim().length ? new vscode.StatementCoverage(0, new vscode.Position(lineNo, 0)) : undefined
-                            )
-                        );
-                    } catch {
-                        // ignored
-                    }
-                }
+        const runHandler = (request: vscode.TestRunRequest, cancellation: vscode.CancellationToken) => {
+            if (!request.continuous) {
+                return startTestRun(request);
             }
         };
 
-        const runTestQueue = async () => {
-            for (const { test, data } of queue) {
-                run.appendOutput(`Running ${test.id}\r\n`);
-                if (run.token.isCancellationRequested) {
-                    run.skipped(test);
-                } else {
-                    run.started(test);
-                    await data.run(test, run);
-                }
+        const startTestRun = (request: vscode.TestRunRequest) => {
+            const queue: { test: vscode.TestItem; data: TestCase }[] = [];
+            const run = ctrl.createTestRun(request, "iOS Tests");
+            // map of file uris to statements on each line:
+            const coveredLines = new Map</* file uri */ string, (vscode.StatementCoverage | undefined)[]>();
 
-                const lineNo = test.range!.start.line;
-                const fileCoverage = coveredLines.get(test.uri!.toString());
-                const lineInfo = fileCoverage?.[lineNo];
-                if (lineInfo) {
-                    lineInfo.executionCount++;
-                }
-
-                run.appendOutput(`Completed ${test.id}\r\n`);
-            }
-
-            run.coverageProvider = {
-                provideFileCoverage() {
-                    const coverage: vscode.FileCoverage[] = [];
-                    for (const [uri, statements] of coveredLines) {
-                        coverage.push(
-                            vscode.FileCoverage.fromDetails(
-                                vscode.Uri.parse(uri),
-                                statements.filter((s): s is vscode.StatementCoverage => !!s)
-                            )
-                        );
+            const discoverTests = async (tests: Iterable<vscode.TestItem>) => {
+                for (const test of tests) {
+                    if (request.exclude?.includes(test)) {
+                        continue;
                     }
 
-                    return coverage;
-                },
+                    const data = this.context.testData.get(test);
+                    if (data instanceof TestCase) {
+                        run.enqueued(test);
+                        queue.push({ test, data });
+                    } else {
+                        if (data instanceof TestFile && !data.didResolve) {
+                            await data.updateFromDisk(ctrl, test);
+                        } else if (data instanceof TestTarget && !data.didResolve) {
+                            await data.updateFromDisk(ctrl, test);
+                        } else if (data instanceof TestProject && !data.didResolve) {
+                            await data.updateFromDisk(ctrl, test);
+                        }
+
+                        await discoverTests(this.gatherTestItems(test.children));
+                    }
+                }
             };
 
-            run.end();
+            const runTestQueue = async () => {
+                const mapTests = new Map<string, { test: vscode.TestItem, data: TestCase }>();
+                const tests: string[] = [];
+                for (const { test, data } of queue) {
+                    run.appendOutput(`Running ${test.id}\r\n`);
+                    if (run.token.isCancellationRequested) {
+                        run.skipped(test);
+                    } else {
+                        run.started(test);
+                        tests.push(data.getXCodeBuildTest(test));
+                        mapTests.set(
+                            data.getXCodeBuildTest(test),
+                            { test: test, data: data }
+                        );
+                    }
+                }
+
+                try {
+                    emptyTestsLog();
+                    await this.asyncTestCaseParser.checkExistingTestCases(this.context.allTestItems());
+                    this.asyncParser.parseAsyncLogs(
+                        getWorkspacePath(),
+                        ".logs/tests.log",
+                        (result, message, rawMessage, target, className, testName, duration) => {
+                            const key = `${target}/${className}/${testName}`;
+                            const item = mapTests.get(key)?.test;
+                            if (item) {
+                                if (result === "passed") {
+                                    run.passed(item, duration);
+                                } else if (result == "failed") {
+                                    run.errored(item, message, duration);
+                                }
+                                this.asyncTestCaseParser.parseAsyncLogs(rawMessage, item);
+                            }
+                            console.log("log");
+                        });
+                    await this.executeTests(request.include === undefined ? undefined : tests, request.profile?.kind === vscode.TestRunProfileKind.Debug);
+                }
+                catch (err) {
+                    console.log(`Run with error: ${err}`);
+                } finally {
+                    run.end();
+                }
+            };
+
+            discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(runTestQueue);
         };
 
-        discoverTests(request.include ?? gatherTestItems(ctrl.items)).then(runTestQueue);
-    };
+        ctrl.refreshHandler = async () => {
+            await this.findInitialFiles(ctrl)
+        };
 
-    ctrl.refreshHandler = async () => {
-        await Promise.all(getWorkspaceTestPatterns().map(({ pattern }) => findInitialFiles(ctrl, pattern)));
-    };
+        ctrl.createRunProfile('Run Tests', vscode.TestRunProfileKind.Run, runHandler, true, undefined, false);
 
-    ctrl.createRunProfile('Run Tests', vscode.TestRunProfileKind.Run, runHandler, true, undefined, true);
+        ctrl.createRunProfile('Debug Tests', vscode.TestRunProfileKind.Debug, runHandler, true, undefined, false);
 
-    ctrl.resolveHandler = async item => {
-        if (!item) {
-            context.subscriptions.push(...startWatchingWorkspace(ctrl, fileChangedEmitter));
-            return;
+        ctrl.resolveHandler = async item => {
+            if (!item) {
+                this.findInitialFiles(ctrl);
+                return;
+            }
+
+            const data = this.context.testData.get(item);
+            if (data instanceof TestFile) {
+                await data.updateFromDisk(ctrl, item);
+            }
+        };
+
+        for (const document of vscode.workspace.textDocuments) {
+            this.updateNodeForDocument(document, ctrl);
         }
 
-        const data = testData.get(item);
-        if (data instanceof TestFile) {
-            await data.updateFromDisk(ctrl, item);
-        }
-    };
+        context.subscriptions.push(
+            vscode.workspace.onDidOpenTextDocument(e => { this.updateNodeForDocument(e, ctrl) }),
+            vscode.workspace.onDidChangeTextDocument(e => this.updateNodeForDocument(e.document, ctrl)),
+        );
+    }
 
-    function updateNodeForDocument(e: vscode.TextDocument) {
+    async updateNodeForDocument(e: vscode.TextDocument, ctrl: vscode.TestController) {
         if (e.uri.scheme !== 'file') {
             return;
         }
 
-        if (!e.uri.path.endsWith('.md')) {
+        if (!e.uri.path.endsWith('.swift')) {
             return;
         }
 
-        const { file, data } = getOrCreateFile(ctrl, e.uri);
-        data.updateFromContents(ctrl, e.getText(), file);
-    }
-
-    for (const document of vscode.workspace.textDocuments) {
-        updateNodeForDocument(document);
-    }
-
-    context.subscriptions.push(
-        vscode.workspace.onDidOpenTextDocument(updateNodeForDocument),
-        vscode.workspace.onDidChangeTextDocument(e => updateNodeForDocument(e.document)),
-    );
-}
-
-function getOrCreateFile(controller: vscode.TestController, uri: vscode.Uri) {
-    const existing = controller.items.get(uri.toString());
-    if (existing) {
-        return { file: existing, data: testData.get(existing) as TestFile };
-    }
-
-    const file = controller.createTestItem(uri.toString(), uri.path.split('/').pop()!, uri);
-    controller.items.add(file);
-
-    const data = new TestFile();
-    testData.set(file, data);
-
-    file.canResolveChildren = true;
-    return { file, data };
-}
-
-function gatherTestItems(collection: vscode.TestItemCollection) {
-    const items: vscode.TestItem[] = [];
-    collection.forEach(item => items.push(item));
-    return items;
-}
-
-function getWorkspaceTestPatterns() {
-    if (!vscode.workspace.workspaceFolders) {
-        return [];
-    }
-
-    return vscode.workspace.workspaceFolders.map(workspaceFolder => ({
-        workspaceFolder,
-        pattern: new vscode.RelativePattern(workspaceFolder, '**/*.md'),
-    }));
-}
-
-async function findInitialFiles(controller: vscode.TestController, pattern: vscode.GlobPattern) {
-    for (const file of await vscode.workspace.findFiles(pattern)) {
-        getOrCreateFile(controller, file);
-    }
-}
-
-function startWatchingWorkspace(controller: vscode.TestController, fileChangedEmitter: vscode.EventEmitter<vscode.Uri>) {
-    return getWorkspaceTestPatterns().map(({ workspaceFolder, pattern }) => {
-        const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-
-        watcher.onDidCreate(uri => {
-            getOrCreateFile(controller, uri);
-            fileChangedEmitter.fire(uri);
+        const { file, data } = this.context.getOrCreateTest(e.uri, () => {
+            return new TestFile(this.context);
         });
-        watcher.onDidChange(async uri => {
-            const { file, data } = getOrCreateFile(controller, uri);
-            if (data.didResolve) {
+        const testFile = data as TestFile;
+        await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
+        if ([...file.children].length == 0) {
+            this.context.deleteItem(file.id);
+        }
+        else {
+            const targets = await this.projectManager.listTargetsForFile(e.uri.fsPath);
+            const project = (await this.projectManager.getProjects()).at(0);
+            this.context.addItem(file, root => {
+                return root.uri?.path === `/${project}/${targets[0]}`;
+            });
+        }
+    }
+
+    gatherTestItems(collection: vscode.TestItemCollection) {
+        const items: vscode.TestItem[] = [];
+        collection.forEach(item => items.push(item));
+        return items;
+    }
+
+    initialize() {
+        if (this.context.ctrl)
+            this.findInitialFiles(this.context.ctrl);
+    }
+
+    async findInitialFiles(controller: vscode.TestController) {
+        for (const proj of await this.projectManager.getProjects()) {
+            const url = proj;
+            const { file, data } = this.context.getOrCreateTest(
+                vscode.Uri.file(url),
+                () => {
+                    return new TestProject(this.context,
+                        async () => {
+                            const targets = await this.projectManager.getProjectTargets();
+                            return targets.filter(e => { return e.includes("Tests") });
+                        }, async (targetName) => {
+                            const files = await this.projectManager.getFilesForTarget(targetName);
+                            return files.filter(e => { return e.endsWith(".swift") });
+                        });
+                }
+            );
+            if (!data.didResolve) {
                 await data.updateFromDisk(controller, file);
             }
-            fileChangedEmitter.fire(uri);
-        });
-        watcher.onDidDelete(uri => controller.items.delete(uri.toString()));
-
-        findInitialFiles(controller, pattern);
-
-        return watcher;
-    });
+            break; // only first target 
+        }
+        this.asyncTestCaseParser.checkExistingTestCases(this.context.allTestItems());
+        return;
+    }
 }
+
+
