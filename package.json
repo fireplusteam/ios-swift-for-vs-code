@@ -17,6 +17,9 @@
   "repository": {
     "url": "https://github.com/fireplusteam/ios_vs_code.git"
   },
+  "enabledApiProposals": [
+    "testCoverage"
+  ],
   "publisher": "fireplusteam",
   "contributes": {
     "configuration": {
@@ -250,7 +253,8 @@
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.9",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@vscode/dts": "^0.4.0"
   },
   "dependencies": {
     "fast-xml-parser": "^4.3.5",
