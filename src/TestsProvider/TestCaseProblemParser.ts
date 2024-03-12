@@ -1,6 +1,7 @@
+import { start } from 'repl';
 import * as vscode from 'vscode';
 
-const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
+const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):?/m;
 
 export class TestCaseProblemParser {
 
@@ -38,7 +39,7 @@ export class TestCaseProblemParser {
     }
 
     async parseAsyncLogs(testCase: string, testItem: vscode.TestItem) {
-        const problems = this.parseBuildLog(testCase);
+        const problems = this.parseBuildLog(testCase) || [];
         const uri = testItem.uri;
         const id = testItem.id;
         if (!uri)
@@ -59,16 +60,29 @@ export class TestCaseProblemParser {
         return [0, 10000];
     }
 
-    private parseBuildLog(output: string) {
+    private parseBuildLog(stdout: string) {
         const files: vscode.Diagnostic[] = [];
+        stdout += "\nerror:";
         try {
-            let matches = [...output.matchAll(problemPattern)];
-            for (const match of matches) {
+            let startIndex = 0;
+            while (startIndex < stdout.length) {
+                while (startIndex > 0) { // find the start of line for the next pattern search
+                    if (stdout[startIndex] === '\n')
+                        break;
+                    --startIndex;
+                }
+
+                const output = stdout.slice(startIndex);
+                const match = output.match(problemPattern);
+                if (!match) return;
                 const line = Number(match[2]) - 1;
                 const column = this.column(output, (match?.index || 0) + match[0].length);
 
                 const severity = match[4];
                 let message = match[5];
+                let end = message.lastIndexOf("\n");
+                if (end !== -1)
+                    message = message.substring(0, end);
                 let errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 switch (severity) {
@@ -90,6 +104,8 @@ export class TestCaseProblemParser {
                 );
                 diagnostic.source = "xcodebuild-tests";
                 files.push(diagnostic);
+
+                startIndex += (match.index || 0) + match[0].length;
             }
         } catch (err) {
             console.log(err);
