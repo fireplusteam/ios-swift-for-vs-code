@@ -124,7 +124,7 @@ export class ProjectsCache {
             });
             this.watcher.set(
                 projectPath,
-                fileWatch  
+                fileWatch
             );
         }
     }

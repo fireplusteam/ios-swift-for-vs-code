@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
 import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getWorkspacePath, updateProject } from "./env";
-import { buildSelectedTarget, getFileNameLog } from "./buildCommands";
+import { buildSelectedTarget } from "./buildCommands";
 import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
@@ -279,6 +279,19 @@ export async function runAndDebugTestsForCurrentFile(sessionID: string, executor
         [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-SELECTED", option],
         false
     );
+}
+
+export async function openFile(filePath: string, lineNumber: number) {
+    const fileUri = vscode.Uri.file(path.resolve(filePath));
+    const document = await vscode.workspace.openTextDocument(fileUri);
+    const editor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false);
+    editor.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
+    await vscode.commands.executeCommand("cursorMove", {
+        to: "down",
+        select: false,
+        by: "line",
+        value: lineNumber
+    });
 }
 
 // diff

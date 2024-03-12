@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 
-
-
 export interface TestContainer {
     didResolve: boolean;
 

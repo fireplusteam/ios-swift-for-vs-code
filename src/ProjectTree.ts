@@ -1,6 +1,5 @@
 import path from "path";
 
-
 type Node = {
     isVisible: boolean;
     isLeaf: boolean,

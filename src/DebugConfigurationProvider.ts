@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
-import { getDeviceId, getEnvList, getScriptPath, isActivated } from "./env";
+import { getDeviceId, getScriptPath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./buildCommands";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { getSessionId, killSpawnLaunchedProcesses } from "./utils";
+import { getSessionId } from "./utils";
 import { sleep } from "./extension";
-import { resolve } from "path";
 
 export class TerminatedDebugSessionTask extends Error {
     public constructor(message: string) {
@@ -220,7 +219,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     await buildTestsForCurrentFile(this.executor, this.problemResolver, this.testsToRun || []);
                 }, async () => {
                     try {
-                        await runAndDebugTestsForCurrentFile(this.sessionID, this.executor,isDebuggable, this.testsToRun || []);
+                        await runAndDebugTestsForCurrentFile(this.sessionID, this.executor, isDebuggable, this.testsToRun || []);
                     } finally {
                         this.setIsRunning(false);
                         await terminateCurrentIOSApp(this.sessionID, new Executor(), true);

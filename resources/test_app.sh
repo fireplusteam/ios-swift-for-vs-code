@@ -37,8 +37,8 @@ echo "DEBUGGER_ARG: $2"
 
 if [ "$2" == "DEBUG_LLDB" ]; then
 
-echo "WAITING FOR DEBUGER"
-python3 <<EOF
+    echo "WAITING FOR DEBUGER"
+    python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
@@ -50,7 +50,7 @@ fi
 check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
-        echo "Test Failed.■" >> .logs/tests.log
+        echo "Test Failed.■" >>.logs/tests.log
         python3 "$VS_IOS_SCRIPT_PATH/print_errors.py" '.logs/tests.log'
         exit 1
     fi
@@ -70,15 +70,15 @@ else
         echo "Tests are not defined for the given file"
         VALID_TESTS=0
     else
-        echo "Running tests: $TESTS" 
-        
+        echo "Running tests: $TESTS"
+
         set -o pipefail
         eval "$XCODECMD $TESTS | tee '.logs/tests.log' | tee '.logs/app_$DEVICE_ID.log' | xcbeautify"
         check_exit_status "${PIPESTATUS[0]}"
     fi
 fi
 
-echo "Test Finished.■" >> .logs/tests.log
+echo "Test Finished.■" >>.logs/tests.log
 
 if [ $VALID_TESTS -eq 1 ]; then
     # Open Results

@@ -25,9 +25,9 @@ is_empty() {
     fi
 }
 
-
 # GET BUILD PATH
-APP_PATH=$(python3 <<EOF
+APP_PATH=$(
+    python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
@@ -39,8 +39,7 @@ echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"
 
-for SINGLE_DESTINATION in $DESTINATION
-do
+for SINGLE_DESTINATION in $DESTINATION; do
     SIMULATOR_UDID=${SINGLE_DESTINATION#id=} # Removes prefix id=
 
     echo "UUID of the device:${SIMULATOR_UDID}"

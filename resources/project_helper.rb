@@ -1,5 +1,5 @@
-require 'xcodeproj'
-require 'pathname'
+require "xcodeproj"
+require "pathname"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
@@ -162,9 +162,7 @@ def delete_group(project, group_path)
 end
 
 def list_targets(project)
-  project.targets.each do |target| 
-    puts target.name 
-  end
+  project.targets.each { |target| puts target.name }
 end
 
 def list_files(project)

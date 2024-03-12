@@ -1,6 +1,7 @@
 #!/bin/bash
 
-PATH_SCRIPT=$(python3 <<EOF
+PATH_SCRIPT=$(
+    python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper

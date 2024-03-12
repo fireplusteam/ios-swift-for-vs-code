@@ -3,14 +3,12 @@ import { TestFile } from './TestFile';
 import { TestCase } from './TestCase';
 import { TestProject } from './TestProject';
 import { ProjectManager } from '../ProjectManager';
-import { url } from 'inspector';
 import { TestTarget } from './TestTarget';
 import { emptyTestsLog } from '../utils';
 import { TestCaseAsyncParser } from './TestCaseAsyncParser';
 import { getWorkspacePath } from '../env';
 import { TestTreeContext } from './TestTreeContext';
 import { TestCaseProblemParser } from './TestCaseProblemParser';
-import path from 'path';
 
 
 export class TestProvider {

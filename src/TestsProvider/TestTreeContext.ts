@@ -1,8 +1,5 @@
 import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
-import { TestProject } from './TestProject';
-import { TestTarget } from './TestTarget';
-import path from 'path';
 import { TestContainer } from './TestContainer';
 import { TestCase } from './TestCase';
 import { TestHeading } from './TestHeading';

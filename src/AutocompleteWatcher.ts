@@ -19,7 +19,6 @@ export class AutocompleteWatcher {
     static AutocompleteCommandName = "Autocomplete Build";
 
     private disposable: vscode.Disposable[] = [];
-    private executor = new Executor();
     private buildExecutor: Executor;
     private problemResolver: ProblemDiagnosticResolver;
     private projectManager: ProjectManager;

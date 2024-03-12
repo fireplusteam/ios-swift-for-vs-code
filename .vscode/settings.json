@@ -11,5 +11,6 @@
     "cmake.configureOnOpen": false,
     "rubyLsp.rubyVersionManager": "rbenv",
     "rubyLsp.formatter": "syntax_tree",
-    "editor.detectIndentation": false
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true
 }

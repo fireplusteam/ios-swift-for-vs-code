@@ -1,4 +1,3 @@
-import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
 
 const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
@@ -52,7 +51,7 @@ export class TestCaseProblemParser {
         problems.forEach(problem => {
             existingProblems.add(problem);
         });
-        this.diagnosticTestsCollection.set(uri,[...existingProblems]);
+        this.diagnosticTestsCollection.set(uri, [...existingProblems]);
         this.errors.set(testItem.id, { uri: uri, errors: problems });
     }
 
@@ -69,7 +68,7 @@ export class TestCaseProblemParser {
                 const column = this.column(output, (match?.index || 0) + match[0].length);
 
                 const severity = match[4];
-                const message = match[5];
+                let message = match[5];
                 let errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 switch (severity) {

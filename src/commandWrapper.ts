@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ExecutorRunningError, ExecutorTaskError, ExecutorTerminatedByUserError } from "./execShell";
-import { projectExecutor, sleep } from "./extension";
+import { projectExecutor } from "./extension";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { TerminatedDebugSessionTask } from "./DebugConfigurationProvider";
 

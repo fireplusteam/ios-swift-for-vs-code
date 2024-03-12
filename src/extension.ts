@@ -7,6 +7,7 @@ import {
     generateXcodeServer,
     ksdiff,
     nameOfModuleForFile,
+    openFile,
     openXCode,
     restartLSP,
     runAppOnMultipleDevices,
@@ -113,6 +114,11 @@ export function activate(context: vscode.ExtensionContext) {
             ksdiff(name, path1, path2);
         })
     );
+
+    vscode.commands.registerCommand("vscode-ios.openFile", async (filePath: string, line: string) => {
+        const lineNumber = Number(line) - 1;
+        openFile(filePath, lineNumber);
+    });
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.env.open.xcode", async () => {

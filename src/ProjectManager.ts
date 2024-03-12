@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import * as fs from 'fs';
-import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getProjectScheme, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "./env";
+import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "./env";
 import * as parser from 'fast-xml-parser';
 import { exec } from "child_process";
-import path, { resolve } from "path";
+import path from "path";
 import { fileNameFromPath } from "./utils";
 import { ProjectTree } from "./ProjectTree";
 import { glob } from 'glob';
@@ -57,7 +57,7 @@ export class ProjectManager {
         if (schemeType === "-package") {
             return await new Promise<string[]>(resolve => {
                 let pathParts = file.split(path.sep);
-                for (let i = pathParts.length - 1;i >= 0; --i) {
+                for (let i = pathParts.length - 1; i >= 0; --i) {
                     if (pathParts[i] == "Sources" || pathParts[i] == "Tests") {
                         resolve([pathParts[i + 1]]);
                         return;

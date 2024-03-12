@@ -1,10 +1,7 @@
-import * as vscode from 'vscode';
-import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
-import { showPicker } from './inputPicker';
+import { Executor } from "./execShell";
 import { checkWorkspace, storeVSConfig } from "./commands";
-import { emptyBuildLog, emptyFile, getLastLine } from './utils';
+import { emptyBuildLog } from './utils';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
-import fs from "fs";
 import { getWorkspacePath } from './env';
 import path from 'path';
 

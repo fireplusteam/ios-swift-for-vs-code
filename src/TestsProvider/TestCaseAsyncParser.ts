@@ -1,4 +1,3 @@
-import { match } from 'assert';
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
 
@@ -79,18 +78,22 @@ export class TestCaseAsyncParser {
     private markDown(message: string, name: string) {
         let mdString = new vscode.MarkdownString("");
         mdString.isTrusted = true;
+        // replace file links to be opened
+        message = message.replaceAll(/^(.*?):(\d+):/gm, (str, p1, p2) => {
+            return `${str}\n\r[View line](command:vscode-ios.openFile?${encodeURIComponent(JSON.stringify([p1, p2]))})`;
+        });
         if (message.includes("SnapshotTesting.diffTool")) {
             const list = message.split(/^To configure[\s\S]*?SnapshotTesting.diffTool.*"$/gm);
 
             for (const pattern of list) {
                 const files = [...pattern.matchAll(/^\@[\s\S]*?"(file:.*?)\"$/gm)];
-                mdString.appendText("\n" + pattern);
+                mdString.appendMarkdown("\n" + pattern);
                 if (files.length == 2) {
                     mdString.appendMarkdown(`\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, files[0][1], files[1][1]]))})`);
                 }
             }
         } else {
-            mdString.appendText(message);
+            mdString.appendMarkdown(message);
         }
 
         return mdString;

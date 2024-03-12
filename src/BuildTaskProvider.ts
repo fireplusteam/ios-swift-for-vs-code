@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
+import { Executor } from "./execShell";
 import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";

@@ -1,7 +1,6 @@
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
 
-
 export class ProblemDiagnosticResolver {
 
     disposable: vscode.Disposable[] = [];

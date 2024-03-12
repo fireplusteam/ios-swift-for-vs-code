@@ -3,7 +3,8 @@ source '.vscode/.env'
 
 SELECTED_FILE=$1
 
-SCHEME_SCRIPT=$(python3 <<EOF
+SCHEME_SCRIPT=$(
+    python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
@@ -15,4 +16,4 @@ print(scheme)
 EOF
 )
 
-echo "MODULE NAME OF $SELECTED_FILE IS: $SCHEME_SCRIPT" 
+echo "MODULE NAME OF $SELECTED_FILE IS: $SCHEME_SCRIPT"

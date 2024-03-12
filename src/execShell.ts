@@ -1,15 +1,10 @@
 import {
-    ExecFileSyncOptionsWithStringEncoding,
     spawn,
     ChildProcess,
     SpawnOptions,
 } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
-import { resolve } from "path";
-import { assert } from "console";
-import { on } from "stream";
-import { AssertionError } from "assert";
 import { sleep } from "./extension";
 var kill = require("tree-kill");
 
@@ -98,7 +93,7 @@ export class Executor {
             onDidChangeName: this.changeNameEmitter.event,
             open: () => this.writeEmitter?.fire(`\x1b[31${terminalId}\x1b[0m`),
             close: () => {
-                if(this.disposedTerminal !== this.terminal) 
+                if (this.disposedTerminal !== this.terminal)
                     kill(this.childProc?.pid);
             },
         };

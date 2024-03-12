@@ -89,7 +89,7 @@ export const parseMarkdown = (text: string, events: {
         const range = new vscode.Range(new vscode.Position(lineNumbers[classStartInd], 0), new vscode.Position(lineNumbers[endScope], 10000));
         events.onHeading(range, name);
 
-        const tests = [...text.slice(classStartInd, endScope).matchAll(testRe)]; 
+        const tests = [...text.slice(classStartInd, endScope).matchAll(testRe)];
         for (const test of tests) {
             const testStartInd = (test.index || 0) + classStartInd;
             const testEndInd = testStartInd + test[0].length;
@@ -98,7 +98,7 @@ export const parseMarkdown = (text: string, events: {
 
             const [, , , testName,] = test;
             const endTestScope = getScope(text, testStartInd, commented) || testEndInd;
-            
+
             const range = new vscode.Range(new vscode.Position(lineNumbers[testStartInd], 0), new vscode.Position(lineNumbers[testEndInd], 10000));
             events.onTest(range, testName);
         }

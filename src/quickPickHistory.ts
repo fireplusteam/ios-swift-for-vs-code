@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { getWorkspacePath } from './env';
-import { title } from 'process';
 import { QuickPickItem } from './inputPicker';
 
 export async function quickPickWithHistory(

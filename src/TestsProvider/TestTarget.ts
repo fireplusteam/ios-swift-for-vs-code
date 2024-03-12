@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { TestTreeContext, getContentFromFilesystem } from './TestTreeContext';
+import { TestTreeContext } from './TestTreeContext';
 import { TestFile } from './TestFile';
 import { TestContainer } from './TestContainer';
 
-export class TestTarget implements TestContainer{
+export class TestTarget implements TestContainer {
     public didResolve = false;
     public context: TestTreeContext
 
@@ -37,9 +37,9 @@ export class TestTarget implements TestContainer{
             }
             if ([...file.children].length > 0)
                 parent.children.push(file);
-            else 
+            else
                 this.context.deleteItem(file.id);
-            
+
         }
         this.didResolve = true;
         // finish

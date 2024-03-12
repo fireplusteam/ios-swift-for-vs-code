@@ -11,7 +11,8 @@ if [ "$TYPE" != "-package" ]; then
     XCODECMD="$XCODECMD \"$TYPE\" \"$PROJECT_FILE\""
 else
 
-PATH_SCRIPT=$(python3 <<EOF
+    PATH_SCRIPT=$(
+        python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
@@ -20,11 +21,11 @@ path = helper.get_derived_data_path()
 print(path)
 
 EOF
-)
+    )
 
-PATH_SCRIPT=$(echo "$PATH_SCRIPT" | tail -n 1)
+    PATH_SCRIPT=$(echo "$PATH_SCRIPT" | tail -n 1)
 
-XCODECMD="$XCODECMD -derivedDataPath \"$PATH_SCRIPT\""
+    XCODECMD="$XCODECMD -derivedDataPath \"$PATH_SCRIPT\""
 
 fi
 
