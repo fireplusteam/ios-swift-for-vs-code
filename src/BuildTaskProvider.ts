@@ -1,12 +1,8 @@
 import * as vscode from "vscode";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
-import { buildAllTarget, buildCurrentFile, buildSelectedTarget, buildTests, buildTestsForCurrentFile, cleanDerivedData } from "./buildCommands";
+import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
 import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
-import { TaskDefinition } from "vscode";
-import { title } from "process";
-import { getLastLine } from "./utils";
-import { log } from "console";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
@@ -50,24 +46,8 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             return [];
         }
 
-        let buildAllTask = this.createBuildTask(
-            "Build All",
-            vscode.TaskGroup.Build,
-            async () => {
-                await buildAllTarget(this.executor, this.problemResolver);
-            }
-        );
-
-        let buildCurrentFileTask = this.createBuildTask(
-            "Build: Current File",
-            vscode.TaskGroup.Build,
-            async () => {
-                await buildCurrentFile(this.executor, this.problemResolver);
-            }
-        );
-
         let buildSelectedTargetTask = this.createBuildTask(
-            "Build Selected Target",
+            "Build",
             vscode.TaskGroup.Build,
             async () => {
                 await buildSelectedTarget(this.executor, this.problemResolver);
@@ -90,7 +70,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             }
         );
 
-        return [buildTestsTask, buildCurrentFileTask, buildAllTask, buildSelectedTargetTask, cleanTask];
+        return [buildTestsTask, buildSelectedTargetTask, cleanTask];
     }
 
     private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: () => Promise<void>) {

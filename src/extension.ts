@@ -171,25 +171,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             "vscode-ios.build.selectedTarget",
             async () => {
-                await executeTask("Build Selected Target");
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.build.currentFile",
-            async () => {
-                await executeTask("Build: Current File");
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.build.all",
-            async () => {
-                await executeTask("Build All");
+                await executeTask("Build");
             }
         )
     );
