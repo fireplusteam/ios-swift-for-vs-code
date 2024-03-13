@@ -4,9 +4,18 @@ import { listFilesFromProject } from "./ProjectManager";
 import { watch } from "fs";
 import path from 'path';
 
+type ProjFilePath = {
+    path: string,
+    isFolder: boolean
+}
+
+function isProjFilePath(obj: any): obj is ProjFilePath {
+    return obj && typeof obj.path === "string" && typeof obj.isFolder === "boolean";
+}
+
 type ProjFile = {
     timestamp: number;
-    list: Set<string>;
+    list: Set<ProjFilePath>;
 };
 function mapReplacer(key: any, value: any) {
     if (value instanceof Map) {
@@ -29,7 +38,14 @@ function mapReviver(key: any, value: any) {
             return new Map(value.value);
         }
         if (value.dataType === "Set") {
-            return new Set(value.value);
+            const parsed = new Set(value.value);
+            if (parsed.size > 0)
+                for (let v of parsed) {
+                    if (!isProjFilePath(v)) {
+                        throw Error("Generated Format of file is wrong");
+                    }
+                }
+            return parsed;
         }
     }
     return value;
@@ -85,8 +101,15 @@ export class ProjectsCache {
         return this.cache.has(project);
     }
 
-    getList(project: string) {
-        return this.cache.get(project)?.list || new Set<string>();
+    getList(project: string, onlyFiles = true) {
+        const res = new Set<string>();
+        const projectList = this.cache.get(project)?.list;
+        if (!projectList)
+            return res;
+        for (const file of projectList)
+            if (!file.isFolder || !onlyFiles)
+                res.add(file.path);
+        return res;
     }
 
     getProjects() {
@@ -97,22 +120,38 @@ export class ProjectsCache {
         return projects;
     }
 
-    files() {
+    files(isFolder = false) {
         const files: string[] = [];
         for (let [key, value] of this.cache) {
             for (let file of value.list) {
-                files.push(file);
+                if (file.isFolder == isFolder)
+                    files.push(file.path);
             }
         }
         return files;
     }
 
+    async parseProjectList(files: string[]) {
+        const resPaths = new Set<{ path: string, isFolder: boolean }>();
+        for (let file of files) {
+            if (file.startsWith("group:/")) {
+                resPaths.add({ path: file.substring("group:".length), isFolder: true });
+            } else if (file.startsWith("file:/")) {
+                resPaths.add({ path: file.substring("file:".length), isFolder: false });
+            } else {
+                console.log(`unsupported file ${file}`);
+            }
+        }
+        return resPaths;
+    }
+
     async update(projectPath: string) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
+
             this.cache.set(projectPath, {
                 timestamp: time,
-                list: new Set<string>(await listFilesFromProject(getFilePathInWorkspace(projectPath)))
+                list: await this.parseProjectList(await listFilesFromProject(getFilePathInWorkspace(projectPath)))
             });
         }
         if (!this.watcher.has(projectPath)) {

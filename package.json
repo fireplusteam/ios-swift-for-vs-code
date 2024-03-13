@@ -1,218 +1,222 @@
 {
-  "name": "vscode-ios",
-  "displayName": "iOS IDE",
-  "description": "Develop your iOS application in VS Code",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.86.0"
-  },
-  "categories": [
-    "Debuggers",
-    "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./out/extension.js",
-  "repository": {
-    "url": "https://github.com/fireplusteam/ios_vs_code.git"
-  },
-  "enabledApiProposals": [
-    "testCoverage"
-  ],
-  "publisher": "fireplusteam",
-  "contributes": {
-    "configuration": {
-      "title": "iOS IDE",
-      "properties": {
-        "vscode-ios.watcher": {
-          "type": "boolean",
-          "default": true,
-          "description": "Xcodebuild Watch. Build automatically while editing project files. Needed for updating indexes"
-        }
-      }
+    "name": "vscode-ios",
+    "displayName": "iOS IDE",
+    "description": "Develop your iOS application in VS Code",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.86.0"
     },
-    "keybindings": [
-      {
-        "key": "shift+f5",
-        "command": "vscode-ios.stop.debug.session",
-        "when": "VSCode_iOS_debugStarted"
-      }
+    "categories": [
+        "Debuggers",
+        "Other"
     ],
-    "problemMatchers": [
-      {
-        "name": "xcode",
-        "owner": "xcode",
-        "source": "xcodebuild",
-        "fileLocation": "absolute",
-        "pattern": [
-          {
-            "regexp": "^(.*?):(\\d+)(?::(\\d+))?:\\s+(warning|error|note):\\s+(.*)$",
-            "file": 1,
-            "line": 2,
-            "column": 3,
-            "severity": 4,
-            "message": 5
-          }
-        ]
-      }
+    "activationEvents": [
+        "onStartupFinished"
     ],
-    "taskDefinitions": [
-      {
-        "type": "vscode-ios-tasks",
-        "required": [
-          "taskBuild"
-        ],
-        "properties": {
-          "taskBuild": {
-            "type": "string",
-            "description": "The build type"
-          }
-        }
-      }
+    "main": "./out/extension.js",
+    "repository": {
+        "url": "https://github.com/fireplusteam/ios_vs_code.git"
+    },
+    "enabledApiProposals": [
+        "testCoverage"
     ],
-    "commands": [
-      {
-        "command": "vscode-ios.project.select",
-        "title": "iOS: Select Project/Workspace"
-      },
-      {
-        "command": "vscode-ios.project.selectTarget",
-        "title": "iOS: Select Scheme"
-      },
-      {
-        "command": "vscode-ios.project.selectDevice",
-        "title": "iOS: Select DEBUG Device"
-      },
-      {
-        "command": "vscode-ios.check.workspace",
-        "title": "iOS: Validate Environment"
-      },
-      {
-        "command": "vscode-ios.check.generateXcodeServer",
-        "title": "iOS: Generate xCode Server"
-      },
-      {
-        "command": "vscode-ios.env.open.xcode",
-        "title": "iOS: Open Xcode"
-      },
-      {
-        "command": "vscode-ios.build.clean",
-        "title": "iOS: Clean Derived Data",
-        "category": "build"
-      },
-      {
-        "command": "vscode-ios.build.selectedTarget",
-        "title": "iOS: Build",
-        "category": "build"
-      },
-      {
-        "command": "vscode-ios.build.tests",
-        "title": "iOS: Build Tests",
-        "category": "build"
-      },
-      {
-        "command": "vscode-ios.utils.file.nameOfModule",
-        "title": "iOS: Name Of Module By Current File",
-        "category": "build"
-      },
-      {
-        "command": "vscode-ios.run.app.multiple.devices",
-        "title": "iOS: Run App On Multiple Devices"
-      },
-      {
-        "command": "vscode-ios.run.app.debug",
-        "title": "iOS: Run App & Debug"
-      },
-      {
-        "command": "vscode-ios.run.project.add.file",
-        "title": "iOS: Project: Add File"
-      },
-      {
-        "command": "vscode-ios.run.project.reload",
-        "title": "iOS: Project: Reload"
-      }
-    ],
-    "debuggers": [
-      {
-        "type": "xcode-lldb",
-        "label": "iOS: APP Debug",
-        "configurationAttributes": {
-          "launch": {
+    "publisher": "fireplusteam",
+    "contributes": {
+        "configuration": {
+            "title": "iOS IDE",
             "properties": {
-              "target": {
-                "type": "string",
-                "default": "app",
-                "enum": [
-                  "app"
-                ]
-              },
-              "isDebuggable": {
-                "type": "boolean",
-                "default": true
-              }
+                "vscode-ios.watcher": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Xcodebuild Watch. Build automatically while editing project files. Needed for updating indexes"
+                }
             }
-          }
         },
-        "initialConfigurations": [
-          {
-            "type": "xcode-lldb",
-            "name": "iOS: Run App & Debug",
-            "request": "launch",
-            "target": "app",
-            "isDebuggable": true
-          }
-        ],
-        "configurationSnippets": [
-          {
-            "label": "iOS: Run App & Debug",
-            "description": "Add a new configuration for iOS debugging",
-            "body": {
-              "type": "xcode-lldb",
-              "name": "iOS: Run App & Debug",
-              "request": "launch",
-              "target": "app",
-              "isDebuggable": true
+        "keybindings": [
+            {
+                "key": "shift+f5",
+                "command": "vscode-ios.stop.debug.session",
+                "when": "VSCode_iOS_debugStarted"
             }
-          }
+        ],
+        "problemMatchers": [
+            {
+                "name": "xcode",
+                "owner": "xcode",
+                "source": "xcodebuild",
+                "fileLocation": "absolute",
+                "pattern": [
+                    {
+                        "regexp": "^(.*?):(\\d+)(?::(\\d+))?:\\s+(warning|error|note):\\s+(.*)$",
+                        "file": 1,
+                        "line": 2,
+                        "column": 3,
+                        "severity": 4,
+                        "message": 5
+                    }
+                ]
+            }
+        ],
+        "taskDefinitions": [
+            {
+                "type": "vscode-ios-tasks",
+                "required": [
+                    "taskBuild"
+                ],
+                "properties": {
+                    "taskBuild": {
+                        "type": "string",
+                        "description": "The build type"
+                    }
+                }
+            }
+        ],
+        "commands": [
+            {
+                "command": "vscode-ios.project.select",
+                "title": "iOS: Select Project/Workspace"
+            },
+            {
+                "command": "vscode-ios.project.selectTarget",
+                "title": "iOS: Select Scheme"
+            },
+            {
+                "command": "vscode-ios.project.selectDevice",
+                "title": "iOS: Select DEBUG Device"
+            },
+            {
+                "command": "vscode-ios.check.workspace",
+                "title": "iOS: Validate Environment"
+            },
+            {
+                "command": "vscode-ios.check.generateXcodeServer",
+                "title": "iOS: Generate xCode Server"
+            },
+            {
+                "command": "vscode-ios.env.open.xcode",
+                "title": "iOS: Open Xcode"
+            },
+            {
+                "command": "vscode-ios.build.clean",
+                "title": "iOS: Clean Derived Data",
+                "category": "build"
+            },
+            {
+                "command": "vscode-ios.build.selectedTarget",
+                "title": "iOS: Build",
+                "category": "build"
+            },
+            {
+                "command": "vscode-ios.build.tests",
+                "title": "iOS: Build Tests",
+                "category": "build"
+            },
+            {
+                "command": "vscode-ios.utils.file.nameOfModule",
+                "title": "iOS: Name Of Module By Current File",
+                "category": "build"
+            },
+            {
+                "command": "vscode-ios.run.app.multiple.devices",
+                "title": "iOS: Run App On Multiple Devices"
+            },
+            {
+                "command": "vscode-ios.run.app.debug",
+                "title": "iOS: Run App & Debug"
+            },
+            {
+                "command": "vscode-ios.run.project.file.add",
+                "title": "iOS: Project: Add File"
+            },
+            {
+                "command": "vscode-ios.run.project.file.edit.targets",
+                "title": "iOS: Project: Edit File Targets"
+            },
+            {
+                "command": "vscode-ios.run.project.reload",
+                "title": "iOS: Project: Reload"
+            }
+        ],
+        "debuggers": [
+            {
+                "type": "xcode-lldb",
+                "label": "iOS: APP Debug",
+                "configurationAttributes": {
+                    "launch": {
+                        "properties": {
+                            "target": {
+                                "type": "string",
+                                "default": "app",
+                                "enum": [
+                                    "app"
+                                ]
+                            },
+                            "isDebuggable": {
+                                "type": "boolean",
+                                "default": true
+                            }
+                        }
+                    }
+                },
+                "initialConfigurations": [
+                    {
+                        "type": "xcode-lldb",
+                        "name": "iOS: Run App & Debug",
+                        "request": "launch",
+                        "target": "app",
+                        "isDebuggable": true
+                    }
+                ],
+                "configurationSnippets": [
+                    {
+                        "label": "iOS: Run App & Debug",
+                        "description": "Add a new configuration for iOS debugging",
+                        "body": {
+                            "type": "xcode-lldb",
+                            "name": "iOS: Run App & Debug",
+                            "request": "launch",
+                            "target": "app",
+                            "isDebuggable": true
+                        }
+                    }
+                ]
+            }
+        ],
+        "extensionDependencies": [
+            "vadimcn.vscode-lldb",
+            "swift-lang",
+            "debugpy"
+        ],
+        "extensionPack": [
+            "vadimcn.vscode-lldb",
+            "swift-lang",
+            "debugpy"
         ]
-      }
-    ],
-    "extensionDependencies": [
-      "vadimcn.vscode-lldb",
-      "swift-lang",
-      "debugpy"
-    ],
-    "extensionPack": [
-      "vadimcn.vscode-lldb",
-      "swift-lang",
-      "debugpy"
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
-    "test": "vscode-test"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.6",
-    "@types/node": "18.x",
-    "@types/vscode": "^1.86.0",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
-    "@vscode/test-cli": "^0.0.4",
-    "@vscode/test-electron": "^2.3.9",
-    "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "@vscode/dts": "^0.4.0"
-  },
-  "dependencies": {
-    "fast-xml-parser": "^4.3.5",
-    "find-process": "^1.4.7",
-    "glob": "^10.3.10",
-    "tree-kill": "^1.2.2"
-  }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "vscode-test"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.6",
+        "@types/node": "18.x",
+        "@types/vscode": "^1.86.0",
+        "@typescript-eslint/eslint-plugin": "^6.19.1",
+        "@typescript-eslint/parser": "^6.19.1",
+        "@vscode/test-cli": "^0.0.4",
+        "@vscode/test-electron": "^2.3.9",
+        "eslint": "^8.56.0",
+        "typescript": "^5.3.3",
+        "@vscode/dts": "^0.4.0"
+    },
+    "dependencies": {
+        "fast-xml-parser": "^4.3.5",
+        "find-process": "^1.4.7",
+        "glob": "^10.3.10",
+        "tree-kill": "^1.2.2"
+    }
 }

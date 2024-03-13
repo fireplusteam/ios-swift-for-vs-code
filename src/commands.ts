@@ -72,15 +72,6 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
     await selectTarget(executor, true, false);
 }
 
-export async function storeVSConfig(executor: Executor) {
-    const fileUrl = vscode.window.activeTextEditor?.document.uri.fsPath;
-    if (fileUrl === undefined) {
-        throw new Error("In order to trigger a compile task for a file, select a file first please");
-    }
-
-    await executor.execShell("Store VS Config", "store_vs_config.sh", [fileUrl]);
-}
-
 export async function selectTarget(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
     if (shouldCheckWorkspace) {
         await checkWorkspace(executor, ignoreFocusOut);

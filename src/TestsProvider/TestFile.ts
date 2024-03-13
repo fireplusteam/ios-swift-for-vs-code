@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseMarkdown } from './testMarkdown';
+import { parseMarkdown } from './parseMarkdown';
 import { TestContainer } from './TestContainer';
 import { TestCase } from './TestCase';
 import { TestHeading } from './TestHeading';
@@ -10,7 +10,7 @@ let generationCounter = 0;
 export class TestFile implements TestContainer {
     public didResolve = false;
     context: TestTreeContext;
-    
+
     constructor(context: TestTreeContext) {
         this.context = context;
     }

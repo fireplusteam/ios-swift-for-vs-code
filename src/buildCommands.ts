@@ -1,5 +1,5 @@
 import { Executor } from "./execShell";
-import { checkWorkspace, storeVSConfig } from "./commands";
+import { checkWorkspace } from "./commands";
 import { emptyBuildLog } from './utils';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { getWorkspacePath } from './env';
@@ -43,7 +43,6 @@ export async function buildTests(executor: Executor, problemResolver: ProblemDia
 }
 
 export async function buildTestsForCurrentFile(executor: Executor, problemResolver: ProblemDiagnosticResolver, tests: string[]) {
-    await storeVSConfig(executor);
     await checkWorkspace(executor);
     const option = tests.map(e => {
         return `-only-testing:${e}`;

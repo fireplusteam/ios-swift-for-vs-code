@@ -35,9 +35,7 @@ export class TestProvider {
 
         const startTestRun = (request: vscode.TestRunRequest) => {
             const queue: { test: vscode.TestItem; data: TestCase }[] = [];
-            const run = ctrl.createTestRun(request, "iOS Tests");
-            // map of file uris to statements on each line:
-            const coveredLines = new Map</* file uri */ string, (vscode.StatementCoverage | undefined)[]>();
+            const run = ctrl.createTestRun(request, "iOS Tests", true);
 
             const discoverTests = async (tests: Iterable<vscode.TestItem>) => {
                 for (const test of tests) {

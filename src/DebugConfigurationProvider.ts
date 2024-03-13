@@ -70,7 +70,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
             await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
             await this.setEnvVariables();
-            commandWrapper(runCommandClosure, successMessage);
+            commandWrapper(runCommandClosure, successMessage).catch(e => {
+                console.log(`Running ended with : ${e}`);
+            });
         } catch (err) {
             const message = (err as Error).message;
             if (message !== "Debug session" && message != "Debug Task") {

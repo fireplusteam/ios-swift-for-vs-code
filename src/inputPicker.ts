@@ -23,7 +23,8 @@ export async function showPicker(
     placeholder: string,
     canPickMany = false,
     ignoreFocusOut = false,
-    useHistory = false
+    useHistory = false,
+    separator: string = " "
 ) {
     let items: QuickPickItem[]
     if (typeof json === 'string' || json instanceof String) {
@@ -69,7 +70,7 @@ export async function showPicker(
                     return e["value"];
                 });
 
-                value = array.join(" ");
+                value = array.join(separator);
             } else {
                 const dict = selection as { [key: string]: any };
                 value = dict["value"];

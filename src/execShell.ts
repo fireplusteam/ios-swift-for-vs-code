@@ -249,8 +249,10 @@ export class Executor {
                     switch (returnType) {
                         case ExecutorReturnType.statusCode:
                             resolve(true);
+                            break;
                         case ExecutorReturnType.stdout:
                             resolve(stdout);
+                            break;
                     }
                 }
             });

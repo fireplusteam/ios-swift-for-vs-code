@@ -165,11 +165,21 @@ def list_targets(project)
   project.targets.each { |target| puts target.name }
 end
 
+def print_all_group_paths(project, group = project.main_group)
+  puts "group:#{get_real_path(group, project)}"
+  group.children.each do |child|
+    if child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
+      print_all_group_paths(project, child)
+    end
+  end
+end
+
 def list_files(project)
   project.files.each do |file|
-    puts get_real_path(file, project)
+    puts "file:#{get_real_path(file, project)}"
     #puts file.path.to_s
   end
+  print_all_group_paths(project)
 end
 
 def list_files_for_target(project, target_name)

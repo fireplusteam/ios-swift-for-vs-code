@@ -1,7 +1,7 @@
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
 
-const testCaseRe = /^(Test Case.*started\.)([\s\S]*?)^(Test Case\s\'-\[)(.*)?\.(.*)?\s(.*)?\](.*)(failed|passed).*\((.*)? .*.$/gm
+const testCaseRe = /^(Test Case\s\'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)^((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm
 
 export class TestCaseAsyncParser {
 
@@ -43,15 +43,15 @@ export class TestCaseAsyncParser {
                 let lastErrorIndex = -1;
                 const matches = [...stdout.matchAll(testCaseRe)];
                 for (const match of matches) {
-                    const result = match[8];
-                    const rawMessage = match[2];
-                    const target = match[4];
-                    const className = match[5];
-                    const testName = match[6];
+                    const result = match[12] || "failed";
+                    const rawMessage = match[7];
+                    const target = match[2];
+                    const className = match[3];
+                    const testName = match[4];
                     const diffName = `Diff: ${testName}`;
                     const message = new vscode.TestMessage(this.markDown(rawMessage, diffName));
 
-                    const duration = Number(match[9]);
+                    const duration = Number(match[13]);
 
                     onMessage(result, message, rawMessage, target, className, testName, duration);
                     lastErrorIndex = (match.index || 0) + match[0].length;

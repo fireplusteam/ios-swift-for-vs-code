@@ -221,15 +221,22 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.run.project.add.file", async () => {
-            projectManager.addAFileToXcodeProject(vscode.window.activeTextEditor?.document.uri);
+        vscode.commands.registerCommand("vscode-ios.run.project.file.add", async () => {
+            const files = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectMany: true, filters: { "All Files": ["*"] } });
+            projectManager.addAFileToXcodeProject(files);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.run.project.file.edit.targets", async () => {
+            projectManager.editFileTargets(vscode.window.activeTextEditor?.document.uri);
         })
     );
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.run.project.reload", async () => {
             try {
-                await projectManager.loadProjectFiles();
+                await projectManager.loadProjectFiles(true);
             } catch {
                 vscode.window.showErrorMessage("Project was not reloaded due to error");
             }

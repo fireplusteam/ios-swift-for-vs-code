@@ -21,7 +21,7 @@ export async function killSpawnLaunchedProcesses(sessionId: string) {
             });
         }
     }
-    catch(err) {
+    catch (err) {
         console.log(err);
     }
 }
@@ -37,7 +37,7 @@ export function getLastLine(stdout: string) {
     return lines[lines.length - 1];
 }
 
-export function emptyFile(filePath: string, fileName: string){
+export function emptyFile(filePath: string, fileName: string) {
     if (fs.existsSync(filePath) === false) {
         fs.mkdirSync(filePath, { recursive: true });
     }
@@ -64,4 +64,21 @@ export function fileNameFromPath(filePath: string) {
 
 export function emptyAppLog(deviceId: string) {
     emptyFile(getWorkspacePath(), `.logs/app_${deviceId}.log`);
+}
+
+export function isFolder(path: string) {
+    let stats = fs.statSync(path);
+    if (stats.isFile()) {
+        return false;
+    } else if (stats.isDirectory()) {
+        return true;
+    } else {
+        throw Error("Not a file or directory");
+    }
+}
+
+export function isFileMoved(oldFile: string, newFile: string) {
+    if (oldFile.split(path.sep).slice(0, -1).toString() !== newFile.split(path.sep).slice(0, -1).toString())
+        return true;
+    return false;
 }
