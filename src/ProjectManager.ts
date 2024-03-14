@@ -142,18 +142,22 @@ export class ProjectManager {
                 compPath = path.join(compPath, components[i]);
                 if (!visitedFolders.has(compPath)) {
                     visitedFolders.add(compPath);
-                    const files = await glob(
-                        "*",
-                        {
-                            absolute: true,
-                            cwd: path.join(getWorkspacePath(), compPath),
-                            dot: true,
-                            nodir: false,
-                            ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}"
+                    try {
+                        const files = await glob(
+                            "*",
+                            {
+                                absolute: true,
+                                cwd: path.join(getWorkspacePath(), compPath),
+                                dot: true,
+                                nodir: false,
+                                ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}"
+                            }
+                        );
+                        for (let file of files) {
+                            projectTree.addExcluded(file);
                         }
-                    );
-                    for (let file of files) {
-                        projectTree.addExcluded(file);
+                    } catch (err) {
+                        console.log(`Glob pattern is configured wrong: ${err}`);
                     }
                 }
             }
