@@ -397,11 +397,29 @@ export class ProjectManager {
             return;
         }
 
-        const hasFile = fileList.filter(e => {
-            return !isFolder(e.fsPath);
-        }).length > 0;
+        const paths = fileList.map(file => {
+            return { path: file, isFolder: isFolder(file.fsPath) };
+        });
+        const foldersToAdd = new Set<string>();
+        const filesToAdd = new Set<string>();
+        const allFilesInProject = this.projectCache.getList(selectedProject, false);
+        for (const filePath of paths) {
+            if (!filePath.isFolder) {
+                const localFolder = filePath.path.fsPath.split(path.sep).slice(0, -1).join(path.sep);
+                if (!allFilesInProject.has(localFolder)) {
+                    foldersToAdd.add(localFolder);
+                }
+                if (!allFilesInProject.has(filePath.path.fsPath))
+                    filesToAdd.add(filePath.path.fsPath);
+            } else if (!allFilesInProject.has(filePath.path.fsPath)) {
+                foldersToAdd.add(filePath.path.fsPath);
+            }
+        }
+        if (filesToAdd.size == 0 && foldersToAdd.size == 0)
+            return;
+
         let selectedTarget: string[] | undefined;
-        if (hasFile) {
+        if (filesToAdd.size > 0) {
             const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
             selectedTarget = await vscode.window.showQuickPick(targets, { canPickMany: true, ignoreFocusOut: true, title: "Select Targets for The Files" });
             if (selectedTarget === undefined) {
@@ -409,18 +427,17 @@ export class ProjectManager {
             }
         }
 
-        for (const file of fileList) {
-            if (isFolder(file.fsPath)) {
-                // add Folder
-                // TODO: Add all content in the folder to the project
-                await addFolderToProject(getFilePathInWorkspace(selectedProject), file.fsPath);
-            } else {
-                await addFileToProject(
-                    getFilePathInWorkspace(selectedProject),
-                    selectedTarget?.join(",") || "",
-                    file.fsPath
-                );
-            }
+        for (const folder of foldersToAdd) {
+            // TODO: Add all content in the folder to the project
+            await addFolderToProject(getFilePathInWorkspace(selectedProject), folder);
+        }
+
+        for (const file of filesToAdd) {
+            await addFileToProject(
+                getFilePathInWorkspace(selectedProject),
+                selectedTarget?.join(",") || "",
+                file
+            );
         }
     }
 
