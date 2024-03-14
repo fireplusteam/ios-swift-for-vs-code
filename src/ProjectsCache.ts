@@ -3,6 +3,7 @@ import { getFilePathInWorkspace } from "./env";
 import { listFilesFromProject } from "./ProjectManager";
 import { watch } from "fs";
 import path from 'path';
+import * as vscode from "vscode";
 
 type ProjFilePath = {
     path: string,
@@ -53,6 +54,8 @@ function mapReviver(key: any, value: any) {
 export class ProjectsCache {
     private cache = new Map<string, ProjFile>();
     private watcher = new Map<string, fs.FSWatcher>();
+
+    onProjectChanged = new vscode.EventEmitter<void>();
 
     constructor() { }
 
@@ -157,9 +160,10 @@ export class ProjectsCache {
         if (!this.watcher.has(projectPath)) {
             const fileWatch = watch(path.join(getFilePathInWorkspace(projectPath), "project.pbxproj"), null
             );
-            fileWatch.on("change", e => {
+            fileWatch.on("change", async e => {
                 this.watcher.delete(projectPath);
-                this.update(projectPath);
+                await this.update(projectPath);
+                this.onProjectChanged.fire();
             });
             this.watcher.set(
                 projectPath,

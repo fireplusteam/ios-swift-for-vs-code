@@ -44,6 +44,9 @@ export class ProjectManager {
             }
             console.log("Deleted");
         }));
+        this.disposable.push(this.projectCache.onProjectChanged.event(() => {
+            this.touch();
+        }));
 
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
 
@@ -117,15 +120,18 @@ export class ProjectManager {
         const projectTree = new ProjectTree();
 
         // add all project first as they are visible
-        for (let file of [...this.projectCache.files(), ...this.projectCache.files(true), ...await this.getAdditionalIncludedFiles()]) {
+        for (let file of [...this.projectCache.files(), ...await this.getAdditionalIncludedFiles()]) {
             projectTree.addIncluded(file);
+        }
+        for (let folder of [...this.projectCache.files(true)]) {
+            projectTree.addIncluded(folder, false);
         }
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getFilePathInWorkspace(".logs"));
 
         // now try to go over all subfolder and exclude every single file which is not in the project files 
         const visitedFolders = new Set<string>();
-        for (let file of [getWorkspacePath(), ...this.projectCache.files()]) {
+        for (let file of [getWorkspacePath(), ...this.projectCache.files(), ...this.projectCache.files(true)]) {
             const relative = path.relative(getWorkspacePath(), file);
             if (relative.startsWith("..")) {
                 continue;
@@ -288,7 +294,6 @@ export class ProjectManager {
                     else
                         await renameFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
                 }
-                this.touch();
             } catch (err) {
                 console.log(err);
             }
@@ -297,6 +302,7 @@ export class ProjectManager {
 
     private async touch() {
         this.onProjectUpdate.fire();
+        await this.generateWorkspace();
     }
 
     private async deleteFileFromXcodeProject(file: vscode.Uri) {
@@ -314,7 +320,6 @@ export class ProjectManager {
                 } else { // folder
                     await deleteFolderFromProject(getFilePathInWorkspace(project), file.fsPath);
                 }
-                this.touch();
             } catch (err) {
                 console.log(err);
             }
@@ -392,28 +397,30 @@ export class ProjectManager {
             return;
         }
 
-        if (isFolder(fileList[0].fsPath)) {
-            // add Folder
-            // TODO: Add all content in the folder to the project
-            for (const folder of fileList) {
-                await addFolderToProject(getFilePathInWorkspace(selectedProject), folder.fsPath);
-            }
-        } else {
+        const hasFile = fileList.filter(e => {
+            return !isFolder(e.fsPath);
+        }).length > 0;
+        let selectedTarget: string[] | undefined;
+        if (hasFile) {
             const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
-            const selectedTarget = await vscode.window.showQuickPick(targets, { canPickMany: true, ignoreFocusOut: true, title: "Select Targets for The Files" });
+            selectedTarget = await vscode.window.showQuickPick(targets, { canPickMany: true, ignoreFocusOut: true, title: "Select Targets for The Files" });
             if (selectedTarget === undefined) {
                 return;
             }
+        }
 
-            for (const file of fileList) {
+        for (const file of fileList) {
+            if (isFolder(file.fsPath)) {
+                // add Folder
+                // TODO: Add all content in the folder to the project
+                await addFolderToProject(getFilePathInWorkspace(selectedProject), file.fsPath);
+            } else {
                 await addFileToProject(
                     getFilePathInWorkspace(selectedProject),
-                    selectedTarget.join(","),
+                    selectedTarget?.join(",") || "",
                     file.fsPath
                 );
             }
-            if (selectedTarget.length > 0)
-                this.touch();
         }
     }
 

@@ -18,15 +18,15 @@ export class ProjectTree {
         if (components.length <= 1) {
             return;
         }
-        this.add(this.root, components, false, 0);
+        this.add(this.root, components, false, 0, false);
     }
 
-    addIncluded(filePath: string) {
+    addIncluded(filePath: string, includeSubfolders = true) {
         const components = filePath.split(path.sep);
         if (components.length <= 1) {
             return;
         }
-        this.add(this.root, components, true, 0);
+        this.add(this.root, components, true, 0, includeSubfolders);
     }
 
     excludedFiles() {
@@ -56,14 +56,15 @@ export class ProjectTree {
         return list;
     }
 
-    private add(node: Node | undefined, components: string[], isVisible: boolean, index: number) {
+    private add(node: Node | undefined, components: string[], isVisible: boolean, index: number, includeSubfolders: boolean) {
         if (node === undefined)
             return;
         if (index >= components.length) {
             if (!isVisible) {
                 return;
             }
-            node.isLeaf = true; // if it's visible, tells that's a leaf
+            if (includeSubfolders)
+                node.isLeaf = true; // if it's visible, tells that's a leaf
             return;
         }
         if (isVisible) {
@@ -76,12 +77,12 @@ export class ProjectTree {
         if (!edges.has(components[index].toLowerCase())) {
             edges.set(components[index].toLowerCase(), [components[index], {
                 isVisible: isVisible,
-                isLeaf: index == components.length - 1 ? true : false,
+                isLeaf: index == components.length - 1 && includeSubfolders ? true : false,
                 edges: null
             }]);
         }
         node.edges = edges;
         const key = edges.get(components[index].toLowerCase());
-        this.add(key?.[1], components, isVisible, index + 1);
+        this.add(key?.[1], components, isVisible, index + 1, includeSubfolders);
     }
 }

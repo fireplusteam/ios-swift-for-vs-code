@@ -222,7 +222,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.run.project.file.add", async () => {
-            const files = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectMany: true, filters: { "All Files": ["*"] } });
+            const files = await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: true, canSelectMany: true, filters: { "All Files": ["*"] } });
             projectManager.addAFileToXcodeProject(files);
         })
     );
