@@ -409,6 +409,27 @@ export class ProjectManager {
         const paths = fileList.map(file => {
             return { path: file, isFolder: isFolder(file.fsPath) };
         });
+
+        for (const path of paths) {
+            if (path.isFolder) {
+                // add all files in subfolders
+                const files = await glob.glob(
+                    "**",
+                    {
+                        absolute: true,
+                        cwd: path.path.fsPath,
+                        dot: true,
+                        nodir: false,
+                        ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}"
+                    }
+                );
+                for (const file of files) {
+                    if (file !== path.path.fsPath)
+                        paths.push({ path: vscode.Uri.file(file), isFolder: isFolder(file) });
+                }
+            }
+        }
+
         const foldersToAdd = new Set<string>();
         const filesToAdd = new Set<string>();
         const allFilesInProject = this.projectCache.getList(selectedProject, false);
