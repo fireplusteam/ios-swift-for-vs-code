@@ -23,7 +23,7 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, setContext } from "./inputPicker";
 import { getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
-import { ProjectManager } from "./ProjectManager";
+import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import path from "path";
 
@@ -31,11 +31,13 @@ async function initialize() {
     if (!isActivated()) {
         try {
             await selectProjectFile(projectExecutor, projectManager, true, true);
+            autocompleteWatcher.triggerIncrementalBuild();
         } catch {
             vscode.window.showErrorMessage("Project was not loaded due to error");
         }
     } else {
         restartLSP();
+        autocompleteWatcher.triggerIncrementalBuild();
     }
 }
 
@@ -103,6 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("vscode-ios.project.select", async () => {
             try {
                 await selectProjectFile(projectExecutor, projectManager);
+                autocompleteWatcher.triggerIncrementalBuild();
             } catch {
                 vscode.window.showErrorMessage("Project was not loaded due to error");
             }

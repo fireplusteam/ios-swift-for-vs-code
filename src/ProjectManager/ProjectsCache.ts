@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { getFilePathInWorkspace } from "./env";
+import { getFilePathInWorkspace } from "../env";
 import { listFilesFromProject } from "./ProjectManager";
 import { watch } from "fs";
 import path from 'path';
@@ -151,7 +151,6 @@ export class ProjectsCache {
     async update(projectPath: string) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
-
             this.cache.set(projectPath, {
                 timestamp: time,
                 list: await this.parseProjectList(await listFilesFromProject(getFilePathInWorkspace(projectPath)))

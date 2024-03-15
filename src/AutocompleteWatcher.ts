@@ -4,7 +4,7 @@ import { getWorkspacePath, getProjectScheme } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { ProjectManager } from "./ProjectManager";
+import { ProjectManager } from "./ProjectManager/ProjectManager";
 
 class AutocompleteCancel extends Error {
 }

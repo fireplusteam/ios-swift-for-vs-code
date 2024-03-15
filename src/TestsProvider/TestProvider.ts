@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TestFile } from './TestFile';
 import { TestCase } from './TestCase';
 import { TestProject } from './TestProject';
-import { ProjectManager } from '../ProjectManager';
+import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { TestTarget } from './TestTarget';
 import { emptyTestsLog } from '../utils';
 import { TestCaseAsyncParser } from './TestCaseAsyncParser';

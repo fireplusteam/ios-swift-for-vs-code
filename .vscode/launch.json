@@ -3,22 +3,22 @@
 // Hover to view descriptions of existing attributes.
 // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 {
-	"version": "0.2.0",
-	"configurations": [
-		{
-			"name": "Run Extension",
-			"type": "extensionHost",
-			"request": "launch",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}"
-			],
-			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
-			],
-			"preLaunchTask": "${defaultBuildTask}"
-		},
-		{
-			"name": "Show IOS",
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "${defaultBuildTask}"
+        },
+        {
+            "name": "Show IOS",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/resources/app_log.py",
@@ -31,12 +31,12 @@
             "internalConsoleOptions": "neverOpen",
             "envFile": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/.vscode/.env",
             "cwd": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example"
-		}, 
-		{
-			"type": "ruby_lsp",
-			"request": "launch",
-			"name": "Debug Ruby program",
-			"program": "ruby resources/project_helper.rb add_file '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/AdidasAppSuite.xcodeproj' Drops '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/Experiences/Drops/Sources/UI/some_test.swift'"
-		}
-	]
+        },
+        {
+            "type": "ruby_lsp",
+            "request": "launch",
+            "name": "Debug Ruby program",
+            "program": "ruby resources/project_helper.rb '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/AdidasAppSuite.xcodeproj'"
+        }
+    ]
 }

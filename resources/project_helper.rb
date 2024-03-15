@@ -3,10 +3,6 @@ require "pathname"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
-action = ARGV[0]
-project_path = ARGV[1]
-project = Xcodeproj::Project.open(ARGV[1])
-
 def is_relative_path?(path)
   !File.absolute_path?(path)
 end
@@ -92,8 +88,6 @@ def add_file_to_targets(project, targets, file_path)
       target = project.targets.find { |current| current.name == target }
       target.add_file_references([file_ref])
     end
-
-  project.save
 end
 
 def update_file_targets(project, targets, file_path)
@@ -103,12 +97,10 @@ end
 
 def delete_file(project, file_path)
   find_file(project, file_path).remove_from_project
-  project.save
 end
 
 def rename_file(project, old_file_path, new_file_path)
   find_file(project, old_file_path).set_path(new_file_path)
-  project.save
 end
 
 def move_file(project, old_path, new_path)
@@ -133,15 +125,12 @@ def add_group(project, group_path)
       end
     end
   end
-
-  project.save
 end
 
 def rename_group(project, old_group_path, new_group_path)
   group = find_group_by_absolute_dir_path(project, old_group_path)
   group.name = File.basename(new_group_path)
   group.set_path(new_group_path)
-  project.save
 end
 
 def move_group(project, old_path, new_path)
@@ -149,8 +138,6 @@ def move_group(project, old_path, new_path)
   new_parent_group = find_group_by_absolute_dir_path(project, new_parent_path)
   old_group = find_group_by_absolute_dir_path(project, old_path)
   old_group.move(new_parent_group)
-
-  project.save
 end
 
 def delete_group(project, group_path)
@@ -158,7 +145,6 @@ def delete_group(project, group_path)
   group.recursive_children_groups.reverse.each(&:clear)
   group.clear
   group.remove_from_project
-  project.save
 end
 
 def list_targets(project)
@@ -212,70 +198,96 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def handle_action(project, action)
+def save(project)
+  project.save
+end
+
+def handle_action(project, action, arg)
+  if action == "save"
+    save(project)
+    return
+  end
   if action == "list_files"
     list_files(project)
-    exit
+    return
   end
 
   if action == "list_files_for_target"
-    list_files_for_target(project, ARGV[2])
-    exit
+    list_files_for_target(project, arg[1])
+    return
   end
 
   if action == "add_file"
-    add_file_to_targets(project, ARGV[2], ARGV[3])
-    exit
+    add_file_to_targets(project, arg[1], arg[2])
+    return
   end
 
   if action == "delete_file"
-    delete_file(project, ARGV[2])
-    exit
+    delete_file(project, arg[1])
+    return
   end
 
   if action == "rename_file"
-    rename_file(project, ARGV[2], ARGV[3])
-    exit
+    rename_file(project, arg[1], arg[2])
+    return
   end
 
   if action == "move_file"
-    move_file(project, ARGV[2], ARGV[3])
-    exit
+    move_file(project, arg[1], arg[2])
+    return
   end
 
   if action == "add_group"
-    add_group(project, ARGV[2])
-    exit
+    add_group(project, arg[1])
+    return
   end
 
   if action == "delete_group"
-    delete_group(project, ARGV[2])
-    exit
+    delete_group(project, arg[1])
+    return
   end
 
   if action == "rename_group"
-    rename_group(project, ARGV[2], ARGV[3])
-    exit
+    rename_group(project, arg[1], arg[2])
+    return
   end
 
   if action == "move_group"
-    move_group(project, ARGV[2], ARGV[3])
-    exit
+    move_group(project, arg[1], arg[2])
+    return
   end
 
   if action == "update_file_targets"
-    update_file_targets(project, ARGV[2], ARGV[3])
+    update_file_targets(project, arg[1], arg[2])
+    return
   end
 
   if action == "list_targets"
     list_targets(project)
-    exit
+    return
   end
 
   if action == "list_targets_for_file"
-    list_targets_for_file(project, ARGV[2])
-    exit
+    list_targets_for_file(project, arg[1])
+    return
   end
 end
 
-handle_action(project, action)
+project_path = ARGV[0]
+project = Xcodeproj::Project.open(project_path)
+previous_mtime = File.mtime(project_path)
+
+while (input = STDIN.gets.chomp)
+  break if input == "exit"
+
+  new_mtime = File.mtime(project_path)
+  if previous_mtime != new_mtime
+    previous_mtime = new_mtime
+    project = Xcodeproj::Project.open(project_path)
+  end
+  arg = input.split("|^|^|")
+  action = arg[0]
+  handle_action(project, action, arg)
+  puts "EOF_REQUEST"
+  STDOUT.flush
+end

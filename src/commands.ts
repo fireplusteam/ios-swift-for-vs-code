@@ -7,7 +7,7 @@ import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { exec } from 'child_process';
-import { ProjectManager } from './ProjectManager';
+import { ProjectManager } from './ProjectManager/ProjectManager';
 import { glob } from 'glob';
 
 export async function selectProjectFile(executor: Executor, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {

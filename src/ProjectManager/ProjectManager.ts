@@ -1,15 +1,16 @@
 import * as vscode from "vscode";
 import * as fs from 'fs';
-import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "./env";
+import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "../env";
 import * as parser from 'fast-xml-parser';
 import { exec } from "child_process";
 import path from "path";
-import { fileNameFromPath, isFileMoved, isFolder } from "./utils";
+import { fileNameFromPath, isFileMoved, isFolder } from "../utils";
 import { ProjectTree } from "./ProjectTree";
 import { glob } from 'glob';
 import { ProjectsCache } from "./ProjectsCache";
 import { error } from "console";
-import { QuickPickItem, showPicker } from "./inputPicker";
+import { QuickPickItem, showPicker } from "../inputPicker";
+import { XcodeProjectFileProxy } from "./XcodeProjectFileProxy";
 
 export class ProjectManager {
 
@@ -300,6 +301,8 @@ export class ProjectManager {
                 }
             } catch (err) {
                 console.log(err);
+            } finally {
+                await saveProject(getFilePathInWorkspace(project));
             }
         }
     }
@@ -326,6 +329,8 @@ export class ProjectManager {
                 }
             } catch (err) {
                 console.log(err);
+            } finally {
+                await saveProject(getFilePathInWorkspace(project));
             }
         }
     }
@@ -443,6 +448,8 @@ export class ProjectManager {
                 file
             );
         }
+
+        await saveProject(getFilePathInWorkspace(selectedProject));
     }
 
     private async selectBestFitProject(title: string, file: vscode.Uri, projectFiles: string[]) {
@@ -543,83 +550,69 @@ function getProjectFiles(project: string) {
 
 /// Ruby scripts
 
-async function executeRuby(command: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const str = exec(
-            `ruby '${getScriptPath("project_helper.rb")}'  ${command}`,
-            { maxBuffer: 1024 * 1024 * 1024 },
-            (error, stdout) => {
-                if (error !== null) {
-                    reject(error);
-                } else {
-                    resolve(stdout);
-                }
-            }
-        );
-    });
+const xcodeProjects = new Map<string, XcodeProjectFileProxy>();
+
+async function executeRuby(projectPath: string, command: string): Promise<string[]> {
+    if (!xcodeProjects.has(projectPath))
+        xcodeProjects.set(projectPath,
+            new XcodeProjectFileProxy(projectPath));
+    return await xcodeProjects.get(projectPath)?.request(command) || [];
 }
 
 async function getProjectTargets(projectFile: string) {
-    const stdout = await executeRuby(`list_targets '${projectFile}'`);
-    return stdout.split("\n").filter(e => {
-        return e.length > 0;
-    });
+    return await executeRuby(projectFile, `list_targets`);
 }
 
 async function addFileToProject(projectFile: string, target: string, file: string) {
-    return await executeRuby(`add_file '${projectFile}' '${target}' '${file}'`)
+    return await executeRuby(projectFile, `add_file|^|^|${target}|^|^|${file}`)
 }
 
 async function addFolderToProject(projectFile: string, folder: string) {
-    return await executeRuby(`add_group '${projectFile}' '${folder}'`)
+    return await executeRuby(projectFile, `add_group|^|^|${folder}`)
 }
 
 async function updateFileToProject(projectFile: string, target: string, file: string) {
-    return await executeRuby(`update_file_targets '${projectFile}' '${target}' '${file}'`)
+    return await executeRuby(projectFile, `update_file_targets|^|^|${target}|^|^|${file}`);
 }
 
 async function renameFileToProject(projectFile: string, oldFile: string, file: string) {
-    return executeRuby(`rename_file '${projectFile}' '${oldFile}' '${file}'`);
+    return await executeRuby(projectFile, `rename_file|^|^|${oldFile}|^|^|${file}`);
 }
 
 async function moveFileToProject(projectFile: string, oldFile: string, file: string) {
-    return executeRuby(`move_file '${projectFile}' '${oldFile}' '${file}'`);
+    return await executeRuby(projectFile, `move_file|^|^|${oldFile}|^|^|${file}'`);
 }
 
 async function renameFolderToProject(projectFile: string, oldFolder: string, newFolder: string) {
-    return executeRuby(`rename_group '${projectFile}' '${oldFolder}' '${newFolder}'`);
+    return await executeRuby(projectFile, `rename_group|^|^|${oldFolder}|^|^|${newFolder}'`);
 }
 
 async function moveFolderToProject(projectFile: string, oldFolder: string, newFolder: string) {
-    return executeRuby(`move_group '${projectFile}' '${oldFolder}' '${newFolder}'`);
+    return await executeRuby(projectFile, `move_group|^|^|${oldFolder}|^|^|${newFolder}'`);
 }
 
 export async function listFilesFromProject(projectFile: string) {
-    const stdout = await executeRuby(`list_files '${projectFile}'`);
-    return stdout.split("\n").filter(e => {
-        return e.length > 0;
-    });
+    return await executeRuby(projectFile, `list_files|^|^|`);
 }
 
 export async function listFilesFromTarget(projectFile: string, targetName: String) {
-    const stdout = await executeRuby(`list_files_for_target '${projectFile}' '${targetName}'`);
-    return stdout.split("\n");
+    return await executeRuby(projectFile, `list_files_for_target|^|^|${targetName}`);
 }
 
-
 async function deleteFileFromProject(projectFile: string, file: string) {
-    return executeRuby(`delete_file '${projectFile}' '${file}'`);
+    return await executeRuby(projectFile, `delete_file|^|^|${file}`);
 }
 
 async function deleteFolderFromProject(projectFile: string, folder: string) {
-    return executeRuby(`delete_group '${projectFile}' '${folder}'`);
+    return await executeRuby(projectFile, `delete_group|^|^|${folder}`);
 }
 
 async function listTargetsForFile(projectFile: string, file: string) {
-    const stdout = await executeRuby(`list_targets_for_file '${projectFile}' '${file}'`);
-    return stdout.split("\n").filter(e => {
-        return e.length > 0;
-    });
+    return await executeRuby(projectFile, `list_targets_for_file|^|^|${file}`);
+}
+
+async function saveProject(projectFile: string) {
+    return await executeRuby(projectFile, "save");
 }
 
 /// helpers using xcodebuild as Package

@@ -7,7 +7,7 @@ type Node = {
 }
 
 export class ProjectTree {
-    root: Node;
+    private root: Node;
 
     constructor() {
         this.root = { isVisible: false, isLeaf: false, edges: null };
