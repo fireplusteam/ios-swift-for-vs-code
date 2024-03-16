@@ -382,8 +382,13 @@ export class ProjectManager {
 
         const fileTargets = await listTargetsForFile(getFilePathInWorkspace(selectedProject[0]), file.fsPath);
         const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject[0]));
-        const items: QuickPickItem[] = targets.map(target => {
-            return { label: target, value: target, picked: fileTargets.includes(target) };
+        const items: QuickPickItem[] = targets.map((target, index) => {
+            return { label: target, value: target, picked: fileTargets.includes(target), index: index };
+        }).sort((a, b) => {
+            if (a.picked !== b.picked) {
+                return Number(b.picked) - Number(a.picked);
+            }
+            return a.index - b.index;
         });
         const selectedTargets = await showPicker(items, "Edit targets of a file", "", true, false, false, ",");
 
@@ -391,6 +396,7 @@ export class ProjectManager {
             return;
 
         await updateFileToProject(getFilePathInWorkspace(selectedProject[0]), selectedTargets, file.fsPath);
+        await saveProject(getFilePathInWorkspace(selectedProject[0]));
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
