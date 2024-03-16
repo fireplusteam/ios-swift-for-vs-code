@@ -39,15 +39,19 @@
             "program": "ruby resources/project_helper.rb '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/AdidasAppSuite.xcodeproj'"
         },
         {
-            "name": "Python: Current File",
+            "name": "Debug: Install XCBBuildService",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
+            "args": [
+                "-install",
+                "/Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/dist/XCBBuildService"
+            ],
             "console": "integratedTerminal",
             "justMyCode": true
         },
         {
-            "name": "Python: Attach XCBBuildService",
+            "name": "Debug: Attach XCBBuildService",
             "type": "debugpy",
             "request": "attach",
             "connect": {

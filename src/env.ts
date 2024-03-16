@@ -79,6 +79,10 @@ export function getXCodeBuildServerPath() {
     return path.join(__dirname, "..", "xcode-build-server");
 }
 
+export function getXCBBuildServicePath() {
+    return path.join(__dirname, "..", "src", "XCBBuildServiceProxy", "dist", "XCBBuildService")
+}
+
 export function getEnvList() {
     let dict: { [key: string]: string } = {};
     if (fs.existsSync(getEnvFilePath()) === false) {

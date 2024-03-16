@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pyinstaller --onefile src/XCBBuildServiceProxy/XCBBuildService.py
+
 # insall dependencies or update them
 npm install # resolve dependencies
 npm run compile

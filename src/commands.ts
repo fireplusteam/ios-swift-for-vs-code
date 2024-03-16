@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { showPicker } from "./inputPicker";
-import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getWorkspacePath, updateProject } from "./env";
+import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
 import { buildSelectedTarget } from "./buildCommands";
 import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
@@ -49,11 +49,11 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
         if (showProposalMessage == false) {
             vscode.window.showErrorMessage("Workspace doesn't have any iOS project or workspace file");
         }
-        return;
+        return false;
     } else if (showProposalMessage) {
         const isAllowedToConfigure = await vscode.window.showInformationMessage("Workspace has iOS projects. Do you want to pick a project to configure?", "Yes", "No");
         if (isAllowedToConfigure !== "Yes")
-            return;
+            return false;
     }
 
     const selection = await showPicker(
@@ -65,11 +65,12 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
         true
     );
     if (selection === undefined || selection === '') {
-        return;
+        return false;
     }
     updateProject(selection);
     await projectManager.loadProjectFiles(true);
     await selectTarget(executor, true, false);
+    return true;
 }
 
 export async function selectTarget(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
@@ -270,6 +271,14 @@ export async function runAndDebugTestsForCurrentFile(sessionID: string, executor
         [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-SELECTED", option],
         false
     );
+}
+
+export async function enableXCBBuildService(enabled: boolean) {
+    const install = enabled ? "-install" : "-uninstall"
+    const command = `python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()}`;
+    exec(command, (error, stdout, stderr) => {
+        console.log(error);
+    });
 }
 
 export async function openFile(filePath: string, lineNumber: number) {

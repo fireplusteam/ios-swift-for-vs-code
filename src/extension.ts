@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { isActivated } from "./env";
 import {
     checkWorkspace,
+    enableXCBBuildService,
     generateXcodeServer,
     ksdiff,
     nameOfModuleForFile,
@@ -30,13 +31,16 @@ import path from "path";
 async function initialize() {
     if (!isActivated()) {
         try {
-            await selectProjectFile(projectExecutor, projectManager, true, true);
-            autocompleteWatcher.triggerIncrementalBuild();
+            if (await selectProjectFile(projectExecutor, projectManager, true, true)) {
+                await enableXCBBuildService(true);
+                autocompleteWatcher.triggerIncrementalBuild();
+            }
         } catch {
             vscode.window.showErrorMessage("Project was not loaded due to error");
         }
     } else {
         restartLSP();
+        await enableXCBBuildService(true);
         autocompleteWatcher.triggerIncrementalBuild();
     }
 }
