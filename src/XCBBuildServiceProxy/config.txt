@@ -1,0 +1,6 @@
+# to generate XCBBuildService
+pyinstaller --onefile XCBBuildService.py
+
+# to create a symlink
+
+ln -s /Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/dist/XCBBuildService /Applications/Xcode.app/Contents/SharedFrameworks/XCBuild.framework/Versions/A/PlugIns/XCBBuildService.bundle/Contents/MacOS/XCBBuildService

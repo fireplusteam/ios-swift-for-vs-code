@@ -37,6 +37,23 @@
             "request": "launch",
             "name": "Debug Ruby program",
             "program": "ruby resources/project_helper.rb '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/AdidasAppSuite.xcodeproj'"
+        },
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Attach XCBBuildService",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            }
         }
     ]
 }

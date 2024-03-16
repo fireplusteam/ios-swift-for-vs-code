@@ -1,0 +1,81 @@
+CREATE_BUILD
+
+After that, it contains configuration
+
+{
+   "onlyCreateBuildDescription":false,
+   "request":{
+      "buildCommand":{
+         "command":"build",
+         "skipDependencies":false,
+         "style":0
+      },
+      "configuredTargets":[
+         {
+            "guid":"119a8faab4b3b7cc0bad3d66871d6dfcd767570f280253923fa82854c689b5ff"
+         }
+      ],
+      "containerPath":"/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example/TestVSCode.xcworkspace",
+      "continueBuildingAfterErrors":false,
+      "hideShellScriptEnvironment":false,
+      "jsonRepresentation":"ewogICJidWlsZENvbW1hbmQiIDogewogICAgImNvbW1hbmQiIDogImJ1aWxkIiwKICAgICJza2lwRGVwZW5kZW5jaWVzIiA6IGZhbHNlLAogICAgInN0eWxlIiA6ICJidWlsZE9ubHkiCiAgfSwKICAiY29uZmlndXJlZFRhcmdldHMiIDogWwogICAgewogICAgICAiZ3VpZCIgOiAiMTE5YThmYWFiNGIzYjdjYzBiYWQzZDY2ODcxZDZkZmNkNzY3NTcwZjI4MDI1MzkyM2ZhODI4NTRjNjg5YjVmZiIKICAgIH0KICBdLAogICJjb250YWluZXJQYXRoIiA6ICIvVXNlcnMvSWV2Z2VuaWlfTXlraGFsZXZza3lpL0Rlc2t0b3AvZ2l0QGdpdGh1Yi5jb206ZmlyZXBsdXN0ZWFtL2lvc192c19jb2RlL2V4YW1wbGUvVGVzdFZTQ29kZS54Y3dvcmtzcGFjZSIsCiAgImNvbnRpbnVlQnVpbGRpbmdBZnRlckVycm9ycyIgOiBmYWxzZSwKICAiZW5hYmxlSW5kZXhCdWlsZEFyZW5hIiA6IGZhbHNlLAogICJoaWRlU2hlbGxTY3JpcHRFbnZpcm9ubWVudCIgOiBmYWxzZSwKICAicGFyYW1ldGVycyIgOiB7CiAgICAiYWN0aW9uIiA6ICJidWlsZCIsCiAgICAiYWN0aXZlQXJjaGl0ZWN0dXJlIiA6ICJhcm02NCIsCiAgICAiYWN0aXZlUnVuRGVzdGluYXRpb24iIDogewogICAgICAiZGlzYWJsZU9ubHlBY3RpdmVBcmNoIiA6IGZhbHNlLAogICAgICAicGxhdGZvcm0iIDogImlwaG9uZXNpbXVsYXRvciIsCiAgICAgICJzZGsiIDogImlwaG9uZXNpbXVsYXRvcjE3LjAiLAogICAgICAic2RrVmFyaWFudCIgOiAiaXBob25lc2ltdWxhdG9yIiwKICAgICAgInN1cHBvcnRlZEFyY2hpdGVjdHVyZXMiIDogWwogICAgICAgICJhcm02NCIsCiAgICAgICAgIng4Nl82NCIKICAgICAgXSwKICAgICAgInRhcmdldEFyY2hpdGVjdHVyZSIgOiAiYXJtNjQiCiAgICB9LAogICAgImFyZW5hSW5mbyIgOiB7CiAgICAgICJidWlsZEludGVybWVkaWF0ZXNQYXRoIiA6ICIvVXNlcnMvSWV2Z2VuaWlfTXlraGFsZXZza3lpL0xpYnJhcnkvRGV2ZWxvcGVyL1hjb2RlL0Rlcml2ZWREYXRhL1Rlc3RWU0NvZGUtY3RseWlnYmNlaW91enVnc3dnY21weGVra25odC9CdWlsZC9JbnRlcm1lZGlhdGVzLm5vaW5kZXgiLAogICAgICAiYnVpbGRQcm9kdWN0c1BhdGgiIDogIi9Vc2Vycy9JZXZnZW5paV9NeWtoYWxldnNreWkvTGlicmFyeS9EZXZlbG9wZXIvWGNvZGUvRGVyaXZlZERhdGEvVGVzdFZTQ29kZS1jdGx5aWdiY2Vpb3V6dWdzd2djbXB4ZWtrbmh0L0J1aWxkL1Byb2R1Y3RzIiwKICAgICAgImRlcml2ZWREYXRhUGF0aCIgOiAiL1VzZXJzL0lldmdlbmlpX015a2hhbGV2c2t5aS9MaWJyYXJ5L0RldmVsb3Blci9YY29kZS9EZXJpdmVkRGF0YSIsCiAgICAgICJpbmRleERhdGFTdG9yZUZvbGRlclBhdGgiIDogIi9Vc2Vycy9JZXZnZW5paV9NeWtoYWxldnNreWkvTGlicmFyeS9EZXZlbG9wZXIvWGNvZGUvRGVyaXZlZERhdGEvVGVzdFZTQ29kZS1jdGx5aWdiY2Vpb3V6dWdzd2djbXB4ZWtrbmh0L0luZGV4Lm5vaW5kZXgvRGF0YVN0b3JlIiwKICAgICAgImluZGV4RW5hYmxlRGF0YVN0b3JlIiA6IHRydWUsCiAgICAgICJpbmRleFBDSFBhdGgiIDogIi9Vc2Vycy9JZXZnZW5paV9NeWtoYWxldnNreWkvTGlicmFyeS9EZXZlbG9wZXIvWGNvZGUvRGVyaXZlZERhdGEvVGVzdFZTQ29kZS1jdGx5aWdiY2Vpb3V6dWdzd2djbXB4ZWtrbmh0L0luZGV4Lm5vaW5kZXgvUHJlY29tcGlsZWRIZWFkZXJzIiwKICAgICAgInBjaFBhdGgiIDogIi9Vc2Vycy9JZXZnZW5paV9NeWtoYWxldnNreWkvTGlicmFyeS9EZXZlbG9wZXIvWGNvZGUvRGVyaXZlZERhdGEvVGVzdFZTQ29kZS1jdGx5aWdiY2Vpb3V6dWdzd2djbXB4ZWtrbmh0L0J1aWxkL0ludGVybWVkaWF0ZXMubm9pbmRleC9QcmVjb21waWxlZEhlYWRlcnMiCiAgICB9LAogICAgImNvbmZpZ3VyYXRpb25OYW1lIiA6ICJEZWJ1ZyIsCiAgICAib3ZlcnJpZGVzIiA6IHsKICAgICAgImNvbW1hbmRMaW5lIiA6IHsKICAgICAgICAidGFibGUiIDogewogICAgICAgICAgIlNES1JPT1QiIDogImlwaG9uZXNpbXVsYXRvcjE3LjAiCiAgICAgICAgfQogICAgICB9LAogICAgICAic3ludGhlc2l6ZWQiIDogewogICAgICAgICJ0YWJsZSIgOiB7CiAgICAgICAgICAiQUNUSU9OIiA6ICJidWlsZCIsCiAgICAgICAgICAiQVNTRVRDQVRBTE9HX0ZJTFRFUl9GT1JfREVWSUNFX01PREVMIiA6ICJpUGhvbmUxNSw1IiwKICAgICAgICAgICJBU1NFVENBVEFMT0dfRklMVEVSX0ZPUl9ERVZJQ0VfT1NfVkVSU0lPTiIgOiAiMTcuMC4xIiwKICAgICAgICAgICJBU1NFVENBVEFMT0dfRklMVEVSX0ZPUl9USElOTklOR19ERVZJQ0VfQ09ORklHVVJBVElPTiIgOiAiaVBob25lMTUsNSIsCiAgICAgICAgICAiQlVJTERfQUNUSVZFX1JFU09VUkNFU19PTkxZIiA6ICJZRVMiLAogICAgICAgICAgIkNMQU5HX0NPVkVSQUdFX01BUFBJTkciIDogIllFUyIsCiAgICAgICAgICAiQ0xBTkdfUFJPRklMRV9EQVRBX0RJUkVDVE9SWSIgOiAiL1VzZXJzL0lldmdlbmlpX015a2hhbGV2c2t5aS9MaWJyYXJ5L0RldmVsb3Blci9YY29kZS9EZXJpdmVkRGF0YS9UZXN0VlNDb2RlLWN0bHlpZ2JjZWlvdXp1Z3N3Z2NtcHhla2tuaHQvQnVpbGQvUHJvZmlsZURhdGEiLAogICAgICAgICAgIkVOQUJMRV9QUkVWSUVXUyIgOiAiTk8iLAogICAgICAgICAgIkVOQUJMRV9YT0pJVF9QUkVWSUVXUyIgOiAiTk8iLAogICAgICAgICAgIlRBUkdFVF9ERVZJQ0VfSURFTlRJRklFUiIgOiAiQUYyMThGOUYtMTg4My00RjQ1LTkxQkItMkZGQkQ4MTZGMkY0IiwKICAgICAgICAgICJUQVJHRVRfREVWSUNFX01PREVMIiA6ICJpUGhvbmUxNSw1IiwKICAgICAgICAgICJUQVJHRVRfREVWSUNFX09TX1ZFUlNJT04iIDogIjE3LjAuMSIsCiAgICAgICAgICAiVEFSR0VUX0RFVklDRV9QTEFURk9STV9OQU1FIiA6ICJpcGhvbmVzaW11bGF0b3IiCiAgICAgICAgfQogICAgICB9CiAgICB9CiAgfSwKICAic2NoZW1lQ29tbWFuZCIgOiAibGF1bmNoIiwKICAic2hvd05vbkxvZ2dlZFByb2dyZXNzIiA6IHRydWUsCiAgInVzZURyeVJ1biIgOiBmYWxzZSwKICAidXNlSW1wbGljaXREZXBlbmRlbmNpZXMiIDogdHJ1ZSwKICAidXNlTGVnYWN5QnVpbGRMb2NhdGlvbnMiIDogZmFsc2UsCiAgInVzZVBhcmFsbGVsVGFyZ2V0cyIgOiB0cnVlCn0=",
+      "parameters":{
+         "action":"build",
+         "activeArchitecture":"arm64",
+         "activeRunDestination":{
+            "disableOnlyActiveArch":false,
+            "platform":"iphonesimulator",
+            "sdk":"iphonesimulator17.0",
+            "sdkVariant":"iphonesimulator",
+            "supportedArchitectures":[
+               "arm64",
+               "x86_64"
+            ],
+            "targetArchitecture":"arm64"
+         },
+         "arenaInfo":{
+            "buildIntermediatesPath":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Intermediates.noindex",
+            "buildProductsPath":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Products",
+            "derivedDataPath":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData",
+            "indexDataStoreFolderPath":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Index.noindex/DataStore",
+            "indexEnableDataStore":true,
+            "indexPCHPath":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Index.noindex/PrecompiledHeaders",
+            "pchPath":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/Intermediates.noindex/PrecompiledHeaders"
+         },
+         "configuration":"Debug",
+         "overrides":{
+            "commandLine":{
+               "SDKROOT":"iphonesimulator17.0"
+            },
+            "commandLineConfig":{
+               
+            },
+            "environmentConfig":{
+               
+            },
+            "synthesized":{
+               "ACTION":"build",
+               "ASSETCATALOG_FILTER_FOR_DEVICE_MODEL":"iPhone15,5",
+               "ASSETCATALOG_FILTER_FOR_DEVICE_OS_VERSION":"17.0.1",
+               "ASSETCATALOG_FILTER_FOR_THINNING_DEVICE_CONFIGURATION":"iPhone15,5",
+               "BUILD_ACTIVE_RESOURCES_ONLY":"YES",
+               "CLANG_COVERAGE_MAPPING":"YES",
+               "CLANG_PROFILE_DATA_DIRECTORY":"/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ctlyigbceiouzugswgcmpxekknht/Build/ProfileData",
+               "ENABLE_PREVIEWS":"NO",
+               "ENABLE_XOJIT_PREVIEWS":"NO",
+               "TARGET_DEVICE_IDENTIFIER":"AF218F9F-1883-4F45-91BB-2FFBD816F2F4",
+               "TARGET_DEVICE_MODEL":"iPhone15,5",
+               "TARGET_DEVICE_OS_VERSION":"17.0.1",
+               "TARGET_DEVICE_PLATFORM_NAME":"iphonesimulator"
+            }
+         }
+      },
+      "schemeCommand":0,
+      "showNonLoggedProgress":true,
+      "useDryRun":false,
+      "useImplicitDependencies":true,
+      "useParallelTargets":true
+   },
+   "responseChannel":5,
+   "sessionHandle":"S0"
+}
