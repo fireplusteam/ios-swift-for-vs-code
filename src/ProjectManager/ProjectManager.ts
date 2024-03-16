@@ -23,26 +23,17 @@ export class ProjectManager {
 
     constructor() {
         this.disposable.push(vscode.workspace.onDidCreateFiles(async e => {
-            for (let uri of e.files) {
-                if (!this.isAllowed()) {
-                    return;
-                }
-                this.addAFileToXcodeProject(uri);
-            }
+            this.addAFileToXcodeProject([...e.files]);
             console.log("Create a new file");
         }));
 
         this.disposable.push(vscode.workspace.onDidRenameFiles(e => {
-            for (let uri of e.files) {
-                this.renameFile(uri.oldUri, uri.newUri);
-            }
+            this.renameFile(e.files.map(f => { return f.oldUri; }), e.files.map(f => { return f.newUri; }));
             console.log("Renamed");
         }));
 
         this.disposable.push(vscode.workspace.onDidDeleteFiles(e => {
-            for (let uri of e.files) {
-                this.deleteFileFromXcodeProject(uri);
-            }
+            this.deleteFileFromXcodeProject([...e.files]);
             console.log("Deleted");
         }));
         this.disposable.push(this.projectCache.onProjectChanged.event(() => {
@@ -277,33 +268,42 @@ export class ProjectManager {
         return true;
     }
 
-    private async renameFile(oldFile: vscode.Uri, file: vscode.Uri) {
+    private async renameFile(oldFiles: vscode.Uri[], files: vscode.Uri[]) {
         if (!this.isAllowed()) {
             return;
         }
 
-        const projectFiles = this.projectCache.getProjects();
-        let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+        const modifiedProjects = new Set<string>();
+        try {
+            const projectFiles = this.projectCache.getProjects();
+            for (let i = 0; i < oldFiles.length; ++i) {
+                const file = files[i];
+                const oldFile = oldFiles[i];
+                let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
 
-        for (let project of selectedProject) {
-            try {
-                if (isFolder(file.fsPath)) {
-                    // rename folder
-                    if (isFileMoved(oldFile.fsPath, file.fsPath))
-                        await moveFolderToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
-                    else
-                        await renameFolderToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
-                } else {
-                    if (isFileMoved(oldFile.fsPath, file.fsPath))
-                        await moveFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
-                    else
-                        await renameFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                for (let project of selectedProject) {
+                    try {
+                        modifiedProjects.add(project);
+                        if (isFolder(file.fsPath)) {
+                            // rename folder
+                            if (isFileMoved(oldFile.fsPath, file.fsPath))
+                                await moveFolderToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                            else
+                                await renameFolderToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                        } else {
+                            if (isFileMoved(oldFile.fsPath, file.fsPath))
+                                await moveFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                            else
+                                await renameFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                        }
+                    } catch (err) {
+                        console.log(err);
+                    }
                 }
-            } catch (err) {
-                console.log(err);
-            } finally {
-                await saveProject(getFilePathInWorkspace(project));
             }
+        } finally {
+            for (const project of modifiedProjects)
+                await saveProject(getFilePathInWorkspace(project));
         }
     }
 
@@ -312,26 +312,33 @@ export class ProjectManager {
         await this.generateWorkspace();
     }
 
-    private async deleteFileFromXcodeProject(file: vscode.Uri) {
+    async deleteFileFromXcodeProject(files: vscode.Uri[]) {
         if (!this.isAllowed()) {
             return;
         }
         const projectFiles = this.projectCache.getProjects();
-        let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+        const modifiedProjects = new Set<string>();
+        try {
+            for (const file of files) {
+                let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
 
-        for (let project of selectedProject) {
-            try {
-                const list = this.projectCache.getList(project);
-                if (list.has(file.fsPath)) {
-                    await deleteFileFromProject(getFilePathInWorkspace(project), file.fsPath);
-                } else { // folder
-                    await deleteFolderFromProject(getFilePathInWorkspace(project), file.fsPath);
+                for (let project of selectedProject) {
+                    modifiedProjects.add(project);
+                    try {
+                        const list = this.projectCache.getList(project);
+                        if (list.has(file.fsPath)) {
+                            await deleteFileFromProject(getFilePathInWorkspace(project), file.fsPath);
+                        } else { // folder
+                            await deleteFolderFromProject(getFilePathInWorkspace(project), file.fsPath);
+                        }
+                    } catch (err) {
+                        console.log(err);
+                    }
                 }
-            } catch (err) {
-                console.log(err);
-            } finally {
-                await saveProject(getFilePathInWorkspace(project));
             }
+        } finally {
+            for (const project of modifiedProjects)
+                await saveProject(getFilePathInWorkspace(project));
         }
     }
 
@@ -458,7 +465,6 @@ export class ProjectManager {
         }
 
         for (const folder of foldersToAdd) {
-            // TODO: Add all content in the folder to the project
             await addFolderToProject(getFilePathInWorkspace(selectedProject), folder);
         }
 
@@ -601,15 +607,15 @@ async function renameFileToProject(projectFile: string, oldFile: string, file: s
 }
 
 async function moveFileToProject(projectFile: string, oldFile: string, file: string) {
-    return await executeRuby(projectFile, `move_file|^|^|${oldFile}|^|^|${file}'`);
+    return await executeRuby(projectFile, `move_file|^|^|${oldFile}|^|^|${file}`);
 }
 
 async function renameFolderToProject(projectFile: string, oldFolder: string, newFolder: string) {
-    return await executeRuby(projectFile, `rename_group|^|^|${oldFolder}|^|^|${newFolder}'`);
+    return await executeRuby(projectFile, `rename_group|^|^|${oldFolder}|^|^|${newFolder}`);
 }
 
 async function moveFolderToProject(projectFile: string, oldFolder: string, newFolder: string) {
-    return await executeRuby(projectFile, `move_group|^|^|${oldFolder}|^|^|${newFolder}'`);
+    return await executeRuby(projectFile, `move_group|^|^|${oldFolder}|^|^|${newFolder}`);
 }
 
 export async function listFilesFromProject(projectFile: string) {

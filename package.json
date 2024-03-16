@@ -22,6 +22,22 @@
     ],
     "publisher": "fireplusteam",
     "contributes": {
+        "menus": {
+            "explorer/context": [
+                {
+                    "command": "vscode-ios.project.file.add",
+                    "group": "vscode-ios@1"
+                },
+                {
+                    "command": "vscode-ios.project.file.edit.targets",
+                    "group": "vscode-ios@1"
+                },
+                {
+                    "command": "vscode-ios.project.delete.reference",
+                    "group": "vscode-ios@1"
+                }
+            ]
+        },
         "configuration": {
             "title": "iOS IDE",
             "properties": {
@@ -125,12 +141,16 @@
                 "title": "iOS: Run App & Debug"
             },
             {
-                "command": "vscode-ios.run.project.file.add",
-                "title": "iOS: Project: Add File"
+                "command": "vscode-ios.project.file.add",
+                "title": "iOS: Add Files"
             },
             {
-                "command": "vscode-ios.run.project.file.edit.targets",
-                "title": "iOS: Project: Edit File Targets"
+                "command": "vscode-ios.project.delete.reference",
+                "title": "iOS: Delete Files Reference"
+            },
+            {
+                "command": "vscode-ios.project.file.edit.targets",
+                "title": "iOS: Edit File Targets"
             },
             {
                 "command": "vscode-ios.run.project.reload",

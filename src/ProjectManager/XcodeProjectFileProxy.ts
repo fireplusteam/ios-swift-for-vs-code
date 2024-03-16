@@ -24,9 +24,14 @@ export class XcodeProjectFileProxy {
                 stdio: "pipe"
             }
         );
-        this.process.on("exit", () => {
+        let stderr = "";
+        this.process.stderr?.on("data", data => {
+            stderr += data.toString();
+        })
+        this.process.on("exit", (code, signal) => {
             this.rl = undefined;
-            this.onEndReadWithError.fire(new Error("child is killed"));
+            console.log(`Return code: ${code}, signal: ${signal}, error: ${stderr}`);
+            this.onEndReadWithError.fire(new Error(`${projectPath} file failed: ${stderr}`));
             if (fs.existsSync(projectPath)) {
                 this.runProcess(projectPath);
             }
@@ -35,8 +40,8 @@ export class XcodeProjectFileProxy {
     }
 
     private async read() {
+        const process = this.process;
         try {
-            const process = this.process;
             if (this.process?.stdout)
                 this.rl = createInterface({
                     input: this.process.stdout, //or fileStream 
@@ -53,7 +58,7 @@ export class XcodeProjectFileProxy {
             }
         } catch (error) {
             this.rl = undefined;
-            process.kill(process.pid);
+            process?.kill();
             this.onEndReadWithError.fire(error);
         }
     }

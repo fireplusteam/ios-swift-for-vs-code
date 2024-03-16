@@ -224,15 +224,30 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.run.project.file.add", async () => {
-            const files = await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: true, canSelectMany: true, filters: { "All Files": ["*"] } });
+        vscode.commands.registerCommand("vscode-ios.project.file.add", async (contextSelection: vscode.Uri, allSelections: vscode.Uri[]) => {
+            const files = await vscode.window.showOpenDialog({
+                defaultUri: contextSelection,
+                openLabel: "Add",
+                canSelectFiles: true,
+                canSelectFolders: true,
+                canSelectMany: true,
+                filters: {
+                    "All Files": ["*"]
+                }
+            });
             projectManager.addAFileToXcodeProject(files);
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.run.project.file.edit.targets", async () => {
-            projectManager.editFileTargets(vscode.window.activeTextEditor?.document.uri);
+        vscode.commands.registerCommand("vscode-ios.project.delete.reference", async (contextSelection: vscode.Uri, allSelections: vscode.Uri[]) => {
+            projectManager.deleteFileFromXcodeProject(allSelections);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.project.file.edit.targets", async (contextSelection: vscode.Uri, allSelections: vscode.Uri[]) => {
+            projectManager.editFileTargets(contextSelection || vscode.window.activeTextEditor?.document.uri);
         })
     );
 

@@ -22,7 +22,7 @@ def get_real_path(file, project)
   end
 end
 
-def find_group_by_absolute_file_path(project, path, exit_on_not_found = true)
+def find_group_by_absolute_file_path(project, path)
   groups =
     project.groups.lazy.filter_map do |group|
       relative_path = path.sub(get_real_path(group, project) + "/", "")
@@ -33,16 +33,10 @@ def find_group_by_absolute_file_path(project, path, exit_on_not_found = true)
       group.find_subpath(relative_dir)
     end
 
-  if groups.first.nil? && exit_on_not_found
-    group_name = File.dirname(path)
-    puts "WARN: xcodebuild: Could not find \"#{group_name}\" group in the project."
-    exit
-  end
-
   groups.first
 end
 
-def find_group_by_absolute_dir_path(project, path, exit_on_not_found = true)
+def find_group_by_absolute_dir_path(project, path)
   groups =
     project.groups.lazy.filter_map do |group|
       relative_dir = path.sub(get_real_path(group, project) + "/", "")
@@ -52,30 +46,18 @@ def find_group_by_absolute_dir_path(project, path, exit_on_not_found = true)
       group.find_subpath(relative_dir)
     end
 
-  if groups.first.nil? && exit_on_not_found
-    group_name = File.basename(path)
-    puts "WARN: xcodebuild: Could not find \"#{group_name}\" group in the project."
-    exit
-  end
-
   groups.first
 end
 
-def find_file(project, file_path, exit_on_not_found = true)
+def find_file(project, file_path)
   file_ref =
     project.files.find { |file| get_real_path(file, project) == file_path }
-
-  if file_ref.nil? && exit_on_not_found
-    file_name = File.basename(file_path)
-    puts "WARN: xcodebuild: Could not find \"#{file_name}\" in the project."
-    exit
-  end
 
   file_ref
 end
 
 def add_file_to_targets(project, targets, file_path)
-  file_ref = find_file(project, file_path, false)
+  file_ref = find_file(project, file_path)
 
   if file_ref.nil?
     group = find_group_by_absolute_file_path(project, file_path)
@@ -91,16 +73,21 @@ def add_file_to_targets(project, targets, file_path)
 end
 
 def update_file_targets(project, targets, file_path)
-  find_file(project, file_path).remove_from_project
-  add_file_to_targets(project, targets, file_path)
+  file_ref = find_file(project, file_path)
+  if not file_ref.nil?
+    file_ref.remove_from_project
+    add_file_to_targets(project, targets, file_path)
+  end
 end
 
 def delete_file(project, file_path)
-  find_file(project, file_path).remove_from_project
+  file_ref = find_file(project, file_path)
+  file_ref.remove_from_project if not file_ref.nil?
 end
 
 def rename_file(project, old_file_path, new_file_path)
-  find_file(project, old_file_path).set_path(new_file_path)
+  file_ref = find_file(project, old_file_path)
+  file_ref.set_path(new_file_path) if not file_ref.nil?
 end
 
 def move_file(project, old_path, new_path)
@@ -115,9 +102,8 @@ def add_group(project, group_path)
   for i in 1..(splitted_path.length - 2)
     current_path = splitted_path[0..i].join("/")
     new_group_path = current_path + "/" + splitted_path[i + 1]
-    parent_group = find_group_by_absolute_dir_path(project, current_path, false)
-    current_group =
-      find_group_by_absolute_dir_path(project, new_group_path, false)
+    parent_group = find_group_by_absolute_dir_path(project, current_path)
+    current_group = find_group_by_absolute_dir_path(project, new_group_path)
 
     if current_group.nil?
       unless parent_group.nil?
@@ -129,22 +115,28 @@ end
 
 def rename_group(project, old_group_path, new_group_path)
   group = find_group_by_absolute_dir_path(project, old_group_path)
-  group.name = File.basename(new_group_path)
-  group.set_path(new_group_path)
+  if not group.nil?
+    group.name = File.basename(new_group_path)
+    group.set_path(new_group_path)
+  end
 end
 
 def move_group(project, old_path, new_path)
   new_parent_path = File.dirname(new_path)
   new_parent_group = find_group_by_absolute_dir_path(project, new_parent_path)
-  old_group = find_group_by_absolute_dir_path(project, old_path)
-  old_group.move(new_parent_group)
+  if not new_parent_group.nil?
+    old_group = find_group_by_absolute_dir_path(project, old_path)
+    old_group.move(new_parent_group) if not old_group.nil?
+  end
 end
 
 def delete_group(project, group_path)
   group = find_group_by_absolute_dir_path(project, group_path)
-  group.recursive_children_groups.reverse.each(&:clear)
-  group.clear
-  group.remove_from_project
+  if not group.nil?
+    group.recursive_children_groups.reverse.each(&:clear)
+    group.clear
+    group.remove_from_project
+  end
 end
 
 def list_targets(project)
