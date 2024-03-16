@@ -382,14 +382,7 @@ export class ProjectManager {
 
         const fileTargets = await listTargetsForFile(getFilePathInWorkspace(selectedProject[0]), file.fsPath);
         const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject[0]));
-        const items: QuickPickItem[] = targets.map((target, index) => {
-            return { label: target, value: target, picked: fileTargets.includes(target), index: index };
-        }).sort((a, b) => {
-            if (a.picked !== b.picked) {
-                return Number(b.picked) - Number(a.picked);
-            }
-            return a.index - b.index;
-        });
+        const items: QuickPickItem[] = sortTargets(targets, fileTargets);
         const selectedTargets = await showPicker(items, "Edit targets of a file", "", true, false, false, ",");
 
         if (selectedTargets === undefined)
@@ -461,11 +454,13 @@ export class ProjectManager {
         if (filesToAdd.size == 0 && foldersToAdd.size == 0)
             return;
 
-        let selectedTarget: string[] | undefined;
+        let selectedTargets: string | undefined;
         if (filesToAdd.size > 0) {
+            const proposedTargets = await this.determineTargetForFile([...filesToAdd][0], selectedProject);
             const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
-            selectedTarget = await vscode.window.showQuickPick(targets, { canPickMany: true, ignoreFocusOut: true, title: "Select Targets for The Files" });
-            if (selectedTarget === undefined) {
+            const items = sortTargets(targets, proposedTargets);
+            selectedTargets = await showPicker(items, "Select Targets for The Files", "", true, false, false, ",");
+            if (selectedTargets === undefined) {
                 return;
             }
         }
@@ -477,7 +472,7 @@ export class ProjectManager {
         for (const file of filesToAdd) {
             await addFileToProject(
                 getFilePathInWorkspace(selectedProject),
-                selectedTarget?.join(",") || "",
+                selectedTargets || "",
                 file
             );
         }
@@ -498,6 +493,27 @@ export class ProjectManager {
                 selectedProject = bestFitProject[0];
         }
         return selectedProject;
+    }
+
+    private async determineTargetForFile(filePath: string, project: string) {
+        const filePathComponent = filePath.split(path.sep);
+        for (let i = filePathComponent.length - 1; i >= 0; --i) {
+            const fileSubpath = filePathComponent.slice(0, i).join(path.sep);
+            const neighborFiles = await vscode.workspace.findFiles({
+                baseUri: vscode.Uri.file(fileSubpath),
+                base: fileSubpath,
+                pattern: "*"
+            });
+            for (const file of neighborFiles) {
+                if (file.fsPath === filePath)
+                    continue;
+                const targets = await listTargetsForFile(getFilePathInWorkspace(project), file.fsPath);
+                if (targets.length > 0) {
+                    return targets;
+                }
+            }
+        }
+        return [];
     }
 
     private async determineProjectFile(filePath: string, projects: string[]) {
@@ -529,6 +545,17 @@ export class ProjectManager {
         }
         return [...bestFitProject];
     }
+}
+
+function sortTargets(targets: string[], fileTargets: string[]): QuickPickItem[] {
+    return targets.map((target, index) => {
+        return { label: target, value: target, picked: fileTargets.includes(target), index: index };
+    }).sort((a, b) => {
+        if (a.picked !== b.picked) {
+            return Number(b.picked) - Number(a.picked);
+        }
+        return a.index - b.index;
+    });
 }
 
 function getProjectFiles(project: string) {

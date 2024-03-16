@@ -1,4 +1,5 @@
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 
 export class ProblemDiagnosticResolver {
@@ -238,7 +239,8 @@ export class ProblemDiagnosticResolver {
                 diagnostic.source = "xcodebuild";
                 const value = files[file] || [];
                 value.push(diagnostic);
-                files[file] = value;
+                if (fs.existsSync(file))
+                    files[file] = value;
             }
         } catch (err) {
             console.log(err);
