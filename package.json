@@ -94,7 +94,7 @@
             },
             {
                 "command": "vscode-ios.project.selectTarget",
-                "title": "iOS: Select Scheme"
+                "title": "iOS: Select Target"
             },
             {
                 "command": "vscode-ios.project.selectDevice",
@@ -106,7 +106,7 @@
             },
             {
                 "command": "vscode-ios.check.generateXcodeServer",
-                "title": "iOS: Generate xCode Server"
+                "title": "iOS: Generate xCode Server Config"
             },
             {
                 "command": "vscode-ios.env.open.xcode",
@@ -125,11 +125,6 @@
             {
                 "command": "vscode-ios.build.tests",
                 "title": "iOS: Build Tests",
-                "category": "build"
-            },
-            {
-                "command": "vscode-ios.utils.file.nameOfModule",
-                "title": "iOS: Name Of Module By Current File",
                 "category": "build"
             },
             {

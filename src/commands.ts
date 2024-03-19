@@ -191,21 +191,6 @@ export async function terminateCurrentIOSApp(sessionID: string, executor: Execut
     await killSpawnLaunchedProcesses(sessionID);
 }
 
-export async function nameOfModuleForFile(executor: Executor) {
-    const fileUrl = vscode.window.activeTextEditor?.document.uri.fsPath;
-    if (fileUrl === undefined) {
-        throw new Error("In order to get a name of module for a file, select the file first please");
-    }
-    const moduleName = getLastLine(await executor.execShell(
-        "Name Of Module By Current File",
-        "module_name_by_file.sh",
-        [fileUrl],
-        false,
-        ExecutorReturnType.stdout) as string
-    );
-    vscode.window.showInformationMessage(`Name of module is: ${moduleName}`);
-}
-
 export async function runApp(sessionID: string, executor: Executor, isDebuggable: boolean) {
     emptyAppLog(getDeviceId());
     await executor.execShell(

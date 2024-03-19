@@ -7,7 +7,6 @@ import {
     enableXCBBuildService,
     generateXcodeServer,
     ksdiff,
-    nameOfModuleForFile,
     openFile,
     openXCode,
     restartLSP,
@@ -194,17 +193,6 @@ export function activate(context: vscode.ExtensionContext) {
             "vscode-ios.build.tests",
             async () => {
                 await executeTask("Build Tests");
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.utils.file.nameOfModule",
-            async () => {
-                await runCommand(async () => {
-                    await nameOfModuleForFile(new Executor());
-                });
             }
         )
     );
