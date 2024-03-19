@@ -280,6 +280,7 @@ while (input = STDIN.gets.chomp)
   arg = input.split("|^|^|")
   action = arg[0]
   handle_action(project, action, arg)
+  previous_mtime = File.mtime(project_path) if action == "save"
   puts "EOF_REQUEST"
   STDOUT.flush
 end
