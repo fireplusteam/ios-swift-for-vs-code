@@ -71,6 +71,12 @@ export class ProjectManager {
 
     async loadProjectFiles(shouldDropCache = false) {
         if (!this.isAllowed()) {
+            if (isActivated()) {
+                setTimeout(() => {
+                    this.onProjectLoaded.fire();
+                }, 100);
+                return
+            }
             return;
         }
         if (shouldDropCache) {
@@ -270,6 +276,10 @@ export class ProjectManager {
 
     private async renameFile(oldFiles: vscode.Uri[], files: vscode.Uri[]) {
         if (!this.isAllowed()) {
+            if (isActivated()) {
+                this.onProjectUpdate.fire();
+                return
+            }
             return;
         }
 
@@ -314,6 +324,10 @@ export class ProjectManager {
 
     async deleteFileFromXcodeProject(files: vscode.Uri[]) {
         if (!this.isAllowed()) {
+            if (isActivated()) {
+                this.onProjectUpdate.fire();
+                return
+            }
             return;
         }
         const projectFiles = this.projectCache.getProjects();
@@ -373,6 +387,9 @@ export class ProjectManager {
     }
 
     async editFileTargets(file: vscode.Uri | undefined) {
+        if (!this.isAllowed()) {
+            return;
+        }
         if (!file)
             return;
         const projectFiles = this.projectCache.getProjects();
@@ -393,6 +410,13 @@ export class ProjectManager {
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
+        if (!this.isAllowed()) {
+            if (isActivated()) {
+                this.onProjectUpdate.fire();
+                return
+            }
+            return;
+        }
         if (files === undefined) {
             return;
         }
