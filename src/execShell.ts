@@ -94,7 +94,7 @@ export class Executor {
             open: () => this.writeEmitter?.fire(`\x1b[31${terminalId}\x1b[0m`),
             close: () => {
                 if (this.disposedTerminal !== this.terminal)
-                    kill(this.childProc?.pid);
+                    kill(this.childProc?.pid, "SIGKILL");
             },
         };
         this.terminal = vscode.window.createTerminal({
@@ -126,8 +126,10 @@ export class Executor {
             return await new Promise<void>(resolve => {
                 dis = this.onExit.event(() => {
                     resolve();
+                })
+                kill(childId, "SIGKILL", (err: any) => {
+                    console.log(err);
                 });
-                kill(childId);
             });
         }
 
@@ -204,7 +206,11 @@ export class Executor {
         });
 
         return new Promise((resolve, reject) => {
-            proc.on("exit", async (code, signal) => {
+            proc.once("error", async (err) => {
+                await this.terminateShellImp();
+                reject(err);
+            });
+            proc.once("exit", async (code, signal) => {
                 if (this.childProc !== proc) {
                     console.log("Error, wrong child process terminated")
                 }
