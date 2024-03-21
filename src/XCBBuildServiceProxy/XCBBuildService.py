@@ -8,13 +8,12 @@ import json
 import fcntl
 import asyncio
 import psutil # pip install psutil
+import subprocess
 from MessageReader import MessageReader, MsgStatus
 
-#root_path = os.path.abspath(os.path.expanduser(uri2filepath(rootUri)))
-#cache_path = os.path.join(
-            #os.path.expanduser("~/Library/Caches/xcode-build-server"),
-            #root_path.replace("/", "-"),
-        #)
+cache_path = os.path.join(
+            os.path.expanduser("~/Library/Caches/XCBBuildServiceProxy"),
+        )
 
 #debugpy.listen(5678)
 #debugpy.wait_for_client()
@@ -28,25 +27,30 @@ MODE = 1
 # 2 - write logs from server to input files
 DEBUG_FROM_FILE = 0
 
-
-prefix_file = "/Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/"
-
 global log_file
-log_file = open("/Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/xcbuild.log", "w+")#//"/tmp/xcbuild.diags"
+os.makedirs(cache_path, exist_ok=True)
+log_file = open(f"{cache_path}/xcbuild.log", "w+")#//"/tmp/xcbuild.diags"
 
-command = ['/Applications/Xcode.app/Contents/SharedFrameworks/XCBuild.framework/Versions/A/PlugIns/XCBBuildService.bundle/Contents/MacOS/XCBBuildService-origin']
+xcode_dev_path = subprocess.run("xcode-select -p", shell=True, capture_output=True).stdout.decode("utf-8").strip("\n")
+xcode_dev_path_components = xcode_dev_path.split(os.path.sep)
+if xcode_dev_path_components[-1] == "Developer":
+    build_service_path = os.path.sep.join(xcode_dev_path_components[0: -1])
+else:
+    build_service_path = os.path.sep.join(xcode_dev_path_components)
+build_service_path = os.path.join(build_service_path, "SharedFrameworks/XCBuild.framework/Versions/A/PlugIns/XCBBuildService.bundle/Contents/MacOS")
+
+command = [f"{build_service_path}/XCBBuildService-origin"]
 for i in range(1, len(sys.argv)):
     command.append(sys.argv[i])
 
 match DEBUG_FROM_FILE:
     case 0: pass
     case 1:
-        input = open("/Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/in", "r")
+        input = open(f"{cache_path}/in", "r")
         sys.stdin = input
     case 2:
-        input = open("/Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/in", "wb")
-        output = open("/Users/Ievgenii_Mykhalevskyi/Desktop/utils/XCBBuildServiceProxy/out", "wb")
-
+        input = open(f"{cache_path}/in", "wb")
+        output = open(f"{cache_path}/out", "wb")
 
 # ----------------UTILS------------------------
 

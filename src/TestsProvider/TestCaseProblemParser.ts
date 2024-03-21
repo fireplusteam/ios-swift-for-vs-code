@@ -14,6 +14,10 @@ export class TestCaseProblemParser {
         this.diagnosticTestsCollection = vscode.languages.createDiagnosticCollection("xcodebuild-tests");
     }
 
+    clear() {
+        this.diagnosticTestsCollection.clear();
+    }
+
     async checkExistingTestCases(testItems: vscode.TestItem[]) {
         const itemsMap = new Set<string>(testItems.map(e => { return e.id; }));
 

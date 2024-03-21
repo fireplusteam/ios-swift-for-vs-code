@@ -118,6 +118,11 @@
                 "category": "build"
             },
             {
+                "command": "vscode-ios.build.clean.test.errors",
+                "title": "iOS: Clean Tests Errors",
+                "category": "build"
+            },
+            {
                 "command": "vscode-ios.build.selectedTarget",
                 "title": "iOS: Build",
                 "category": "build"

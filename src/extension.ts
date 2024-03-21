@@ -180,6 +180,12 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.build.clean.test.errors", async () => {
+            testProvider.clear();
+        })
+    );
+
+    context.subscriptions.push(
         vscode.commands.registerCommand(
             "vscode-ios.build.selectedTarget",
             async () => {
