@@ -16,6 +16,11 @@ Write/Build/Debug/Test your xCode projects in VS Code with your favorite extensi
 - VS Code workspace generation based on Xcode project/workspace
 - Parsing build/test logs and display in Problems panel in real time
 
+Instead of xCode preview you can use hot reloading [InjectionIII](https://github.com/johnno1962/InjectionIII) which works great with this extension:
+
+- HotReloading & Injection with [HotReloading](https://github.com/johnno1962/HotReloading)
+- SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
+
 ## Requirements
 
 To use this extension you need to install also:
