@@ -33,7 +33,7 @@ export class TestProvider {
             }
         };
 
-        const startTestRun = (request: vscode.TestRunRequest) => {
+        const startTestRun = async (request: vscode.TestRunRequest) => {
             const queue: { test: vscode.TestItem; data: TestCase }[] = [];
             const run = ctrl.createTestRun(request, "iOS Tests", true);
 
@@ -105,7 +105,8 @@ export class TestProvider {
                     run.end();
                 }
             };
-
+            // resolve all tree before start testing
+            await this.findInitialFiles(this.context.ctrl);
             discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(runTestQueue);
         };
 
