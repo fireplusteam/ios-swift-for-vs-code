@@ -46,7 +46,14 @@
                 "vscode-ios.watcher": {
                     "type": "boolean",
                     "default": true,
+                    "title": "Changes Watcher",
                     "description": "Xcodebuild Watch. Build automatically while editing project files. Needed for updating indexes"
+                },
+                "vscode-ios.confirm.restart": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Confirm to Restart Debug Session",
+                    "description": "If enabled, asks a user to terminate debug session on a new session being triggered"
                 }
             }
         },

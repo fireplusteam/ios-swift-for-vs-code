@@ -94,9 +94,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         this.setIsRunning(false);
     }
 
+    private async shouldAskForTerminateCurrentSession() {
+        const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("confirm.restart");
+        if (!isEnabled) {
+            return false;
+        }
+        return true;
+    }
+
     private async terminateCurrentSessionIfNeeded() {
         if (this.isRunning) {
-            const option = await vscode.window.showErrorMessage("Terminate the current session?", "Yes", "No");
+            const option = (await this.shouldAskForTerminateCurrentSession()) ? await vscode.window.showErrorMessage("Terminate the current session?", "Yes", "No") : "Yes";
             if (option === "Yes") {
                 try {
                     await this.stop();
