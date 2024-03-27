@@ -2,6 +2,18 @@
     "name": "vscode-ios",
     "displayName": "iOS IDE",
     "description": "Develop your iOS application in VS Code",
+    "keywords": [
+        "ios",
+        "xcode",
+        "swift",
+        "native",
+        "debug",
+        "debugger",
+        "SwiftUI",
+        "Xcodebuild Tools",
+        "unit testing",
+        "snapshot testing"
+    ],
     "version": "0.0.1",
     "engines": {
         "vscode": "^1.86.0"
@@ -54,6 +66,18 @@
                     "default": true,
                     "title": "Confirm to Restart Debug Session",
                     "description": "If enabled, asks a user to terminate debug session on a new session being triggered"
+                },
+                "vscode-ios.show.log": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Show Log Alert on Error?",
+                    "description": "If enabled, show error alert on task failed"
+                },
+                "vscode-ios.confirm.terminate.task": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Confirm to Terminate Current Task",
+                    "description": "If enabled, asks a user to terminate current running task before executing the current one"
                 }
             }
         },

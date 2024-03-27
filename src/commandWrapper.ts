@@ -4,6 +4,22 @@ import { projectExecutor } from "./extension";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { TerminatedDebugSessionTask } from "./DebugConfigurationProvider";
 
+function isShowErrorEnabled() {
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("show.log");
+    if (!isEnabled) {
+        return false;
+    }
+    return true;
+}
+
+function shouldAskTerminateCurrentTask() {
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("confirm.terminate.task");
+    if (!isEnabled) {
+        return false;
+    }
+    return true;
+}
+
 export async function runCommand(commandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
     try {
         await commandWrapper(commandClosure, successMessage);
@@ -22,7 +38,7 @@ export async function commandWrapper(commandClosure: () => Promise<void>, succes
         if (err instanceof ExecutorRunningError) {
             const executingCommand = err.commandName
             let choice: string | undefined;
-            if (executingCommand === AutocompleteWatcher.AutocompleteCommandName) {
+            if (executingCommand === AutocompleteWatcher.AutocompleteCommandName || !shouldAskTerminateCurrentTask()) {
                 choice = "Terminate";
             } else {
                 choice = await vscode.window.showErrorMessage(
@@ -38,13 +54,15 @@ export async function commandWrapper(commandClosure: () => Promise<void>, succes
                 throw err;
             }
         } else if (err instanceof ExecutorTaskError) {
-            const error = err as ExecutorTaskError;
-            vscode.window.showErrorMessage(error.message, "Show log")
-                .then((option) => {
-                    if (option === "Show log") {
-                        error.terminal?.show();
-                    }
-                });
+            if (isShowErrorEnabled()) {
+                const error = err as ExecutorTaskError;
+                vscode.window.showErrorMessage(error.message, "Show log")
+                    .then((option) => {
+                        if (option === "Show log") {
+                            error.terminal?.show();
+                        }
+                    });
+            }
             throw err;
         } else if (err instanceof ExecutorTerminatedByUserError) {
             throw err; // no need to notify as this's one is terminated by user
