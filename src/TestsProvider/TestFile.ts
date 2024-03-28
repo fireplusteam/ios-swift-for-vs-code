@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseMarkdown } from './parseMarkdown';
+import { parseMarkdown } from './parseClass';
 import { TestContainer } from './TestContainer';
 import { TestCase } from './TestCase';
 import { TestHeading } from './TestHeading';
