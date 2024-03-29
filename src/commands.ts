@@ -6,9 +6,10 @@ import { buildSelectedTarget } from "./buildCommands";
 import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { ProjectManager } from './ProjectManager/ProjectManager';
 import { glob } from 'glob';
+import { sleep } from './extension';
 
 export async function selectProjectFile(executor: Executor, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
@@ -259,10 +260,38 @@ export async function runAndDebugTestsForCurrentFile(sessionID: string, executor
 }
 
 export async function enableXCBBuildService(enabled: boolean) {
-    const install = enabled ? "-install" : "-uninstall"
-    const command = `python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()}`;
-    exec(command, (error, stdout, stderr) => {
-        console.log(error);
+    await sleep(5000);
+    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
+
+    return new Promise<void>(async (resolve) => {
+        exec(checkIfInjectedCommand, async (error, stdout, stderr) => {
+            if (enabled && error === null || !enabled && error != null) {
+                resolve();
+                return;
+            }
+            const isInstallStr = enabled ? "INSTALL" : "DISABLED";
+            const password = await vscode.window.showInputBox({ ignoreFocusOut: false, prompt: `In order to ${isInstallStr} XCBBuildService, please enter sudo password`, password: true });
+            if (password === undefined) {
+                resolve();
+                return;
+            }
+            const install = enabled ? "-install" : "-uninstall"
+            const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()}`;
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    if (enabled)
+                        vscode.window.showErrorMessage(`Failed to install XCBBuildService`);
+                    else
+                        vscode.window.showErrorMessage(`Failed to uninstall XCBBuildService`);
+                } else {
+                    if (enabled)
+                        vscode.window.showInformationMessage("XCBBuildService proxy setup successfully");
+                    else
+                        vscode.window.showInformationMessage("XCBBuildService Proxy was uninstall successfully")
+                }
+                resolve();
+            });
+        });
     });
 }
 

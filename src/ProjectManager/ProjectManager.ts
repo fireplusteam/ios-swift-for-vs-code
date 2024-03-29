@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as fs from 'fs';
-import { getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "../env";
+import { getBuildRootPath, getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "../env";
 import * as parser from 'fast-xml-parser';
 import { exec } from "child_process";
 import path from "path";
@@ -181,6 +181,13 @@ export class ProjectManager {
                 "files.exclude": excludedFilesDict,
                 "search.exclude": excludedFilesDict
             }
+        }
+        const buildRootPath = getBuildRootPath();
+        if (buildRootPath !== undefined) {
+            xCodeWorkspace.folders.push({
+                name: "Dependencies",
+                path: path.join(buildRootPath, "SourcePackages", "checkouts")
+            });
         }
 
         await this.projectCache.saveCacheToFile(this.xCodeCachePath());

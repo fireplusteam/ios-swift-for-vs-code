@@ -74,6 +74,9 @@ def get_schemes(project_file):
         if "Schemes:" in x:
             is_tail = True
     
+    if len(schemes) == 0:
+        print(f"Error: {process.stdout}")
+    
     return schemes
 
 

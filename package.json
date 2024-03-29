@@ -55,6 +55,12 @@
         "configuration": {
             "title": "iOS IDE",
             "properties": {
+                "vscode-ios.xcb.build.service": {
+                    "type": "boolean",
+                    "default": false,
+                    "title": "Enable XCBBuildService Proxy",
+                    "description": "if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature"
+                },
                 "vscode-ios.watcher": {
                     "type": "boolean",
                     "default": true,

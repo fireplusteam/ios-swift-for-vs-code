@@ -27,11 +27,19 @@ import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import path from "path";
 
+function shouldInjectXCBBuildService() {
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
+    if (!isEnabled) {
+        return false;
+    }
+    return true;
+}
+
 async function initialize() {
     if (!isActivated()) {
         try {
             if (await selectProjectFile(projectExecutor, projectManager, true, true)) {
-                await enableXCBBuildService(true);
+                await enableXCBBuildService(shouldInjectXCBBuildService());
                 autocompleteWatcher.triggerIncrementalBuild();
             }
         } catch {
@@ -39,7 +47,7 @@ async function initialize() {
         }
     } else {
         restartLSP();
-        await enableXCBBuildService(true);
+        await enableXCBBuildService(shouldInjectXCBBuildService());
         autocompleteWatcher.triggerIncrementalBuild();
     }
 }

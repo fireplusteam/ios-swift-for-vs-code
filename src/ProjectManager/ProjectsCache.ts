@@ -161,6 +161,10 @@ export class ProjectsCache {
             );
             fileWatch.on("change", async e => {
                 this.watcher.delete(projectPath);
+                if (!fs.existsSync(getFilePathInWorkspace(projectPath))) {
+                    this.cache.delete(projectPath);
+                    return;
+                }
                 await this.update(projectPath);
                 this.onProjectChanged.fire();
             });

@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import fs from "fs";
 
 export function getWorkspacePath() {
-    const workspace = vscode.workspace.rootPath || "";
+    const workspace = vscode.workspace.workspaceFolders?.at(0)?.uri.fsPath || "";
     return workspace;
 }
 
@@ -107,4 +107,14 @@ export function isActivated() {
         return false;
     }
     return true;
+}
+
+export function getBuildRootPath() {
+    try {
+        const json = JSON.parse(fs.readFileSync(getFilePathInWorkspace("buildServer.json"), "utf-8"));
+        return json.build_root;
+    } catch (error) {
+        console.log(`Building folder is not set : ${error}`)
+        return undefined;
+    }
 }
