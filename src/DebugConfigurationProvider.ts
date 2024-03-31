@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
-import { getDeviceId, getScriptPath, isActivated } from "./env";
+import { getDeviceId, getScriptPath, getWorkspacePath, isActivated } from "./env";
 import { commandWrapper } from "./commandWrapper";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./buildCommands";
@@ -263,8 +263,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             ],
             console: "internalConsole",
             internalConsoleOptions: "neverOpen",
-            envFile: "${workspaceFolder}/.vscode/.env",
-            cwd: "${workspaceFolder}",
+            envFile: `${workspaceFolderConfig()}/.vscode/.env`,
+            cwd: `${workspaceFolderConfig()}`,
             appSessionId: appSessionId,
             sessionId: this.sessionID
         };
@@ -275,7 +275,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             type: "lldb",
             request: "custom",
             name: DebugConfigurationProvider.lldbName,
-            program: "${workspaceFolder}/your-program.js",
             targetCreateCommands: [
                 `command script import '${getScriptPath()}/attach_lldb.py'`,
                 "command script add -f attach_lldb.create_target create_target",
@@ -298,4 +297,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         };
         return debugSession;
     }
+}
+
+function workspaceFolderConfig() {
+    return getWorkspacePath()
 }
