@@ -90,6 +90,7 @@ export class TestProvider {
                             if (item) {
                                 if (result === "passed") {
                                     run.passed(item, duration);
+                                    run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
                                 } else if (result == "failed") {
                                     run.errored(item, message, duration);
                                 }
