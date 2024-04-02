@@ -80,21 +80,20 @@ export class TestProvider {
 
                 try {
                     emptyTestsLog();
-                    await this.asyncTestCaseParser.checkExistingTestCases(this.context.allTestItems());
                     this.asyncParser.parseAsyncLogs(
                         getWorkspacePath(),
                         ".logs/tests.log",
-                        (result, message, rawMessage, target, className, testName, duration) => {
+                        async (result, rawMessage, target, className, testName, duration) => {
                             const key = `${target}/${className}/${testName}`;
                             const item = mapTests.get(key)?.test;
                             if (item) {
+                                run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
                                 if (result === "passed") {
                                     run.passed(item, duration);
-                                    run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
                                 } else if (result == "failed") {
-                                    run.errored(item, message, duration);
+                                    const messages = await this.asyncTestCaseParser.parseAsyncLogs(rawMessage, item);
+                                    run.failed(item, messages, duration);
                                 }
-                                this.asyncTestCaseParser.parseAsyncLogs(rawMessage, item);
                             }
                             console.log("log");
                         });
@@ -179,7 +178,6 @@ export class TestProvider {
     }
 
     clear() {
-        this.asyncTestCaseParser.clear();
     }
 
     async findInitialFiles(controller: vscode.TestController) {
@@ -203,7 +201,6 @@ export class TestProvider {
             }
             break; // only first target 
         }
-        this.asyncTestCaseParser.checkExistingTestCases(this.context.allTestItems());
         return;
     }
 }

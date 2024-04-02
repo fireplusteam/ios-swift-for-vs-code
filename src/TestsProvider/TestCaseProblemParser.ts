@@ -1,71 +1,27 @@
+import { error } from 'console';
+import path from 'path';
 import { start } from 'repl';
 import * as vscode from 'vscode';
 
 const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):?/m;
+const diffPattern = /(XCTAssertEqual|XCTAssertNotEqual)\sfailed:\s\((.*?)\).*?\((.*?)\)/m;
 
 export class TestCaseProblemParser {
 
-    disposable: vscode.Disposable[] = [];
-    diagnosticTestsCollection: vscode.DiagnosticCollection;
-
-    errors = new Map<string, { uri: vscode.Uri, errors: vscode.Diagnostic[] }>();
-
-    constructor() {
-        this.diagnosticTestsCollection = vscode.languages.createDiagnosticCollection("xcodebuild-tests");
-    }
-
-    clear() {
-        this.diagnosticTestsCollection.clear();
-    }
-
-    async checkExistingTestCases(testItems: vscode.TestItem[]) {
-        const itemsMap = new Set<string>(testItems.map(e => { return e.id; }));
-
-        const toDelete = [] as string[];
-        for (const [id,] of this.errors) {
-            if (!itemsMap.has(id)) {
-                toDelete.push(id);
-            }
-        }
-        for (const itemToDelete of toDelete) {
-            this.delete(itemToDelete);
-        }
-    }
-
-    private delete(id: string) {
-        const uri = this.errors.get(id)?.uri || vscode.Uri.file("");
-        const existingProblems = new Set<vscode.Diagnostic>(this.diagnosticTestsCollection.get(uri));
-        for (const problem of this.errors.get(id)?.errors || []) {
-            existingProblems.delete(problem);
-        }
-        this.diagnosticTestsCollection.set(uri, [...existingProblems]);
-        this.errors.delete(id);
-    }
-
     async parseAsyncLogs(testCase: string, testItem: vscode.TestItem) {
-        const problems = this.parseBuildLog(testCase) || [];
-        const uri = testItem.uri;
-        const id = testItem.id;
-        if (!uri)
-            return;
-        const existingProblems = new Set<vscode.Diagnostic>(this.diagnosticTestsCollection.get(uri));
-        for (const problem of this.errors.get(id)?.errors || []) {
-            existingProblems.delete(problem);
+        if (testItem.uri) {
+            const problems = this.parseBuildLog(testCase, testItem.uri, testItem.id.split(path.sep).at(-1) || "") || [];
+            return problems;
         }
-        this.errors.delete(id);
-        problems.forEach(problem => {
-            existingProblems.add(problem);
-        });
-        this.diagnosticTestsCollection.set(uri, [...existingProblems]);
-        this.errors.set(testItem.id, { uri: uri, errors: problems });
+        return [];
     }
 
     private column(output: string, messageEnd: number) {
         return [0, 10000];
     }
 
-    private parseBuildLog(stdout: string) {
-        const files: vscode.Diagnostic[] = [];
+    private parseBuildLog(stdout: string, uri: vscode.Uri, testName: string) {
+        const files: vscode.TestMessage[] = [];
         stdout += "\nerror:";
         try {
             let startIndex = 0;
@@ -82,31 +38,30 @@ export class TestCaseProblemParser {
                 const line = Number(match[2]) - 1;
                 const column = this.column(output, (match?.index || 0) + match[0].length);
 
-                const severity = match[4];
                 let message = match[5];
                 let end = message.lastIndexOf("\n");
                 if (end !== -1)
                     message = message.substring(0, end);
-                let errorSeverity = vscode.DiagnosticSeverity.Error;
 
-                switch (severity) {
-                    case "warning":
-                        errorSeverity = vscode.DiagnosticSeverity.Warning;
-                        break;
-                    case "note":
-                        errorSeverity = vscode.DiagnosticSeverity.Information;
-                        break;
-                    default: break;
+                const expectedActualMatch = this.expectedActualValues(message);
+                const fullErrorMessage = this.errorMessage(message);
+
+
+                const diffName = `Diff: ${testName}`;
+                let diagnostic: vscode.TestMessage
+                if (expectedActualMatch) {
+                    diagnostic = vscode.TestMessage.diff(fullErrorMessage, expectedActualMatch.expected, expectedActualMatch.actual);
+                } else {
+                    diagnostic = new vscode.TestMessage(this.markDown(fullErrorMessage, diffName));
                 }
 
-                const diagnostic = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(line, column[0]),
-                        new vscode.Position(line, column[1])),
-                    message,
-                    errorSeverity
+                const range = new vscode.Range(
+                    new vscode.Position(line, column[0]),
+                    new vscode.Position(line, column[1])
                 );
-                diagnostic.source = "xcodebuild-tests";
+
+                diagnostic.location = new vscode.Location(uri, range);
+
                 files.push(diagnostic);
 
                 startIndex += (match.index || 0) + match[0].length;
@@ -115,5 +70,47 @@ export class TestCaseProblemParser {
             console.log(err);
         }
         return files;
+    }
+
+    private expectedActualValues(message: string) {
+        const expectedActualMatch = message.match(diffPattern);
+        if (expectedActualMatch)
+            return { expected: expectedActualMatch[2], actual: expectedActualMatch[3] };
+    }
+
+    private errorMessage(message: string) {
+        const index = message.indexOf("failed");
+        if (index == -1)
+            return message;
+
+        for (let i = index; i >= 0; --i)
+            if (message[i] == ':') {
+                return message.substring(i + 1).trim();
+            }
+        return message.substring(index).trim();
+    }
+
+    private markDown(message: string, name: string) {
+        let mdString = new vscode.MarkdownString("");
+        mdString.isTrusted = true;
+        // replace file links to be opened
+        message = message.replaceAll(/^(.*?):(\d+):/gm, (str, p1, p2) => {
+            return `${str}\n\r[View line](command:vscode-ios.openFile?${encodeURIComponent(JSON.stringify([p1, p2]))})`;
+        });
+        if (message.includes("SnapshotTesting.diffTool")) {
+            const list = message.split(/^To configure[\s\S]*?SnapshotTesting.diffTool.*"$/gm);
+
+            for (const pattern of list) {
+                const files = [...pattern.matchAll(/^\@[\s\S]*?"(file:.*?)\"$/gm)];
+                mdString.appendMarkdown("\n" + pattern);
+                if (files.length == 2) {
+                    mdString.appendMarkdown(`\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, files[0][1], files[1][1]]))})`);
+                }
+            }
+        } else {
+            mdString.appendMarkdown(message);
+        }
+
+        return mdString;
     }
 }
