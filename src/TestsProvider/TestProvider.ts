@@ -177,9 +177,6 @@ export class TestProvider {
             this.findInitialFiles(this.context.ctrl);
     }
 
-    clear() {
-    }
-
     async findInitialFiles(controller: vscode.TestController) {
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;

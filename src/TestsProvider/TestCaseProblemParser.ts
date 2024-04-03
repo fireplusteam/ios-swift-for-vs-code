@@ -80,8 +80,13 @@ export class TestCaseProblemParser {
 
     private errorMessage(message: string) {
         const index = message.indexOf("failed");
-        if (index == -1)
+        if (index == -1) {
+            const indexDelimiter = message.indexOf(" : ");
+            if (indexDelimiter !== -1) {
+                return message.substring(indexDelimiter + " : ".length).trim();
+            }
             return message;
+        }
 
         for (let i = index; i >= 0; --i)
             if (message[i] == ':') {
