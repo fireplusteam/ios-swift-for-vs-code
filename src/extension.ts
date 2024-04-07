@@ -136,7 +136,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.env.open.xcode", async () => {
-            openXCode();
+            openXCode(vscode.window.activeTextEditor?.document.uri.fsPath || "");
         })
     );
 

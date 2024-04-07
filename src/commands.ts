@@ -6,7 +6,7 @@ import { buildSelectedTarget } from "./buildCommands";
 import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
 import * as path from 'path';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
-import { exec, execSync } from 'child_process';
+import { exec } from 'child_process';
 import { ProjectManager } from './ProjectManager/ProjectManager';
 import { glob } from 'glob';
 import { sleep } from './extension';
@@ -176,8 +176,18 @@ export async function generateXcodeServer(executor: Executor) {
     );
 }
 
-export async function openXCode() {
-    exec(`open '${getProjectPath()}'`);
+export async function openXCode(activeFile: string) {
+    const openExec = new Executor();
+    const stdout = await openExec.execShell(
+        "Open Xcode",
+        "open_xcode.sh",
+        [getProjectPath()],
+        false,
+        ExecutorReturnType.stdout,
+        ExecutorMode.silently
+    ) as string;
+    console.log(stdout);
+    exec(`open -a Xcode ${activeFile}`);
 }
 
 export async function terminateCurrentIOSApp(sessionID: string, executor: Executor, silent = false) {
