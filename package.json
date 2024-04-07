@@ -39,6 +39,10 @@
         "menus": {
             "explorer/context": [
                 {
+                    "command": "vscode-ios.env.open.xcode",
+                    "group": "vscode-ios@0"
+                },
+                {
                     "command": "vscode-ios.project.file.add",
                     "group": "vscode-ios@1"
                 },
@@ -149,7 +153,7 @@
             },
             {
                 "command": "vscode-ios.env.open.xcode",
-                "title": "iOS: Open Xcode"
+                "title": "iOS: Open In Xcode"
             },
             {
                 "command": "vscode-ios.build.clean",

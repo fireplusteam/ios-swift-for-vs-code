@@ -1,15 +1,15 @@
-import * as vscode from 'vscode';
-import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
-import { showPicker } from "./inputPicker";
-import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
-import { buildSelectedTarget } from "./buildCommands";
-import { emptyAppLog, getLastLine, killSpawnLaunchedProcesses } from "./utils";
-import * as path from 'path';
-import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { exec } from 'child_process';
-import { ProjectManager } from './ProjectManager/ProjectManager';
 import { glob } from 'glob';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
+import { ProjectManager } from './ProjectManager/ProjectManager';
+import { buildSelectedTarget } from "./buildCommands";
+import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
+import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
+import { showPicker } from "./inputPicker";
+import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "./utils";
 
 export async function selectProjectFile(executor: Executor, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
@@ -187,7 +187,9 @@ export async function openXCode(activeFile: string) {
         ExecutorMode.silently
     ) as string;
     console.log(stdout);
-    exec(`open -a Xcode ${activeFile}`);
+    if (!isFolder(activeFile)) {
+        exec(`open -a Xcode ${activeFile}`);
+    }
 }
 
 export async function terminateCurrentIOSApp(sessionID: string, executor: Executor, silent = false) {

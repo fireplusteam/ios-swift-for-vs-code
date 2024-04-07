@@ -135,8 +135,12 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.env.open.xcode", async () => {
-            openXCode(vscode.window.activeTextEditor?.document.uri.fsPath || "");
+        vscode.commands.registerCommand("vscode-ios.env.open.xcode", async (contextSelection: vscode.Uri, allSelections: vscode.Uri[]) => {
+            if (contextSelection) {
+                openXCode(contextSelection.fsPath);
+            } else {
+                openXCode(vscode.window.activeTextEditor?.document.uri.fsPath || "");
+            }
         })
     );
 
