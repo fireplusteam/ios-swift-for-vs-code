@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as fs from 'fs';
-import { getBuildRootPath, getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getScriptPath, getWorkspaceId, getWorkspacePath, isActivated } from "../env";
+import { getBuildRootPath, getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getWorkspaceId, getWorkspacePath, isActivated } from "../env";
 import * as parser from 'fast-xml-parser';
 import { exec } from "child_process";
 import path from "path";
