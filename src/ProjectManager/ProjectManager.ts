@@ -364,7 +364,7 @@ export class ProjectManager {
     }
 
     async getProjects() {
-        return await getProjectFiles(getProjectPath());
+        return getProjectFiles(getProjectPath());
     }
 
     async getProjectTargets() {

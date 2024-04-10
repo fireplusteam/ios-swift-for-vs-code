@@ -28,7 +28,7 @@ To use this extension you need to install also:
 - [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
 - [Swift](https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang)
 - [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) - needed to run the app not in the debug mode
-- Xcode
+- **Xcode**
 
 - **xcbeautify** tool to prettify the building log output:
 
@@ -45,6 +45,38 @@ To use this extension you need to install also:
 **Note:**
 As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **XCBBuildService** automatically when an extension is activated.
 This's just needed to override the **continueBuildingAfterError** property when you build the app and gives you all errors in the project and compile flags possible used by sourcekit for indexing.
+
+## How to build/install extension from a repo
+
+Open terminal to install required libraries (Also make sure you've installed Xcode, xcbeautify, xcodeproj):
+
+- install **pyinstaller** and **psutil** (needed to build Xcode proxy build service)
+
+```bash
+pip install pyinstaller
+pip install psutil
+```
+
+- install **npm**
+
+```bash
+brew install node
+```
+
+- clone git repo and update submodules:
+
+```bash
+git clone https://github.com/fireplusteam/ios_vs_code.git
+git submodule update --init --recursive
+```
+
+- navigate to repo folder in your terminal and run:
+
+```bash
+./make.sh
+```
+
+If everything configured right, the extension should be built and installed to vs code automatically.
 
 ## Extension Settings
 

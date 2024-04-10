@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # This program is for proxy of XCBBuildService, allows you to manipulate with XCode build on low level
-import time
 import base64
 import sys
 import os
