@@ -31,9 +31,6 @@
     "repository": {
         "url": "https://github.com/fireplusteam/ios_vs_code.git"
     },
-    "enabledApiProposals": [
-        "testCoverage"
-    ],
     "publisher": "fireplusteam",
     "contributes": {
         "menus": {

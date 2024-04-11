@@ -70,6 +70,16 @@ git clone https://github.com/fireplusteam/ios_vs_code.git
 git submodule update --init --recursive
 ```
 
+- install vsce package
+
+```bash
+brew install vsce
+```
+
+- 1. Open Visual Studio Code.
+  2. Press **Cmd+Shift+P** to open the Command Palette.
+  3. Type: **Shell Command: Install 'code' command in PATH**.
+
 - navigate to repo folder in your terminal and run:
 
 ```bash
