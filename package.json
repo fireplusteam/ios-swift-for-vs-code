@@ -137,6 +137,10 @@
                 "title": "iOS: Select Target"
             },
             {
+                "command": "vscode-ios.project.selectConfiguration",
+                "title": "iOS: Select Build Configuration"
+            },
+            {
                 "command": "vscode-ios.project.selectDevice",
                 "title": "iOS: Select DEBUG Device"
             },

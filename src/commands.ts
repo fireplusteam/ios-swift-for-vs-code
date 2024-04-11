@@ -3,9 +3,9 @@ import { glob } from 'glob';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
-import { ProjectManager } from './ProjectManager/ProjectManager';
+import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { getDeviceId, getEnvList, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
+import { getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { showPicker } from "./inputPicker";
@@ -70,13 +70,15 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
     }
     updateProject(selection);
     await projectManager.loadProjectFiles(true);
-    await selectTarget(executor, true, false);
+    await checkWorkspace(executor, true);
     return true;
 }
 
 export async function selectTarget(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
     if (shouldCheckWorkspace) {
-        await checkWorkspace(executor, ignoreFocusOut);
+        const selected = await checkWorkspace(executor, ignoreFocusOut);
+        if (selected.selectedTarget)
+            return;
     }
 
     let stdout = getLastLine((await executor.execShell(
@@ -108,9 +110,47 @@ export async function selectTarget(executor: Executor, ignoreFocusOut = false, s
     await checkWorkspace(executor);
 }
 
+export async function selectConfiguration(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
+    if (shouldCheckWorkspace) {
+        const selected = await checkWorkspace(executor, ignoreFocusOut);
+        if (selected.selectedConfiguration)
+            return;
+    }
+
+    let stdout = getLastLine((await executor.execShell(
+        "Fetch Project Configurations",
+        "populate_configurations.sh",
+        [ // TODO: Need to figure out if we can pass ProjectManager here
+            getProjectFiles(getProjectPath()).at(0) || ""
+        ],
+        false,
+        ExecutorReturnType.stdout
+    )) as string);
+
+    let option = await showPicker(stdout,
+        "Configuration",
+        "Please Select Build Configuration",
+        false,
+        ignoreFocusOut,
+        true
+    );
+
+    if (option === undefined) {
+        return;
+    }
+
+    await executor.execShell(
+        "Update Selected Configuration",
+        "update_environment.sh",
+        ["-destinationConfiguration", option]
+    );
+}
+
 export async function selectDevice(executor: Executor, shouldCheckWorkspace = true, ignoreFocusOut = false) {
     if (shouldCheckWorkspace === true) {
-        await checkWorkspace(executor);
+        const selected = await checkWorkspace(executor);
+        if (selected.selectedDevice)
+            return;
     }
     let stdout = getLastLine((await executor.execShell(
         "Fetch Devices",
@@ -145,13 +185,28 @@ export async function restartLSP() {
 }
 
 export async function checkWorkspace(executor: Executor, ignoreFocusOut = false) {
+    let selectedConfiguration = false;
+    try {
+        if (getProjectConfiguration().length == 0) {
+            await selectConfiguration(executor, true, false);
+            selectedConfiguration = true;
+        }
+    } catch {
+        await selectConfiguration(executor, true, false);
+        selectedConfiguration = true;
+    }
+
+    let selectedTarget = false;
     try {
         if (getProjectScheme().length == 0) {
             await selectTarget(executor, true, false);
+            selectedTarget = true;
         }
     } catch {
         await selectTarget(executor, true, false);
+        selectedTarget = true;
     }
+
     const command = getLastLine(await executor.execShell(
         "Validate Environment",
         "check_workspace.sh",
@@ -163,9 +218,12 @@ export async function checkWorkspace(executor: Executor, ignoreFocusOut = false)
         restartLSP();
     }
     const env = getEnvList();
+    let selectedDevice = false;
     if (!env.hasOwnProperty("DEVICE_ID")) {
         await selectDevice(executor, false, ignoreFocusOut);
+        selectedDevice = true;
     }
+    return { selectedTarget: selectedTarget, selectedConfiguration: selectedConfiguration, selectedDevice: selectedDevice };
 }
 
 export async function generateXcodeServer(executor: Executor) {

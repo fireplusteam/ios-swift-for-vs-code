@@ -3,7 +3,7 @@ source '.vscode/.env'
 
 DESTINATION="id=$DEVICE_ID"
 
-XCODECMD="-configuration Debug -destination \"$DESTINATION\" -sdk iphonesimulator -resultBundlePath .vscode/.bundle"
+XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -destination \"$DESTINATION\" -sdk iphonesimulator -resultBundlePath .vscode/.bundle"
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; elif [[ $PROJECT_FILE == *.swift ]]; then echo "-package"; else echo "-workspace"; fi)
 # Check if TYPE is non-empty

@@ -58,6 +58,10 @@ export function getProjectScheme() {
     return getEnvList()["PROJECT_SCHEME"].replace(/^"|"$/g, '');
 }
 
+export function getProjectConfiguration() {
+    return getEnvList()["PROJECT_CONFIGURATION"].replace(/^"|"$/g, '');
+}
+
 export function getDeviceId() {
     return getEnvList()["DEVICE_ID"].replace(/^"|"$/g, '');
 }

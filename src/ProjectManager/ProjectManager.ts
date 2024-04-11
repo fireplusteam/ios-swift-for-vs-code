@@ -89,7 +89,7 @@ export class ProjectManager {
             }
         }
 
-        const projects = await getProjectFiles(getProjectPath());
+        const projects = getProjectFiles(getProjectPath());
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Loading Project" }, async (progress, token) => {
             for (let [index, project] of projects.entries()) {
@@ -589,7 +589,7 @@ function sortTargets(targets: string[], fileTargets: string[]): QuickPickItem[] 
     });
 }
 
-function getProjectFiles(project: string) {
+export function getProjectFiles(project: string) {
     if (project.indexOf(".xcworkspace") !== -1) {
         let xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), 'utf-8');
 

@@ -59,8 +59,7 @@ def get_project_type(project_file):
     return "-workspace"
 
 
-def get_schemes(project_file):
-    
+def get_schemes(project_file, is_build_configuration = False):
     command = ["xcodebuild", "-list"]
     scheme_type = get_project_type(project_file)
     if "-package" != scheme_type:
@@ -69,10 +68,16 @@ def get_schemes(project_file):
     schemes = []
     is_tail = False
     for x in process.stdout.splitlines():
+        if len(x.strip()) == 0 and is_tail:
+            break
         if is_tail and len(x) > 0:
             schemes.append(x.strip())
-        if "Schemes:" in x:
-            is_tail = True
+        if not is_build_configuration:
+            if "Schemes:" in x:
+                is_tail = True
+        else:
+            if "Build Configurations:" in x:
+                is_tail = True
     
     if len(schemes) == 0:
         print(f"Error: {process.stdout}")
@@ -81,7 +86,8 @@ def get_schemes(project_file):
 
 
 def get_project_settings(project_file, scheme):
-    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme, "-configuration", "Debug"]
+    list = get_env_list()
+    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme, "-configuration", list["PROJECT_CONFIGURATION"] ]
     process = subprocess.run(command, capture_output=True, text=True)
     return process.stdout
 
@@ -117,8 +123,15 @@ def update_scheme(project_file, scheme):
     safe_env_list(env_list)
 
 
+def update_configuration(project_file, configuration):
+    env_list = get_env_list()
+    env_list["PROJECT_CONFIGURATION"] = "\"" + configuration + "\""
+    safe_env_list(env_list)
+
+
 def get_target_executable_impl(build_path, product_name):
-   return f"{build_path}/Build/Products/Debug-iphonesimulator/{product_name}.app"
+   build_configuration = get_env_list()["PROJECT_CONFIGURATION"].strip("\"")
+   return f"{build_path}/Build/Products/{build_configuration}-iphonesimulator/{product_name}.app"
 
 
 def get_project_config():

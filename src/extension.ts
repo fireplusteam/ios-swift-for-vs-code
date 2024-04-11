@@ -11,6 +11,7 @@ import {
     openXCode,
     restartLSP,
     runAppOnMultipleDevices,
+    selectConfiguration,
     selectDevice,
     selectProjectFile,
     selectTarget,
@@ -150,6 +151,17 @@ export function activate(context: vscode.ExtensionContext) {
             async () => {
                 await runCommand(async () => {
                     await selectTarget(projectExecutor);
+                });
+            }
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            "vscode-ios.project.selectConfiguration",
+            async () => {
+                await runCommand(async () => {
+                    await selectConfiguration(projectExecutor);
                 });
             }
         )

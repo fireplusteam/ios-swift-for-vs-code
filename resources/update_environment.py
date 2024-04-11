@@ -37,3 +37,7 @@ elif type == "-destinationScheme":
     scheme = sys.argv[3]
     print("Selected Target: " + scheme)
     helper.update_scheme(project_file, scheme)
+elif type == "-destinationConfiguration":
+    configuration = sys.argv[3]
+    print("Selected Target: " + configuration)
+    helper.update_configuration(project_file, configuration)
