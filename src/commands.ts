@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
+import { getDeviceId, getEnvList, getProjectConfiguration, getProjectFileName, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { showPicker } from "./inputPicker";
@@ -121,7 +121,7 @@ export async function selectConfiguration(executor: Executor, ignoreFocusOut = f
         "Fetch Project Configurations",
         "populate_configurations.sh",
         [ // TODO: Need to figure out if we can pass ProjectManager here
-            getProjectFiles(getProjectPath()).at(0) || ""
+            getProjectFiles(getProjectPath()).at(0) || "Debug"
         ],
         false,
         ExecutorReturnType.stdout

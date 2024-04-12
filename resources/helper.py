@@ -64,6 +64,8 @@ def get_schemes(project_file, is_build_configuration = False):
     scheme_type = get_project_type(project_file)
     if "-package" != scheme_type:
         command.extend([get_project_type(project_file), project_file])
+    elif is_build_configuration:
+        return ["Debug", "Release"]
     process = subprocess.run(command, capture_output=True, text=True)
     schemes = []
     is_tail = False
