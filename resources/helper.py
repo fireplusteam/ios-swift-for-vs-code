@@ -87,15 +87,17 @@ def get_schemes(project_file, is_build_configuration = False):
     return schemes
 
 
-def get_project_settings(project_file, scheme):
+def get_project_settings(project_file, scheme, build_configuration = None):
     list = get_env_list()
-    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme, "-configuration", list["PROJECT_CONFIGURATION"] ]
+    if build_configuration is None:
+        build_configuration = list["PROJECT_CONFIGURATION"].strip("\"")
+    command = ["xcodebuild", "-showBuildSettings", get_project_type(project_file), project_file, "-scheme", scheme, "-configuration", build_configuration ]
     process = subprocess.run(command, capture_output=True, text=True)
     return process.stdout
 
 
-def get_bundle_identifier(project_file, scheme):
-    stdout = get_project_settings(project_file, scheme)
+def get_bundle_identifier(project_file, scheme, build_configuration = None):
+    stdout = get_project_settings(project_file, scheme, build_configuration)
     for line in stdout.splitlines():
         line = line.strip()
         if "BUNDLE_IDENTIFIER" in line:
@@ -128,6 +130,11 @@ def update_scheme(project_file, scheme):
 def update_configuration(project_file, configuration):
     env_list = get_env_list()
     env_list["PROJECT_CONFIGURATION"] = "\"" + configuration + "\""
+    if "PROJECT_SCHEME" in env_list:
+        identifier = get_bundle_identifier(project_file, env_list["PROJECT_SCHEME"].strip("\""), configuration)
+        if identifier is None:
+            identifier = ""
+        env_list["BUNDLE_APP_NAME"] = "\"" + identifier + "\""  
     safe_env_list(env_list)
 
 
