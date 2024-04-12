@@ -607,7 +607,8 @@ export function getProjectFiles(project: string) {
                 if (node.FileRef) {
                     let locationPath = location;
                     if (node.location) {
-                        locationPath = path.join(location, node.location.substring('group:'.length));
+                        const localPath = getLocalPath(node);
+                        locationPath = path.join(location, localPath);
                     }
                     let fileRefs = Array.isArray(node.FileRef) ? node.FileRef : [node.FileRef];
                     for (let ref of fileRefs) {
@@ -622,11 +623,22 @@ export function getProjectFiles(project: string) {
                     if (node[prop] !== null && typeof (node[prop]) === 'object') {
                         let locationPath = location;
                         if (node.location) {
-                            locationPath = path.join(location, node.location.substring('group:'.length));
+                            const localPath = getLocalPath(node);
+                            locationPath = path.join(location, localPath);
                         }
                         findFileRefNodes(node[prop], locationPath);
                     }
                 }
+            }
+
+            function getLocalPath(node: any) {
+                let localPath = node.location;
+                if (node.location == "container:") {
+                    localPath = node.location.substring("container:".length);
+                } else if (node.location == "group:") {
+                    localPath = node.location.substring("group:".length);
+                }
+                return localPath;
             }
         }
         findFileRefNodes(jsonObj, "");
