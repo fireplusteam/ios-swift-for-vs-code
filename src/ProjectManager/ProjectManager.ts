@@ -94,8 +94,12 @@ export class ProjectManager {
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Loading Project" }, async (progress, token) => {
             for (let [index, project] of projects.entries()) {
                 progress.report({ increment: 100 * index / (project.length + 1), message: fileNameFromPath(project) });
-                await this.projectCache.update(project);
-                await this.readAllProjects(this.projectCache.getList(project));
+                try {
+                    await this.projectCache.update(project);
+                    await this.readAllProjects(this.projectCache.getList(project));
+                } catch {
+                    console.log(error);
+                }
             }
             progress.report({ increment: 1, message: "Generating workspace..." });
             await this.generateWorkspace();
@@ -126,6 +130,7 @@ export class ProjectManager {
         }
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getFilePathInWorkspace(".logs"));
+        projectTree.addIncluded(getFilePathInWorkspace((await this.getProjects()).at(0) || ""))
 
         // now try to go over all subfolder and exclude every single file which is not in the project files 
         const visitedFolders = new Set<string>();
