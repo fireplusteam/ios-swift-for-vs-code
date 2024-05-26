@@ -69,6 +69,7 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
         return false;
     }
     updateProject(selection);
+    await executor.terminateShell();
     await projectManager.loadProjectFiles(true);
     await checkWorkspace(executor, true);
     return true;
