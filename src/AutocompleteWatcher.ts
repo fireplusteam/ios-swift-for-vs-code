@@ -38,6 +38,8 @@ export class AutocompleteWatcher {
 
     private buildId = 0;
 
+    private buildState: BuildState = BuildState.NotRunning;
+
     constructor(buildExecutor: Executor, problemResolver: ProblemDiagnosticResolver, projectManager: ProjectManager) {
         this.disposable.push(vscode.window.onDidChangeActiveTextEditor(async (e) => {
             if (!e || !this.isWatcherEnabled()) {
@@ -107,9 +109,6 @@ export class AutocompleteWatcher {
         }
         return false;
     }
-
-
-    private buildState: BuildState = BuildState.NotRunning;
 
     private async incrementalBuild(buildId: number): Promise<any> {
         if (this.buildId !== buildId || !this.isWatcherEnabled() || this.buildState === BuildState.Cancelling)
