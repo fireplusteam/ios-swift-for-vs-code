@@ -13,6 +13,13 @@ enum State {
     ModuleNotChanged,
     ModuleChanged
 }
+
+enum BuildState {
+    NotRunning,
+    Running,
+    Cancelling
+}
+
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
 
@@ -27,6 +34,7 @@ export class AutocompleteWatcher {
 
     private state: State = State.ModuleNotChanged;
     private moduleChangedName: string[] | undefined;
+    private terminatingExtension: boolean = false
 
     private buildId = 0;
 
@@ -81,9 +89,13 @@ export class AutocompleteWatcher {
         this.incrementalBuild(this.buildId);
     }
 
+    terminate() {
+        this.terminatingExtension = true;
+    }
+
     private isWatcherEnabled() {
         const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher");
-        if (!isWatcherEnabled) {
+        if (!isWatcherEnabled || this.terminatingExtension) {
             return false;
         }
         return true;
@@ -96,10 +108,18 @@ export class AutocompleteWatcher {
         return false;
     }
 
+
+    private buildState: BuildState = BuildState.NotRunning;
+
     private async incrementalBuild(buildId: number): Promise<any> {
-        if (this.buildId !== buildId || !this.isWatcherEnabled())
+        if (this.buildId !== buildId || !this.isWatcherEnabled() || this.buildState === BuildState.Cancelling)
             return;
         try {
+            if (this.buildState == BuildState.Running) {
+                this.buildState = BuildState.Cancelling;
+                await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
+                await sleep(1500);
+            }
             const scheme = getProjectScheme();
             emptyAutobuildLog();
             this.problemResolver.parseAsyncLogs(
@@ -107,6 +127,7 @@ export class AutocompleteWatcher {
                 ".logs/autocomplete.log",
                 false
             );
+            this.buildState = BuildState.Running;
             await this.buildExecutor.execShell(
                 AutocompleteWatcher.AutocompleteCommandName,
                 "compile_module.sh",
@@ -115,14 +136,26 @@ export class AutocompleteWatcher {
                 ExecutorReturnType.statusCode,
                 ExecutorMode.silently
             );
+            this.buildState = BuildState.NotRunning;
         } catch (err) {
             if (err instanceof ExecutorRunningError) {
                 if (this.buildId === buildId && err.commandName === AutocompleteWatcher.AutocompleteCommandName) {
-                    await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
-                    await sleep(1500);
-                    return await this.incrementalBuild(this.buildId);
+                    if (this.buildState) {
+                        this.buildState = BuildState.Cancelling;
+                        await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
+                        await sleep(1500);
+                    }
+                    if (this.buildState === BuildState.Cancelling) {
+                        this.buildState = BuildState.NotRunning;
+                        return await this.incrementalBuild(this.buildId);
+                    }
+                } else {
+                    this.buildState = BuildState.NotRunning;
                 }
+
                 throw err;
+            } else {
+                this.buildState = BuildState.NotRunning;
             }
         }
     }

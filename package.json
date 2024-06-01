@@ -13,9 +13,17 @@
         "SwiftUI",
         "Xcodebuild Tools",
         "unit testing",
-        "snapshot testing"
+        "snapshot testing",
+        "develop",
+        "development",
+        "objective-c",
+        "swift ui",
+        "uikit",
+        "ios simulator",
+        "iphone",
+        "ipad"
     ],
-    "version": "0.0.2",
+    "version": "0.0.3",
     "engines": {
         "vscode": "^1.86.0"
     },
