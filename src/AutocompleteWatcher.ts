@@ -87,6 +87,8 @@ export class AutocompleteWatcher {
     }
 
     triggerIncrementalBuild() {
+        if (!this.isWatcherEnabled() || this.buildState === BuildState.Cancelling)
+            return;
         this.buildId++;
         this.incrementalBuild(this.buildId);
     }
@@ -118,6 +120,9 @@ export class AutocompleteWatcher {
                 this.buildState = BuildState.Cancelling;
                 await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
                 await sleep(1500);
+                if (this.buildState != BuildState.Cancelling) {
+                    return; // Triggered with a user manual build, so we need to return it here
+                }
             }
             const scheme = getProjectScheme();
             emptyAutobuildLog();
@@ -138,22 +143,15 @@ export class AutocompleteWatcher {
             this.buildState = BuildState.NotRunning;
         } catch (err) {
             if (err instanceof ExecutorRunningError) {
-                if (this.buildId === buildId && err.commandName === AutocompleteWatcher.AutocompleteCommandName) {
-                    if (this.buildState) {
-                        this.buildState = BuildState.Cancelling;
-                        await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
-                        await sleep(1500);
-                    }
-                    if (this.buildState === BuildState.Cancelling) {
+                if (err.commandName === AutocompleteWatcher.AutocompleteCommandName) {
+                    if (this.buildId === buildId && this.buildState == BuildState.Running) {
                         this.buildState = BuildState.NotRunning;
-                        return await this.incrementalBuild(this.buildId);
+                        console.log("ERROR: Not a Valid case. Should not be executed")
                     }
-                } else {
+                } else if (this.buildId == buildId) {
                     this.buildState = BuildState.NotRunning;
                 }
-
-                throw err;
-            } else {
+            } else if (!(err instanceof AutocompleteCancel) && this.buildId == buildId) {
                 this.buildState = BuildState.NotRunning;
             }
         }

@@ -27,7 +27,7 @@ export class XcodeProjectFileProxy {
         let stderr = "";
         this.process.stderr?.on("data", data => {
             stderr += data.toString();
-        })
+        });
         this.process.on("exit", (code, signal) => {
             this.rl = undefined;
             console.log(`Return code: ${code}, signal: ${signal}, error: ${stderr}`);

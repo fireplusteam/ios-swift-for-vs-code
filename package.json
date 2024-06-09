@@ -21,7 +21,16 @@
         "uikit",
         "ios simulator",
         "iphone",
-        "ipad"
+        "ipad",
+        "app",
+        "apple",
+        "testing",
+        "C++",
+        "C",
+        "xcodebuild",
+        "simulator",
+        "emulator",
+        "lldb"
     ],
     "version": "0.0.3",
     "engines": {

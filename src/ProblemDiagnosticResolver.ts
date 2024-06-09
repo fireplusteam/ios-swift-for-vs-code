@@ -6,13 +6,11 @@ export class ProblemDiagnosticResolver {
 
     disposable: vscode.Disposable[] = [];
     diagnosticBuildCollection: vscode.DiagnosticCollection;
-    diagnosticTestsCollection: vscode.DiagnosticCollection;
 
     buildErrors = new Set<string>();
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("xcodebuild");
-        this.diagnosticTestsCollection = vscode.languages.createDiagnosticCollection("xcodebuild-tests");
 
         this.disposable.push(vscode.workspace.onDidChangeTextDocument((e) => {
             const fileUrl = e.document.uri;
