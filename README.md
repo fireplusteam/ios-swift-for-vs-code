@@ -1,6 +1,6 @@
 # vscode-ios README
 
-Write/Build/Debug/Test your xCode projects in VS Code with your favorite extensions
+Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions
 
 ## Features
 

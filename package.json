@@ -1,6 +1,6 @@
 {
     "name": "vscode-ios",
-    "displayName": "iOS IDE: Code/Run/Debug/Test",
+    "displayName": "iOS Swift IDE: Develop/Run/Debug/Test",
     "description": "Develop/Debug/Test your iOS application in VS Code",
     "icon": "icons/icon.jpg",
     "keywords": [
@@ -30,9 +30,13 @@
         "xcodebuild",
         "simulator",
         "emulator",
-        "lldb"
+        "lldb",
+        "code",
+        "develop",
+        "run",
+        "test"
     ],
-    "version": "0.0.4",
+    "version": "0.0.5",
     "engines": {
         "vscode": "^1.86.0"
     },
