@@ -21,7 +21,7 @@ Instead of xCode preview you can use hot reloading [InjectionIII](https://github
 - HotReloading & Injection with [HotReloading](https://github.com/johnno1962/HotReloading)
 - SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
-## Requirements
+## Dependencies
 
 To use this extension you need to install also:
 
@@ -30,7 +30,7 @@ To use this extension you need to install also:
 - [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) - needed to run the app not in the debug mode
 - **Xcode**
 
-- **xcbeautify** tool to prettify the building log output:
+- **xcbeautify** tool to prettify the building log output and :
 
   ```bash
   brew install xcbeautify
@@ -39,12 +39,35 @@ To use this extension you need to install also:
 - **xcodeproj** gem library to make possible to add/delete/rename files in your Xcode project directly from vs code.
 
   ```bash
+  brew install ruby
   gem install xcodeproj
   ```
 
 **Note:**
 As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **XCBBuildService** automatically when an extension is activated.
 This's just needed to override the **continueBuildingAfterError** property when you build the app and gives you all errors in the project and compile flags possible used by sourcekit for indexing.
+
+## How to use
+
+- Once you installed all the dependencies, you can open a folder which contains the iOS project, it project or workspace is located in the local folder then an extension will ask you if you want to configure it otherwise you need to perform command "iOS: Select Project/Workspace" and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
+
+- There's ios launch configuration that can be added to launch.json file to run and debug ios project (there's also "iOS: Run App & Debug" snippet)
+
+```json
+"configurations": [
+    {
+        "type": "xcode-lldb",
+        "name": "iOS: Run App & Debug",
+        "request": "launch",
+        "target": "app",
+        "isDebuggable": true
+    }
+]
+```
+
+- Also there're automatically added build tasks which can be used by pressing standard "**Cmd+Shift+B**" shortcut.
+
+- To make autocompletion to work you may need to clean the project and build it entirely for the first time.
 
 ## How to build/install extension from a repo
 
