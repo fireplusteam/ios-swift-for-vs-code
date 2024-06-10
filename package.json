@@ -299,6 +299,7 @@
         "find-process": "^1.4.7",
         "glob": "^10.3.10",
         "readline": "^1.3.0",
-        "tree-kill": "^1.2.2"
+        "tree-kill": "^1.2.2",
+        "ps-tree": "^1.2.0"
     }
 }

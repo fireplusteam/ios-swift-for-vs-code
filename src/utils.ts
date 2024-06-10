@@ -3,6 +3,7 @@ import { getScriptPath, getWorkspacePath } from "./env";
 import fs from "fs";
 
 var find = require("find-process");
+var psTree = require('ps-tree');
 var kill = require("tree-kill");
 
 export async function killSpawnLaunchedProcesses(sessionId: string) {
@@ -24,6 +25,26 @@ export async function killSpawnLaunchedProcesses(sessionId: string) {
     catch (err) {
         console.log(err);
     }
+}
+
+// for some reason kill function doesn't kill all child process in some cases, so we need to do it manually to make sure it's actually killed
+export function killAll(pid: number | undefined, signal: string) {
+    if (pid === undefined)
+        return;
+    psTree(pid, function (err: any, children: any) {
+        kill(pid, signal, (err: any) => {
+            if (err != null)
+                console.log(err);
+            if (children === null || children === undefined)
+                return;
+            for (let item of children) {
+                kill(item.PID, signal, (err: any) => {
+                    if (err != null)
+                        console.log(err);
+                });
+            }
+        });
+    });
 }
 
 export function getSessionId(key: String) {
