@@ -91,6 +91,7 @@ export class ProjectManager {
 
         const projects = getProjectFiles(getProjectPath());
 
+        let wasLoadedWithError = [] as string[];
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Loading Project" }, async (progress, token) => {
             for (let [index, project] of projects.entries()) {
                 progress.report({ increment: 100 * index / (project.length + 1), message: fileNameFromPath(project) });
@@ -99,11 +100,16 @@ export class ProjectManager {
                     await this.readAllProjects(this.projectCache.getList(project));
                 } catch {
                     console.log(error);
+                    wasLoadedWithError.push(fileNameFromPath(project));
                 }
             }
             progress.report({ increment: 1, message: "Generating workspace..." });
             await this.generateWorkspace();
         });
+
+        if (wasLoadedWithError.length > 0) {
+            vscode.window.showErrorMessage(`Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}`);
+        }
     }
 
     private async readAllProjects(files: Set<string>) {
@@ -640,7 +646,7 @@ export function getProjectFiles(project: string) {
                 let localPath = node.location;
                 if (node.location == "container:") {
                     localPath = node.location.substring("container:".length);
-                } else if (node.location == "group:") {
+                } else if (node.location.substring(0, "group:".length) == "group:") {
                     localPath = node.location.substring("group:".length);
                 }
                 return localPath;
