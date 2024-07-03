@@ -75,11 +75,11 @@ export class TestCaseProblemParser {
     private expectedActualValues(message: string) {
         const expectedActualMatch = message.match(diffPattern);
         if (expectedActualMatch)
-            return { expected: expectedActualMatch[2], actual: expectedActualMatch[3] };
+            return { expected: expectedActualMatch[3], actual: expectedActualMatch[2] };
     }
 
     private errorMessage(message: string) {
-        const index = message.indexOf("failed");
+        const index = message.indexOf(" failed: ");
         if (index == -1) {
             const indexDelimiter = message.indexOf(" : ");
             if (indexDelimiter !== -1) {
