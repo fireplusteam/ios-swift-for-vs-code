@@ -2,6 +2,14 @@
 
 Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions
 
+## Autocomplete
+
+[![Autocomplete](https://img.youtube.com/vi/0dXQGY0IIEA/0.jpg)](https://youtu.be/0dXQGY0IIEA)
+
+## 🌳 File Tree Integration
+
+[![🌳 File Tree Integration](https://img.youtube.com/vi/3C-abUZGkgE/0.jpg)](https://youtu.be/3C-abUZGkgE)
+
 ## Features
 
 - Swift/Objective-C/C++ autocompletion
@@ -116,12 +124,18 @@ If everything configured right, the extension should be built and installed to v
 This extension contributes the following settings:
 
 - `vscode-ios.watcher`: Enable/disable the autocomplete watch build to update indexes whenever a new file added/renamed/moved/deleted/etc.
+- `vscode-ios.xcb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 
 ## Known Issues
 
 - You still need Xcode to use SwiftUI preview or edit storyboard/assets/project settings.
 - [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) use indexing while build. if you find definition or references is not work correctly, just build it to update index or restart Swift LSP in VS Code.
 - When running for the first time, **you need to ensure that the log is complete**, otherwise some files cannot obtain the correct flags.
+- If Generating of project is not working as expected or generates some kind of errors if Xcode opens the same project file, you simply need to update **xcodeproj** lib and ruby library to the latest
+
+  ```bash
+  gem install xcodeproj
+  ```
 
 ## Release Notes
 
