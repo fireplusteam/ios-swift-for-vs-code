@@ -5,6 +5,11 @@
     "icon": "icons/icon.jpg",
     "keywords": [
         "ios",
+        "macos",
+        "visionos",
+        "vision",
+        "watchos",
+        "watch",
         "xcode",
         "swift",
         "native",
