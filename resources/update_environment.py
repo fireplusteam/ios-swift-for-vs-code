@@ -24,13 +24,31 @@ elif type == "-destinationDevice":
     device = sys.argv[3]
     
     print(f"new selected device: {device}")
-    key, value = device.split('=')
-    if key == "id":
-        key = "DEVICE_ID"
-    else:
-        assert(False) 
+    allKeys = device.split(',')
+    hasId = False
+    hasPlatform = False
+    for pair in allKeys:
+        key, value = pair.split('=')
+        if key == "id":
+            key = "DEVICE_ID"
+            hasId = True
+        elif key == "platform":
+            key = "PLATFORM"
+            hasPlatform = True
+            if value == "macOS":
+                value = "macosx"
+            elif value == "iOS Simulator":
+                value = "iphonesimulator"
+        else:
+            assert(False) 
 
-    env_list[key] = "\"" + value + "\""
+        env_list[key] = "\"" + value + "\""
+    
+    if hasId == False:
+        assert(False, "Destination ID is not set")
+    
+    if hasPlatform == False:
+        assert(False, "Destination Platform is not set")
     
     helper.safe_env_list(env_list)
 elif type == "-destinationScheme":

@@ -60,10 +60,10 @@ for device_line in devices:
             isValid = False
             break
         key, value = [i[:pos], i[pos + 1:]]
-        if key == "OS" or key == "name":
-            formatted_key[key] =  value
+        if key == "OS" or key == "name" or key == "platform":
+            formatted_key[key] = value
 
-        if key == 'id':
+        if key == 'id' or key == "platform":
             if len(formatted_value) != 0:
                 formatted_value += ','
             formatted_value += key + "=" + value
@@ -75,7 +75,11 @@ for device_line in devices:
             formatted_key = f"{formatted_key['name']} - iOS {formatted_key['OS']}"
         elif "name" in formatted_key:
             formatted_key = formatted_key["name"]
+        elif "platform" in formatted_key and formatted_key["platform"] == "macOS":
+            formatted_key = formatted_key["platform"]
         else:
+            continue
+        if len(formatted_value) == 0 or not "platform" in formatted_value or not "id" in formatted_value:
             continue
         
         item_multi = {"label": formatted_key, "value": formatted_value}

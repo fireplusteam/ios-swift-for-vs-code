@@ -2,6 +2,20 @@ import path from "path";
 import * as vscode from "vscode";
 import fs from "fs";
 
+export enum Platform {
+    macOS,
+    iOS
+};
+
+export function currentPlatform(): Platform | undefined {
+    switch (getProjectPlatform()) {
+        case "macosx":
+            return Platform.macOS;
+        case "iphonesimulator":
+            return Platform.iOS;
+    }
+}
+
 export function getWorkspacePath() {
     const workspace = vscode.workspace.workspaceFolders?.at(0)?.uri.fsPath || "";
     return workspace;
@@ -56,6 +70,10 @@ export function getProjectFileName() {
 
 export function getProjectScheme() {
     return getEnvList()["PROJECT_SCHEME"].replace(/^"|"$/g, '');
+}
+
+export function getProjectPlatform() {
+    return getEnvList()["PLATFORM"].replace(/^"|"$/g, '');
 }
 
 export function getProjectConfiguration() {
