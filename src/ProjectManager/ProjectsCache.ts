@@ -53,7 +53,7 @@ function mapReviver(key: any, value: any) {
 }
 export class ProjectsCache {
     private cache = new Map<string, ProjFile>();
-    private watcher = new Map<string, fs.FSWatcher>();
+    private watcher = new Map<string, { watcher: fs.FSWatcher, content: Buffer }>();
 
     onProjectChanged = new vscode.EventEmitter<void>();
 
@@ -148,7 +148,7 @@ export class ProjectsCache {
         return resPaths;
     }
 
-    async update(projectPath: string) {
+    async update(projectPath: string, contentFile: Buffer | undefined = undefined) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
             this.cache.set(projectPath, {
@@ -157,9 +157,16 @@ export class ProjectsCache {
             });
         }
         if (!this.watcher.has(projectPath)) {
-            const fileWatch = watch(path.join(getFilePathInWorkspace(projectPath), "project.pbxproj"), null
-            );
+            const fullProjectPath = path.join(getFilePathInWorkspace(projectPath), "project.pbxproj");
+            const fileWatch = watch(fullProjectPath, null);
             fileWatch.on("change", async e => {
+                const contentFile = fs.readFileSync(fullProjectPath);
+
+                if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
+                    this.watcher.delete(projectPath);
+                    await this.update(projectPath, contentFile);
+                    return;
+                }
                 this.watcher.delete(projectPath);
                 if (!fs.existsSync(getFilePathInWorkspace(projectPath))) {
                     this.cache.delete(projectPath);
@@ -168,9 +175,10 @@ export class ProjectsCache {
                 await this.update(projectPath);
                 this.onProjectChanged.fire();
             });
+            const contentProjectFile = contentFile == undefined ? fs.readFileSync(fullProjectPath) : contentFile;
             this.watcher.set(
                 projectPath,
-                fileWatch
+                { watcher: fileWatch, content: contentProjectFile }
             );
         }
     }

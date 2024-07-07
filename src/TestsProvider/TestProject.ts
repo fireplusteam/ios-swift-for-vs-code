@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
 import { TestTreeContext, getContentFromFilesystem } from './TestTreeContext';
 import { TestContainer } from './TestContainer';
 import { TestTarget } from './TestTarget';
 import { getFilePathInWorkspace } from '../env';
-import { FSWatcher, watch } from 'fs';
+import { FSWatcher, Stats, watch } from 'fs';
 import path from 'path';
 
 export class TestProject implements TestContainer {
@@ -15,6 +16,7 @@ export class TestProject implements TestContainer {
     public filesForTargetProvider: (target: string) => Promise<string[]>;
 
     private fsWatcher: FSWatcher | undefined;
+    private projectContent: Buffer | undefined;
 
     constructor(context: TestTreeContext, targetProvider: () => Promise<string[]>, filesForTargetProvider: (target: string) => Promise<string[]>) {
         this.context = context;
@@ -56,19 +58,35 @@ export class TestProject implements TestContainer {
         }
 
         // watch to changes for a file, if it's changed, refresh unit tests
+        const filePath = getFilePathInWorkspace(path.join(item.uri?.path || "", item.label === "Package.swift" ? "" : "project.pbxproj"));
+        this.watchFile(filePath, controller, item);
+
+        this.didResolve = true;
+        // finish
+        item.children.replace(parent.children);
+    }
+
+    private watchFile(filePath: string, controller: vscode.TestController, item: vscode.TestItem, contentFile: Buffer | undefined = undefined) {
+        const weakRef = new WeakRef(this);
+
         this.fsWatcher?.close();
         this.fsWatcher = undefined;
-        const filePath = getFilePathInWorkspace(path.join(item.uri?.path || "", item.label === "Package.swift" ? "" : "project.pbxproj"));
         this.fsWatcher = watch(filePath);
         this.fsWatcher.on("change", e => {
+            const content = fs.readFileSync(filePath);
+            if (this.projectContent?.toString() === content.toString()) {
+                this.watchFile(filePath, controller, item, content);
+                return;
+            }
+            this.projectContent = content;
             setTimeout(() => {
                 item.children.replace([]);
                 weakRef.deref()?.updateFromDisk(controller, item);
             }, 1000);
         });
-
-        this.didResolve = true;
-        // finish
-        item.children.replace(parent.children);
+        if (contentFile === undefined)
+            this.projectContent = fs.readFileSync(filePath);
+        else
+            this.projectContent = contentFile;
     }
 }
