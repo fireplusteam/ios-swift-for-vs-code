@@ -4,21 +4,34 @@ import fs from "fs";
 
 export enum Platform {
     macOS,
-    iOS,
-    watchOS,
-    visionOS
+    iOSSimulator,
+    watchOSSimulator,
+    visionOSSimulator,
+    tvOSSimulator
 };
 
 export function currentPlatform(): Platform | undefined {
-    switch (getProjectPlatform()) {
+    const platform = getProjectPlatform();
+    switch (platform) {
         case "macOS":
             return Platform.macOS;
         case "iOS Simulator":
-            return Platform.iOS;
+            return Platform.iOSSimulator;
         case "watchOS Simulator":
-            return Platform.watchOS;
+            return Platform.watchOSSimulator;
         case "visionOS Simulator":
-            return Platform.visionOS;
+            return Platform.visionOSSimulator;
+        case "tvOS Simulator":
+            return Platform.tvOSSimulator;
+    }
+}
+
+function sdk() {
+    switch (currentPlatform()) {
+        case Platform.iOSSimulator:
+            return "iphonesimulator";
+        default: // not needed
+            return "";
     }
 }
 
@@ -52,7 +65,8 @@ export function getEnv() {
         VS_IOS_PROJECT_ENV_FILE: getEnvFilePath(),
         VS_IOS_WORKSPACE_PATH: getWorkspacePath(),
         VS_IOS_SCRIPT_PATH: getScriptPath(),
-        VS_IOS_XCODE_BUILD_SERVER_PATH: getXCodeBuildServerPath()
+        VS_IOS_XCODE_BUILD_SERVER_PATH: getXCodeBuildServerPath(),
+        VS_IOS_XCODE_SDK: sdk()
     }; // empty
 }
 
@@ -79,7 +93,9 @@ export function getProjectScheme() {
 }
 
 export function getProjectPlatform() {
-    return getEnvList()["PLATFORM"].replace(/^"|"$/g, '');
+    if (getEnvList().hasOwnProperty("PLATFORM"))
+        return getEnvList()["PLATFORM"].replace(/^"|"$/g, '');
+    return "";
 }
 
 export function getProjectConfiguration() {

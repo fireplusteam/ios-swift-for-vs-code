@@ -141,10 +141,14 @@ def update_configuration(project_file, configuration):
 def get_target_executable_impl(build_path, product_name):
     build_configuration = get_env_list()["PROJECT_CONFIGURATION"].strip("\"")
     platform = (get_env_list()["PLATFORM"].strip("\""))
+    if platform == "macOS":
+        return f"{build_path}/Build/Products/{build_configuration}/{product_name}.app"
     if platform == "watchOS Simulator":
         return f"{build_path}/Build/Products/{build_configuration}-watchsimulator/{product_name}.app"
     elif platform == "visionOS Simulator":
         return f"{build_path}/Build/Products/{build_configuration}-xrsimulator/{product_name}.app"
+    elif platform == "tvOS Simulator":
+        return f"{build_path}/Build/Products/{build_configuration}-appletvsimulator/{product_name}.app"
     else:
         return f"{build_path}/Build/Products/{build_configuration}-iphonesimulator/{product_name}.app"
 

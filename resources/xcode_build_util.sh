@@ -3,7 +3,11 @@ source '.vscode/.env'
 
 DESTINATION="id=$DEVICE_ID"
 
-XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -destination \"$DESTINATION\" -resultBundlePath .vscode/.bundle -skipMacroValidation"
+if [ "$VS_IOS_XCODE_SDK" != "" ]; then
+    XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -sdk \"$VS_IOS_XCODE_SDK\" -destination \"$DESTINATION,platform=$PLATFORM\" -resultBundlePath .vscode/.bundle -skipMacroValidation"
+else
+    XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -destination \"$DESTINATION,platform=$PLATFORM\" -resultBundlePath .vscode/.bundle -skipMacroValidation"
+fi
 
 TYPE=$(if [[ $PROJECT_FILE == *.xcodeproj ]]; then echo "-project"; elif [[ $PROJECT_FILE == *.swift ]]; then echo "-package"; else echo "-workspace"; fi)
 # Check if TYPE is non-empty

@@ -250,7 +250,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
 
-        return this.debugSession(dbgConfig.appSessionId);
+        return this.debugSession(dbgConfig);
     }
 
     private runSession(appSessionId: string): vscode.DebugConfiguration {
@@ -273,48 +273,43 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         };
     }
 
-    private debugSession(appSessionId: string): vscode.DebugConfiguration {
-        switch (currentPlatform()) {
-            case Platform.macOS:
-                {
-                    let debugSession: vscode.DebugConfiguration = {
-                        "type": "lldb",
-                        "request": "launch",
-                        "name": DebugConfigurationProvider.lldbName,
-                        "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
-                        "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
-                    };
-                    return debugSession;
-                }
-            default:
-                {
-                    let debugSession: vscode.DebugConfiguration = {
-                        type: "lldb",
-                        request: "custom",
-                        name: DebugConfigurationProvider.lldbName,
-                        targetCreateCommands: [
-                            `command script import '${getScriptPath()}/attach_lldb.py'`,
-                            "command script add -f attach_lldb.create_target create_target",
-                            "command script add -f attach_lldb.terminate_debugger terminate_debugger",
-                            "command script add -f attach_lldb.watch_new_process watch_new_process",
-                            "command script add -f attach_lldb.setScriptPath setScriptPath",
-                            "command script add -f attach_lldb.app_log app_log",
-                            "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
-                            `create_target ${this.sessionID}`
-                        ],
-                        processCreateCommands: [
-                            //"process handle SIGKILL -n true -p true -s false",
-                            //"process handle SIGTERM -n true -p true -s false",
-                            `setScriptPath ${getScriptPath()}`,
-                            `watch_new_process ${this.sessionID}`
-                        ],
-                        exitCommands: [],
-                        appSessionId: appSessionId,
-                        sessionId: this.sessionID
-                    };
-                    return debugSession;
-                }
+    private debugSession(dbgConfig: vscode.DebugConfiguration): vscode.DebugConfiguration {
+        // for macOS, use different scheme to app running
+        if (currentPlatform() == Platform.macOS && dbgConfig.target == "app") {
+            let debugSession: vscode.DebugConfiguration = {
+                "type": "lldb",
+                "request": "launch",
+                "name": DebugConfigurationProvider.lldbName,
+                "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
+                "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
+            };
+            return debugSession;
         }
+        let debugSession: vscode.DebugConfiguration = {
+            type: "lldb",
+            request: "custom",
+            name: DebugConfigurationProvider.lldbName,
+            targetCreateCommands: [
+                `command script import '${getScriptPath()}/attach_lldb.py'`,
+                "command script add -f attach_lldb.create_target create_target",
+                "command script add -f attach_lldb.terminate_debugger terminate_debugger",
+                "command script add -f attach_lldb.watch_new_process watch_new_process",
+                "command script add -f attach_lldb.setScriptPath setScriptPath",
+                "command script add -f attach_lldb.app_log app_log",
+                "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
+                `create_target ${this.sessionID}`
+            ],
+            processCreateCommands: [
+                //"process handle SIGKILL -n true -p true -s false",
+                //"process handle SIGTERM -n true -p true -s false",
+                `setScriptPath ${getScriptPath()}`,
+                `watch_new_process ${this.sessionID}`
+            ],
+            exitCommands: [],
+            appSessionId: dbgConfig.appSessionId,
+            sessionId: this.sessionID
+        };
+        return debugSession;
     }
 }
 
