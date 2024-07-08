@@ -2,6 +2,8 @@
 
 Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions
 
+[![GitHub](https://img.shields.io/github/stars/fireplusteam/ios_vs_code?style=social)](https://github.com/fireplusteam/ios_vs_code)
+
 ## Autocomplete
 
 [![Autocomplete](https://img.youtube.com/vi/0dXQGY0IIEA/0.jpg)](https://youtu.be/0dXQGY0IIEA)
