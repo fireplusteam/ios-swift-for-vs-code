@@ -4,15 +4,21 @@ import fs from "fs";
 
 export enum Platform {
     macOS,
-    iOS
+    iOS,
+    watchOS,
+    visionOS
 };
 
 export function currentPlatform(): Platform | undefined {
     switch (getProjectPlatform()) {
-        case "macosx":
+        case "macOS":
             return Platform.macOS;
-        case "iphonesimulator":
+        case "iOS Simulator":
             return Platform.iOS;
+        case "watchOS Simulator":
+            return Platform.watchOS;
+        case "visionOS Simulator":
+            return Platform.visionOS;
     }
 }
 

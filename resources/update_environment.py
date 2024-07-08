@@ -35,10 +35,6 @@ elif type == "-destinationDevice":
         elif key == "platform":
             key = "PLATFORM"
             hasPlatform = True
-            if value == "macOS":
-                value = "macosx"
-            elif value == "iOS Simulator":
-                value = "iphonesimulator"
         else:
             assert(False) 
 

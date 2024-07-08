@@ -10,7 +10,6 @@ def update_environment(project_file):
     schemes = helper.get_schemes(project_file)
     env_file = helper.get_env_list()
     _ = env_file["PROJECT_CONFIGURATION"] # trigger an error in case if configuration is not set
-    _ = env_file["PLATFORM"] # trigger an error in case if configuration is not set
     try: 
         if not (env_file["PROJECT_SCHEME"].strip("\"") in schemes):
             helper.update_scheme(project_file, schemes[0])

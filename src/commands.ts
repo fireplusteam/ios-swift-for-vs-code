@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { getDeviceId, getEnvList, getProjectConfiguration, getProjectFileName, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
+import { getDeviceId, getEnvList, getProjectConfiguration, getProjectFileName, getProjectPath, getProjectPlatform, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { showPicker } from "./inputPicker";
@@ -208,6 +208,7 @@ export async function checkWorkspace(executor: Executor, ignoreFocusOut = false)
         selectedTarget = true;
     }
 
+
     const command = getLastLine(await executor.execShell(
         "Validate Environment",
         "check_workspace.sh",
@@ -218,12 +219,14 @@ export async function checkWorkspace(executor: Executor, ignoreFocusOut = false)
     if (command === "Restarting LSP") {
         restartLSP();
     }
+
     const env = getEnvList();
     let selectedDevice = false;
-    if (!env.hasOwnProperty("DEVICE_ID")) {
+    if (!env.hasOwnProperty("DEVICE_ID") || !env.hasOwnProperty("PLATFORM")) {
         await selectDevice(executor, false, ignoreFocusOut);
         selectedDevice = true;
     }
+
     return { selectedTarget: selectedTarget, selectedConfiguration: selectedConfiguration, selectedDevice: selectedDevice };
 }
 
