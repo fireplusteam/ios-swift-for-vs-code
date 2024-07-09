@@ -14,6 +14,7 @@ import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "
 export async function selectProjectFile(executor: Executor, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
     const projectEnd = ".xcodeproj/project.pbxproj";
+    const excludeEnd = ".xcodeproj/project.xcworkspace"
     const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
     const files = await glob(
         include,
@@ -45,6 +46,11 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
                 .slice(0, -1)
                 .join(path.sep);
             return { label: relativeProjectPath, value: file.split(path.sep).slice(0, -1).join(path.sep) };
+        })
+        .filter(file => {
+            if (file.value.endsWith(excludeEnd))
+                return false;
+            return true;
         });
     if (options.length == 0) {
         if (showProposalMessage == false) {
