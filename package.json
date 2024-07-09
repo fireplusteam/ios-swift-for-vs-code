@@ -41,7 +41,7 @@
         "run",
         "test"
     ],
-    "version": "0.0.7",
+    "version": "0.0.8",
     "engines": {
         "vscode": "^1.86.0"
     },
