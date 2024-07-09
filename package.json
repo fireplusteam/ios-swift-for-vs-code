@@ -42,6 +42,9 @@
         "test"
     ],
     "version": "0.0.8",
+    "os": [
+        "macos"
+    ],
     "engines": {
         "vscode": "^1.86.0"
     },
