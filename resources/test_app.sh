@@ -8,7 +8,7 @@ fi
 
 source "$VS_IOS_SCRIPT_PATH/xcode_build_util.sh"
 
-XCODECMD="xcodebuild test-without-building -scheme \"$PROJECT_SCHEME\" $XCODECMD"
+XCODECMD="xcodebuild test-without-building -parallel-testing-enabled NO -scheme \"$PROJECT_SCHEME\" $XCODECMD"
 echo "Base XCODECMD: $XCODECMD"
 
 export NSUnbufferedIO=YES

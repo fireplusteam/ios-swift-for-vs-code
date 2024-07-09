@@ -14,6 +14,7 @@ Develop/Build/Debug/Test your xCode projects in VS Code with your favorite exten
 
 ## Features
 
+- Supports iOS/MacOS/WatchOS/VisionOS/TvOS
 - Swift/Objective-C/C++ autocompletion
 - Compatibility with CodeLLDB
 - Debug/Run iOS app
