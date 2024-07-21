@@ -297,7 +297,8 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
         "Please select Multiple Devices to Run You App",
         true,
         false,
-        true
+        true,
+        " |"
     );
 
     if (option === undefined || option === '') {

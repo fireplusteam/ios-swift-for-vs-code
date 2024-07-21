@@ -27,7 +27,7 @@ is_multi_selection = sys.argv[4]
 print("DEST DEVICES: " + selected_destination)
 
 if is_multi_selection == '-multi':
-    selected_destination = selected_destination.split(' ')
+    selected_destination = selected_destination.split(' |')
 else:
     selected_destination = [selected_destination]
     
@@ -81,6 +81,16 @@ for device_line in devices:
             continue
         if len(formatted_value) == 0 or not "platform" in formatted_value or not "id" in formatted_value:
             continue
+       
+        if is_multi_selection == "-multi":
+            formatted_value = formatted_value.split(",")
+            res_value: list[str] = []
+            for pair in formatted_value:
+                if len(pair) == 0: continue
+                key, value = pair.split("=")
+                if key == "id":
+                    res_value.append(pair)
+            formatted_value = res_value
         
         item_multi = {"label": formatted_key, "value": formatted_value}
         if len(selected_list) > 0:

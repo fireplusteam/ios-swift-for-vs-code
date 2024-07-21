@@ -38,7 +38,7 @@ EOF
 echo "Path to the built app: ${APP_PATH}"
 
 is_empty "$APP_PATH"
-
+IFS=' |'
 for SINGLE_DESTINATION in $DESTINATION; do
     SIMULATOR_UDID=${SINGLE_DESTINATION#id=} # Removes prefix id=
 
