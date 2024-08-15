@@ -116,8 +116,7 @@ export class ProjectManager {
         for (let file of files) {
             if (file.endsWith(".xcodeproj")) {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
-                if (!this.projectCache.has(relativeProjectPath)) {
-                    await this.projectCache.update(relativeProjectPath);
+                if (await this.projectCache.update(relativeProjectPath)) {
                     await this.readAllProjects(this.projectCache.getList(relativeProjectPath));
                 }
             }

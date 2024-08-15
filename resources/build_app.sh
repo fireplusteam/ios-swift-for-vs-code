@@ -13,7 +13,7 @@ check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
         python3 "$VS_IOS_SCRIPT_PATH/print_errors.py"
-        echo "Build Succeeded.■" >>.logs/build.log
+        echo "Build With Error.■" >>.logs/build.log
         exit 1
     fi
 }

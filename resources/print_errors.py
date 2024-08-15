@@ -113,7 +113,7 @@ if len(lines) > 0:
         print(output)
     
     sys.stdout.flush();
-    exit(1)
+    exit(0)
 else:
     pure_output = "No errors!"
     with open(".logs/errors.log", 'w') as file:

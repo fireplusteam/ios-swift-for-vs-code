@@ -1,5 +1,6 @@
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as fs from 'fs';
+import path from 'path';
 import * as vscode from 'vscode';
 
 export class ProblemDiagnosticResolver {
@@ -8,6 +9,7 @@ export class ProblemDiagnosticResolver {
     diagnosticBuildCollection: vscode.DiagnosticCollection;
 
     buildErrors = new Set<string>();
+    buildLogFile: string | undefined;
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("xcodebuild");
@@ -15,6 +17,7 @@ export class ProblemDiagnosticResolver {
         this.disposable.push(vscode.workspace.onDidChangeTextDocument((e) => {
             const fileUrl = e.document.uri;
             if (fileUrl === undefined) { return; }
+            if (fileUrl.fsPath.endsWith(".log")) return;
             this.diagnosticBuildCollection.set(fileUrl, []);
         }));
     }
@@ -99,6 +102,7 @@ export class ProblemDiagnosticResolver {
                 this.watcherProc.kill();
             }
 
+            this.buildLogFile = path.join(workspacePath, filePath);
             const options: SpawnOptions = {
                 cwd: workspacePath,
                 shell: true,
@@ -116,6 +120,7 @@ export class ProblemDiagnosticResolver {
             let triggerCharacter = "^";
             let decoder = new TextDecoder("utf-8");
             let isError = false;
+            let numberOfLines = 0;
 
             child.stdout?.on("data", async (data) => {
                 stdout += decoder.decode(data);
@@ -131,15 +136,20 @@ export class ProblemDiagnosticResolver {
                 }
 
                 const shouldEnd = stdout.indexOf("■") !== -1;
+                if (shouldEnd) {
+                    lastErrorIndex = stdout.length - 1;
+                }
                 if (lastErrorIndex !== -1) {
                     triggerCharacter = "^";
-                    const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1));
+                    const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), numberOfLines);
                     for (let problem in problems) {
                         isError = isError || problems[problem].filter(e => {
                             return e.severity === vscode.DiagnosticSeverity.Error;
                         }).length > 0
                     }
                     this.storeProblems(problems);
+                    for (let i = 0; i < lastErrorIndex + 1; ++i)
+                        numberOfLines += (stdout[i] == '\n') ? 1 : 0;
                     stdout = stdout.substring(lastErrorIndex + 1);
                     firstIndex = 0;
                 } else {
@@ -169,6 +179,7 @@ export class ProblemDiagnosticResolver {
     }
 
     private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
+    private problemLinkerPattern = /^(clang):\s+(error):\s+(.*)$/gm;
 
     private column(output: string, messageEnd: number) {
         let newLineCounter = 0;
@@ -204,7 +215,7 @@ export class ProblemDiagnosticResolver {
         return [start, end];
     }
 
-    private parseBuildLog(output: string) {
+    private parseBuildLog(output: string, numberOfLines: number) {
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
             let matches = [...output.matchAll(this.problemPattern)];
@@ -239,6 +250,31 @@ export class ProblemDiagnosticResolver {
                 value.push(diagnostic);
                 if (fs.existsSync(file))
                     files[file] = value;
+            }
+            // parsing linker errors
+            matches = [...output.matchAll(this.problemLinkerPattern)];
+            for (const match of matches) {
+                const file = this.buildLogFile || match[1];
+
+                let line = numberOfLines;
+                for (let i = 0; i < (match.index || 0); ++i) {
+                    line += (output[i] == '\n') ? 1 : 0;
+                }
+
+                const message = match[3];
+                let errorSeverity = vscode.DiagnosticSeverity.Error;
+
+                const diagnostic = new vscode.Diagnostic(
+                    new vscode.Range(
+                        new vscode.Position(line, 0),
+                        new vscode.Position(line, 0)),
+                    message,
+                    errorSeverity
+                );
+                diagnostic.source = "xcodebuild";
+                const value = files[file] || [];
+                value.push(diagnostic);
+                files[file] = value;
             }
         } catch (err) {
             console.log(err);

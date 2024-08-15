@@ -150,11 +150,13 @@ export class ProjectsCache {
 
     async update(projectPath: string, contentFile: Buffer | undefined = undefined) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
+        let updated = false;
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
             this.cache.set(projectPath, {
                 timestamp: time,
                 list: await this.parseProjectList(await listFilesFromProject(getFilePathInWorkspace(projectPath)))
             });
+            updated = true;
         }
         if (!this.watcher.has(projectPath)) {
             const fullProjectPath = path.join(getFilePathInWorkspace(projectPath), "project.pbxproj");
@@ -181,5 +183,6 @@ export class ProjectsCache {
                 { watcher: fileWatch, content: contentProjectFile }
             );
         }
+        return updated;
     }
 }

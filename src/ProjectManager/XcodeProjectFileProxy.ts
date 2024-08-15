@@ -88,7 +88,7 @@ export class XcodeProjectFileProxy {
         } else {
             const wait = this.commandQueue;
             await wait;
-            return this.request(command);
+            return await this.request(command);
         }
     }
 }
