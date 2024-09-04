@@ -16,23 +16,38 @@ class AppLogger:
     def print_new_lines(self):
         try:
             with helper.FileLock(self.file_path + '.lock'):
-                with open(self.file_path, 'r') as file:
+                with open(self.file_path, 'rb') as file:
                     file_size = os.path.getsize(self.file_path)
                     
                     if self.last_known_position < file_size:
                         file.seek(self.last_known_position)
                     else:
                         return
+                    
+                    while True:
+                        try: 
+                            line = helper.binary_readline(file, b'\n')
+                            if not line:
+                                return
+                            if not line.endswith(b'\n'):
+                                return
+                            
+                            if self.enabled:
+                                line = line.decode(errors="replace")
+                                self.printer(line, end='')
+                        except:
+                            # cut utf-8 characters as code lldb console can not print such characters and generates an error
+                            if self.enabled:
+                                to_print = ""
+                                for i in line:
+                                    if ord(i) < 128:
+                                        to_print += i
+                                    else:
+                                        to_print += '?'
+                                self.printer(to_print, end='')
 
-                    try: 
-                        line = file.buffer.read()
-                        if self.enabled:
-                            self.printer(line.decode("utf-8", "replace"), end='')
+                        self.last_known_position = file.tell()
 
-                        self.last_known_position += len(line)  # Add 1 for the newline character
-                    except Exception as e:
-                        self.printer(f"Exception reading file: {str(e)}, position: ${self.last_known_position}", end='')
-                        self.last_known_position += 1
         except: # no such file
             pass
 

@@ -296,3 +296,20 @@ def update_debugger_launch_config(session_id, key, value):
 
 if __name__ == "__main__":
     print("ok")
+
+#---------------------BINARY READER HELPER----------------------------
+
+def binary_readline(file, newline=b'\r\n'):
+    line = bytearray()
+    while True:
+        x = file.read(1)
+        if x:
+            line += x
+        else:
+            if len(line) == 0:
+                return None
+            else:
+                return line
+        
+        if line.endswith(newline):
+            return line
