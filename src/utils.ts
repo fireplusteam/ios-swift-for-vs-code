@@ -66,16 +66,29 @@ export function emptyFile(filePath: string, fileName: string) {
     fs.writeFileSync(fileFullPath, "", "utf-8");
 }
 
+export function deleteLockFile(filePath: string, fileName: string) {
+    const lockFilePath = path.join(filePath, fileName + ".lock");
+    if (fs.existsSync(lockFilePath)) {
+        fs.rmSync(lockFilePath, { force: true, maxRetries: 3 });
+    }
+}
+
 export function emptyBuildLog() {
-    emptyFile(getWorkspacePath(), ".logs/build.log");
+    const fileName = ".logs/build.log";
+    emptyFile(getWorkspacePath(), fileName);
+    deleteLockFile(getWorkspacePath(), fileName)
 }
 
 export function emptyTestsLog() {
-    emptyFile(getWorkspacePath(), ".logs/tests.log");
+    const fileName = ".logs/tests.log";
+    emptyFile(getWorkspacePath(), fileName);
+    deleteLockFile(getWorkspacePath(), fileName)
 }
 
 export function emptyAutobuildLog() {
-    emptyFile(getWorkspacePath(), ".logs/autocomplete.log");
+    const fileName = ".logs/autocomplete.log";
+    emptyFile(getWorkspacePath(), fileName);
+    deleteLockFile(getWorkspacePath(), fileName)
 }
 
 export function fileNameFromPath(filePath: string) {
@@ -84,7 +97,9 @@ export function fileNameFromPath(filePath: string) {
 }
 
 export function emptyAppLog(deviceId: string) {
-    emptyFile(getWorkspacePath(), `.logs/app_${deviceId}.log`);
+    const fileName = `.logs/app_${deviceId}.log`;
+    emptyFile(getWorkspacePath(), fileName);
+    deleteLockFile(getWorkspacePath(), fileName);
 }
 
 export function isFolder(path: string) {
