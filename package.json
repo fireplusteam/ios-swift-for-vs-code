@@ -39,14 +39,15 @@
         "code",
         "develop",
         "run",
-        "test"
+        "test",
+        "coverage"
     ],
-    "version": "0.0.11",
+    "version": "0.0.12",
     "os": [
-        "macos"
+        "darwin"
     ],
     "engines": {
-        "vscode": "^1.86.0"
+        "vscode": "^1.88.0"
     },
     "categories": [
         "Debuggers",
@@ -293,13 +294,13 @@
     "devDependencies": {
         "@types/mocha": "^10.0.6",
         "@types/node": "18.x",
-        "@types/vscode": "^1.86.0",
-        "@typescript-eslint/eslint-plugin": "^6.19.1",
-        "@typescript-eslint/parser": "^6.19.1",
+        "@types/vscode": "^1.88.0",
+        "@typescript-eslint/eslint-plugin": "^7.14.0",
+        "@typescript-eslint/parser": "^7.14.0",
         "@vscode/dts": "^0.4.0",
         "@vscode/test-cli": "^0.0.4",
         "@vscode/test-electron": "^2.3.9",
-        "eslint": "^8.56.0",
+        "eslint": "^8.57.0",
         "typescript": "^5.3.3"
     },
     "dependencies": {

@@ -152,8 +152,8 @@ export class Executor {
     }
 
     public async execShell(
-        commandName: string,
-        file: string,
+        commandName: string | "shellScript",
+        fileOrCommand: string,
         args: string[] = [],
         showTerminal = false,
         returnType = ExecutorReturnType.statusCode,
@@ -169,9 +169,12 @@ export class Executor {
             ...process.env,
             ...env,
         };
-        let script = getScriptPath(file);
-        if (script.indexOf(".py") !== -1) {
-            script = `python3 "${script}"`;
+        let script: string = fileOrCommand;
+        if (commandName != "shellScript") {
+            script = getScriptPath(fileOrCommand);
+            if (script.indexOf(".py") !== -1) {
+                script = `python3 "${script}"`;
+            }
         }
         const proc = this.execShellImp(script, args, {
             cwd: getWorkspacePath(),

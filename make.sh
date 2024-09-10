@@ -7,4 +7,4 @@ npm install # resolve dependencies
 npm run compile
 vsce package
 
-code --install-extension vscode-ios-0.0.11.vsix
+code --install-extension vscode-ios-0.0.12.vsix

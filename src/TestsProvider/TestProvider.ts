@@ -9,6 +9,7 @@ import { TestCaseAsyncParser } from './TestCaseAsyncParser';
 import { getWorkspacePath } from '../env';
 import { TestTreeContext } from './TestTreeContext';
 import { TestCaseProblemParser } from './TestCaseProblemParser';
+import { error } from 'console';
 
 
 export class TestProvider {
@@ -102,6 +103,14 @@ export class TestProvider {
                 catch (err) {
                     console.log(`Run with error: ${err}`);
                 } finally {
+                    try {
+                        const convergedFiles = await this.context.coverage.getCoverageFiles();
+                        for (const file of convergedFiles)
+                            run.addCoverage(file);
+                    } catch {
+                        console.error(`Coverage data can not be obtained: ${error.toString()}`);
+                    }
+
                     run.end();
                 }
             };
@@ -115,8 +124,12 @@ export class TestProvider {
         };
 
         ctrl.createRunProfile('Run Tests', vscode.TestRunProfileKind.Run, runHandler, true, undefined, false);
-
         ctrl.createRunProfile('Debug Tests', vscode.TestRunProfileKind.Debug, runHandler, true, undefined, false);
+
+        const coverageTestProfile = ctrl.createRunProfile('Run with Coverage', vscode.TestRunProfileKind.Coverage, runHandler, true, undefined, false);
+        coverageTestProfile.loadDetailedCoverage = async (_, coverage) => {
+            return await this.context.coverage.getStatementCoverageFor(coverage);
+        };
 
         ctrl.resolveHandler = async item => {
             if (!item) {

@@ -1,8 +1,18 @@
 # vscode-ios README
 
-Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions
+📦[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=FirePlusTeam.vscode-ios) | 🐞
+[Github Issues](https://github.com/fireplusteam/ios_vs_code/issues)
+
+You can support this project by giving a star on GitHub ⭐️
 
 [![GitHub](https://img.shields.io/github/stars/fireplusteam/ios_vs_code?style=social)](https://github.com/fireplusteam/ios_vs_code)
+
+<hr/>
+Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions.
+
+Before use it make sure you've installed all **dependencies** required for this extension.
+
+<hr/>
 
 ## Autocomplete
 
@@ -19,6 +29,7 @@ Develop/Build/Debug/Test your xCode projects in VS Code with your favorite exten
 - Compatibility with CodeLLDB
 - Debug/Run iOS app
 - Debug/Run unit/snapshot tests. Support running single/multiple tests for a class/target/set of classes
+- Support code coverage
 - Run an application on multiple simulator with a single command
 - Support project/workspace and iOS Package.swift
 - Support launch configuration for app

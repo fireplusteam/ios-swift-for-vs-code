@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { TestContainer } from './TestContainer';
 import { TestCase } from './TestCase';
 import { TestHeading } from './TestHeading';
+import { CoverageProvider } from './CoverageProvider';
 
 const textDecoder = new TextDecoder('utf-8');
 
@@ -11,6 +12,7 @@ export type MarkdownTestData = TestHeading | TestCase | TestContainer;
 export class TestTreeContext {
     testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
     ctrl: vscode.TestController = vscode.tests.createTestController('iOSTestController', 'iOS Tests');
+    coverage: CoverageProvider = new CoverageProvider(".vscode/.bundle.xcresult");
 
     getOrCreateTest(
         uri: vscode.Uri,
