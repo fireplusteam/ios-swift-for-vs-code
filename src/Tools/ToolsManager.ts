@@ -10,18 +10,28 @@ export class ToolsManager {
 
     private async isToolInstalled(name: string, version = "--version"): Promise<boolean> {
         return new Promise((resolve,) => {
-            exec(`${name} ${version}`, (error, stdout, stderr) => {
-                if (error)
+            const command = `${name} ${version}`;
+            this.log.appendLine(command);
+            exec(command, (error, stdout, stderr) => {
+                if (error) {
+                    this.log.appendLine(stderr);
                     resolve(false);
-                else
+                }
+                else {
+                    this.log.appendLine(stdout);
                     resolve(true);
+                }
             });
         });
     }
 
     private isGemInstalled(gemName: string): Promise<boolean> {
         return new Promise((resolve,) => {
-            exec(`gem list ^${gemName}$ -i`, (error, stdout, stderr) => {
+            const command = `gem list ^${gemName}$ -i`;
+            this.log.appendLine(command);
+            exec(command, (error, stdout, stderr) => {
+                this.log.appendLine(`stderr: ${stderr}`);
+                this.log.appendLine(`stdout: ${stdout}`);
                 if (error) {
                     resolve(false);
                 } else {
@@ -46,20 +56,22 @@ export class ToolsManager {
     }
 
     private async installHomebrew(): Promise<boolean> {
+        this.log.appendLine("Requested a user sudo password to install Homebrew");
         const password = await vscode.window.showInputBox({ ignoreFocusOut: false, prompt: `In order to install Homebrew, please enter sudo password`, password: true });
         if (password === undefined) {
-            throw "Password is not provided"
+            throw "Password is not provided";
         }
         this.log.appendLine('Attempting to install Homebrew...');
         const installScript = `echo '${password}' | sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
         return await (new Promise((resolver) => {
+            this.log.appendLine("Homebrew is installing");
             exec(installScript, { shell: "true" }, (error, stdout, stderr) => {
+                this.log.appendLine(`stderr: ${stderr}`);
+                this.log.appendLine(`stdout: ${stdout}`);
                 if (error) {
-                    this.log.appendLine(`An error occurred: ${stderr}`);
                     resolver(false);
                     return;
                 }
-                this.log.appendLine(`Homebrew installation completed: ${stdout}`);
                 resolver(true);
             })
         }));
@@ -68,7 +80,10 @@ export class ToolsManager {
     private async installTool(name: string, toolName = "brew") {
         return new Promise((resolver,) => {
             const command = `${toolName} install ${name}`;
+            this.log.appendLine(command);
             exec(command, (error, stdout, stderr) => {
+                this.log.appendLine(`stderr: ${stderr}`);
+                this.log.appendLine(`stdout: ${stdout}`);
                 if (error) {
                     resolver(false);
                 } else {
@@ -112,7 +127,8 @@ export class ToolsManager {
         });
     }
 
-    public async resolveThirdPartyTools() {
+    public async resolveThirdPartyTools(showMessageOnSuccess: boolean = false) {
+        this.log.appendLine("Resolving Third Party Dependencies");
         if (!(await this.isHomebrewInstalled())
             || !(await this.isXcbeautifyInstalled())
             || !(await this.isRubyInstalled())
@@ -123,12 +139,22 @@ export class ToolsManager {
                     // install extensions
                     await this.installTools();
                     this.log.appendLine("All dependencies are installed. You are ready to go");
+                    if (showMessageOnSuccess) {
+                        await vscode.window.showInformationMessage("All Dependencies are installed successfully!");
+                    }
                 } catch (err) {
-                    this.log.appendLine(`${err}`);
+                    this.log.appendLine(`Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`);
+                    vscode.window.showErrorMessage("Dependencies are not installed. This extension would not be working as expected.");
                 }
+            } else {
+                this.log.appendLine("Dependencies are not installed. This extensions would not be working as expected!")
+                vscode.window.showErrorMessage("Dependencies are not installed. This extension would not be working as expected.");
             }
         } else {
             this.log.appendLine("All dependencies are installed. You are ready to go");
+            if (showMessageOnSuccess) {
+                await vscode.window.showInformationMessage("All Dependencies are installed successfully!");
+            }
         }
     }
 }

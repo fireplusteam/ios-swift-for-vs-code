@@ -78,7 +78,6 @@ export async function activate(context: vscode.ExtensionContext) {
         logChannel
     );
     logChannel.appendLine("Activated");
-    logChannel.show();
 
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
@@ -134,6 +133,11 @@ export async function activate(context: vscode.ExtensionContext) {
             } catch {
                 vscode.window.showErrorMessage("Project was not loaded due to error");
             }
+        })
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.tools.install", async () => {
+            await tools.resolveThirdPartyTools(true);
         })
     );
 

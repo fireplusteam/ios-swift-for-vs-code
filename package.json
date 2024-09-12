@@ -160,6 +160,10 @@
         ],
         "commands": [
             {
+                "command": "vscode-ios.tools.install",
+                "title": "iOS: Install Dependencies"
+            },
+            {
                 "command": "vscode-ios.project.select",
                 "title": "iOS: Select Project/Workspace"
             },
