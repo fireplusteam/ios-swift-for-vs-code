@@ -41,8 +41,6 @@ export class ProjectManager {
         }));
 
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
-
-        this.loadProjectFiles();
     }
 
     async listTargetsForFile(file: string) {
