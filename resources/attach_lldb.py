@@ -7,6 +7,7 @@ import threading
 import sys
 import json
 from app_log import AppLogger
+import time
 
 LOG_DEBUG = 1
 
@@ -206,6 +207,7 @@ def terminate_debugger(debugger, command, result, internal_dict):
 
 # ---------------------------FOCUS-SIMULATOR
 
+current_focus_time = time.time()
 def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     "Start monitor to manage simulator window focus while debugging. (Usage: simulator-focus-monitor Simulator)"
     process = exe_ctx.GetProcess()
@@ -217,17 +219,34 @@ def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     # Focus simulator if the process is currently running
     if (process.GetState() == lldb.eStateRunning):
         focus_simulator(command)
+
+    listener = debugger.GetListener()
+    broadcaster = debugger.GetSelectedTarget().GetProcess().GetBroadcaster()
+    broadcaster.AddListener(listener, lldb.SBProcess.eBroadcastBitStateChanged)
+    
+    def focus_simulator_launcher(process, command, start_time):
+        global current_focus_time
+        try:
+            # logMessage(f"Focus start: {command}, {start_time}, {current_time}")
+            # wait for 1 second to make sure that a user is actually run the app, not stepping over the code
+            time.sleep(1)
+            if current_focus_time == start_time and process.GetState() == lldb.eStateRunning:
+                focus_simulator(command)
+        except Exception as e:
+            logMessage(f"Focus failed: {str(e)}")
             
     # Method to wait for state changes
     def listen_process_events():
+        global current_focus_time
         try: 
-            state = None
             while True:
-                process = debugger.GetSelectedTarget().GetProcess()
-                if (process.GetState() == lldb.eStateRunning and state != process.GetState()):
-                    focus_simulator(command)
-                state = process.GetState()
-                time.sleep(0.05)
+                event = lldb.SBEvent()
+                if listener.WaitForEvent(1, event):
+                    process = debugger.GetSelectedTarget().GetProcess()
+                    current_focus_time = time.time();
+                    if (process.GetState() == lldb.eStateRunning):
+                        focus_thread = threading.Thread(target=focus_simulator_launcher, args=( process, command, current_focus_time ))
+                        focus_thread.start()
         except Exception as e:
             logMessage(f"LISTENER_ERROR {str(e)}")
 
