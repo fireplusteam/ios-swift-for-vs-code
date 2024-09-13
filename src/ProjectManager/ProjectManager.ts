@@ -20,6 +20,7 @@ export class ProjectManager {
 
     onProjectUpdate = new vscode.EventEmitter<void>();
     onProjectLoaded = new vscode.EventEmitter<void>();
+    onUpdateDeps: (() => Promise<void>) | undefined;
 
     constructor() {
         this.disposable.push(vscode.workspace.onDidCreateFiles(async e => {
@@ -106,7 +107,11 @@ export class ProjectManager {
         });
 
         if (wasLoadedWithError.length > 0) {
-            vscode.window.showErrorMessage(`Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}`);
+            const option = await vscode.window.showErrorMessage(`Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}. Update dependencies and retry?`, "Update Dependencies", "Cancel");
+            if (option == "Update Dependencies" && this.onUpdateDeps != undefined) {
+                await this.onUpdateDeps();
+                this.loadProjectFiles(shouldDropCache);
+            }
         }
     }
 

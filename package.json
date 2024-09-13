@@ -164,6 +164,10 @@
                 "title": "iOS: Install Dependencies"
             },
             {
+                "command": "vscode-ios.tools.update",
+                "title": "iOS: Update Dependencies"
+            },
+            {
                 "command": "vscode-ios.project.select",
                 "title": "iOS: Select Project/Workspace"
             },
