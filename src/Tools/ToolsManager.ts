@@ -6,7 +6,6 @@ export class ToolsManager {
     private log: vscode.OutputChannel;
     private terminal: InteractiveTerminal
 
-
     constructor(log: vscode.OutputChannel) {
         this.log = log;
         this.terminal = new InteractiveTerminal(log, "Install Dependencies");

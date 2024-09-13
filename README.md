@@ -45,7 +45,10 @@ Instead of xCode preview you can use hot reloading [InjectionIII](https://github
 
 ## Dependencies
 
-To use this extension you need to install also:
+Before an extension is activated, there's a automatic check if those dependencies are installed and if not, it's ask a user to install them automatically.
+Use the following guide to install them manually if any it doesn't work for you:
+
+**Required Dependencies**:
 
 - [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
 - [Swift](https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang)
@@ -91,48 +94,6 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 - To make autocompletion to work you may need to clean the project and build it entirely for the first time.
 
-## How to build/install extension from a repo
-
-Open terminal to install required libraries (Also make sure you've installed Xcode, xcbeautify, xcodeproj):
-
-- install **pyinstaller** and **psutil** (needed to build Xcode proxy build service)
-
-```bash
-pip install pyinstaller
-pip install psutil
-```
-
-- install **npm**
-
-```bash
-brew install node
-```
-
-- clone git repo and update submodules:
-
-```bash
-git clone https://github.com/fireplusteam/ios_vs_code.git
-git submodule update --init --recursive
-```
-
-- install vsce package
-
-```bash
-brew install vsce
-```
-
-- 1. Open Visual Studio Code.
-  2. Press **Cmd+Shift+P** to open the Command Palette.
-  3. Type: **Shell Command: Install 'code' command in PATH**.
-
-- navigate to repo folder in your terminal and run:
-
-```bash
-./make.sh
-```
-
-If everything configured right, the extension should be built and installed to vs code automatically.
-
 ## Extension Settings
 
 This extension contributes the following settings:
@@ -153,6 +114,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.0.1
+### 0.0.13
 
 It's still under development, so you can face some bugs
