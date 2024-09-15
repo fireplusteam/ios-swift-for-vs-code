@@ -42,6 +42,18 @@ export class AutocompleteWatcher {
 
     constructor(atomicCommand: AtomicCommand, problemResolver: ProblemDiagnosticResolver, projectManager: ProjectManager) {
         this.atomicCommand = atomicCommand;
+        this.disposable.push(vscode.workspace.onDidChangeTextDocument(e => {
+            if (!e || !this.isWatcherEnabledAnyFile()) {
+                return;
+            }
+
+            let isChanged = false;
+            for (const ch of e.contentChanges) {
+                if (ch.text.includes('\n')) // '' means deleted
+                    isChanged = true;
+            }
+            this.triggerIncrementalBuild();
+        }));
         this.disposable.push(vscode.window.onDidChangeActiveTextEditor(async (e) => {
             if (!e || !this.isWatcherEnabled()) {
                 return;
@@ -99,6 +111,14 @@ export class AutocompleteWatcher {
 
     private isWatcherEnabled() {
         const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher");
+        if (!isWatcherEnabled || this.terminatingExtension) {
+            return false;
+        }
+        return true;
+    }
+
+    private isWatcherEnabledAnyFile() {
+        const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher.singleModule");
         if (!isWatcherEnabled || this.terminatingExtension) {
             return false;
         }
