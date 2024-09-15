@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { TestTreeContext, getContentFromFilesystem } from './TestTreeContext';
+import { TestTreeContext } from './TestTreeContext';
 import { TestContainer } from './TestContainer';
 import { TestTarget } from './TestTarget';
 import { getFilePathInWorkspace } from '../env';
-import { FSWatcher, Stats, watch } from 'fs';
+import { FSWatcher, watch } from 'fs';
 import path from 'path';
 
 export class TestProject implements TestContainer {

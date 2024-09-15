@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { Executor } from "./execShell";
 import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
 import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";

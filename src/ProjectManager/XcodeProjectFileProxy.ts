@@ -1,5 +1,5 @@
 import fs from "fs";
-import { ChildProcess, exec, spawn } from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import { getScriptPath } from "../env";
 import { createInterface } from "readline";
 import * as vscode from "vscode";

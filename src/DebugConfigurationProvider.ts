@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
-import { Platform, currentPlatform, getBuildRootPath, getDeviceId, getProjectConfiguration, getProjectPlatform, getProjectScheme, getScriptPath, getWorkspacePath, isActivated } from "./env";
+import { Platform, currentPlatform, getBuildRootPath, getDeviceId, getProjectConfiguration, getProjectScheme, getScriptPath, getWorkspacePath, isActivated } from "./env";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./buildCommands";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { getSessionId } from "./utils";
 import { sleep } from "./extension";
-import { debug } from "console";
 import path from "path";
 import { AtomicCommand } from "./AtomicCommand";
 

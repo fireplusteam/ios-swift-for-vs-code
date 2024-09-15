@@ -11,7 +11,6 @@ import { TestTreeContext } from './TestTreeContext';
 import { TestCaseProblemParser } from './TestCaseProblemParser';
 import { error } from 'console';
 
-
 export class TestProvider {
     projectManager: ProjectManager
     executeTests: (tests: string[] | undefined, isDebuggable: boolean) => Promise<boolean>;

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 
-
 export class TestCase {
     constructor(
         private readonly testName: String

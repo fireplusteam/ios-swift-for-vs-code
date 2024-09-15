@@ -1,25 +1,15 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ExecutorReturnType, ExecutorRunningError } from "./execShell";
+import { ExecutorMode, ExecutorReturnType } from "./execShell";
 import { getWorkspacePath, getProjectScheme } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { AtomicCommand, UserCommandIsExecuting } from "./AtomicCommand";
-import { error } from "console";
-
-class AutocompleteCancel extends Error {
-}
 
 enum State {
     ModuleNotChanged,
     ModuleChanged
-}
-
-enum BuildState {
-    NotRunning,
-    Running,
-    Cancelling
 }
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background

@@ -1,6 +1,4 @@
-import { error } from 'console';
 import path from 'path';
-import { start } from 'repl';
 import * as vscode from 'vscode';
 
 const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):?/m;

@@ -5,9 +5,7 @@ import {
 } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
-import { sleep } from "./extension";
 import { killAll } from "./utils";
-var kill = require("tree-kill");
 
 export class ExecutorTerminatedByUserError extends Error {
     public constructor(message: string) {
