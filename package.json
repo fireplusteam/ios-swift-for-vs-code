@@ -285,18 +285,18 @@
                     }
                 ]
             }
-        ],
-        "extensionDependencies": [
-            "vadimcn.vscode-lldb",
-            "swift-lang",
-            "debugpy"
-        ],
-        "extensionPack": [
-            "vadimcn.vscode-lldb",
-            "swift-lang",
-            "debugpy"
         ]
     },
+    "extensionDependencies": [
+        "vadimcn.vscode-lldb",
+        "sswg.swift-lang",
+        "ms-python.debugpy"
+    ],
+    "extensionPack": [
+        "vadimcn.vscode-lldb",
+        "sswg.swift-lang",
+        "ms-python.debugpy"
+    ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
