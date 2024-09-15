@@ -5,6 +5,8 @@ import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
+import { AtomicCommand, UserCommandIsExecuting } from "./AtomicCommand";
+import { error } from "console";
 
 class AutocompleteCancel extends Error {
 }
@@ -26,7 +28,7 @@ export class AutocompleteWatcher {
     static AutocompleteCommandName = "Autocomplete Build";
 
     private disposable: vscode.Disposable[] = [];
-    private buildExecutor: Executor;
+    private atomicCommand: AtomicCommand;
     private problemResolver: ProblemDiagnosticResolver;
     private projectManager: ProjectManager;
     private selectedDocument: vscode.TextDocument | undefined = undefined;
@@ -38,9 +40,8 @@ export class AutocompleteWatcher {
 
     private buildId = 0;
 
-    private buildState: BuildState = BuildState.NotRunning;
-
-    constructor(buildExecutor: Executor, problemResolver: ProblemDiagnosticResolver, projectManager: ProjectManager) {
+    constructor(atomicCommand: AtomicCommand, problemResolver: ProblemDiagnosticResolver, projectManager: ProjectManager) {
+        this.atomicCommand = atomicCommand;
         this.disposable.push(vscode.window.onDidChangeActiveTextEditor(async (e) => {
             if (!e || !this.isWatcherEnabled()) {
                 return;
@@ -81,13 +82,12 @@ export class AutocompleteWatcher {
             this.textOfSelectedDocument = e.document.getText();
             this.selectedDocument = e.document;
         }));
-        this.buildExecutor = buildExecutor;
         this.problemResolver = problemResolver;
         this.projectManager = projectManager;
     }
 
     triggerIncrementalBuild() {
-        if (!this.isWatcherEnabled() || this.buildState === BuildState.Cancelling)
+        if (!this.isWatcherEnabled())
             return;
         this.buildId++;
         this.incrementalBuild(this.buildId);
@@ -113,46 +113,34 @@ export class AutocompleteWatcher {
     }
 
     private async incrementalBuild(buildId: number): Promise<any> {
-        if (this.buildId !== buildId || !this.isWatcherEnabled() || this.buildState === BuildState.Cancelling)
-            return;
         try {
-            if (this.buildState == BuildState.Running) {
-                this.buildState = BuildState.Cancelling;
-                await this.buildExecutor.terminateShell(new AutocompleteCancel("Cancelled"));
-                await sleep(1500);
-                if (this.buildState != BuildState.Cancelling) {
-                    return; // Triggered with a user manual build, so we need to return it here
+            await this.atomicCommand.autoWatchCommand(async () => {
+                if (this.buildId !== buildId || !this.isWatcherEnabled())
+                    return;
+                try {
+                    const scheme = getProjectScheme();
+                    emptyAutobuildLog();
+                    this.problemResolver.parseAsyncLogs(
+                        getWorkspacePath(),
+                        ".logs/autocomplete.log",
+                        false
+                    );
+                    await this.atomicCommand.executor.execShell(
+                        AutocompleteWatcher.AutocompleteCommandName,
+                        "compile_module.sh",
+                        [scheme],
+                        false,
+                        ExecutorReturnType.statusCode,
+                        ExecutorMode.silently
+                    );
+                } catch (err) {
                 }
-            }
-            const scheme = getProjectScheme();
-            emptyAutobuildLog();
-            this.problemResolver.parseAsyncLogs(
-                getWorkspacePath(),
-                ".logs/autocomplete.log",
-                false
-            );
-            this.buildState = BuildState.Running;
-            await this.buildExecutor.execShell(
-                AutocompleteWatcher.AutocompleteCommandName,
-                "compile_module.sh",
-                [scheme],
-                false,
-                ExecutorReturnType.statusCode,
-                ExecutorMode.silently
-            );
-            this.buildState = BuildState.NotRunning;
+            });
         } catch (err) {
-            if (err instanceof ExecutorRunningError) {
-                if (err.commandName === AutocompleteWatcher.AutocompleteCommandName) {
-                    if (this.buildId === buildId && this.buildState == BuildState.Running) {
-                        this.buildState = BuildState.NotRunning;
-                        console.log("ERROR: Not a Valid case. Should not be executed")
-                    }
-                } else if (this.buildId == buildId) {
-                    this.buildState = BuildState.NotRunning;
-                }
-            } else if (!(err instanceof AutocompleteCancel) && this.buildId == buildId) {
-                this.buildState = BuildState.NotRunning;
+            if (err == UserCommandIsExecuting) {
+                await sleep(1000);
+                if (buildId == this.buildId) // still valid
+                    this.incrementalBuild(buildId);
             }
         }
     }

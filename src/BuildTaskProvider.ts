@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import { Executor } from "./execShell";
 import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
-import { commandWrapper } from "./commandWrapper";
 import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
+import { AtomicCommand } from "./AtomicCommand";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
@@ -33,12 +33,12 @@ export async function executeTask(name: string) {
 export class BuildTaskProvider implements vscode.TaskProvider {
     static BuildScriptType = 'vscode-ios-tasks';
 
-    private executor: Executor;
     private problemResolver: ProblemDiagnosticResolver;
+    private atomicCommand: AtomicCommand;
 
-    constructor(executor: Executor, problemResolver: ProblemDiagnosticResolver) {
-        this.executor = executor;
+    constructor(problemResolver: ProblemDiagnosticResolver, atomicCommand: AtomicCommand) {
         this.problemResolver = problemResolver;
+        this.atomicCommand = atomicCommand;
     }
 
     public provideTasks(token?: vscode.CancellationToken): vscode.ProviderResult<vscode.Task[]> {
@@ -50,7 +50,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build",
             vscode.TaskGroup.Build,
             async () => {
-                await buildSelectedTarget(this.executor, this.problemResolver);
+                await buildSelectedTarget(this.atomicCommand.executor, this.problemResolver);
             }
         );
 
@@ -58,7 +58,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build Tests",
             vscode.TaskGroup.Build,
             async () => {
-                await buildTests(this.executor, this.problemResolver);
+                await buildTests(this.atomicCommand.executor, this.problemResolver);
             }
         );
 
@@ -66,7 +66,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Clean Derived Data",
             vscode.TaskGroup.Clean,
             async () => {
-                await cleanDerivedData(this.executor);
+                await cleanDerivedData(this.atomicCommand.executor);
             }
         );
 
@@ -114,7 +114,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 const pty: vscode.Pseudoterminal = {
                     open: async () => {
                         try {
-                            await commandWrapper(commandClosure, successMessage);
+                            await this.atomicCommand.userCommand(commandClosure, successMessage);
                         } catch (err) {
                         }
                         closeEmitter.fire(0);
@@ -122,7 +122,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,
                     close: async () => {
-                        this.executor.terminateShell();
+                        this.atomicCommand.executor.terminateShell();
                     },
                 };
                 resolved(pty);

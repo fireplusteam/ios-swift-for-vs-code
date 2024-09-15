@@ -19,7 +19,6 @@ import {
 import { Executor } from "./execShell";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
-import { runCommand } from "./commandWrapper";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, setContext } from "./inputPicker";
 import { getSessionId } from "./utils";
@@ -27,6 +26,7 @@ import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import { ToolsManager } from "./Tools/ToolsManager";
+import { AtomicCommand } from "./AtomicCommand";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -56,9 +56,10 @@ async function initialize() {
     }
 }
 
-export const projectExecutor = new Executor();
+const projectExecutor = new Executor();
+const atomicCommand = new AtomicCommand(projectExecutor);
 const problemDiagnosticResolver = new ProblemDiagnosticResolver();
-const debugConfiguration = new DebugConfigurationProvider(projectExecutor, problemDiagnosticResolver);
+const debugConfiguration = new DebugConfigurationProvider(problemDiagnosticResolver, atomicCommand);
 
 let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
@@ -88,7 +89,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await tools.updateThirdPartyTools();
         };
         autocompleteWatcher = new AutocompleteWatcher(
-            projectExecutor,
+            atomicCommand,
             problemDiagnosticResolver,
             projectManager
         );
@@ -116,7 +117,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }));
 
         context.subscriptions.push(
-            vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(projectExecutor, problemDiagnosticResolver))
+            vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(problemDiagnosticResolver, atomicCommand))
         );
 
         context.subscriptions.push(
@@ -176,7 +177,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.project.selectTarget",
                 async () => {
-                    await runCommand(async () => {
+                    await atomicCommand.userCommandWithoutThrowingException(async () => {
                         await selectTarget(projectExecutor);
                     });
                 }
@@ -187,7 +188,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.project.selectConfiguration",
                 async () => {
-                    await runCommand(async () => {
+                    await atomicCommand.userCommandWithoutThrowingException(async () => {
                         await selectConfiguration(projectExecutor);
                     });
                 }
@@ -198,7 +199,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.project.selectDevice",
                 async () => {
-                    await runCommand(async () => {
+                    await atomicCommand.userCommandWithoutThrowingException(async () => {
                         await selectDevice(projectExecutor);
                     });
                 }
@@ -207,7 +208,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand("vscode-ios.check.workspace", async () => {
-                await runCommand(async () => {
+                await atomicCommand.userCommandWithoutThrowingException(async () => {
                     await checkWorkspace(projectExecutor);
                 });
             })
@@ -217,7 +218,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.check.generateXcodeServer",
                 async () => {
-                    await runCommand(async () => {
+                    await atomicCommand.userCommandWithoutThrowingException(async () => {
                         await generateXcodeServer(projectExecutor);
                     });
                 }
@@ -250,7 +251,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
-                await runCommand(async () => {
+                await atomicCommand.userCommandWithoutThrowingException(async () => {
                     const id = getSessionId("multiple_devices");
                     await runAppOnMultipleDevices(id, projectExecutor, problemDiagnosticResolver);
                 });
