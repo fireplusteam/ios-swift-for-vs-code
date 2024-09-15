@@ -95,7 +95,7 @@
                 },
                 "vscode-ios.watcher.singleModule": {
                     "type": "boolean",
-                    "default": true,
+                    "default": false,
                     "title": "Changes Watcher (Experimental)",
                     "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes"
                 },
