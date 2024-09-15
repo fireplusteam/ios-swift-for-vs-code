@@ -112,11 +112,11 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 const closeEmitter = new vscode.EventEmitter<number>();
                 const pty: vscode.Pseudoterminal = {
                     open: async () => {
+                        closeEmitter.fire(0); // this's a workaround to hide a task terminal as soon as possible to let executor terminal to do the main job. That has a side effect if that task would be used in a chain of tasks, then it's finished before process actually finishes
                         try {
                             await this.atomicCommand.userCommand(commandClosure, successMessage);
                         } catch (err) {
                         }
-                        closeEmitter.fire(0);
                     },
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,
