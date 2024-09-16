@@ -93,6 +93,13 @@ export async function activate(context: vscode.ExtensionContext) {
             problemDiagnosticResolver,
             projectManager
         );
+
+        // initialise code
+
+        setContext(context);
+
+        await initialize();
+
         testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
             if (tests) {
                 return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable);
@@ -100,12 +107,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 return await debugConfiguration.startIOSTestsDebugger(isDebuggable);
             }
         });
-        // initialise code
-
-        setContext(context);
-
-        await initialize();
-
         testProvider.activateTests(context);
 
         context.subscriptions.push(projectManager.onProjectUpdate.event(e => {
@@ -311,4 +312,5 @@ export async function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
     autocompleteWatcher?.terminate();
     await projectExecutor.terminateShell();
+    await debugConfiguration.terminateCurrentSession();
 }

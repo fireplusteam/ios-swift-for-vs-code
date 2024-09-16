@@ -50,7 +50,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             if (e.id === this.activeSession?.id && this.isRunning) {
                 await this.atomicCommand.executor.terminateShell();
                 this.setIsRunning(false);
-                await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
+                await this.terminateCurrentSession();
                 this.activeSession = undefined;
             }
         }));
@@ -58,8 +58,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         this.disposable.push(vscode.commands.registerCommand("vscode-ios.stop.debug.session", async (e) => {
             await this.atomicCommand.executor.terminateShell();
             this.setIsRunning(false);
-            await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
+            await this.terminateCurrentSession();
         }));
+    }
+
+    public async terminateCurrentSession() {
+        await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
     }
 
     private async executeAppCommand(buildCommand: () => Promise<void>, runCommandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
@@ -69,7 +73,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             this.setIsRunning(true);
             await this.atomicCommand.userCommand(buildCommand);
 
-            await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
+            await this.terminateCurrentSession();
             await this.setEnvVariables();
             this.atomicCommand.userCommand(runCommandClosure, successMessage).catch(e => {
                 console.log(`Running ended with : ${e}`);
@@ -87,7 +91,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private async stop() {
         if (this.isRunning) {
             await this.atomicCommand.executor.terminateShell(new TerminatedDebugSessionTask("Debug Task"));
-            await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
+            await this.terminateCurrentSession();
         }
         if (this.activeSession !== undefined)
             await vscode.debug.stopDebugging(this.activeSession);
@@ -195,7 +199,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     async setEnvVariables() {
         this.counter += 1;
         this.sessionID = getSessionId(`debugger`) + this.counter;
-        await this.atomicCommand.executor.execShell("Debugger Launching", "debugger_launching.sh", [this.sessionID]);
+        this.atomicCommand.userCommand(async () => {
+            await this.atomicCommand.executor.execShell("Debugger Launching", "debugger_launching.sh", [this.sessionID]);
+        });
     }
 
     async resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, dbgConfig: vscode.DebugConfiguration, token: vscode.CancellationToken) {
@@ -223,7 +229,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                         await runAndDebugTests(this.sessionID, this.atomicCommand.executor, isDebuggable);
                     } finally {
                         this.setIsRunning(false);
-                        await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
+                        await this.terminateCurrentSession();
                     }
                 }, "All Tests Are Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
@@ -234,7 +240,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                         await runAndDebugTestsForCurrentFile(this.sessionID, this.atomicCommand.executor, isDebuggable, this.testsToRun || []);
                     } finally {
                         this.setIsRunning(false);
-                        await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
+                        await this.terminateCurrentSession();
                     }
                 }, "All Tests Are Passed");
             }

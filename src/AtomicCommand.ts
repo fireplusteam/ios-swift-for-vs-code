@@ -25,7 +25,7 @@ export class AtomicCommand {
     private _mutex = new Mutex();
     private _executor: Executor;
     private _executingCommand: "user" | "autowatcher" | undefined = undefined;
-    private currentOperationID: number = 0;
+    private latestOperationID: { id: number, type: "user" | "autowatcher" | undefined } = { id: 0, type: undefined };
 
     get executor(): Executor {
         return this._executor;
@@ -44,8 +44,11 @@ export class AtomicCommand {
     }
 
     async autoWatchCommand(commandClosure: () => Promise<void>) {
-        this.currentOperationID++;
-        const currentOperationID = this.currentOperationID;
+        if (this.latestOperationID.type == "user") {
+            throw UserCommandIsExecuting;
+        }
+        this.latestOperationID = { id: this.latestOperationID.id + 1, type: "autowatcher" };
+        const currentOperationID = this.latestOperationID;
         let release: MutexInterface.Releaser | undefined = undefined;
         try {
             if (this._mutex.isLocked()) {
@@ -57,13 +60,14 @@ export class AtomicCommand {
                 }
             }
             release = await this._mutex.acquire();
-            if (currentOperationID != this.currentOperationID)
+            if (currentOperationID !== this.latestOperationID)
                 throw E_CANCELED;
             this._executingCommand = "autowatcher";
             // perform async operations
             await this.executor.terminateShell();
             await commandClosure();
         } finally {
+            this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
             if (release)
                 release();
@@ -71,8 +75,8 @@ export class AtomicCommand {
     }
 
     async userCommand(commandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
-        this.currentOperationID++;
-        const currentOperationID = this.currentOperationID;
+        this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
+        const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
         try {
             if (this._mutex.isLocked()) {
@@ -94,7 +98,7 @@ export class AtomicCommand {
                 }
             }
             releaser = await this._mutex.acquire();
-            if (currentOperationID != this.currentOperationID)
+            if (currentOperationID !== this.latestOperationID)
                 throw E_CANCELED;
             this._executingCommand = "user";
             // perform async operations
@@ -130,6 +134,7 @@ export class AtomicCommand {
                 throw err;
             }
         } finally {
+            this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
             if (releaser)
                 releaser()
