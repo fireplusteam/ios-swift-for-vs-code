@@ -1,10 +1,9 @@
 import path from "path";
 import { getScriptPath, getWorkspacePath } from "./env";
 import fs from "fs";
-
-var find = require("find-process");
-var psTree = require('ps-tree');
-var kill = require("tree-kill");
+import find from "find-process";
+import treeKill from "tree-kill";
+import psTree from "ps-tree";
 
 export async function killSpawnLaunchedProcesses(sessionId: string) {
     try {
@@ -16,7 +15,7 @@ export async function killSpawnLaunchedProcesses(sessionId: string) {
                 continue;
             }
             await new Promise((resolve) => {
-                kill(process.pid, 'SIGKILL', (err: any) => {
+                treeKill(process.pid, 'SIGKILL', (err) => {
                     resolve(true);
                 });
             });
@@ -31,15 +30,16 @@ export async function killSpawnLaunchedProcesses(sessionId: string) {
 export function killAll(pid: number | undefined, signal: string) {
     if (pid === undefined)
         return;
-    psTree(pid, function (err: any, children: any) {
-        kill(pid, signal, (err: any) => {
-            if (err != null)
+    psTree(pid, function (_, children) {
+        treeKill(pid, signal, (err) => {
+            if (err != undefined)
                 console.log(err);
             if (children === null || children === undefined)
                 return;
             for (let item of children) {
-                kill(item.PID, signal, (err: any) => {
-                    if (err != null)
+                const pid: number = Number(item.PID);
+                treeKill(pid, signal, (err) => {
+                    if (err != undefined)
                         console.log(err);
                 });
             }
