@@ -4,8 +4,6 @@ import time
 import subprocess
 import helper
 import threading
-import sys
-import json
 from app_log import AppLogger
 import time
 
@@ -220,10 +218,6 @@ def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     if (process.GetState() == lldb.eStateRunning):
         focus_simulator(command)
 
-    listener = debugger.GetListener()
-    broadcaster = debugger.GetSelectedTarget().GetProcess().GetBroadcaster()
-    broadcaster.AddListener(listener, lldb.SBProcess.eBroadcastBitStateChanged)
-    
     def focus_simulator_launcher(process, command, start_time):
         global current_focus_time
         try:
@@ -239,14 +233,16 @@ def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     def listen_process_events():
         global current_focus_time
         try: 
+            prevState = None
             while True:
-                event = lldb.SBEvent()
-                if listener.WaitForEvent(1, event):
-                    process = debugger.GetSelectedTarget().GetProcess()
+                process = debugger.GetSelectedTarget().GetProcess()
+                if prevState != process.GetState():
+                    prevState = process.GetState()
                     current_focus_time = time.time();
                     if (process.GetState() == lldb.eStateRunning):
                         focus_thread = threading.Thread(target=focus_simulator_launcher, args=( process, command, current_focus_time ))
                         focus_thread.start()
+                time.sleep(0.1)
         except Exception as e:
             logMessage(f"LISTENER_ERROR {str(e)}")
 
