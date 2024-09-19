@@ -260,7 +260,7 @@
                                 "default": true
                             },
                             "lldbCommands": {
-                                "description": "Commands that create the debuggee process.",
+                                "description": "Commands that sent to lldb debugger on launch.",
                                 "type": "array",
                                 "items": {
                                     "type": "string"
