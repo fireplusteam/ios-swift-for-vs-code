@@ -290,6 +290,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             };
             return debugSession;
         }
+        const lldbCommands = dbgConfig.lldbCommands || [];
         let debugSession: vscode.DebugConfiguration = {
             type: "lldb",
             request: "custom",
@@ -305,6 +306,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 `create_target ${this.sessionID}`
             ],
             processCreateCommands: [
+                ...lldbCommands,
                 //"process handle SIGKILL -n true -p true -s false",
                 //"process handle SIGTERM -n true -p true -s false",
                 `setScriptPath ${getScriptPath()}`,

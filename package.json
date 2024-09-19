@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.0.16",
+    "version": "0.0.17",
     "os": [
         "darwin"
     ],
@@ -258,6 +258,14 @@
                             "isDebuggable": {
                                 "type": "boolean",
                                 "default": true
+                            },
+                            "lldbCommands": {
+                                "description": "Commands that create the debuggee process.",
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "default": []
                             }
                         }
                     }
@@ -268,7 +276,8 @@
                         "name": "iOS: Run App & Debug",
                         "request": "launch",
                         "target": "app",
-                        "isDebuggable": true
+                        "isDebuggable": true,
+                        "lldbCommands": []
                     }
                 ],
                 "configurationSnippets": [
@@ -280,7 +289,8 @@
                             "name": "iOS: Run App & Debug",
                             "request": "launch",
                             "target": "app",
-                            "isDebuggable": true
+                            "isDebuggable": true,
+                            "lldbCommands": []
                         }
                     }
                 ]
