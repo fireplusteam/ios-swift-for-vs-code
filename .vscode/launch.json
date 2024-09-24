@@ -33,6 +33,38 @@
             "cwd": "/Users/Ievgenii_Mykhalevskyi/Desktop/git@github.com:fireplusteam/ios_vs_code/example"
         },
         {
+            "name": "Populate Devices",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/resources/populate_devices.py",
+            "stopOnEntry": false,
+            "args": [
+                "Test_ios.xcodeproj",
+                "Test_ios",
+                "simulator",
+                "-single",
+            ],
+            "console": "internalConsole",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/"
+        },
+        {
+            "name": "Run app on simulator",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/resources/launch.py",
+            "stopOnEntry": false,
+            "args": [
+                "A0B87EB7-B37A-4871-90BA-8F3649E3AB3F",
+                "xcode.project.reader.Test-ios",
+                "LLDB_DEBUG",
+                "L1VzZXJzL0lldmdlbmlpX015a2hhbGV2c2t5aS90ZXN0cy9UZXN0X2lvcyBkZWJ1Z2dlcg==1"
+            ],
+            "console": "internalConsole",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/"
+        },
+        {
             "type": "ruby_lsp",
             "request": "launch",
             "name": "Debug Ruby program",

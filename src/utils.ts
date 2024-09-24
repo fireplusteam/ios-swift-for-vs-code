@@ -96,8 +96,13 @@ export function fileNameFromPath(filePath: string) {
     return list[list.length - 1];
 }
 
-export function emptyAppLog(deviceId: string) {
+export function getAppLog(deviceId: string) {
     const fileName = `.logs/app_${deviceId}.log`;
+    return fileName;
+}
+
+export function emptyAppLog(deviceId: string) {
+    const fileName = getAppLog(deviceId);
     emptyFile(getWorkspacePath(), fileName);
     deleteLockFile(getWorkspacePath(), fileName);
 }

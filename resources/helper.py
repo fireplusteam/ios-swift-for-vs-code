@@ -185,6 +185,37 @@ def get_product_name():
     return get_product_name_imp(list["PROJECT_FILE"].strip("\""), scheme).removesuffix(".app")
 
 
+def get_process_name():
+    process_name = get_product_name()
+    if process_name == "xctest":
+        return process_name
+    return f"{process_name}.app/{process_name}"
+
+
+def get_list_of_pids(process_name):
+    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
+
+    #print(proc.stdout)
+    
+    # Split the output into lines
+    lines = proc.stdout.split('\n')
+
+    # get list of pids by process name
+    result = set()
+    for line in lines[1:]:  # Skip the header line
+        columns = line.split()
+        if len(line) == 0:
+            break
+        
+        proc_start = line.find(columns[9]) + len(columns[9])
+        proc_line = line[proc_start:].strip()
+        if len(columns) >= 2 and process_name in proc_line:
+            pid = columns[1]
+            result.add(pid)
+
+    return result
+
+
 def update_project_file(project_file):
     env_list = get_env_list()
     env_list["PROJECT_FILE"] = "\"" + project_file + "\""

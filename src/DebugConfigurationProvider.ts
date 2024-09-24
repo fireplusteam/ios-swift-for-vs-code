@@ -291,6 +291,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return debugSession;
         }
         const lldbCommands = dbgConfig.lldbCommands || [];
+        lldbCommands.push("breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning");
+
         let debugSession: vscode.DebugConfiguration = {
             type: "lldb",
             request: "custom",
@@ -301,6 +303,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                 "command script add -f attach_lldb.watch_new_process watch_new_process",
                 "command script add -f attach_lldb.setScriptPath setScriptPath",
+                "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                 "command script add -f attach_lldb.app_log app_log",
                 "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
                 `create_target ${this.sessionID}`

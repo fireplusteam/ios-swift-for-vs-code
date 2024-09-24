@@ -76,4 +76,4 @@ done
 # if you want to see device log console, but that one you can get via Console App
 #Log Levels:
 #default | info | debug
-#xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always > .logs/app_$DEVICE_ID.log 2>&1
+# xcrun simctl spawn $SIMULATOR_UDID log stream --level debug --process $PID --color always >.logs/app_$DEVICE_ID.log 2>&1

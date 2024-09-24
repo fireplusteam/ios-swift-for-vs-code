@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import fcntl
 import lldb
 import time
 import subprocess
@@ -6,6 +7,9 @@ import helper
 import threading
 from app_log import AppLogger
 import time
+import os
+import debugger
+import runtime_warning_html
 
 LOG_DEBUG = 1
 
@@ -20,39 +24,25 @@ def create_app_logger():
 app_logger = create_app_logger()
 
 log_file = ".logs/lldb.log"
+runtime_warning_log = ".logs/runtime_warning.log"
 if LOG_DEBUG != 0:
-    with open(log_file, 'w') as file:
+    with open(log_file, 'w', encoding="utf-8") as file:
         file.write("")
 
-def get_list_of_pids(process_name):
-    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
+with open(runtime_warning_log, 'w', encoding="utf-8") as file:
+    file.write("")
 
-    #print(proc.stdout)
+
+log_mutex = threading.Lock()
+def logMessage(message, file_name = log_file):
+    global log_mutex
     
-    # Split the output into lines
-    lines = proc.stdout.split('\n')
-
-    # get list of pids by process name
-    result = set()
-    for line in lines[1:]:  # Skip the header line
-        columns = line.split()
-        if len(line) == 0:
-            break
-        
-        proc_start = line.find(columns[9]) + len(columns[9])
-        proc_line = line[proc_start:].strip()
-        if len(columns) >= 2 and process_name in proc_line:
-            pid = columns[1]
-            result.add(pid)
-
-    return result
-
-
-def logMessage(message):
     if LOG_DEBUG == 0:
         return
-    with open(log_file, 'a') as file:
-        file.write(str(message) + "\n")
+    with log_mutex:
+        with open(file_name, 'a', encoding="utf-8") as file:
+            file.write(str(message) + "\n")
+            file.flush()
 
 
 def perform_debugger_command(debugger, command):
@@ -67,6 +57,7 @@ def perform_debugger_command(debugger, command):
         logMessage("Result Command: " + str(returnObject))
     except Exception as e:
         logMessage("Error executing command:" + str(e))
+
 
 script_path = None
 
@@ -85,8 +76,26 @@ def wait_for_exit(debugger, start_time, session_id):
             return
         time.sleep(0.5)
 
+runtime_warning_process: subprocess.Popen = None
+def create_apple_runtime_warning_watch_process(debugger, pid):
+    global runtime_warning_process
+    try: 
+        env_list = helper.get_env_list()
+        device_id = env_list["DEVICE_ID"].strip("\n")
+        command = f"xcrun simctl spawn {device_id} log stream --level debug --style syslog --color none --predicate 'subsystem CONTAINS \"com.apple.runtime-issues\" AND processIdentifier == {pid}'"
+        logMessage(f"Watching runtime warning command: {command}")
 
-def print_app_log(debugger):
+        runtime_warning_process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        flags = fcntl.fcntl(runtime_warning_process.stdout, fcntl.F_GETFL) # first get current process.stdout flags
+        fcntl.fcntl(runtime_warning_process.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+        # while line := process.stdout.readline():
+            # logMessage(line)
+        # logMessage("End Watching Logs")
+    except Exception as e:
+        logMessage(f"Error on watching {e}")
+
+
+def print_app_log(debugger, pid):
     global app_logger
     logMessage("Waiting for logs")
         
@@ -94,7 +103,7 @@ def print_app_log(debugger):
         app_logger.watch_app_log()
     except Exception as e:
         print(f"Printer crashed: {str(e)}")
-
+    
 
 def wait_for_process(process_name, debugger, existing_pids, start_time, session_id):
     logMessage("Start time:" + str(start_time))
@@ -106,7 +115,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
                 kill_codelldb(debugger)
                 return
 
-            new_list = get_list_of_pids(process_name)
+            new_list = helper.get_list_of_pids(process_name)
             new_list = [x for x in new_list if not x in existing_pids]
 
             if len(new_list) > 0:
@@ -117,7 +126,9 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
                 perform_debugger_command(debugger, attach_command)
                 perform_debugger_command(debugger, "continue")
                 
-                threading.Thread(target=print_app_log, args=(debugger)).start()
+                threading.Thread(target=print_app_log, args=(debugger, pid)).start()
+                create_apple_runtime_warning_watch_process(debugger, pid)
+                # threading.Thread(target=watch_apple_runtime_warning, args=(debugger, pid)).start()
                                 
                 return
 
@@ -128,19 +139,12 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
 start_time = time.time()
 
 
-def get_process_name():
-    process_name = helper.get_product_name()
-    if process_name == "xctest":
-        return process_name
-    return f"{process_name}.app/{process_name}"
-
-
 def watch_new_process(debugger, command, result, internal_dict):
     logMessage("Debugger: " + str(debugger))
     global existing_pids
     
     session_id = command
-    thread = threading.Thread(target=wait_for_process, args=(get_process_name(), debugger, existing_pids, start_time, session_id))   
+    thread = threading.Thread(target=wait_for_process, args=(helper.get_process_name(), debugger, existing_pids, start_time, session_id))   
     thread.start()
     helper.update_debugger_launch_config(session_id, "status", "launched")
     env_list = helper.get_env_list()
@@ -152,7 +156,70 @@ def setScriptPath(debugger, command, result, internal_dict):
     global script_path
     logMessage("Set Script Path to: " + str(command))
     script_path = command
-    
+
+
+mutex_log_runtime_error = threading.Lock()
+def logRuntimeError(deb, json):
+    global mutex_log_runtime_error
+    global runtime_warning_process
+    with mutex_log_runtime_error:
+        last_line = None
+        while True:
+            try:
+                input = runtime_warning_process.stdout.readline()
+                if not input:
+                    if not last_line:
+                        continue
+                    if last_line.find("[com.apple.runtime-issues") == -1:
+                        continue
+
+                    break
+                last_line = input
+                if last_line.find("[com.apple.runtime-issues") != -1:
+                    break
+                # logMessage(input)
+            except:
+                # logMessage("End reading runtime warning")
+                break
+        document = runtime_warning_html.get_runtime_warning_html(script_path, last_line, json)
+        debugger.display_html(document, position=2)
+        logMessage(last_line)
+        logMessage(json)
+
+
+def printRuntimeWarning(debugger, command, result, internal_dict):
+    if isinstance(debugger, lldb.SBTarget):
+        debugger = debugger.GetDebugger()
+    try:
+        target: lldb.SBTarget = debugger.GetSelectedTarget()
+        process: lldb.SBProcess = target.GetProcess()
+        thread: lldb.SBThread = process.GetSelectedThread()
+        frame: lldb.SBFrame = thread.GetSelectedFrame()
+
+        def bt_to_json(frame: lldb.SBFrame):
+            thread: lldb.SBThread = frame.GetThread()
+            frames = []
+            for frame in thread:
+                lineEntry: lldb.SBLineEntry = frame.GetLineEntry()
+                fileSpec: lldb.SBFileSpec = lineEntry.GetFileSpec()
+                frame_info = {
+                    "index": frame.idx,
+                    "function": frame.GetFunctionName(),
+                    "file": fileSpec.fullpath,
+                    "line": lineEntry.GetLine(),
+                    "column": lineEntry.GetColumn()
+                }
+                frames.append(frame_info)
+            return frames
+
+        frame = bt_to_json(frame)
+        threading.Thread(target=logRuntimeError, args=(debugger, frame)).start()
+        
+    except Exception as e:
+        logMessage("---------------Runtime warning error:\n" + str(e), file_name=runtime_warning_log)
+    perform_debugger_command(debugger, "continue")
+    logMessage("Logged runtime warning")
+
 
 def create_target(debugger, command, result, internal_dict):
     try:
@@ -167,8 +234,8 @@ def create_target(debugger, command, result, internal_dict):
         list = helper.get_env_list()
         result.AppendMessage(f"Environment: {list}")
 
-        process_name = get_process_name()
-        existing_pids = get_list_of_pids(process_name)
+        process_name = helper.get_process_name()
+        existing_pids = helper.get_list_of_pids(process_name)
 
 
         executable = helper.get_target_executable()
@@ -179,8 +246,11 @@ def create_target(debugger, command, result, internal_dict):
         result.AppendMessage(f"Target created for {executable}")
         # Set common breakpoints, so if tests are running with debugger, so it's caught
         # deprecated
+        # breakpoint on test failed
         #perform_debugger_command(debugger, "breakpoint set --selector recordFailureWithDescription:inFile:atLine:expected:")
         #perform_debugger_command(debugger, "breakpoint set --name _XCTFailureHandler")
+        # breakpoint on runtime warning
+        # perform_debugger_command(debugger, "breakpoint set --name os_log_fault_default_callback")
         # catch the runtime crash
         perform_debugger_command(debugger, "breakpoint set --name __exceptionPreprocess")
         
