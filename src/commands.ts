@@ -376,10 +376,10 @@ export async function enableXCBBuildService(enabled: boolean) {
     });
 }
 
-export async function openFile(filePath: string, lineNumber: number) {
+export async function openFile(filePath: string, lineNumber: number, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Active) {
     const fileUri = vscode.Uri.file(path.resolve(filePath));
     const document = await vscode.workspace.openTextDocument(fileUri);
-    const editor = await vscode.window.showTextDocument(document, vscode.ViewColumn.Active, false);
+    const editor = await vscode.window.showTextDocument(document, viewColumn, false);
     editor.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
     await vscode.commands.executeCommand("cursorMove", {
         to: "down",

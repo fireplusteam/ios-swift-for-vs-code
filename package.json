@@ -64,6 +64,24 @@
     },
     "publisher": "fireplusteam",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "xcode-explorer",
+                    "title": "Xcode Explorer",
+                    "icon": "media/dep.svg"
+                }
+            ]
+        },
+        "views": {
+            "xcode-explorer": [
+                {
+                    "id": "XcodeDataProvider",
+                    "name": "Xcode",
+                    "icon": "src/media/dep.svg"
+                }
+            ]
+        },
         "menus": {
             "explorer/context": [
                 {

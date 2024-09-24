@@ -27,6 +27,8 @@ import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import { ToolsManager } from "./Tools/ToolsManager";
 import { AtomicCommand } from "./AtomicCommand";
+import { RuntimeWarningsProvider } from "./XcodeSideTreePanel/RuntimeWarningsProvider";
+import { XcodeSidePanelDataProvider } from "./XcodeSideTreePanel/XcodeSidePanelDataProvider";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -65,6 +67,8 @@ let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
 
+let runtimeWarningProvider: RuntimeWarningsProvider | undefined;
+
 export function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -99,6 +103,11 @@ export async function activate(context: vscode.ExtensionContext) {
         setContext(context);
 
         await initialize();
+
+        const xcodeDataProvider = new XcodeSidePanelDataProvider();
+        vscode.window.registerTreeDataProvider('XcodeDataProvider', xcodeDataProvider);
+        runtimeWarningProvider = new RuntimeWarningsProvider(xcodeDataProvider);
+        runtimeWarningProvider.showRuntimeWarnings();
 
         testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
             if (tests) {

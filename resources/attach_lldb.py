@@ -8,8 +8,7 @@ import threading
 from app_log import AppLogger
 import time
 import os
-import debugger
-import runtime_warning_html
+import runtime_warning_database
 
 LOG_DEBUG = 1
 
@@ -181,10 +180,9 @@ def logRuntimeError(deb, json):
             except:
                 # logMessage("End reading runtime warning")
                 break
-        document = runtime_warning_html.get_runtime_warning_html(script_path, last_line, json)
-        debugger.display_html(document, position=2)
+        runtime_warning_database.store_runtime_warning(script_path, last_line, json)
         logMessage(last_line)
-        logMessage(json)
+        # logMessage(json)
 
 
 def printRuntimeWarning(debugger, command, result, internal_dict):
