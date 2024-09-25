@@ -218,7 +218,6 @@ def printRuntimeWarning(debugger, command, result, internal_dict):
         
     except Exception as e:
         logMessage("---------------Runtime warning error:\n" + str(e), file_name=runtime_warning_log)
-    perform_debugger_command(debugger, "continue")
     logMessage("Logged runtime warning")
 
 

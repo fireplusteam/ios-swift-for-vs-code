@@ -291,7 +291,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return debugSession;
         }
         const lldbCommands = dbgConfig.lldbCommands || [];
-        lldbCommands.push("breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning");
+        lldbCommands.push("breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning --command continue");
 
         let debugSession: vscode.DebugConfiguration = {
             type: "lldb",
