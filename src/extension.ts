@@ -27,8 +27,8 @@ import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import { ToolsManager } from "./Tools/ToolsManager";
 import { AtomicCommand } from "./AtomicCommand";
-import { RuntimeWarningsProvider } from "./XcodeSideTreePanel/RuntimeWarningsProvider";
-import { XcodeSidePanelDataProvider } from "./XcodeSideTreePanel/XcodeSidePanelDataProvider";
+import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsLogWatcher";
+import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -61,13 +61,11 @@ async function initialize() {
 const projectExecutor = new Executor();
 const atomicCommand = new AtomicCommand(projectExecutor);
 const problemDiagnosticResolver = new ProblemDiagnosticResolver();
-const debugConfiguration = new DebugConfigurationProvider(problemDiagnosticResolver, atomicCommand);
 
+let debugConfiguration: DebugConfigurationProvider;
 let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
-
-let runtimeWarningProvider: RuntimeWarningsProvider | undefined;
 
 export function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -107,9 +105,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 
-        const runtimeWarningsDataProvider = new XcodeSidePanelDataProvider();
+        const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
         vscode.window.registerTreeDataProvider('RuntimeWarningsProvider', runtimeWarningsDataProvider);
-        runtimeWarningProvider = new RuntimeWarningsProvider(runtimeWarningsDataProvider);
+        const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
+        debugConfiguration = new DebugConfigurationProvider(
+            problemDiagnosticResolver,
+            runtimeWarningLogWatcher,
+            atomicCommand
+        );
 
         testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
             if (tests) {

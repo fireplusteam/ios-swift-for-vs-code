@@ -8,6 +8,7 @@ import { getSessionId } from "./utils";
 import { sleep } from "./extension";
 import path from "path";
 import { AtomicCommand } from "./AtomicCommand";
+import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 
 export class TerminatedDebugSessionTask extends Error {
     public constructor(message: string) {
@@ -27,6 +28,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private counter = 0;
     private testsToRun: string[] | undefined;
     private atomicCommand: AtomicCommand;
+    private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
 
     private setIsRunning(value: boolean) {
         this.isRunning = value;
@@ -35,8 +37,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     private activeSession: vscode.DebugSession | undefined;
 
-    constructor(problemResolver: ProblemDiagnosticResolver, atomicCommand: AtomicCommand) {
+    constructor(problemResolver: ProblemDiagnosticResolver, runtimeWarningsWatcher: RuntimeWarningsLogWatcher, atomicCommand: AtomicCommand) {
         this.problemResolver = problemResolver;
+        this.runtimeWarningsWatcher = runtimeWarningsWatcher;
         this.atomicCommand = atomicCommand;
         this.disposable.push(vscode.debug.onDidStartDebugSession((e) => {
             if (e.configuration.sessionId === this.sessionID) {
@@ -254,6 +257,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         } catch {
             return null;
         }
+
+        this.runtimeWarningsWatcher.startWatcher();
 
         return this.debugSession(dbgConfig);
     }

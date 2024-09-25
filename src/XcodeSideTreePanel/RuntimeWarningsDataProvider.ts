@@ -39,7 +39,7 @@ export class RuntimeWarningMessageNode extends vscode.TreeItem {
     }
 }
 
-export class XcodeSidePanelDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
+export class RuntimeWarningsDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
     readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 

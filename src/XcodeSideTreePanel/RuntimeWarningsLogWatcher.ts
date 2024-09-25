@@ -4,30 +4,29 @@ import { FSWatcher, watch } from 'fs';
 import { emptyAppLog, getAppLog } from "../utils";
 import { getWorkspacePath } from '../env';
 import path from 'path';
-import { RuntimeWarningMessageNode, RuntimeWarningStackNode, XcodeSidePanelDataProvider } from './XcodeSidePanelDataProvider';
+import { RuntimeWarningMessageNode, RuntimeWarningStackNode, RuntimeWarningsDataProvider } from './RuntimeWarningsDataProvider';
 import { count, error } from 'console';
 import { start } from 'repl';
 
-export class RuntimeWarningsProvider {
+export class RuntimeWarningsLogWatcher {
 
-    static LogPath = "runtime_warnings";
+    private static LogPath = "runtime_warnings";
 
-    panel: XcodeSidePanelDataProvider
-    disposable: vscode.Disposable[] = [];
-    fsWatcher: FSWatcher | undefined = undefined;
-    cachedContent: string = "";
+    private panel: RuntimeWarningsDataProvider
+    private fsWatcher: FSWatcher | undefined = undefined;
+    private cachedContent: string = "";
 
-    get logPath(): string {
-        return path.join(getWorkspacePath(), getAppLog(RuntimeWarningsProvider.LogPath));
+    private get logPath(): string {
+        return path.join(getWorkspacePath(), getAppLog(RuntimeWarningsLogWatcher.LogPath));
     }
 
-    constructor(panel: XcodeSidePanelDataProvider) {
+    constructor(panel: RuntimeWarningsDataProvider) {
         this.panel = panel;
         this.startWatcher();
     }
 
-    private startWatcher() {
-        emptyAppLog(RuntimeWarningsProvider.LogPath);
+    public startWatcher() {
+        emptyAppLog(RuntimeWarningsLogWatcher.LogPath);
         try {
             this.panel.refresh([]);
             this.cachedContent = "";
