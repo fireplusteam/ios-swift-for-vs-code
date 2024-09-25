@@ -165,10 +165,12 @@ export class ProjectsCache {
                 const contentFile = fs.readFileSync(fullProjectPath);
 
                 if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
+                    this.watcher.get(projectPath)?.watcher.close();
                     this.watcher.delete(projectPath);
                     await this.update(projectPath, contentFile);
                     return;
                 }
+                this.watcher.get(projectPath)?.watcher.close();
                 this.watcher.delete(projectPath);
                 if (!fs.existsSync(getFilePathInWorkspace(projectPath))) {
                     this.cache.delete(projectPath);

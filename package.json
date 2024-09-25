@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.0.17",
+    "version": "0.0.18",
     "os": [
         "darwin"
     ],
@@ -69,16 +69,17 @@
                 {
                     "id": "xcode-explorer",
                     "title": "Xcode Explorer",
-                    "icon": "media/dep.svg"
+                    "icon": "media/sidebar_tool.svg",
+                    "when": "vscode-ios.activated"
                 }
             ]
         },
         "views": {
             "xcode-explorer": [
                 {
-                    "id": "XcodeDataProvider",
-                    "name": "Xcode",
-                    "icon": "src/media/dep.svg"
+                    "id": "RuntimeWarningsProvider",
+                    "name": "Runtime Warnings",
+                    "visibility": "visible"
                 }
             ]
         },

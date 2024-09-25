@@ -4,7 +4,9 @@ import { FSWatcher, watch } from 'fs';
 import { emptyAppLog, getAppLog } from "../utils";
 import { getWorkspacePath } from '../env';
 import path from 'path';
-import { XcodeSidePanelDataProvider } from './XcodeSidePanelDataProvider';
+import { RuntimeWarningMessageNode, RuntimeWarningStackNode, XcodeSidePanelDataProvider } from './XcodeSidePanelDataProvider';
+import { count, error } from 'console';
+import { start } from 'repl';
 
 export class RuntimeWarningsProvider {
 
@@ -13,7 +15,7 @@ export class RuntimeWarningsProvider {
     panel: XcodeSidePanelDataProvider
     disposable: vscode.Disposable[] = [];
     fsWatcher: FSWatcher | undefined = undefined;
-    cachedContent: string | undefined = undefined;
+    cachedContent: string = "";
 
     get logPath(): string {
         return path.join(getWorkspacePath(), getAppLog(RuntimeWarningsProvider.LogPath));
@@ -21,47 +23,85 @@ export class RuntimeWarningsProvider {
 
     constructor(panel: XcodeSidePanelDataProvider) {
         this.panel = panel;
+        this.startWatcher();
     }
 
     private startWatcher() {
-        // TODO: uncomment when it's done
-        // emptyAppLog(RuntimeWarningPanel.LogPath);
-        this.cachedContent = fs.readFileSync(this.logPath).toString();
+        emptyAppLog(RuntimeWarningsProvider.LogPath);
+        try {
+            this.panel.refresh([]);
+            this.cachedContent = "";
+            this.updateTree("");
+        } catch { }
         this.startWatcherImp();
     }
 
     private startWatcherImp() {
+        this.disposeWatcher();
         this.fsWatcher = watch(this.logPath);
 
         this.fsWatcher.on("change", () => {
-            const content = fs.readFileSync(this.logPath);
-            const contentString = content.toString();
-            if (this.cachedContent === undefined || this.cachedContent === contentString) {
+            this.readFileContent();
+        });
+    }
+
+    private readFileContent(numOfTries = 0) {
+        if (numOfTries >= 5) { // TODO: try 5 times, then give up
+            this.startWatcherImp();
+            return;
+        }
+        fs.readFile(this.logPath, (err, data) => {
+            if (err) {
                 this.startWatcherImp();
                 return;
             }
-            this.updateTree(contentString);
+            const contentString = data.toString();
+            try {
+                this.updateTree(contentString);
+            } catch {
+                this.readFileContent(numOfTries + 1);
+                return;
+            }
 
             this.startWatcherImp();
         });
     }
 
     private disposeWatcher() {
+        this.fsWatcher?.close();
         this.fsWatcher = undefined;
     }
 
     private updateTree(content: string) {
+        if (content == this.cachedContent)
+            return;
         //  convert to html
-        this.panel.refresh();
+        const elements: RuntimeWarningMessageNode[] = [];
+        try {
+            const root = JSON.parse(content);
+
+            for (let element in root) {
+                const value = root[element];
+                console.log(element);
+                const warning = new RuntimeWarningMessageNode(value.message, value.count, element);
+                const stacks = value.data;
+                for (let frame of stacks) {
+                    if (frame.file && frame.file.length > 0 && frame.file.indexOf("<compiler-generated>") === -1) {
+                        const frameNode = new RuntimeWarningStackNode(frame.function, frame.line, frame.file);
+                        warning.stack.push(frameNode);
+                    }
+                }
+
+                elements.push(warning);
+            }
+
+            this.panel.refresh(elements);
+        } catch {
+            console.log(`Error of parsing runtime errors data: ${error}`)
+            throw error;
+        } finally {
+            this.cachedContent = content;
+        }
     }
 
-    public showRuntimeWarnings() {
-        this.startWatcher();
-
-        this.updateTree(this.cachedContent || "");
-    }
-
-    public hideRuntimeWarnings() {
-        this.disposeWatcher();
-    }
 }

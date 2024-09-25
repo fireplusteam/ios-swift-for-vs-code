@@ -180,9 +180,12 @@ def logRuntimeError(deb, json):
             except:
                 # logMessage("End reading runtime warning")
                 break
-        runtime_warning_database.store_runtime_warning(script_path, last_line, json)
-        logMessage(last_line)
-        # logMessage(json)
+        try:
+            runtime_warning_database.store_runtime_warning(script_path, last_line, json)
+            logMessage(last_line)
+            # logMessage(json)
+        except Exception as e: 
+            logMessage(f"Error logging to runtime database: {str(e)}")
 
 
 def printRuntimeWarning(debugger, command, result, internal_dict):
@@ -200,13 +203,13 @@ def printRuntimeWarning(debugger, command, result, internal_dict):
             for frame in thread:
                 lineEntry: lldb.SBLineEntry = frame.GetLineEntry()
                 fileSpec: lldb.SBFileSpec = lineEntry.GetFileSpec()
-                frame_info = {
+                frame_info = frozenset({
                     "index": frame.idx,
                     "function": frame.GetFunctionName(),
                     "file": fileSpec.fullpath,
                     "line": lineEntry.GetLine(),
                     "column": lineEntry.GetColumn()
-                }
+                }.items())
                 frames.append(frame_info)
             return frames
 

@@ -76,6 +76,7 @@ export function sleep(ms: number) {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
+
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     let logChannel = vscode.window.createOutputChannel("VSCode-iOS");
@@ -104,10 +105,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
         await initialize();
 
-        const xcodeDataProvider = new XcodeSidePanelDataProvider();
-        vscode.window.registerTreeDataProvider('XcodeDataProvider', xcodeDataProvider);
-        runtimeWarningProvider = new RuntimeWarningsProvider(xcodeDataProvider);
-        runtimeWarningProvider.showRuntimeWarnings();
+        vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
+
+        const runtimeWarningsDataProvider = new XcodeSidePanelDataProvider();
+        vscode.window.registerTreeDataProvider('RuntimeWarningsProvider', runtimeWarningsDataProvider);
+        runtimeWarningProvider = new RuntimeWarningsProvider(runtimeWarningsDataProvider);
 
         testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
             if (tests) {
