@@ -123,7 +123,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
                 pid = new_list.pop()
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
-                perform_debugger_command(debugger, "continue")
+                # perform_debugger_command(debugger, "continue")
                 
                 threading.Thread(target=print_app_log, args=(debugger, pid)).start()
                 create_apple_runtime_warning_watch_process(debugger, pid)
@@ -143,9 +143,10 @@ def watch_new_process(debugger, command, result, internal_dict):
     global existing_pids
     
     session_id = command
-    thread = threading.Thread(target=wait_for_process, args=(helper.get_process_name(), debugger, existing_pids, start_time, session_id))   
-    thread.start()
     helper.update_debugger_launch_config(session_id, "status", "launched")
+    wait_for_process(helper.get_process_name(), debugger, existing_pids, start_time, session_id)
+    # thread = threading.Thread(target=wait_for_process, args=(helper.get_process_name(), debugger, existing_pids, start_time, session_id))   
+    # thread.start()
     env_list = helper.get_env_list()
     device_id = env_list["DEVICE_ID"].strip("\n")
     perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
