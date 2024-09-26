@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
-import { Executor } from "./execShell";
-import { Platform, currentPlatform, getBuildRootPath, getDeviceId, getProjectConfiguration, getProjectScheme, getScriptPath, getWorkspacePath, isActivated } from "./env";
-import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "./commands";
-import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "./buildCommands";
-import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { getSessionId } from "./utils";
-import { sleep } from "./extension";
+import { Executor } from "../execShell";
+import { Platform, currentPlatform, getBuildRootPath, getDeviceId, getProjectConfiguration, getProjectScheme, getScriptPath, getWorkspacePath, isActivated } from "../env";
+import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "../commands";
+import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
+import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
+import { getSessionId } from "../utils";
+import { sleep } from "../extension";
 import path from "path";
-import { AtomicCommand } from "./AtomicCommand";
-import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsLogWatcher";
+import { AtomicCommand } from "../AtomicCommand";
+import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 
 export class TerminatedDebugSessionTask extends Error {
     public constructor(message: string) {
@@ -329,7 +329,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         }
 
         const debugSession: vscode.DebugConfiguration = {
-            type: "lldb-dap",
+            type: "xcode-lldb",
             request: "attach",
             name: DebugConfigurationProvider.lldbName,
             attachCommands: [

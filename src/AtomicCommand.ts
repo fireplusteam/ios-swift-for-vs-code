@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Executor, ExecutorRunningError, ExecutorTaskError, ExecutorTerminatedByUserError } from "./execShell";
-import { TerminatedDebugSessionTask } from "./DebugConfigurationProvider";
+import { TerminatedDebugSessionTask } from "./Debug/DebugConfigurationProvider";
 import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
 
 export const UserCommandIsExecuting: Error = new Error("User task is currently executing");
