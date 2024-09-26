@@ -22,7 +22,6 @@ export class RuntimeWarningsLogWatcher {
 
     constructor(panel: RuntimeWarningsDataProvider) {
         this.panel = panel;
-        this.startWatcher();
     }
 
     public startWatcher() {

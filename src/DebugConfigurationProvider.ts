@@ -15,6 +15,21 @@ export class TerminatedDebugSessionTask extends Error {
         super(message);
     }
 }
+
+function runtimeWarningsConfigStatus() {
+    return vscode.workspace.getConfiguration("vscode-ios").get<string>("swiftui.runtimeWarnings");
+}
+
+function runtimeWarningBreakPointCommand() {
+    switch (runtimeWarningsConfigStatus()) {
+        case "report":
+            return "breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning --command continue";
+        case "breakpoint":
+            return "breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning";
+        default: return undefined;
+    }
+}
+
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
 
     static Type = "xcode-lldb";
@@ -258,7 +273,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
 
-        this.runtimeWarningsWatcher.startWatcher();
+        if (runtimeWarningsConfigStatus() !== "off")
+            this.runtimeWarningsWatcher.startWatcher();
 
         return this.debugSession(dbgConfig);
     }
@@ -296,7 +312,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return debugSession;
         }
         const lldbCommands = dbgConfig.lldbCommands || [];
-        lldbCommands.push("breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning --command continue");
+        const command = runtimeWarningBreakPointCommand();
+        if (command)
+            lldbCommands.push(command);
 
         let debugSession: vscode.DebugConfiguration = {
             type: "lldb",

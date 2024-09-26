@@ -106,11 +106,26 @@
         "configuration": {
             "title": "iOS IDE",
             "properties": {
+                "vscode-ios.swiftui.runtimeWarnings": {
+                    "type": "string",
+                    "default": "off",
+                    "enum": [
+                        "report",
+                        "breakpoint",
+                        "off"
+                    ],
+                    "description": "SwiftUI runtime warnings (Experimental. When on can slow down performance)",
+                    "enumDescriptions": [
+                        "Report about SwiftUI runtime warning without stopping the process execution",
+                        "Stop a process execution on hit SwiftUI runtime warning",
+                        "Disable SwiftUI runtime warning reporting."
+                    ]
+                },
                 "vscode-ios.xcb.build.service": {
                     "type": "boolean",
                     "default": false,
                     "title": "Enable XCBBuildService Proxy",
-                    "description": "if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature"
+                    "description": "if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch)"
                 },
                 "vscode-ios.watcher.singleModule": {
                     "type": "boolean",

@@ -62,9 +62,14 @@ export class RuntimeWarningsDataProvider implements vscode.TreeDataProvider<vsco
             }
         }
 
+        this.used.clear();
         this.warnings = this.warnings.filter(value => {
             return newComingElements.has(value.id || "");
         });
+        this.warnings.forEach(e => {
+            this.used.set(e.id || "", e);
+        });
+
 
         this._onDidChangeTreeData.fire(undefined);
     }

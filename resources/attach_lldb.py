@@ -178,7 +178,8 @@ def logRuntimeError(deb, json):
                     break
                 # logMessage(input)
             except:
-                # logMessage("End reading runtime warning")
+                if not last_line or last_line.find("[com.apple.runtime-issues") == -1:
+                    continue
                 break
         try:
             runtime_warning_database.store_runtime_warning(script_path, last_line, json)
