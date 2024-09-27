@@ -30,6 +30,7 @@ import { AtomicCommand } from "./AtomicCommand";
 import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
 import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
+import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -116,6 +117,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 new LLDBDapDescriptorFactory(),
             )
         );
+        context.subscriptions.push(
+            vscode.debug.registerDebugAdapterTrackerFactory('xcode-lldb', new DebugAdapterTrackerFactory())
+        );
+
         debugConfiguration = new DebugConfigurationProvider(
             problemDiagnosticResolver,
             runtimeWarningLogWatcher,

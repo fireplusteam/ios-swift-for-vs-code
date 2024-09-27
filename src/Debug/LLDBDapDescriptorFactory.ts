@@ -1,5 +1,4 @@
 import { exec } from "child_process";
-import { resolve } from "path";
 import * as vscode from "vscode";
 
 /**
@@ -30,6 +29,10 @@ export class LLDBDapDescriptorFactory
         session: vscode.DebugSession,
         executable: vscode.DebugAdapterExecutable | undefined,
     ): Promise<vscode.DebugAdapterDescriptor | undefined> {
+        if (session.configuration.isDummy === true) {
+            // dummy session
+            return new vscode.DebugAdapterExecutable("", []);
+        }
         const path = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
         if (path == null) {
             LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage();

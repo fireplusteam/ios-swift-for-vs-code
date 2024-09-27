@@ -273,7 +273,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             if (!dbgConfig.appSessionId)
                 dbgConfig.appSessionId = this.sessionID;
         } catch {
-            return null;
+            let debugSession: vscode.DebugConfiguration = {
+                type: "xcode-lldb",
+                request: "launch",
+                name: DebugConfigurationProvider.lldbName,
+                isDummy: true
+            };
+            return debugSession;
         }
 
         if (runtimeWarningsConfigStatus() !== "off")
