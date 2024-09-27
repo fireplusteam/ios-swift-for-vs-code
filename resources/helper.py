@@ -36,7 +36,7 @@ class FileLock:
 
 def get_env_list():
     dict = {}
-    with FileLock(file_path + '.lock'):
+    with FileLock(file_path):
         with open(file_path, 'r') as file:
             for line in file:
                 pos = line.strip().find("=")
@@ -45,7 +45,7 @@ def get_env_list():
 
 
 def safe_env_list(list):
-    with FileLock(file_path + '.lock'):
+    with FileLock(file_path):
         with open(file_path, 'w') as file:
             for key, value in list.items():
                 file.write(key + "=" + value + "\n")
@@ -281,7 +281,7 @@ def update_git_exclude(file_to_exclude):
 debugger_config_file = ".logs/debugger.launching"
 def wait_debugger_to_launch(session_id):
     while True:
-        with FileLock(debugger_config_file + '.lock'):
+        with FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
         if config is not None and not session_id in config:
@@ -294,7 +294,7 @@ def wait_debugger_to_launch(session_id):
 
 def is_debug_session_valid(session_id, start_time) -> bool:
     try:
-        with FileLock(debugger_config_file + '.lock'):
+        with FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
         if not session_id in config:
@@ -310,10 +310,13 @@ def update_debug_session_time(session_id: str):
 
 def update_debugger_launch_config(session_id, key, value):
     config = {}
-    if os.path.exists(debugger_config_file):
-        with FileLock(debugger_config_file + '.lock'):
-            with open(debugger_config_file, "r+") as file:
-                config = json.load(file)
+    try:
+        if os.path.exists(debugger_config_file):
+            with FileLock(debugger_config_file):
+                with open(debugger_config_file, "r+") as file:
+                    config = json.load(file)
+    except:
+        pass # config is empty
     
     if session_id in config:
         config[session_id][key] = value;
@@ -321,7 +324,7 @@ def update_debugger_launch_config(session_id, key, value):
         config[session_id] = {}
         config[session_id][key] = value
     
-    with FileLock(debugger_config_file + '.lock'):
+    with FileLock(debugger_config_file):
         with open(debugger_config_file, "w+") as file:
             json.dump(config, file, indent=2)
 

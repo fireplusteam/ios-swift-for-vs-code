@@ -46,6 +46,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private atomicCommand: AtomicCommand;
     private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
 
+    private debugTestSessionEvent = new vscode.EventEmitter<string>();
+
     private setIsRunning(value: boolean) {
         this.isRunning = value;
         vscode.commands.executeCommand("setContext", "VSCode_iOS_debugStarted", value);
@@ -67,7 +69,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         }));
         this.disposable.push(vscode.debug.onDidTerminateDebugSession(async (e) => {
             if (e.id === this.activeSession?.id && this.isRunning) {
-                await this.atomicCommand.executor.terminateShell();
+                // for tests, it's automatically freed, so no need to terminate it manually
+                if (e.configuration.target === 'app')
+                    await this.atomicCommand.executor.terminateShell();
                 this.setIsRunning(false);
                 await this.terminateCurrentSession();
                 this.activeSession = undefined;
@@ -78,6 +82,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             await this.atomicCommand.executor.terminateShell();
             this.setIsRunning(false);
             await this.terminateCurrentSession();
+            this.activeSession = undefined;
         }));
     }
 
@@ -182,8 +187,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         } else {
             let dis: vscode.Disposable | undefined;
             return await new Promise<boolean>(resolve => {
-                dis = vscode.debug.onDidTerminateDebugSession(e => {
-                    if (e.configuration.appSessionId === appSessionId)
+                dis = this.debugTestSessionEvent.event(e => {
+                    if (e === appSessionId)
                         resolve(true);
                 });
             });
@@ -207,8 +212,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         } else {
             let dis: vscode.Disposable | undefined;
             return await new Promise<boolean>(resolve => {
-                dis = vscode.debug.onDidTerminateDebugSession(e => {
-                    if (e.configuration.appSessionId === appSessionId)
+                dis = this.debugTestSessionEvent.event(e => {
+                    if (e === appSessionId)
                         resolve(true);
                 });
             });
@@ -218,7 +223,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     async setEnvVariables() {
         this.counter += 1;
         this.sessionID = getSessionId(`debugger`) + this.counter;
-        this.atomicCommand.userCommand(async () => {
+        await this.atomicCommand.userCommand(async () => {
             await this.atomicCommand.executor.execShell("Debugger Launching", "debugger_launching.sh", [this.sessionID]);
         });
     }
@@ -248,6 +253,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     } finally {
                         this.setIsRunning(false);
                         await this.terminateCurrentSession();
+                        this.debugTestSessionEvent.fire(dbgConfig.appSessionId || this.sessionID);
                     }
                 }, "All Tests Are Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
@@ -259,6 +265,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     } finally {
                         this.setIsRunning(false);
                         await this.terminateCurrentSession();
+                        this.debugTestSessionEvent.fire(dbgConfig.appSessionId || this.sessionID);
                     }
                 }, "All Tests Are Passed");
             }
@@ -339,7 +346,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 stopOnEntry: false,
                 appSessionId: dbgConfig.appSessionId,
                 sessionId: this.sessionID,
-                noDebug: !isDebuggable
+                noDebug: !isDebuggable,
+                target: dbgConfig.target
             };
             return debugSession;
         } else { // old code-lldb way: deprecated
@@ -368,7 +376,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 exitCommands: [],
                 appSessionId: dbgConfig.appSessionId,
                 sessionId: this.sessionID,
-                noDebug: !isDebuggable
+                noDebug: !isDebuggable,
+                target: dbgConfig.target
             };
             return debugSession;
         }
