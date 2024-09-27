@@ -9,6 +9,7 @@ import { sleep } from "../extension";
 import path from "path";
 import { AtomicCommand } from "../AtomicCommand";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
+import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
 
 export class TerminatedDebugSessionTask extends Error {
     public constructor(message: string) {
@@ -229,9 +230,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         if (dbgConfig.type !== DebugConfigurationProvider.Type) {
             return null;
         }
+        const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
         try {
-            const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
-            const useCommandWrapper = dbgConfig.appSessionId === undefined;
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async () => {
                     await buildSelectedTarget(this.atomicCommand.executor, this.problemResolver);
@@ -265,10 +265,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
             if (!dbgConfig.appSessionId)
                 dbgConfig.appSessionId = this.sessionID;
-
-            if (isDebuggable === false) {
-                return this.runSession(dbgConfig.appSessionId);
-            }
         } catch {
             return null;
         }
@@ -276,122 +272,105 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         if (runtimeWarningsConfigStatus() !== "off")
             this.runtimeWarningsWatcher.startWatcher();
 
-        return await this.debugSession(dbgConfig);
+        return await this.debugSession(dbgConfig, isDebuggable);
     }
 
-    private runSession(appSessionId: string): vscode.DebugConfiguration {
-        return {
-            name: "iOS App Log",
-            type: "debugpy",
-            request: "launch",
-            program: `${getScriptPath()}/app_log.py`,
-            stopOnEntry: false,
-            args: [
-                `.logs/app_${getDeviceId()}.log`,
-                this.sessionID
-            ],
-            console: "internalConsole",
-            internalConsoleOptions: "neverOpen",
-            envFile: `${workspaceFolderConfig()}/.vscode/.env`,
-            cwd: `${workspaceFolderConfig()}`,
-            appSessionId: appSessionId,
-            sessionId: this.sessionID
-        };
-    }
-
-    private async debugSession(dbgConfig: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration> {
+    private async debugSession(dbgConfig: vscode.DebugConfiguration, isDebuggable: boolean): Promise<vscode.DebugConfiguration> {
         // for macOS, use different scheme to app running
+        const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
         if (currentPlatform() == Platform.macOS && dbgConfig.target == "app") {
-            let debugSession: vscode.DebugConfiguration = {
-                "type": "lldb",
-                "request": "launch",
-                "name": DebugConfigurationProvider.lldbName,
-                "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
-                "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
-            };
-            return debugSession;
+            if (lldExePath) {
+                let debugSession: vscode.DebugConfiguration = {
+                    "type": "xcode-lldb",
+                    "request": "launch",
+                    "name": DebugConfigurationProvider.lldbName,
+                    "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
+                    "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
+                };
+                return debugSession;
+            } else { // old code lldb way: deprecated
+                let debugSession: vscode.DebugConfiguration = {
+                    "type": "lldb",
+                    "request": "launch",
+                    "name": DebugConfigurationProvider.lldbName,
+                    "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
+                    "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
+                };
+                return debugSession;
+            }
         }
         const lldbCommands = dbgConfig.lldbCommands || [];
         const command = runtimeWarningBreakPointCommand();
-        if (command)
+        if (command && isDebuggable)
             lldbCommands.push(command);
 
-        // use: xcrun swift -version
-        // to determine the swift version and if it's 6, then lldb-dap can be used
-        // to find the lldb-dap: xcrun -find lldb-dap
-        const folder = vscode.workspace.workspaceFolders?.[0];
-        if (folder) {
-            const config = vscode.workspace.getConfiguration(
-                "lldb-dap",
-                folder
-            );
-            await config.update("executable-path", "/Library/Developer/CommandLineTools/usr/bin/lldb-dap");
+        // TODO: try to refactor launch logic
+        // https://junch.github.io/debug/2016/09/19/original-lldb.html
+        if (lldExePath) {
+            const debugSession: vscode.DebugConfiguration = {
+                type: "xcode-lldb",
+                request: "attach",
+                name: DebugConfigurationProvider.lldbName,
+                attachCommands: [
+                    `command script import '${getScriptPath()}/attach_lldb.py'`,
+                    "command script add -f attach_lldb.create_target create_target",
+                    "command script add -f attach_lldb.terminate_debugger terminate_debugger",
+                    "command script add -f attach_lldb.watch_new_process watch_new_process",
+                    "command script add -f attach_lldb.setScriptPath setScriptPath",
+                    "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
+                    "command script add -f attach_lldb.app_log app_log",
+                    "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
+                    `create_target ${this.sessionID}`,
+
+                    ...lldbCommands,
+                    //"process handle SIGKILL -n true -p true -s false",
+                    //"process handle SIGTERM -n true -p true -s false",
+                    `setScriptPath ${getScriptPath()}`,
+                    `watch_new_process ${this.sessionID} lldb-dap`,
+                ],
+                args: [],
+                env: [],
+                initCommands: [
+
+                ],
+                exitCommands: [],
+                cwd: getWorkspacePath(),
+                debuggerRoot: getWorkspacePath(),
+                stopOnEntry: false,
+                appSessionId: dbgConfig.appSessionId,
+                sessionId: this.sessionID,
+                noDebug: !isDebuggable
+            };
+            return debugSession;
+        } else { // old code-lldb way: deprecated
+            let debugSession: vscode.DebugConfiguration = {
+                type: "lldb",
+                request: "custom",
+                name: DebugConfigurationProvider.lldbName,
+                targetCreateCommands: [
+                    `command script import '${getScriptPath()}/attach_lldb.py'`,
+                    "command script add -f attach_lldb.create_target create_target",
+                    "command script add -f attach_lldb.terminate_debugger terminate_debugger",
+                    "command script add -f attach_lldb.watch_new_process watch_new_process",
+                    "command script add -f attach_lldb.setScriptPath setScriptPath",
+                    "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
+                    "command script add -f attach_lldb.app_log app_log",
+                    "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
+                    `create_target ${this.sessionID}`
+                ],
+                processCreateCommands: [
+                    ...lldbCommands,
+                    //"process handle SIGKILL -n true -p true -s false",
+                    //"process handle SIGTERM -n true -p true -s false",
+                    `setScriptPath ${getScriptPath()}`,
+                    `watch_new_process ${this.sessionID} codelldb`
+                ],
+                exitCommands: [],
+                appSessionId: dbgConfig.appSessionId,
+                sessionId: this.sessionID,
+                noDebug: !isDebuggable
+            };
+            return debugSession;
         }
-
-        const debugSession: vscode.DebugConfiguration = {
-            type: "xcode-lldb",
-            request: "attach",
-            name: DebugConfigurationProvider.lldbName,
-            attachCommands: [
-                `command script import '${getScriptPath()}/attach_lldb.py'`,
-                "command script add -f attach_lldb.create_target create_target",
-                "command script add -f attach_lldb.terminate_debugger terminate_debugger",
-                "command script add -f attach_lldb.watch_new_process watch_new_process",
-                "command script add -f attach_lldb.setScriptPath setScriptPath",
-                "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
-                "command script add -f attach_lldb.app_log app_log",
-                "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
-                `create_target ${this.sessionID}`,
-
-                ...lldbCommands,
-                //"process handle SIGKILL -n true -p true -s false",
-                //"process handle SIGTERM -n true -p true -s false",
-                `setScriptPath ${getScriptPath()}`,
-                `watch_new_process ${this.sessionID}`,
-            ],
-            args: [],
-            env: [],
-            initCommands: [
-
-            ],
-            exitCommands: [],
-            cwd: getWorkspacePath(),
-            debuggerRoot: getWorkspacePath(),
-            stopOnEntry: false,
-            appSessionId: dbgConfig.appSessionId,
-            sessionId: this.sessionID
-        };
-
-        // let debugSession: vscode.DebugConfiguration = {
-        //     type: "lldb",
-        //     request: "custom",
-        //     name: DebugConfigurationProvider.lldbName,
-        //     targetCreateCommands: [
-        //         `command script import '${getScriptPath()}/attach_lldb.py'`,
-        //         "command script add -f attach_lldb.create_target create_target",
-        //         "command script add -f attach_lldb.terminate_debugger terminate_debugger",
-        //         "command script add -f attach_lldb.watch_new_process watch_new_process",
-        //         "command script add -f attach_lldb.setScriptPath setScriptPath",
-        //         "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
-        //         "command script add -f attach_lldb.app_log app_log",
-        //         "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
-        //         `create_target ${this.sessionID}`
-        //     ],
-        //     processCreateCommands: [
-        //         ...lldbCommands,
-        //         //"process handle SIGKILL -n true -p true -s false",
-        //         //"process handle SIGTERM -n true -p true -s false",
-        //         `setScriptPath ${getScriptPath()}`,
-        //         `watch_new_process ${this.sessionID}`
-        //     ],
-        //     exitCommands: [],
-        //     appSessionId: dbgConfig.appSessionId,
-        //     sessionId: this.sessionID
-        // };
-        return debugSession;
     }
-}
-
-function workspaceFolderConfig() {
-    return getWorkspacePath()
 }

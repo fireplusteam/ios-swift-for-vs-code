@@ -29,7 +29,6 @@ import { ToolsManager } from "./Tools/ToolsManager";
 import { AtomicCommand } from "./AtomicCommand";
 import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
-import { createDefaultLLDBDapOptions } from "./Debug/LLDBDapDefaultOptions";
 import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 
 function shouldInjectXCBBuildService() {
@@ -111,12 +110,11 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider('RuntimeWarningsProvider', runtimeWarningsDataProvider);
         const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
 
-        const lldbDapDefaultOptions = createDefaultLLDBDapOptions();
         context.subscriptions.push(
             vscode.debug.registerDebugAdapterDescriptorFactory(
-                lldbDapDefaultOptions.debuggerType,
-                new LLDBDapDescriptorFactory(lldbDapDefaultOptions),
-            ),
+                "xcode-lldb",
+                new LLDBDapDescriptorFactory(),
+            )
         );
         debugConfiguration = new DebugConfigurationProvider(
             problemDiagnosticResolver,

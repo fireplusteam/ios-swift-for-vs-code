@@ -75,6 +75,7 @@ def wait_for_exit(debugger, start_time, session_id):
             return
         time.sleep(0.5)
 
+
 runtime_warning_process: subprocess.Popen = None
 def create_apple_runtime_warning_watch_process(debugger, pid):
     global runtime_warning_process
@@ -87,9 +88,6 @@ def create_apple_runtime_warning_watch_process(debugger, pid):
         runtime_warning_process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         flags = fcntl.fcntl(runtime_warning_process.stdout, fcntl.F_GETFL) # first get current process.stdout flags
         fcntl.fcntl(runtime_warning_process.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-        # while line := process.stdout.readline():
-            # logMessage(line)
-        # logMessage("End Watching Logs")
     except Exception as e:
         logMessage(f"Error on watching {e}")
 
@@ -104,7 +102,7 @@ def print_app_log(debugger, pid):
         print(f"Printer crashed: {str(e)}")
     
 
-def wait_for_process(process_name, debugger, existing_pids, start_time, session_id):
+def wait_for_process(process_name, debugger, existing_pids, start_time, session_id, is_continue):
     logMessage("Start time:" + str(start_time))
     try:
         logMessage(f"Waiting for process: {process_name}")
@@ -123,15 +121,15 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
                 pid = new_list.pop()
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
-                # perform_debugger_command(debugger, "continue")
+                if is_continue:
+                    perform_debugger_command(debugger, "continue")
                 
                 threading.Thread(target=print_app_log, args=(debugger, pid)).start()
                 create_apple_runtime_warning_watch_process(debugger, pid)
-                # threading.Thread(target=watch_apple_runtime_warning, args=(debugger, pid)).start()
                                 
                 return
 
-            time.sleep(0.05)
+            time.sleep(0.01)
     except Exception as e:
         logMessage(str(e))
 
@@ -142,11 +140,16 @@ def watch_new_process(debugger, command, result, internal_dict):
     logMessage("Debugger: " + str(debugger))
     global existing_pids
     
-    session_id = command
+    logMessage(f"Watching command: {command}")
+    commands = command.split(" ")
+
+    session_id = commands[0]
     helper.update_debugger_launch_config(session_id, "status", "launched")
-    wait_for_process(helper.get_process_name(), debugger, existing_pids, start_time, session_id)
-    # thread = threading.Thread(target=wait_for_process, args=(helper.get_process_name(), debugger, existing_pids, start_time, session_id))   
-    # thread.start()
+    if commands[1] == "lldb-dap":
+        wait_for_process(helper.get_process_name(), debugger, existing_pids, start_time, session_id, False)
+    else:
+        thread = threading.Thread(target=wait_for_process, args=(helper.get_process_name(), debugger, existing_pids, start_time, session_id, True))   
+        thread.start()
     env_list = helper.get_env_list()
     device_id = env_list["DEVICE_ID"].strip("\n")
     perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
@@ -183,7 +186,7 @@ def logRuntimeError(deb, json):
                     continue
                 break
         try:
-            runtime_warning_database.store_runtime_warning(script_path, last_line, json)
+            runtime_warning_database.store_runtime_warning(last_line, json)
             logMessage(last_line)
             # logMessage(json)
         except Exception as e: 

@@ -21,7 +21,7 @@ def dump_database():
         json.dump(data_base, file, indent=2, cls=SetEncoder)
     
 
-def store_runtime_warning(script_path: str, error_message: str, data: tuple):
+def store_runtime_warning(error_message: str, data: tuple):
     global data_base
     global item_id
 
