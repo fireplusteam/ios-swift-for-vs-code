@@ -128,7 +128,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         debugConfiguration = new DebugConfigurationProvider(
             runtimeWarningLogWatcher,
-            debugSessionEndEvent
+            debugSessionEndEvent.event
         );
 
         testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {

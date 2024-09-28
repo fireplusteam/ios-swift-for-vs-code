@@ -257,7 +257,7 @@ def wait_until_build(debugger, session_id):
         status = helper.get_debugger_launch_config(session_id, "status")
         if status == "launching" or status == "launched":
             return status
-        time.sleep(1) 
+        time.sleep(0.3) 
 
 
 def create_target(debugger, command, result, internal_dict):

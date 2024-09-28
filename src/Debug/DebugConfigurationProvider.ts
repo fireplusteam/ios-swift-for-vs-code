@@ -1,11 +1,9 @@
 import * as vscode from "vscode";
-import { Platform, currentPlatform, getBuildRootPath, getDeviceId, getProjectConfiguration, getProjectScheme, getScriptPath, getWorkspacePath, isActivated } from "../env";
+import { currentPlatform, getScriptPath, getWorkspacePath, isActivated, Platform } from "../env";
 import { getSessionId } from "../utils";
-import path from "path";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
-import { DebugAdapterTracker } from "./DebugAdapterTrackerFactory";
-import { count } from "console";
+import { DebugAdapterTracker } from "./DebugAdapterTracker";
 
 export class TerminatedDebugSessionTask extends Error {
     public constructor(message: string) {
@@ -32,7 +30,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     static Type = "xcode-lldb";
     static lldbName = "iOS: App Debugger Console";
 
-    private sessionID = getSessionId("debugger");
     private _counterID = 0;
     private get counterID(): number {
         this._counterID += 1;
@@ -40,9 +37,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
     private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
 
-    private debugTestSessionEvent: vscode.EventEmitter<string>;
+    private debugTestSessionEvent: vscode.Event<string>;
 
-    constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, debugTestSessionEvent: vscode.EventEmitter<string>) {
+    constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, debugTestSessionEvent: vscode.Event<string>) {
         this.runtimeWarningsWatcher = runtimeWarningsWatcher;
         this.debugTestSessionEvent = debugTestSessionEvent;
     }
@@ -60,7 +57,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
-            dis = this.debugTestSessionEvent.event(e => {
+            dis = this.debugTestSessionEvent(e => {
                 if (e === appSessionId)
                     resolve(true);
             });
@@ -81,7 +78,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
-            dis = this.debugTestSessionEvent.event(e => {
+            dis = this.debugTestSessionEvent(e => {
                 if (e === appSessionId)
                     resolve(true);
             });
@@ -103,7 +100,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
-            dis = this.debugTestSessionEvent.event(e => {
+            dis = this.debugTestSessionEvent(e => {
                 if (e === appSessionId)
                     resolve(true);
             });
@@ -120,17 +117,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         }
         const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
 
-        this.sessionID = getSessionId(`debugger`) + this.counterID;
-        await DebugAdapterTracker.updateStatus(this.sessionID, "configuring");
+        const sessionID = getSessionId(`debugger`) + this.counterID;
+        await DebugAdapterTracker.updateStatus(sessionID, "configuring");
 
-        if (runtimeWarningsConfigStatus() !== "off")
+        if (runtimeWarningsConfigStatus() !== "off" && currentPlatform() != Platform.macOS) // mac OS doesn't support that feature at the moment
             this.runtimeWarningsWatcher.startWatcher();
 
-
-        return await this.debugSession(dbgConfig, isDebuggable);
+        return await this.debugSession(dbgConfig, sessionID, isDebuggable);
     }
 
-    private async debugSession(dbgConfig: vscode.DebugConfiguration, isDebuggable: boolean): Promise<vscode.DebugConfiguration> {
+    private async debugSession(dbgConfig: vscode.DebugConfiguration, sessionID: string, isDebuggable: boolean): Promise<vscode.DebugConfiguration> {
         const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
         const lldbCommands = dbgConfig.lldbCommands || [];
         const command = runtimeWarningBreakPointCommand();
@@ -157,13 +153,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
                     "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
-                    `create_target ${this.sessionID}`,
+                    `create_target ${sessionID}`,
 
                     ...lldbCommands,
-                    //"process handle SIGKILL -n true -p true -s false",
-                    //"process handle SIGTERM -n true -p true -s false",
                     `setScriptPath ${getScriptPath()}`,
-                    `watch_new_process ${this.sessionID} lldb-dap`,
+                    `watch_new_process ${sessionID} lldb-dap`,
                 ],
                 args: [],
                 env: [],
@@ -175,7 +169,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 debuggerRoot: getWorkspacePath(),
                 stopOnEntry: false,
                 appSessionId: dbgConfig.appSessionId,
-                sessionId: this.sessionID,
+                sessionId: sessionID,
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun
@@ -195,18 +189,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
                     "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
-                    `create_target ${this.sessionID}`
+                    `create_target ${sessionID}`
                 ],
                 processCreateCommands: [
                     ...lldbCommands,
-                    //"process handle SIGKILL -n true -p true -s false",
-                    //"process handle SIGTERM -n true -p true -s false",
                     `setScriptPath ${getScriptPath()}`,
-                    `watch_new_process ${this.sessionID} codelldb`
+                    `watch_new_process ${sessionID} codelldb`
                 ],
                 exitCommands: [],
                 appSessionId: dbgConfig.appSessionId,
-                sessionId: this.sessionID,
+                sessionId: sessionID,
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
