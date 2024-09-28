@@ -44,6 +44,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStopSession() {
         console.log('Session will stop');
+        if (this.debugSession.configuration.target === "app")
+            this.terminateCurrentSession();
     }
 
     onError(error: Error) {
@@ -52,11 +54,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onExit(code: number | undefined, signal: string | undefined) {
         console.log(`Exited with code ${code} and signal ${signal}`);
-        if (this.debugSession.configuration.target === "app")
-            this.terminateCurrentSession();
     }
 
-    public async terminateCurrentSession() {
+    private async terminateCurrentSession() {
         if (this.isTerminated)
             return
         this.isTerminated = true;

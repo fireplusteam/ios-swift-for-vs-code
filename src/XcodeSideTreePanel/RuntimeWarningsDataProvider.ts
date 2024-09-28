@@ -70,7 +70,6 @@ export class RuntimeWarningsDataProvider implements vscode.TreeDataProvider<vsco
             this.used.set(e.id || "", e);
         });
 
-
         this._onDidChangeTreeData.fire(undefined);
     }
 

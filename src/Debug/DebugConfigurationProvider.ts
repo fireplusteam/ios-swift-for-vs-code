@@ -194,7 +194,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 processCreateCommands: [
                     ...lldbCommands,
                     `setScriptPath ${getScriptPath()}`,
-                    `watch_new_process ${sessionID} codelldb`
+                    `watch_new_process ${sessionID} codelldb`,
+                    "continue"
                 ],
                 exitCommands: [],
                 appSessionId: dbgConfig.appSessionId,

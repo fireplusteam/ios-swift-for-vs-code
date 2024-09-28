@@ -112,7 +112,7 @@ def print_app_log(debugger, pid):
 
 is_process_watching = False 
 
-def wait_for_process(process_name, debugger, existing_pids, start_time, session_id, is_continue):
+def wait_for_process(process_name, debugger, existing_pids, start_time, session_id):
     global is_process_watching
     logMessage("Start time:" + str(start_time))
     try:
@@ -134,8 +134,6 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
                 logMessage(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
-                if is_continue:
-                    perform_debugger_command(debugger, "continue")
                 
                 threading.Thread(target=print_app_log, args=(debugger, pid)).start()
                 create_apple_runtime_warning_watch_process(debugger, pid)
@@ -165,11 +163,7 @@ def watch_new_process(debugger, command, result, internal_dict):
     process_name = helper.get_process_name()
     existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
-    if commands[1] == "lldb-dap":
-        wait_for_process(process_name, debugger, existing_pids, start_time, session_id, False)
-    else:
-        thread = threading.Thread(target=wait_for_process, args=(process_name, debugger, existing_pids, start_time, session_id, True))   
-        thread.start()
+    wait_for_process(process_name, debugger, existing_pids, start_time, session_id)
     env_list = helper.get_env_list()
     device_id = env_list["DEVICE_ID"].strip("\n")
     perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
