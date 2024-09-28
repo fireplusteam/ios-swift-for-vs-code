@@ -35,17 +35,13 @@ VALID_TESTS=1
 
 echo "DEBUGGER_ARG: $2"
 
-if [ "$2" == "DEBUG_LLDB" ]; then
-
-    echo "WAITING FOR DEBUGER"
-    python3 <<EOF
+echo "WAITING FOR DEBUGGER"
+python3 <<EOF
 import sys
 sys.path.insert(0, "$VS_IOS_SCRIPT_PATH")
 import helper
 helper.wait_debugger_to_launch("$1")
 EOF
-
-fi
 
 check_exit_status() {
     local exit_status="$1"

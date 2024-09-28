@@ -292,41 +292,59 @@ def wait_debugger_to_launch(session_id):
 
         time.sleep(1)
 
+
 def is_debug_session_valid(session_id, start_time) -> bool:
     try:
         with FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
-        if not session_id in config:
-            return False
-        if config[session_id]["sessionEndTime"] >= start_time:
-            return False
-        return True
+            if not session_id in config:
+                return False
+            if config[session_id]["sessionEndTime"] >= start_time:
+                return False
+            if config[session_id]["status"] == "stopped":
+                return False
+
+            return True
     except: # no file or a key, so the session is valid
         return True
     
 def update_debug_session_time(session_id: str):
     update_debugger_launch_config(session_id, "sessionEndTime", time.time())
 
+def get_debugger_launch_config(session_id, key):
+    with FileLock(debugger_config_file):
+        with open(debugger_config_file, 'r') as file:
+            config = json.load(file)
+            if config is not None and not session_id in config:
+                return None
+            
+            if config is not None and config[session_id][key]:
+                return config[session_id][key]
+
+
 def update_debugger_launch_config(session_id, key, value):
     config = {}
     try:
-        if os.path.exists(debugger_config_file):
-            with FileLock(debugger_config_file):
-                with open(debugger_config_file, "r+") as file:
-                    config = json.load(file)
+        with FileLock(debugger_config_file):
+            if os.path.exists(debugger_config_file):
+                try: 
+                    with open(debugger_config_file, "r+") as file:
+                        config = json.load(file)
+                except:
+                    pass
+
+            if session_id in config:
+                config[session_id][key] = value;
+            else:
+                config[session_id] = {}
+                config[session_id][key] = value
+
+            with open(debugger_config_file, "w+") as file:
+                json.dump(config, file, indent=2)
     except:
         pass # config is empty
-    
-    if session_id in config:
-        config[session_id][key] = value;
-    else:
-        config[session_id] = {}
-        config[session_id][key] = value
-    
-    with FileLock(debugger_config_file):
-        with open(debugger_config_file, "w+") as file:
-            json.dump(config, file, indent=2)
+
 
 if __name__ == "__main__":
     print("ok")

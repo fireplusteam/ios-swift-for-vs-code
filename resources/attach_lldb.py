@@ -119,6 +119,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
                 threading.Thread(target=wait_for_exit, args=(debugger, start_time, session_id)).start()
                 
                 pid = new_list.pop()
+                logMessage(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
                 if is_continue:
@@ -139,11 +140,18 @@ start_time = time.time()
 def watch_new_process(debugger, command, result, internal_dict):
     logMessage("Debugger: " + str(debugger))
     global existing_pids
-    
+    global start_time
+
     logMessage(f"Watching command: {command}")
     commands = command.split(" ")
 
     session_id = commands[0]
+    if not helper.is_debug_session_valid(session_id, start_time):
+        kill_codelldb(debugger)
+        return
+
+    process_name = helper.get_process_name()
+    existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
     if commands[1] == "lldb-dap":
         wait_for_process(helper.get_process_name(), debugger, existing_pids, start_time, session_id, False)
@@ -226,22 +234,31 @@ def printRuntimeWarning(debugger, command, result, internal_dict):
     logMessage("Logged runtime warning")
 
 
+def wait_until_build(debugger, session_id):
+    while True:
+        if not helper.is_debug_session_valid(session_id, start_time):
+            kill_codelldb(debugger)
+            return "stopped"
+        status = helper.get_debugger_launch_config(session_id, "status")
+        if status == "launching" or status == "launched":
+            return status
+        time.sleep(1) 
+
+
 def create_target(debugger, command, result, internal_dict):
     try:
         global app_logger
         session_id = command
+        status = wait_until_build(debugger, session_id)
+        if status == "stopped":
+            return
+        
         app_logger.session_id = session_id
         logMessage(f"Creating Session with session id: {session_id}")
-        helper.update_debugger_launch_config(session_id, "status", "launching")
-        global existing_pids
         result.AppendMessage("Start lldb watching new instance of App")
         
         list = helper.get_env_list()
         result.AppendMessage(f"Environment: {list}")
-
-        process_name = helper.get_process_name()
-        existing_pids = helper.get_list_of_pids(process_name)
-
 
         executable = helper.get_target_executable()
         logMessage(f"Exe: {executable}")

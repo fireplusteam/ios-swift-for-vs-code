@@ -117,14 +117,18 @@ export async function activate(context: vscode.ExtensionContext) {
                 new LLDBDapDescriptorFactory(),
             )
         );
+        const debugSessionEndEvent = new vscode.EventEmitter<string>();
+        const debugAdapterFactory = new DebugAdapterTrackerFactory(problemDiagnosticResolver, atomicCommand, debugSessionEndEvent);
         context.subscriptions.push(
-            vscode.debug.registerDebugAdapterTrackerFactory('xcode-lldb', new DebugAdapterTrackerFactory())
+            vscode.debug.registerDebugAdapterTrackerFactory('xcode-lldb', debugAdapterFactory)
+        );
+        context.subscriptions.push(
+            vscode.debug.registerDebugAdapterTrackerFactory('lldb', debugAdapterFactory)
         );
 
         debugConfiguration = new DebugConfigurationProvider(
-            problemDiagnosticResolver,
             runtimeWarningLogWatcher,
-            atomicCommand
+            debugSessionEndEvent
         );
 
         testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
@@ -339,5 +343,4 @@ export async function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
     autocompleteWatcher?.terminate();
     await projectExecutor.terminateShell();
-    await debugConfiguration.terminateCurrentSession();
 }

@@ -20,8 +20,8 @@ print("INPUT", device_uuid, bundle, session_id)
 
 commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
 # this parameter is causing freeze if it debugger is not launched on time
-if debugger_arg == "LLDB_DEBUG":
-   commandLaunch.append("--wait-for-debugger")
+# if debugger_arg == "LLDB_DEBUG":
+commandLaunch.append("--wait-for-debugger")
     
 cwd = os.getcwd()
 
@@ -86,8 +86,7 @@ def logMessage(e):
 
 
 def main():
-    if debugger_arg == "LLDB_DEBUG":
-        helper.wait_debugger_to_launch(session_id)
+    helper.wait_debugger_to_launch(session_id)
     
     # Run the command asynchronously
     return_code, is_ok = run_process(' '.join(commandLaunch), f".logs/app_{device_uuid}.log")
