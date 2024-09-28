@@ -159,13 +159,6 @@
                 }
             }
         },
-        "keybindings": [
-            {
-                "key": "shift+f5",
-                "command": "vscode-ios.stop.debug.session",
-                "when": "VSCode_iOS_debugStarted"
-            }
-        ],
         "problemMatchers": [
             {
                 "name": "xcode",

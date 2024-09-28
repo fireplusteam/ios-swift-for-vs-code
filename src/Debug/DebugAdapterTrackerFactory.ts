@@ -14,6 +14,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private atomicCommand: AtomicCommand;
     private debugTestSessionEvent: vscode.EventEmitter<string>;
     private isTerminated = false;
+    private runningScripts = false;
 
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
@@ -62,7 +63,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.isTerminated = true;
 
         await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
-        await this.atomicCommand.executor.terminateShell(new TerminatedDebugSessionTask("Debug Task"));
+        if (this.runningScripts)
+            await this.atomicCommand.executor.terminateShell(new TerminatedDebugSessionTask("Debug Task"));
         await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
 
         this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
@@ -80,16 +82,16 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async executeAppCommand(buildCommand: () => Promise<void>, runCommandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
-        try {
-            await this.atomicCommand.userCommand(buildCommand);
-
-            await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-            await this.atomicCommand.userCommand(runCommandClosure, successMessage).catch(e => {
-                console.log(`Running ended with : ${e}`);
-            });
-        } catch (err) {
-            throw err;
-        }
+        await this.atomicCommand.userCommand(async () => {
+            this.runningScripts = true;
+            try {
+                await buildCommand();
+                await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
+                await runCommandClosure();
+            } finally {
+                this.runningScripts = false;
+            }
+        }, successMessage);
     }
 
     async build(dbgConfig: vscode.DebugConfiguration) {

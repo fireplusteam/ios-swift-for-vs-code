@@ -63,7 +63,8 @@ script_path = None
 def kill_codelldb(debugger):
     global script_path
     perform_debugger_command(debugger, f"target create {script_path}/lldb_exe_stub")
-    perform_debugger_command(debugger, "process launch")
+    process = subprocess.Popen(f"{script_path}/lldb_exe_stub")
+    perform_debugger_command(debugger, f"process attach --pid {process.pid}")
 
 
 def wait_for_exit(debugger, start_time, session_id):
