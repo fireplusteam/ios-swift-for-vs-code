@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { AtomicCommand } from "../AtomicCommand";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
-import { currentPlatform, Platform } from "../env";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "../commands";
 import { TerminatedDebugSessionTask } from "./DebugConfigurationProvider";
 import { error } from "console";
@@ -102,8 +101,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 await this.executeAppCommand(async () => {
                     await buildSelectedTarget(this.atomicCommand.executor, this.problemResolver);
                 }, async () => {
-                    if (currentPlatform() != Platform.macOS)
-                        await runApp(this.sessionID, this.atomicCommand.executor, isDebuggable);
+                    await runApp(this.sessionID, this.atomicCommand.executor, isDebuggable);
                 });
             } else if (dbgConfig.target === "tests") {
                 await this.executeAppCommand(async () => {

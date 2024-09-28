@@ -18,10 +18,13 @@ with open(launch_log_path, "w+") as file:
 
 print("INPUT", device_uuid, bundle, session_id)
 
-commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
-# this parameter is causing freeze if it debugger is not launched on time
-# if debugger_arg == "LLDB_DEBUG":
-commandLaunch.append("--wait-for-debugger")
+if device_uuid == "MAC_OS":
+   commandLaunch = ["open", "--new", "--wait-apps", "-o", ".logs/app_MAC_OS.log", helper.get_target_executable()]
+else: 
+    commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
+    # this parameter is causing freeze if it debugger is not launched on time
+    if debugger_arg == "LLDB_DEBUG":
+        commandLaunch.append("--wait-for-debugger")
     
 cwd = os.getcwd()
 
@@ -61,10 +64,11 @@ def run_process(command: str, log_file_path):
                 break
             if output:
                 is_ok = True
-                with helper.FileLock(log_file_path):
-                    with open(log_file_path, "a+") as file:
-                        file.buffer.write(output)
-                        file.flush()
+                if device_uuid != "MAC_OS":
+                    with helper.FileLock(log_file_path):
+                        with open(log_file_path, "a+") as file:
+                            file.buffer.write(output)
+                            file.flush()
             else:
                 index += 1
                 if index > 20:

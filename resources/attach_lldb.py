@@ -155,9 +155,9 @@ def watch_new_process(debugger, command, result, internal_dict):
     existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
     if commands[1] == "lldb-dap":
-        wait_for_process(helper.get_process_name(), debugger, existing_pids, start_time, session_id, False)
+        wait_for_process(process_name, debugger, existing_pids, start_time, session_id, False)
     else:
-        thread = threading.Thread(target=wait_for_process, args=(helper.get_process_name(), debugger, existing_pids, start_time, session_id, True))   
+        thread = threading.Thread(target=wait_for_process, args=(process_name, debugger, existing_pids, start_time, session_id, True))   
         thread.start()
     env_list = helper.get_env_list()
     device_id = env_list["DEVICE_ID"].strip("\n")

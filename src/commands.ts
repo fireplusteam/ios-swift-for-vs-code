@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { getDeviceId, getEnvList, getProjectConfiguration, getProjectFileName, getProjectPath, getProjectPlatform, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, updateProject } from "./env";
+import { currentPlatform, getDeviceId, getEnvList, getProjectConfiguration, getProjectFileName, getProjectPath, getProjectPlatform, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { showPicker } from "./inputPicker";
@@ -274,15 +274,29 @@ export async function terminateCurrentIOSApp(sessionID: string, executor: Execut
 
 export async function runApp(sessionID: string, executor: Executor, isDebuggable: boolean) {
     emptyAppLog(getDeviceId());
-    await executor.execShell(
-        "Run App",
-        "run_app.sh",
-        [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
-        false
-    );
+    if (currentPlatform() == Platform.macOS) {
+        await executor.execShell(
+            "Run App",
+            "run_app.sh",
+            [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING", "-MAC_OS"],
+            false
+        );
+    }
+    else {
+        await executor.execShell(
+            "Run App",
+            "run_app.sh",
+            [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
+            false
+        );
+    }
 }
 
 export async function runAppOnMultipleDevices(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver) {
+    if (currentPlatform() == Platform.macOS) {
+        vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
+        return;
+    }
     let stdout = getLastLine((await executor.execShell(
         "Fetch Multiple Devices",
         "populate_devices.sh",

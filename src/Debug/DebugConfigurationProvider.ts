@@ -131,29 +131,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     private async debugSession(dbgConfig: vscode.DebugConfiguration, isDebuggable: boolean): Promise<vscode.DebugConfiguration> {
-        // for macOS, use different scheme to app running
         const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
-        if (currentPlatform() == Platform.macOS && dbgConfig.target == "app") {
-            if (lldExePath) {
-                let debugSession: vscode.DebugConfiguration = {
-                    "type": "xcode-lldb",
-                    "request": "launch",
-                    "name": DebugConfigurationProvider.lldbName,
-                    "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
-                    "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
-                };
-                return debugSession;
-            } else { // old code lldb way: deprecated
-                let debugSession: vscode.DebugConfiguration = {
-                    "type": "lldb",
-                    "request": "launch",
-                    "name": DebugConfigurationProvider.lldbName,
-                    "program": `${path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration(), `${getProjectScheme()}.app`)}`,
-                    "cwd": path.join(getBuildRootPath(), "Build", "Products", getProjectConfiguration())
-                };
-                return debugSession;
-            }
-        }
         const lldbCommands = dbgConfig.lldbCommands || [];
         const command = runtimeWarningBreakPointCommand();
         if (command && isDebuggable)

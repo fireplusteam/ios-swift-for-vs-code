@@ -187,6 +187,9 @@ def get_product_name():
 
 def get_process_name():
     process_name = get_product_name()
+    list = get_env_list()
+    if (list["PLATFORM"].strip("\"") == "macOS"):
+        return f"{process_name}.app/Contents/MacOS/{process_name}"
     if process_name == "xctest":
         return process_name
     return f"{process_name}.app/{process_name}"
