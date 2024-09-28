@@ -1,6 +1,9 @@
 import { exec } from "child_process";
+import fs from "fs"
 import * as vscode from "vscode";
 import { InteractiveTerminal } from "./InteractiveTerminal";
+import { getScriptPath } from "../env";
+import { XCRunHelper } from "./XCRunHelper";
 
 export class ToolsManager {
     private log: vscode.OutputChannel;
@@ -71,6 +74,19 @@ export class ToolsManager {
         await this.terminal.executeCommand(command);
     }
 
+    private async isLLDBStubExeCompiled() {
+        const lldb_exe_stub = getScriptPath("lldb_exe_stub");
+        return fs.existsSync(lldb_exe_stub);
+    }
+
+    private async compileLLDStubExe() {
+        const clang = await XCRunHelper.getClangCompilerPath();
+        const sdk = await XCRunHelper.getSdkPath();
+        const command = `${clang} -isysroot ${sdk} "${getScriptPath("lldb_exe_stub.c")}" -o "${getScriptPath("lldb_exe_stub")}"`;
+        // this.terminal.show();
+        await this.terminal.executeCommand(command);
+    }
+
     private async installTools() {
         if (!(await this.isHomebrewInstalled())) {
             await this.installHomebrew();
@@ -86,6 +102,10 @@ export class ToolsManager {
 
         if (!(await this.isGemInstalled("xcodeproj"))) {
             await this.installTool("xcodeproj", "gem");
+        }
+
+        if (!(await this.isLLDBStubExeCompiled())) {
+            await this.compileLLDStubExe();
         }
     }
 
@@ -106,10 +126,19 @@ export class ToolsManager {
 
     public async resolveThirdPartyTools(askUserToInstallDeps: boolean = false) {
         this.log.appendLine("Resolving Third Party Dependencies");
+
+        try {
+            await this.compileLLDStubExe();
+        } catch {
+            throw new Error("Xcode is not installed. Please install it and restart VS Code");
+        }
+
         if (!(await this.isHomebrewInstalled())
             || !(await this.isXcbeautifyInstalled())
             || !(await this.isRubyInstalled())
-            || !(await this.isGemInstalled("xcodeproj"))) {
+            || !(await this.isGemInstalled("xcodeproj"))
+            || !(await this.isLLDBStubExeCompiled())
+        ) {
             let option: string | undefined = "Yes";
             if (!askUserToInstallDeps)
                 option = await vscode.window.showWarningMessage("Required tools are not installed. Without them extension would not work properly. Do you want to Install Them automatically?", "Yes", "No");
