@@ -18,6 +18,10 @@ export class XCRunHelper {
         return this.getStdOut("xcrun --show-sdk-path");
     }
 
+    public static async checkIfXCodeInstalled() {
+        return this.getStdOut("xcodebuild -version");
+    }
+
     public static async getClangCompilerPath(): Promise<string> {
         return this.getStdOut("xcrun -f clang");
     }

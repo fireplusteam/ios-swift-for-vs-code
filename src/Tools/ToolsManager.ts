@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { InteractiveTerminal } from "./InteractiveTerminal";
 import { getScriptPath } from "../env";
 import { XCRunHelper } from "./XCRunHelper";
+import { error } from "console";
 
 export class ToolsManager {
     private log: vscode.OutputChannel;
@@ -128,9 +129,16 @@ export class ToolsManager {
         this.log.appendLine("Resolving Third Party Dependencies");
 
         try {
+            await XCRunHelper.checkIfXCodeInstalled();
+        } catch (error) {
+            throw new Error(`Xcode is not installed. Please install it: ${error}`)
+        }
+
+        try {
             await this.compileLLDStubExe();
         } catch {
-            throw new Error("Xcode is not installed. Please install it and restart VS Code");
+            if (!this.isLLDBStubExeCompiled())
+                throw new Error("Xcode is not installed. Please install it and restart VS Code");
         }
 
         if (!(await this.isHomebrewInstalled())
