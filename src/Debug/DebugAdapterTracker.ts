@@ -84,9 +84,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         await this.atomicCommand.userCommand(async () => {
             this.runningScripts = true;
             try {
+                if (this.isTerminated) return;
                 await DebugAdapterTracker.updateStatus(this.sessionID, "building");
+                if (this.isTerminated) return;
                 await buildCommand();
+                if (this.isTerminated) return;
                 await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
+                if (this.isTerminated) return;
                 await runCommandClosure();
             } finally {
                 this.runningScripts = false;

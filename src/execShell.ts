@@ -70,7 +70,7 @@ export class Executor {
         const animationInterval = setInterval(() => {
             currentIndex = (currentIndex + 1) % steps.length;
             this.changeNameEmitter?.fire(`${steps[currentIndex]} ${terminalId}`);
-        }, 200); // Change this to control animation speed
+        }, 1000); // Change this to control animation speed
         return animationInterval;
     }
 

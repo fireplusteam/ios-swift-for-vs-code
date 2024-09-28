@@ -67,7 +67,7 @@ export class ToolsManager {
         const installScript = `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
         this.terminal.show();
         await this.terminal.executeCommand(installScript);
-    };
+    }
 
     private async installTool(name: string, toolName = "brew") {
         const command = `${toolName} install ${name}`;
