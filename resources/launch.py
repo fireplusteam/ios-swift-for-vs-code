@@ -19,7 +19,8 @@ with open(launch_log_path, "w+") as file:
 print("INPUT", device_uuid, bundle, session_id)
 
 if device_uuid == "MAC_OS":
-   commandLaunch = ["open", "--new", "--wait-apps", "-o", ".logs/app_MAC_OS.log", helper.get_target_executable()]
+   exe = f"{helper.get_target_executable()}/Contents/MacOS/{helper.get_product_name()}"
+   commandLaunch = [exe]
 else: 
     commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
     # this parameter is causing freeze if it debugger is not launched on time
@@ -45,6 +46,7 @@ def session_validation(process):
 
 def run_process(command: str, log_file_path):
     global process
+    logMessage(command)
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     # Set output to non-blocking
     flags = fcntl.fcntl(process.stdout, fcntl.F_GETFL) # first get current process.stdout flags
@@ -64,11 +66,10 @@ def run_process(command: str, log_file_path):
                 break
             if output:
                 is_ok = True
-                if device_uuid != "MAC_OS":
-                    with helper.FileLock(log_file_path):
-                        with open(log_file_path, "a+") as file:
-                            file.buffer.write(output)
-                            file.flush()
+                with helper.FileLock(log_file_path):
+                    with open(log_file_path, "a+") as file:
+                        file.buffer.write(output)
+                        file.flush()
             else:
                 index += 1
                 if index > 20:

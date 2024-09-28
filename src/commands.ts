@@ -273,8 +273,8 @@ export async function terminateCurrentIOSApp(sessionID: string, executor: Execut
 }
 
 export async function runApp(sessionID: string, executor: Executor, isDebuggable: boolean) {
-    emptyAppLog(getDeviceId());
     if (currentPlatform() == Platform.macOS) {
+        emptyAppLog("MAC_OS");
         await executor.execShell(
             "Run App",
             "run_app.sh",
@@ -283,6 +283,7 @@ export async function runApp(sessionID: string, executor: Executor, isDebuggable
         );
     }
     else {
+        emptyAppLog(getDeviceId());
         await executor.execShell(
             "Run App",
             "run_app.sh",

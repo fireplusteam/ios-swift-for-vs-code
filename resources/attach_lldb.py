@@ -16,6 +16,9 @@ def create_app_logger():
     list = helper.get_env_list()
     scheme = list["PROJECT_SCHEME"].strip("\"")
     device = list["DEVICE_ID"].strip("\"")
+    platform = list["PLATFORM"].strip("\"")
+    if platform == "macOS":
+        device = "MAC_OS"
     app_logger = AppLogger(f".logs/app_{device}.log", scheme, "")
     return app_logger
 
@@ -83,6 +86,11 @@ def create_apple_runtime_warning_watch_process(debugger, pid):
     try: 
         env_list = helper.get_env_list()
         device_id = env_list["DEVICE_ID"].strip("\n")
+        
+        if env_list["PLATFORM"].strip("\"") == "macOS":
+            logMessage("Runtime warnings are not supported for MacOS apps")
+            return
+        
         command = f"xcrun simctl spawn {device_id} log stream --level debug --style syslog --color none --predicate 'subsystem CONTAINS \"com.apple.runtime-issues\" AND processIdentifier == {pid}'"
         logMessage(f"Watching runtime warning command: {command}")
 
@@ -101,9 +109,11 @@ def print_app_log(debugger, pid):
         app_logger.watch_app_log()
     except Exception as e:
         print(f"Printer crashed: {str(e)}")
-    
+
+is_process_watching = False 
 
 def wait_for_process(process_name, debugger, existing_pids, start_time, session_id, is_continue):
+    global is_process_watching
     logMessage("Start time:" + str(start_time))
     try:
         logMessage(f"Waiting for process: {process_name}")
@@ -118,6 +128,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
 
             if len(new_list) > 0:
                 threading.Thread(target=wait_for_exit, args=(debugger, start_time, session_id)).start()
+                is_process_watching = True
                 
                 pid = new_list.pop()
                 logMessage(f"Attaching to pid: {pid}")
@@ -174,6 +185,9 @@ mutex_log_runtime_error = threading.Lock()
 def logRuntimeError(deb, json):
     global mutex_log_runtime_error
     global runtime_warning_process
+    if not runtime_warning_process:
+        return
+
     with mutex_log_runtime_error:
         last_line = None
         while True:
@@ -302,10 +316,22 @@ current_focus_time = time.time()
 def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     "Start monitor to manage simulator window focus while debugging. (Usage: simulator-focus-monitor Simulator)"
     process = exe_ctx.GetProcess()
+    list = helper.get_env_list()
+    product_name = helper.get_product_name()
 
     def focus_simulator(udid):
-        logMessage(f"UDID: {udid}")
-        subprocess.run(['open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', udid])
+        nonlocal list
+        nonlocal product_name
+        global is_process_watching
+        if not is_process_watching:
+            return
+        platform = list["PLATFORM"].strip("\"")
+        if (platform == "macOS"):
+            logMessage(f"UDID: {platform}")
+            subprocess.run(["osascript", "-e", f"tell application \"{product_name}\" to activate"])
+        else:
+            logMessage(f"UDID: {udid}")
+            subprocess.run(['open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', udid])
 
     # Focus simulator if the process is currently running
     if (process.GetState() == lldb.eStateRunning):
