@@ -85,6 +85,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         await this.atomicCommand.userCommand(async () => {
             this.runningScripts = true;
             try {
+                await DebugAdapterTracker.updateStatus(this.sessionID, "building");
                 await buildCommand();
                 await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
                 await runCommandClosure();
@@ -97,7 +98,6 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     async build(dbgConfig: vscode.DebugConfiguration) {
         const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
         try {
-            await DebugAdapterTracker.updateStatus(this.sessionID, "building");
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async () => {
                     await buildSelectedTarget(this.atomicCommand.executor, this.problemResolver);
@@ -109,26 +109,22 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 await this.executeAppCommand(async () => {
                     await buildTests(this.atomicCommand.executor, this.problemResolver);
                 }, async () => {
-                    try {
-                        await runAndDebugTests(this.sessionID, this.atomicCommand.executor, isDebuggable);
-                    } finally {
-                        await this.terminateCurrentSession();
-                    }
+                    await runAndDebugTests(this.sessionID, this.atomicCommand.executor, isDebuggable);
                 }, "All Tests Are Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async () => {
                     await buildTestsForCurrentFile(this.atomicCommand.executor, this.problemResolver, this.testsToRun);
                 }, async () => {
-                    try {
-                        await runAndDebugTestsForCurrentFile(this.sessionID, this.atomicCommand.executor, isDebuggable, this.testsToRun);
-                    } finally {
-                        await this.terminateCurrentSession();
-                    }
+                    await runAndDebugTestsForCurrentFile(this.sessionID, this.atomicCommand.executor, isDebuggable, this.testsToRun);
                 }, "All Tests Are Passed");
             }
         } catch {
             console.log(error);
             await this.terminateCurrentSession();
+        } finally {
+            if (dbgConfig.target !== 'app') {
+                await this.terminateCurrentSession();
+            }
         }
     }
 }
@@ -137,6 +133,7 @@ export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFac
     private problemResolver: ProblemDiagnosticResolver;
     private atomicCommand: AtomicCommand;
     private debugTestSessionEvent: vscode.EventEmitter<string>;
+    private previousDebugSession?: vscode.DebugSession
 
     constructor(problemResolver: ProblemDiagnosticResolver, atomicCommand: AtomicCommand, debugTestSessionEvent: vscode.EventEmitter<string>) {
         this.problemResolver = problemResolver;
@@ -146,7 +143,14 @@ export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFac
 
     createDebugAdapterTracker(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterTracker> {
         if ((session.type === 'xcode-lldb' || session.type === 'lldb') && session.configuration.sessionId) {
-            return new DebugAdapterTracker(session, this.problemResolver, this.atomicCommand, this.debugTestSessionEvent);
+            return new Promise<vscode.DebugAdapterTracker>(async resolve => {
+                if (this.previousDebugSession)
+                    vscode.debug.stopDebugging(this.previousDebugSession);
+                this.previousDebugSession = session;
+                resolve(new DebugAdapterTracker(session, this.problemResolver, this.atomicCommand, this.debugTestSessionEvent));
+
+            });
+
         }
     }
 }

@@ -5,6 +5,7 @@ import path from "path";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
 import { DebugAdapterTracker } from "./DebugAdapterTrackerFactory";
+import { count } from "console";
 
 export class TerminatedDebugSessionTask extends Error {
     public constructor(message: string) {
@@ -32,7 +33,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     static lldbName = "iOS: App Debugger Console";
 
     private sessionID = getSessionId("debugger");
-    private counter = 0;
+    private _counterID = 0;
+    private get counterID(): number {
+        this._counterID += 1;
+        return this._counterID;
+    }
     private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
 
     private debugTestSessionEvent: vscode.EventEmitter<string>;
@@ -43,7 +48,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSDebugger(isDebuggable: boolean) {
-        const appSessionId = getSessionId(`App_${isDebuggable}`);
+        const appSessionId = getSessionId(`App_${isDebuggable}${this.counterID}`);
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: Run App & Debug",
@@ -55,8 +60,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
-            dis = vscode.debug.onDidTerminateDebugSession(e => {
-                if (e.configuration.appSessionId === appSessionId)
+            dis = this.debugTestSessionEvent.event(e => {
+                if (e === appSessionId)
                     resolve(true);
             });
             vscode.debug.startDebugging(undefined, debugSession);
@@ -64,7 +69,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSTestsDebugger(isDebuggable: boolean) {
-        const appSessionId = getSessionId(`All tests: ${isDebuggable}`);
+        const appSessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: Run Tests & Debug",
@@ -85,7 +90,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSTestsForCurrentFileDebugger(tests: string[], isDebuggable: boolean) {
-        const appSessionId = `${getSessionId(tests.join(","))}_${isDebuggable}`;
+        const appSessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: Run Tests & Debug: Current File",
@@ -115,8 +120,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         }
         const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
 
-        this.counter += 1;
-        this.sessionID = getSessionId(`debugger`) + this.counter;
+        this.sessionID = getSessionId(`debugger`) + this.counterID;
         await DebugAdapterTracker.updateStatus(this.sessionID, "configuring");
 
         if (runtimeWarningsConfigStatus() !== "off")
@@ -154,6 +158,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const command = runtimeWarningBreakPointCommand();
         if (command && isDebuggable)
             lldbCommands.push(command);
+        if (dbgConfig.target !== 'app') { // for running tests, we don't need to listen to those process handler as it's redundant
+            lldbCommands.push("process handle SIGKILL -n true -p true -s false");
+            lldbCommands.push("process handle SIGTERM -n true -p true -s false");
+        }
 
         // TODO: try to refactor launch logic
         // https://junch.github.io/debug/2016/09/19/original-lldb.html
