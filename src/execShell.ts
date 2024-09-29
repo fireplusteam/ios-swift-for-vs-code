@@ -224,7 +224,7 @@ export class Executor {
 
             proc.once("error", (err) => {
                 userCancel?.dispose();
-                terminalClose.dispose();
+                terminalClose?.dispose();
                 if (this.childProc !== proc) {
                     console.log("Error, wrong child process error")
                     return;

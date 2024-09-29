@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.0.18",
+    "version": "0.1.0",
     "os": [
         "darwin"
     ],
@@ -131,7 +131,7 @@
                     "type": "boolean",
                     "default": false,
                     "title": "Changes Watcher (Experimental)",
-                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes"
+                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes while editing"
                 },
                 "vscode-ios.watcher": {
                     "type": "boolean",
