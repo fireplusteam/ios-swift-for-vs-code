@@ -5,7 +5,7 @@ import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
-import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagment/AtomicCommand";
+import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 
 enum State {
     ModuleNotChanged,

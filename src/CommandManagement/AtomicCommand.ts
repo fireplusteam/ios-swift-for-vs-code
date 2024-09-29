@@ -1,12 +1,9 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorRunningError, ExecutorTaskError, ExecutorTerminatedByUserError } from "../execShell";
-import { TerminatedDebugSessionTask } from "../Debug/DebugConfigurationProvider";
+import { Executor, ExecutorRunningError, ExecutorTaskError, ExecutorTerminated } from "../execShell";
 import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
-import { CommandContext } from "./CommandContext";
-import { error } from "console";
+import { CommandContext, UserTerminatedError } from "./CommandContext";
 
 export const UserCommandIsExecuting: Error = new Error("User task is currently executing");
-export const UserTerminatedError: Error = new Error("Terminated");
 
 function isShowErrorEnabled() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("show.log");
@@ -78,12 +75,12 @@ export class AtomicCommand {
         }
     }
 
-    async withCancellation(closure: () => Promise<void>, cancellation: vscode.CancellationTokenSource) {
+    private async withCancellation(closure: () => Promise<void>, cancellation: vscode.CancellationTokenSource) {
         let dis: vscode.Disposable;
         return new Promise<void>(async (resolve, reject) => {
             dis = cancellation.token.onCancellationRequested(e => {
-                reject(UserTerminatedError);
                 dis.dispose();
+                reject(UserTerminatedError);
             })
             resolve(await closure());
         });
@@ -140,10 +137,8 @@ export class AtomicCommand {
                         });
                 }
                 throw err;
-            } else if (err instanceof ExecutorTerminatedByUserError) {
+            } else if (err instanceof ExecutorTerminated) {
                 throw err; // no need to notify as this's one is terminated by user
-            } else if (err instanceof TerminatedDebugSessionTask) {
-                throw err;
             } else if (err == E_CANCELED) {
                 // lock was cancelled: do nothing
                 // } else if (err == UserTerminatedError) {

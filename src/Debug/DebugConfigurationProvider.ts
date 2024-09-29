@@ -5,12 +5,6 @@ import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarnings
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
 
-export class TerminatedDebugSessionTask extends Error {
-    public constructor(message: string) {
-        super(message);
-    }
-}
-
 function runtimeWarningsConfigStatus() {
     return vscode.workspace.getConfiguration("vscode-ios").get<string>("swiftui.runtimeWarnings");
 }

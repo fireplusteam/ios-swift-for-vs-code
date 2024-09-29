@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
 
+export const UserTerminatedError: Error = new Error("Terminated");
+
 export class CommandContext {
     cancellationToken: vscode.CancellationTokenSource;
     private executor: Executor;

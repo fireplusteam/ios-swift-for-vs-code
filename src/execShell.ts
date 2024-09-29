@@ -6,11 +6,10 @@ import {
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
-import { CommandContext } from "./CommandManagment/CommandContext";
-import { UserTerminatedError } from "./CommandManagment/AtomicCommand";
-import { pid } from "process";
+import { CommandContext, UserTerminatedError } from "./CommandManagement/CommandContext";
+import { error } from "console";
 
-export class ExecutorTerminatedByUserError extends Error {
+export class ExecutorTerminated extends Error {
     public constructor(message: string) {
         super(message);
     }
@@ -51,7 +50,6 @@ export class Executor {
     private changeNameEmitter: vscode.EventEmitter<string> | undefined;
     private childProc: ChildProcess | undefined;
     private animationInterval: NodeJS.Timeout | undefined;
-    private errorOnKill: Error | undefined;
 
     private onExit = new vscode.EventEmitter<void>();
 
@@ -101,8 +99,7 @@ export class Executor {
             open: () => this.writeEmitter?.fire(`\x1b[31${terminalId}\x1b[0m`),
             close: () => {
                 this.terminal = undefined;
-                if (this.childProc && (this.childProc.exitCode == null && this.childProc.signalCode == null))
-                    killAll(this.childProc?.pid, "SIGKILL");
+                this.onExit.fire();
             },
         };
         this.terminal = vscode.window.createTerminal({
@@ -112,7 +109,10 @@ export class Executor {
         return this.terminal;
     }
 
-    private terminateShellImp() {
+    private terminateShellImp(proc: ChildProcess) {
+        if (this.childProc !== proc) {
+            console.warn("Try to terminate wrong process");
+        }
         clearInterval(this.animationInterval);
         this.animationInterval = undefined;
         this.childProc = undefined;
@@ -171,7 +171,6 @@ export class Executor {
         });
         this._executingCommand = commandName;
         this.childProc = proc;
-        this.errorOnKill = undefined;
         const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(commandName);
         if (showTerminal) {
             terminal?.show();
@@ -195,56 +194,60 @@ export class Executor {
         });
 
         return new Promise((resolve, reject) => {
-            let dis: vscode.Disposable | undefined;
-            dis = cancellationToken?.onCancellationRequested(() => {
-                dis?.dispose();
+            let userCancel: vscode.Disposable | undefined;
+            let terminalClose: vscode.Disposable | undefined;
+            userCancel = cancellationToken?.onCancellationRequested(() => {
+                userCancel?.dispose();
+                terminalClose?.dispose();
                 reject(UserTerminatedError);
-
-                if (proc.exitCode != null || proc.signalCode != null)
+                if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
                     return;
-                if (this.childProc !== proc) {
-                    console.log("Terminal is used for another proc")
-                    return;
-                }
 
-                this.terminateShellImp();
+                this.terminateShellImp(proc);
                 this.changeNameEmitter?.fire(
                     `🚫 ${this.getTerminalName(commandName)}`
                 );
                 killAll(proc.pid, "SIGKILL");
             });
+            terminalClose = this.onExit.event(() => {
+                userCancel?.dispose();
+                terminalClose?.dispose();
+                reject(UserTerminatedError);
+                if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
+                    return;
+
+                this.terminateShellImp(proc);
+                killAll(proc.pid, "SIGKILL");
+            });
 
             proc.once("error", (err) => {
-                dis?.dispose();
+                userCancel?.dispose();
+                terminalClose.dispose();
                 if (this.childProc !== proc) {
                     console.log("Error, wrong child process error")
                     return;
                 }
-                this.terminateShellImp();
+                this.terminateShellImp(proc);
                 reject(err);
             });
+
             proc.once("exit", (code, signal) => {
-                dis?.dispose();
+                userCancel?.dispose();
+                terminalClose?.dispose();
+
                 if (this.childProc !== proc) {
                     console.log("Error, wrong child process terminated")
                     return;
                 }
-                this._executingCommand = undefined;
-                this.childProc = undefined;
-                clearInterval(this.animationInterval);
+                this.terminateShellImp(proc)
 
                 if (signal !== null) {
-                    this.terminateShellImp();
                     if (mode !== ExecutorMode.silently) {
                         this.changeNameEmitter?.fire(
                             `❌ ${this.getTerminalName(commandName)}`
                         );
                     }
-                    if (this.errorOnKill !== undefined) {
-                        reject(this.errorOnKill);
-                    } else {
-                        reject(new ExecutorTerminatedByUserError(`${this.getTerminalName(commandName)} is terminated by a User`));
-                    }
+                    reject(new ExecutorTerminated(`${this.getTerminalName(commandName)} is terminated with SIGNAL : ${error}`));
                     return;
                 }
 

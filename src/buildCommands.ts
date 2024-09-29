@@ -3,7 +3,7 @@ import { emptyBuildLog } from './utils';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { getWorkspacePath } from './env';
 import path from 'path';
-import { CommandContext } from "./CommandManagment/CommandContext";
+import { CommandContext } from "./CommandManagement/CommandContext";
 
 export function getFileNameLog() {
     const fileName = path.join(".logs", "build.log");

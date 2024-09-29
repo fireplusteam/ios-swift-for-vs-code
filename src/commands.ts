@@ -10,7 +10,7 @@ import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "./utils";
-import { CommandContext } from './CommandManagment/CommandContext';
+import { CommandContext } from './CommandManagement/CommandContext';
 
 export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";

@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
 import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { AtomicCommand } from "./CommandManagment/AtomicCommand";
-import { CommandContext } from "./CommandManagment/CommandContext";
+import { AtomicCommand } from "./CommandManagement/AtomicCommand";
+import { CommandContext } from "./CommandManagement/CommandContext";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;

@@ -1,12 +1,11 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
-import { AtomicCommand } from "../CommandManagment/AtomicCommand";
+import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "../commands";
-import { TerminatedDebugSessionTask } from "./DebugConfigurationProvider";
 import { error } from "console";
 import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
-import { CommandContext } from "../CommandManagment/CommandContext";
+import { CommandContext } from "../CommandManagement/CommandContext";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -36,11 +35,11 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onDidSendMessage(message: any) {
-        console.log('Sent:', message);
+        // console.log('Sent:', message);
     }
 
     onWillReceiveMessage(message: any) {
-        console.log('Will receive:', message);
+        // console.log('Will receive:', message);
     }
 
     onWillStopSession() {
@@ -63,8 +62,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         try {
             this.isTerminated = true;
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
-            if (this.commandContext)
-                await terminateCurrentIOSApp(this.commandContext, this.sessionID, true);
+            const terminationContext = new CommandContext(new vscode.CancellationTokenSource(), new Executor());
+            await terminateCurrentIOSApp(terminationContext, this.sessionID, true);
             this.commandContext?.cancellationToken.cancel();
         } finally {
             try {
