@@ -360,7 +360,7 @@ export async function enableXCBBuildService(enabled: boolean) {
     await sleep(5000);
     const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
 
-    return new Promise<void>(async (resolve) => {
+    return new Promise<void>((resolve) => {
         exec(checkIfInjectedCommand, async (error, stdout, stderr) => {
             if (enabled && error === null || !enabled && error != null) {
                 resolve();

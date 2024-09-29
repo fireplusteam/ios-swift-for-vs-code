@@ -24,7 +24,11 @@ export async function executeTask(name: string) {
                         resolve(true);
                     }
                 });
-                await vscode.tasks.executeTask(task);
+                try {
+                    await vscode.tasks.executeTask(task);
+                } catch (err) {
+                    reject(err)
+                }
             });
         }
     }

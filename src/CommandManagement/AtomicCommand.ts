@@ -78,11 +78,15 @@ export class AtomicCommand {
     private async withCancellation(closure: () => Promise<void>, cancellation: vscode.CancellationTokenSource) {
         let dis: vscode.Disposable;
         return new Promise<void>(async (resolve, reject) => {
-            dis = cancellation.token.onCancellationRequested(e => {
-                dis.dispose();
-                reject(UserTerminatedError);
-            })
-            resolve(await closure());
+            try {
+                dis = cancellation.token.onCancellationRequested(e => {
+                    dis.dispose();
+                    reject(UserTerminatedError);
+                })
+                resolve(await closure());
+            } catch (err) {
+                reject(err);
+            }
         });
     }
 

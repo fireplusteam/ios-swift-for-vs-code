@@ -67,7 +67,7 @@ export class XcodeProjectFileProxy {
         if (this.commandQueue === undefined) {
             let dis: vscode.Disposable | undefined;
             let disError: vscode.Disposable | undefined;
-            this.commandQueue = new Promise<string[]>(async (resolve, reject) => {
+            this.commandQueue = new Promise<string[]>((resolve, reject) => {
                 if (this.rl === undefined) {
                     reject(new Error("Process is killed"));
                 }
