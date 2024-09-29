@@ -55,8 +55,6 @@ export class AtomicCommand {
                 } else {
                     throw UserCommandIsExecuting;
                 }
-            } else {
-                this._prevCommandContext?.cancellationToken.cancel();
             }
             release = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID)
@@ -145,8 +143,8 @@ export class AtomicCommand {
                 throw err; // no need to notify as this's one is terminated by user
             } else if (err == E_CANCELED) {
                 // lock was cancelled: do nothing
-                // } else if (err == UserTerminatedError) {
-                //     // terminated by a user
+            } else if (err == UserTerminatedError) {
+                throw err;
             } else {
                 if ((err as Error).message) {
                     vscode.window.showErrorMessage((err as Error).message);

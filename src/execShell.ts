@@ -204,9 +204,11 @@ export class Executor {
                     return;
 
                 this.terminateShellImp(proc);
-                this.changeNameEmitter?.fire(
-                    `🚫 ${this.getTerminalName(commandName)}`
-                );
+                if (mode !== ExecutorMode.silently) {
+                    this.changeNameEmitter?.fire(
+                        `🚫 ${this.getTerminalName(commandName)}`
+                    );
+                }
                 killAll(proc.pid, "SIGKILL");
             });
             terminalClose = this.onExit.event(() => {
