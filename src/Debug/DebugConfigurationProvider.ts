@@ -59,7 +59,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         });
     }
 
-    async startIOSTestsDebugger(isDebuggable: boolean) {
+    async startIOSTestsDebugger(isDebuggable: boolean, testRun: vscode.TestRun) {
         const appSessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
@@ -76,11 +76,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 if (e === appSessionId)
                     resolve(true);
             });
-            vscode.debug.startDebugging(undefined, debugSession);
+            vscode.debug.startDebugging(undefined, debugSession, { testRun: testRun });
         });
     }
 
-    async startIOSTestsForCurrentFileDebugger(tests: string[], isDebuggable: boolean) {
+    async startIOSTestsForCurrentFileDebugger(tests: string[], isDebuggable: boolean, testRun: vscode.TestRun) {
         const appSessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
         let debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
@@ -88,8 +88,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             request: "launch",
             target: "testsForCurrentFile",
             isDebuggable: isDebuggable,
-            appSessionId: appSessionId,
-            testsToRun: tests
+            appSessionId: appSessionId
         };
 
         let dis: vscode.Disposable | undefined;
@@ -98,7 +97,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 if (e === appSessionId)
                     resolve(true);
             });
-            vscode.debug.startDebugging(undefined, debugSession);
+            vscode.debug.startDebugging(undefined, debugSession, { testRun: testRun });
         });
     }
 

@@ -61,8 +61,7 @@ async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectM
     }
 }
 
-const projectExecutor = new Executor();
-const atomicCommand = new AtomicCommand(projectExecutor);
+const atomicCommand = new AtomicCommand(new Executor());
 const problemDiagnosticResolver = new ProblemDiagnosticResolver();
 
 let debugConfiguration: DebugConfigurationProvider;
@@ -131,11 +130,11 @@ export async function activate(context: vscode.ExtensionContext) {
         debugSessionEndEvent.event
     );
 
-    testProvider = new TestProvider(projectManager, async (tests, isDebuggable) => {
+    testProvider = new TestProvider(projectManager, async (tests, isDebuggable, testRun) => {
         if (tests) {
-            return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable);
+            return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable, testRun);
         } else {
-            return await debugConfiguration.startIOSTestsDebugger(isDebuggable);
+            return await debugConfiguration.startIOSTestsDebugger(isDebuggable, testRun);
         }
     });
     testProvider.activateTests(context);

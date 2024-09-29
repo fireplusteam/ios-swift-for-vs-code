@@ -64,7 +64,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
             const terminationContext = new CommandContext(new vscode.CancellationTokenSource(), new Executor());
             await terminateCurrentIOSApp(terminationContext, this.sessionID, true);
-            this.commandContext?.cancellationToken.cancel();
+            this.commandContext?.cancel();
         } finally {
             try {
                 await vscode.debug.stopDebugging(this.debugSession);

@@ -4,12 +4,19 @@ import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
 export const UserTerminatedError: Error = new Error("Terminated");
 
 export class CommandContext {
-    cancellationToken: vscode.CancellationTokenSource;
-    private executor: Executor;
+
+    private _cancellationTokenSource: vscode.CancellationTokenSource;
+    private _executor: Executor;
+    public get executor(): Executor {
+        return this.executor;
+    }
+    public get cancellationToken(): vscode.CancellationToken {
+        return this._cancellationTokenSource.token;
+    }
 
     constructor(cancellationToken: vscode.CancellationTokenSource, executor: Executor) {
-        this.cancellationToken = cancellationToken;
-        this.executor = executor;
+        this._cancellationTokenSource = cancellationToken;
+        this._executor = executor;
     }
 
     public async execShell(
@@ -20,8 +27,8 @@ export class CommandContext {
         returnType = ExecutorReturnType.statusCode,
         mode: ExecutorMode = ExecutorMode.verbose
     ): Promise<boolean | string> {
-        return await this.executor.execShell(
-            this.cancellationToken.token,
+        return await this._executor.execShell(
+            this._cancellationTokenSource.token,
             commandName,
             fileOrCommand,
             args,
@@ -29,5 +36,9 @@ export class CommandContext {
             returnType,
             mode
         )
+    }
+
+    public cancel() {
+        this._cancellationTokenSource.cancel();
     }
 }

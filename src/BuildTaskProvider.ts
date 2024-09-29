@@ -130,7 +130,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,
                     close: async () => {
-                        commandContext?.cancellationToken.cancel();
+                        commandContext?.cancel();
                     },
                 };
                 resolved(pty);

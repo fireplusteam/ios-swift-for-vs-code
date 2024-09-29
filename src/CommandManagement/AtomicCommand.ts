@@ -50,13 +50,13 @@ export class AtomicCommand {
         try {
             if (this._mutex.isLocked()) {
                 if (this._executingCommand == "autowatcher") {
-                    this._prevCommandContext?.cancellationToken.cancel();
+                    this._prevCommandContext?.cancel();
                     this._mutex.cancel();
                 } else {
                     throw UserCommandIsExecuting;
                 }
             } else {
-                this._prevCommandContext?.cancellationToken.cancel();
+                this._prevCommandContext?.cancel();
             }
             release = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID)
@@ -75,11 +75,11 @@ export class AtomicCommand {
         }
     }
 
-    private async withCancellation(closure: () => Promise<void>, cancellation: vscode.CancellationTokenSource) {
+    private async withCancellation(closure: () => Promise<void>, cancellation: vscode.CancellationToken) {
         let dis: vscode.Disposable;
         return new Promise<void>(async (resolve, reject) => {
             try {
-                dis = cancellation.token.onCancellationRequested(e => {
+                dis = cancellation.onCancellationRequested(e => {
                     dis.dispose();
                     reject(UserTerminatedError);
                 })
@@ -107,13 +107,13 @@ export class AtomicCommand {
                     );
                 }
                 if (choice === "Terminate") {
-                    this._prevCommandContext?.cancellationToken.cancel();
+                    this._prevCommandContext?.cancel();
                     this._mutex.cancel();
                 } else {
                     throw UserCommandIsExecuting;
                 }
             } else {
-                this._prevCommandContext?.cancellationToken.cancel();
+                this._prevCommandContext?.cancel();
             }
             releaser = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID)

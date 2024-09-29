@@ -13,12 +13,12 @@ import { error } from 'console';
 
 export class TestProvider {
     projectManager: ProjectManager
-    executeTests: (tests: string[] | undefined, isDebuggable: boolean) => Promise<boolean>;
+    executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>;
     context = new TestTreeContext();
     asyncParser = new TestCaseAsyncParser()
     asyncTestCaseParser = new TestCaseProblemParser();
 
-    constructor(projectManager: ProjectManager, executeTests: (tests: string[] | undefined, isDebuggable: boolean) => Promise<boolean>) {
+    constructor(projectManager: ProjectManager, executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>) {
         this.projectManager = projectManager;
         this.executeTests = executeTests;
     }
@@ -97,7 +97,7 @@ export class TestProvider {
                             }
                             console.log("log");
                         });
-                    await this.executeTests(request.include === undefined ? undefined : tests, request.profile?.kind === vscode.TestRunProfileKind.Debug);
+                    await this.executeTests(request.include === undefined ? undefined : tests, request.profile?.kind === vscode.TestRunProfileKind.Debug, run);
                 }
                 catch (err) {
                     console.log(`Run with error: ${err}`);
