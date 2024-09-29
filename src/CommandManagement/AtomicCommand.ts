@@ -55,6 +55,8 @@ export class AtomicCommand {
                 } else {
                     throw UserCommandIsExecuting;
                 }
+            } else {
+                this._prevCommandContext?.cancellationToken.cancel();
             }
             release = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID)

@@ -139,12 +139,6 @@
                     "title": "Changes Between Modules Watcher",
                     "description": "Xcodebuild Watch. Build automatically while editing project files in multiple module. Needed for updating indexes"
                 },
-                "vscode-ios.confirm.restart": {
-                    "type": "boolean",
-                    "default": true,
-                    "title": "Confirm to Restart Debug Session",
-                    "description": "If enabled, asks a user to terminate debug session on a new session being triggered"
-                },
                 "vscode-ios.show.log": {
                     "type": "boolean",
                     "default": true,
