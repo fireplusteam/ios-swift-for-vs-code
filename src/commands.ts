@@ -5,10 +5,10 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { currentPlatform, getDeviceId, getEnvList, getProjectConfiguration, getProjectFileName, getProjectPath, getProjectPlatform, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
+import { currentPlatform, getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
-import { showPicker } from "./inputPicker";
+import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
 
@@ -167,8 +167,14 @@ export async function selectDevice(commandContext: CommandContext, shouldCheckWo
         ExecutorReturnType.stdout,
     )) as string);
 
+    const items: QuickPickItem[] = JSON.parse(stdout);
+    if (items.length == 0) {
+        vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
+        return false;
+    }
+
     let option = await showPicker(
-        stdout,
+        items,
         "Device",
         "Please select Device for DEBUG",
         false,
@@ -213,7 +219,6 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         await selectTarget(commandContext, true, false);
         selectedTarget = true;
     }
-
 
     const command = getLastLine(await commandContext.execShell(
         "Validate Environment",
@@ -307,8 +312,14 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
         ExecutorReturnType.stdout
     )) as string);
 
+    const items: QuickPickItem[] = JSON.parse(stdout);
+    if (items.length == 0) {
+        vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
+        return false;
+    }
+
     let option = await showPicker(
-        stdout,
+        items,
         "Devices",
         "Please select Multiple Devices to Run You App",
         true,
