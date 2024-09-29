@@ -10,8 +10,9 @@ import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "./utils";
+import { CommandContext } from './CommandManagment/CommandContext';
 
-export async function selectProjectFile(executor: Executor, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
+export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
     const projectEnd = ".xcodeproj/project.pbxproj";
     const excludeEnd = ".xcodeproj/project.xcworkspace"
@@ -75,20 +76,19 @@ export async function selectProjectFile(executor: Executor, projectManager: Proj
         return false;
     }
     updateProject(selection);
-    await executor.terminateShell();
     await projectManager.loadProjectFiles(true);
-    await checkWorkspace(executor, true);
+    await checkWorkspace(commandContext, true);
     return true;
 }
 
-export async function selectTarget(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
+export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false, shouldCheckWorkspace = true) {
     if (shouldCheckWorkspace) {
-        const selected = await checkWorkspace(executor, ignoreFocusOut);
+        const selected = await checkWorkspace(commandContext, ignoreFocusOut);
         if (selected.selectedTarget)
             return;
     }
 
-    let stdout = getLastLine((await executor.execShell(
+    let stdout = getLastLine((await commandContext.execShell(
         "Fetch Project Targets",
         "populate_schemes.sh",
         [],
@@ -108,23 +108,23 @@ export async function selectTarget(executor: Executor, ignoreFocusOut = false, s
         return;
     }
 
-    await executor.execShell(
+    await commandContext.execShell(
         "Update Selected Target",
         "update_environment.sh",
         ["-destinationScheme", option]
     );
 
-    await checkWorkspace(executor);
+    await checkWorkspace(commandContext);
 }
 
-export async function selectConfiguration(executor: Executor, ignoreFocusOut = false, shouldCheckWorkspace = true) {
+export async function selectConfiguration(commandContext: CommandContext, ignoreFocusOut = false, shouldCheckWorkspace = true) {
     if (shouldCheckWorkspace) {
-        const selected = await checkWorkspace(executor, ignoreFocusOut);
+        const selected = await checkWorkspace(commandContext, ignoreFocusOut);
         if (selected.selectedConfiguration)
             return;
     }
 
-    let stdout = getLastLine((await executor.execShell(
+    let stdout = getLastLine((await commandContext.execShell(
         "Fetch Project Configurations",
         "populate_configurations.sh",
         [ // TODO: Need to figure out if we can pass ProjectManager here
@@ -146,20 +146,20 @@ export async function selectConfiguration(executor: Executor, ignoreFocusOut = f
         return;
     }
 
-    await executor.execShell(
+    await commandContext.execShell(
         "Update Selected Configuration",
         "update_environment.sh",
         ["-destinationConfiguration", option]
     );
 }
 
-export async function selectDevice(executor: Executor, shouldCheckWorkspace = true, ignoreFocusOut = false) {
+export async function selectDevice(commandContext: CommandContext, shouldCheckWorkspace = true, ignoreFocusOut = false) {
     if (shouldCheckWorkspace === true) {
-        const selected = await checkWorkspace(executor);
+        const selected = await checkWorkspace(commandContext);
         if (selected.selectedDevice)
             return;
     }
-    let stdout = getLastLine((await executor.execShell(
+    let stdout = getLastLine((await commandContext.execShell(
         "Fetch Devices",
         "populate_devices.sh",
         ["-single"],
@@ -180,7 +180,7 @@ export async function selectDevice(executor: Executor, shouldCheckWorkspace = tr
         return false;
     }
 
-    return await executor.execShell(
+    return await commandContext.execShell(
         "Update DEBUG Device",
         "update_environment.sh",
         ["-destinationDevice", option]
@@ -191,31 +191,31 @@ export async function restartLSP() {
     await vscode.commands.executeCommand("swift.restartLSPServer");
 }
 
-export async function checkWorkspace(executor: Executor, ignoreFocusOut = false) {
+export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
     let selectedConfiguration = false;
     try {
         if (getProjectConfiguration().length == 0) {
-            await selectConfiguration(executor, true, false);
+            await selectConfiguration(commandContext, true, false);
             selectedConfiguration = true;
         }
     } catch {
-        await selectConfiguration(executor, true, false);
+        await selectConfiguration(commandContext, true, false);
         selectedConfiguration = true;
     }
 
     let selectedTarget = false;
     try {
         if (getProjectScheme().length == 0) {
-            await selectTarget(executor, true, false);
+            await selectTarget(commandContext, true, false);
             selectedTarget = true;
         }
     } catch {
-        await selectTarget(executor, true, false);
+        await selectTarget(commandContext, true, false);
         selectedTarget = true;
     }
 
 
-    const command = getLastLine(await executor.execShell(
+    const command = getLastLine(await commandContext.execShell(
         "Validate Environment",
         "check_workspace.sh",
         [],
@@ -229,16 +229,16 @@ export async function checkWorkspace(executor: Executor, ignoreFocusOut = false)
     const env = getEnvList();
     let selectedDevice = false;
     if (!env.hasOwnProperty("DEVICE_ID") || !env.hasOwnProperty("PLATFORM")) {
-        await selectDevice(executor, false, ignoreFocusOut);
+        await selectDevice(commandContext, false, ignoreFocusOut);
         selectedDevice = true;
     }
 
     return { selectedTarget: selectedTarget, selectedConfiguration: selectedConfiguration, selectedDevice: selectedDevice };
 }
 
-export async function generateXcodeServer(executor: Executor) {
-    await checkWorkspace(executor);
-    await executor.execShell(
+export async function generateXcodeServer(commandContext: CommandContext) {
+    await checkWorkspace(commandContext);
+    await commandContext.execShell(
         "Generate xCode Server",
         "build_autocomplete.sh"
     );
@@ -247,6 +247,7 @@ export async function generateXcodeServer(executor: Executor) {
 export async function openXCode(activeFile: string) {
     const openExec = new Executor();
     const stdout = await openExec.execShell(
+        undefined,
         "Open Xcode",
         "open_xcode.sh",
         [getProjectPath()],
@@ -260,8 +261,8 @@ export async function openXCode(activeFile: string) {
     }
 }
 
-export async function terminateCurrentIOSApp(sessionID: string, executor: Executor, silent = false) {
-    await executor.execShell(
+export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string, silent = false) {
+    await commandContext.execShell(
         "Terminate Current iOS App",
         "terminate_current_running_app.sh",
         [sessionID],
@@ -272,10 +273,10 @@ export async function terminateCurrentIOSApp(sessionID: string, executor: Execut
     await killSpawnLaunchedProcesses(sessionID);
 }
 
-export async function runApp(sessionID: string, executor: Executor, isDebuggable: boolean) {
+export async function runApp(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
     if (currentPlatform() == Platform.macOS) {
         emptyAppLog("MAC_OS");
-        await executor.execShell(
+        await commandContext.execShell(
             "Run App",
             "run_app.sh",
             [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING", "-MAC_OS"],
@@ -284,7 +285,7 @@ export async function runApp(sessionID: string, executor: Executor, isDebuggable
     }
     else {
         emptyAppLog(getDeviceId());
-        await executor.execShell(
+        await commandContext.execShell(
             "Run App",
             "run_app.sh",
             [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
@@ -293,12 +294,12 @@ export async function runApp(sessionID: string, executor: Executor, isDebuggable
     }
 }
 
-export async function runAppOnMultipleDevices(sessionID: string, executor: Executor, problemResolver: ProblemDiagnosticResolver) {
+export async function runAppOnMultipleDevices(commandContext: CommandContext, sessionID: string, problemResolver: ProblemDiagnosticResolver) {
     if (currentPlatform() == Platform.macOS) {
         vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
         return;
     }
-    let stdout = getLastLine((await executor.execShell(
+    let stdout = getLastLine((await commandContext.execShell(
         "Fetch Multiple Devices",
         "populate_devices.sh",
         ["-multi"],
@@ -320,13 +321,13 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
         return;
     }
 
-    await buildSelectedTarget(executor, problemResolver);
-    await terminateCurrentIOSApp(sessionID, executor);
+    await buildSelectedTarget(commandContext, problemResolver);
+    await terminateCurrentIOSApp(commandContext, sessionID);
 
     for (let device of option.split(" ")) {
         emptyAppLog(device.substring("id=".length));
     }
-    await executor.execShell(
+    await commandContext.execShell(
         "Run App On Multiple Devices",
         "run_app.sh",
         [sessionID, "RUNNING", "-DEVICES", `${option}`],
@@ -334,8 +335,8 @@ export async function runAppOnMultipleDevices(sessionID: string, executor: Execu
     );
 }
 
-export async function runAndDebugTests(sessionID: string, executor: Executor, isDebuggable: boolean) {
-    await executor.execShell(
+export async function runAndDebugTests(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
+    await commandContext.execShell(
         "Run Tests",
         "test_app.sh",
         [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
@@ -343,11 +344,11 @@ export async function runAndDebugTests(sessionID: string, executor: Executor, is
     );
 }
 
-export async function runAndDebugTestsForCurrentFile(sessionID: string, executor: Executor, isDebuggable: boolean, tests: string[]) {
+export async function runAndDebugTestsForCurrentFile(commandContext: CommandContext, sessionID: string, isDebuggable: boolean, tests: string[]) {
     const option = tests.map(e => {
         return `-only-testing:${e}`;
     }).join(" ");
-    await executor.execShell(
+    await commandContext.execShell(
         "Run Tests For Current File",
         "test_app.sh",
         [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-SELECTED", option],

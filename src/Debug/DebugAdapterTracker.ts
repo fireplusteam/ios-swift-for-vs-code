@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
-import { AtomicCommand } from "../AtomicCommand";
+import { AtomicCommand } from "../CommandManagment/AtomicCommand";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "../commands";
 import { TerminatedDebugSessionTask } from "./DebugConfigurationProvider";
 import { error } from "console";
 import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
+import { CommandContext } from "../CommandManagment/CommandContext";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -13,7 +14,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private atomicCommand: AtomicCommand;
     private debugTestSessionEvent: vscode.EventEmitter<string>;
     private isTerminated = false;
-    private runningScripts = false;
+    private commandContext: CommandContext | undefined;
 
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
@@ -59,18 +60,23 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private async terminateCurrentSession() {
         if (this.isTerminated)
             return
-        this.isTerminated = true;
-
-        await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
-        if (this.runningScripts)
-            await this.atomicCommand.executor.terminateShell(new TerminatedDebugSessionTask("Debug Task"));
-        await terminateCurrentIOSApp(this.sessionID, new Executor(), true);
-
-        this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
+        try {
+            this.isTerminated = true;
+            await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
+            if (this.commandContext)
+                await terminateCurrentIOSApp(this.commandContext, this.sessionID, true);
+            this.commandContext?.cancellationToken.cancel();
+        } finally {
+            try {
+                await vscode.debug.stopDebugging(this.debugSession);
+            } catch { }
+            this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
+        }
     }
 
     public static async updateStatus(sessionId: string, status: string) {
         await new Executor().execShell(
+            undefined,
             "Debugger Launching",
             "debugger_launching.sh",
             [sessionId, status],
@@ -80,21 +86,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         );
     }
 
-    private async executeAppCommand(buildCommand: () => Promise<void>, runCommandClosure: () => Promise<void>, successMessage: string | undefined = undefined) {
-        await this.atomicCommand.userCommand(async () => {
-            this.runningScripts = true;
-            try {
-                if (this.isTerminated) return;
-                await DebugAdapterTracker.updateStatus(this.sessionID, "building");
-                if (this.isTerminated) return;
-                await buildCommand();
-                if (this.isTerminated) return;
-                await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-                if (this.isTerminated) return;
-                await runCommandClosure();
-            } finally {
-                this.runningScripts = false;
-            }
+    private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
+        await this.atomicCommand.userCommand(async (context) => {
+            this.commandContext = context;
+            await DebugAdapterTracker.updateStatus(this.sessionID, "building");
+            await buildCommand(context);
+            await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
+            await runCommandClosure(context);
         }, successMessage);
     }
 
@@ -102,22 +100,22 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
         try {
             if (dbgConfig.target === "app") {
-                await this.executeAppCommand(async () => {
-                    await buildSelectedTarget(this.atomicCommand.executor, this.problemResolver);
-                }, async () => {
-                    await runApp(this.sessionID, this.atomicCommand.executor, isDebuggable);
+                await this.executeAppCommand(async (context) => {
+                    await buildSelectedTarget(context, this.problemResolver);
+                }, async (context) => {
+                    await runApp(context, this.sessionID, isDebuggable);
                 });
             } else if (dbgConfig.target === "tests") {
-                await this.executeAppCommand(async () => {
-                    await buildTests(this.atomicCommand.executor, this.problemResolver);
-                }, async () => {
-                    await runAndDebugTests(this.sessionID, this.atomicCommand.executor, isDebuggable);
+                await this.executeAppCommand(async (context) => {
+                    await buildTests(context, this.problemResolver);
+                }, async (context) => {
+                    await runAndDebugTests(context, this.sessionID, isDebuggable);
                 }, "All Tests Are Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
-                await this.executeAppCommand(async () => {
-                    await buildTestsForCurrentFile(this.atomicCommand.executor, this.problemResolver, this.testsToRun);
-                }, async () => {
-                    await runAndDebugTestsForCurrentFile(this.sessionID, this.atomicCommand.executor, isDebuggable, this.testsToRun);
+                await this.executeAppCommand(async (context) => {
+                    await buildTestsForCurrentFile(context, this.problemResolver, this.testsToRun);
+                }, async (context) => {
+                    await runAndDebugTestsForCurrentFile(context, this.sessionID, isDebuggable, this.testsToRun);
                 }, "All Tests Are Passed");
             }
         } catch {

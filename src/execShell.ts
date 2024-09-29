@@ -6,6 +6,9 @@ import {
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
+import { CommandContext } from "./CommandManagment/CommandContext";
+import { UserTerminatedError } from "./CommandManagment/AtomicCommand";
+import { pid } from "process";
 
 export class ExecutorTerminatedByUserError extends Error {
     public constructor(message: string) {
@@ -117,22 +120,6 @@ export class Executor {
         this.onExit.fire();
     }
 
-    public async terminateShell(errorOnKill: Error | undefined = undefined) {
-        if (this.childProc && this.childProc?.pid && (this.childProc.exitCode == null && this.childProc.signalCode == null)) {
-            const childId = this.childProc?.pid;
-            this.errorOnKill = errorOnKill;
-            let dis: vscode.Disposable | undefined;
-            return await new Promise<void>(resolve => {
-                dis = this.onExit.event(() => {
-                    resolve();
-                })
-                killAll(childId, "SIGKILL");
-            });
-        }
-
-        return Promise.resolve();
-    }
-
     private execShellImp(
         file: string,
         args: ReadonlyArray<string>,
@@ -150,6 +137,7 @@ export class Executor {
     }
 
     public async execShell(
+        cancellationToken: vscode.CancellationToken | undefined,
         commandName: string | "shellScript",
         fileOrCommand: string,
         args: string[] = [],
@@ -157,10 +145,11 @@ export class Executor {
         returnType = ExecutorReturnType.statusCode,
         mode: ExecutorMode = ExecutorMode.verbose
     ): Promise<boolean | string> {
+        if (cancellationToken && cancellationToken.isCancellationRequested) {
+            throw Promise.reject(UserTerminatedError);
+        }
         if (this.isRunning) {
-            return new Promise((resolve, reject) => {
-                reject(new ExecutorRunningError("Another task is running", this._executingCommand));
-            });
+            throw Promise.reject(new ExecutorRunningError("Another task is running", this._executingCommand));
         }
         const env = getEnv();
         const envOptions = {
@@ -206,13 +195,39 @@ export class Executor {
         });
 
         return new Promise((resolve, reject) => {
+            let dis: vscode.Disposable | undefined;
+            dis = cancellationToken?.onCancellationRequested(() => {
+                dis?.dispose();
+                reject(UserTerminatedError);
+
+                if (proc.exitCode != null || proc.signalCode != null)
+                    return;
+                if (this.childProc !== proc) {
+                    console.log("Terminal is used for another proc")
+                    return;
+                }
+
+                this.terminateShellImp();
+                this.changeNameEmitter?.fire(
+                    `🚫 ${this.getTerminalName(commandName)}`
+                );
+                killAll(proc.pid, "SIGKILL");
+            });
+
             proc.once("error", (err) => {
+                dis?.dispose();
+                if (this.childProc !== proc) {
+                    console.log("Error, wrong child process error")
+                    return;
+                }
                 this.terminateShellImp();
                 reject(err);
             });
             proc.once("exit", (code, signal) => {
+                dis?.dispose();
                 if (this.childProc !== proc) {
                     console.log("Error, wrong child process terminated")
+                    return;
                 }
                 this._executingCommand = undefined;
                 this.childProc = undefined;

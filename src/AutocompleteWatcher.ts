@@ -5,7 +5,7 @@ import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
-import { AtomicCommand, UserCommandIsExecuting } from "./AtomicCommand";
+import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagment/AtomicCommand";
 
 enum State {
     ModuleNotChanged,
@@ -124,7 +124,7 @@ export class AutocompleteWatcher {
 
     private async incrementalBuild(buildId: number): Promise<any> {
         try {
-            await this.atomicCommand.autoWatchCommand(async () => {
+            await this.atomicCommand.autoWatchCommand(async (context) => {
                 if (this.buildId !== buildId || !this.isWatcherEnabled())
                     return;
                 try {
@@ -135,7 +135,7 @@ export class AutocompleteWatcher {
                         ".logs/autocomplete.log",
                         false
                     );
-                    await this.atomicCommand.executor.execShell(
+                    await context.execShell(
                         AutocompleteWatcher.AutocompleteCommandName,
                         "compile_module.sh",
                         [scheme],

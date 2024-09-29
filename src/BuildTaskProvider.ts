@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
 import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { AtomicCommand } from "./AtomicCommand";
+import { AtomicCommand } from "./CommandManagment/AtomicCommand";
+import { CommandContext } from "./CommandManagment/CommandContext";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     taskBuild: string;
@@ -48,31 +49,31 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         let buildSelectedTargetTask = this.createBuildTask(
             "Build",
             vscode.TaskGroup.Build,
-            async () => {
-                await buildSelectedTarget(this.atomicCommand.executor, this.problemResolver);
+            async (context) => {
+                await buildSelectedTarget(context, this.problemResolver);
             }
         );
 
         let buildTestsTask = this.createBuildTask(
             "Build Tests",
             vscode.TaskGroup.Build,
-            async () => {
-                await buildTests(this.atomicCommand.executor, this.problemResolver);
+            async (context) => {
+                await buildTests(context, this.problemResolver);
             }
         );
 
         let cleanTask = this.createBuildTask(
             "Clean Derived Data",
             vscode.TaskGroup.Clean,
-            async () => {
-                await cleanDerivedData(this.atomicCommand.executor);
+            async (context) => {
+                await cleanDerivedData(context);
             }
         );
 
         return [buildTestsTask, buildSelectedTargetTask, cleanTask];
     }
 
-    private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: () => Promise<void>) {
+    private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: (context: CommandContext) => Promise<void>) {
         const def: BuildTaskDefinition = { type: BuildTaskProvider.BuildScriptType, taskBuild: title };
         let buildTask = new vscode.Task(
             def,
@@ -105,23 +106,27 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return undefined;
     }
 
-    private customExecution(successMessage: string, commandClosure: () => Promise<void>) {
+    private customExecution(successMessage: string, commandClosure: (context: CommandContext) => Promise<void>) {
         return new vscode.CustomExecution(() => {
             return new Promise((resolved) => {
                 const writeEmitter = new vscode.EventEmitter<string>();
                 const closeEmitter = new vscode.EventEmitter<number>();
+                let commandContext: CommandContext | undefined = undefined;
                 const pty: vscode.Pseudoterminal = {
                     open: async () => {
                         closeEmitter.fire(0); // this's a workaround to hide a task terminal as soon as possible to let executor terminal to do the main job. That has a side effect if that task would be used in a chain of tasks, then it's finished before process actually finishes
                         try {
-                            await this.atomicCommand.userCommand(commandClosure, successMessage);
+                            await this.atomicCommand.userCommand(async (context) => {
+                                commandContext = context;
+                                await commandClosure(context);
+                            }, successMessage);
                         } catch (err) {
                         }
                     },
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,
                     close: async () => {
-                        this.atomicCommand.executor.terminateShell();
+                        commandContext?.cancellationToken.cancel();
                     },
                 };
                 resolved(pty);

@@ -26,11 +26,12 @@ import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import { ToolsManager } from "./Tools/ToolsManager";
-import { AtomicCommand } from "./AtomicCommand";
+import { AtomicCommand } from "./CommandManagment/AtomicCommand";
 import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
 import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
+import { CommandContext } from "./CommandManagment/CommandContext";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -40,15 +41,20 @@ function shouldInjectXCBBuildService() {
     return true;
 }
 
-async function initialize() {
+async function initialize(atomicCommand: AtomicCommand) {
     if (projectManager == undefined)
-        throw "ProjectManager is not undefined"
+        throw "ProjectManager is not undefined";
     if (!isActivated()) {
         try {
-            if (await selectProjectFile(projectExecutor, projectManager, true, true)) {
-                await enableXCBBuildService(shouldInjectXCBBuildService());
-                autocompleteWatcher?.triggerIncrementalBuild();
-            }
+            await atomicCommand.userCommand(async (context) => {
+                if (projectManager == undefined)
+                    throw "ProjectManager is not undefined";
+
+                if (await selectProjectFile(context, projectManager, true, true)) {
+                    await enableXCBBuildService(shouldInjectXCBBuildService());
+                    autocompleteWatcher?.triggerIncrementalBuild();
+                }
+            });
         } catch {
             vscode.window.showErrorMessage("Project was not loaded due to error");
         }
@@ -103,7 +109,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         setContext(context);
 
-        await initialize();
+        await initialize(atomicCommand);
 
         vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 
@@ -163,10 +169,12 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             vscode.commands.registerCommand("vscode-ios.project.select", async () => {
                 try {
-                    if (projectManager == undefined)
-                        throw Error("project manager is not initialised");
-                    await selectProjectFile(projectExecutor, projectManager);
-                    autocompleteWatcher?.triggerIncrementalBuild();
+                    await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                        if (projectManager == undefined)
+                            throw Error("project manager is not initialised");
+                        await selectProjectFile(context, projectManager);
+                        autocompleteWatcher?.triggerIncrementalBuild();
+                    });
                 } catch {
                     vscode.window.showErrorMessage("Project was not loaded due to error");
                 }
@@ -209,8 +217,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.project.selectTarget",
                 async () => {
-                    await atomicCommand.userCommandWithoutThrowingException(async () => {
-                        await selectTarget(projectExecutor);
+                    await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                        await selectTarget(context);
                     });
                 }
             )
@@ -220,8 +228,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.project.selectConfiguration",
                 async () => {
-                    await atomicCommand.userCommandWithoutThrowingException(async () => {
-                        await selectConfiguration(projectExecutor);
+                    await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                        await selectConfiguration(context);
                     });
                 }
             )
@@ -231,8 +239,8 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.project.selectDevice",
                 async () => {
-                    await atomicCommand.userCommandWithoutThrowingException(async () => {
-                        await selectDevice(projectExecutor);
+                    await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                        await selectDevice(context);
                     });
                 }
             )
@@ -240,8 +248,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand("vscode-ios.check.workspace", async () => {
-                await atomicCommand.userCommandWithoutThrowingException(async () => {
-                    await checkWorkspace(projectExecutor);
+                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                    await checkWorkspace(context);
                 });
             })
         );
@@ -250,15 +258,15 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand(
                 "vscode-ios.check.generateXcodeServer",
                 async () => {
-                    await atomicCommand.userCommandWithoutThrowingException(async () => {
-                        await generateXcodeServer(projectExecutor);
+                    await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                        await generateXcodeServer(context);
                     });
                 }
             )
         );
 
         context.subscriptions.push(
-            vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
+            vscode.commands.registerCommand("vscode-ios.build.clean", async (context) => {
                 await executeTask("Clean Derived Data");
             })
         );
@@ -283,9 +291,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
         context.subscriptions.push(
             vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
-                await atomicCommand.userCommandWithoutThrowingException(async () => {
+                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
                     const id = getSessionId("multiple_devices");
-                    await runAppOnMultipleDevices(id, projectExecutor, problemDiagnosticResolver);
+                    await runAppOnMultipleDevices(context, id, problemDiagnosticResolver);
                 });
                 return ""; // we need to return string as it's going to be used for launch configuration
             })
@@ -342,5 +350,5 @@ export async function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated
 export async function deactivate() {
     autocompleteWatcher?.terminate();
-    await projectExecutor.terminateShell();
+    // await projectExecutor.terminateShell();
 }
