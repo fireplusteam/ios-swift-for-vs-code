@@ -88,7 +88,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             request: "launch",
             target: "testsForCurrentFile",
             isDebuggable: isDebuggable,
-            appSessionId: appSessionId
+            appSessionId: appSessionId,
+            testsToRun: tests
         };
 
         let dis: vscode.Disposable | undefined;
