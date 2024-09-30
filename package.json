@@ -56,7 +56,9 @@
         "Other"
     ],
     "activationEvents": [
-        "onStartupFinished"
+        "workspaceContains:**/*.xcworkspace/contents.xcworkspacedata",
+        "workspaceContains:**/*.xcodeproj/project.pbxproj",
+        "onDebugResolve:xcode-lldb"
     ],
     "main": "./out/extension.js",
     "repository": {
