@@ -282,6 +282,15 @@
                                 "type": "boolean",
                                 "default": true
                             },
+                            "buildBeforeLaunch": {
+                                "type": "string",
+                                "default": "always",
+                                "enum": [
+                                    "always",
+                                    "ask",
+                                    "never"
+                                ]
+                            },
                             "lldbCommands": {
                                 "description": "Commands that sent to lldb debugger on launch.",
                                 "type": "array",
@@ -300,6 +309,7 @@
                         "request": "launch",
                         "target": "app",
                         "isDebuggable": true,
+                        "buildBeforeLaunch": "always",
                         "lldbCommands": []
                     }
                 ],
@@ -313,6 +323,7 @@
                             "request": "launch",
                             "target": "app",
                             "isDebuggable": true,
+                            "buildBeforeLaunch": "always",
                             "lldbCommands": []
                         }
                     }

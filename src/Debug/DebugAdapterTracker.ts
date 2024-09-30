@@ -6,6 +6,7 @@ import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurr
 import { error } from "console";
 import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
 import { CommandContext } from "../CommandManagement/CommandContext";
+import { askIfBuild } from "../inputPicker";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -88,11 +89,25 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
         await this.atomicCommand.userCommand(async (context) => {
             this.commandContext = context;
-            await DebugAdapterTracker.updateStatus(this.sessionID, "building");
-            await buildCommand(context);
+            if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
+                await DebugAdapterTracker.updateStatus(this.sessionID, "building");
+                await buildCommand(context);
+            }
             await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
             await runCommandClosure(context);
         }, successMessage);
+    }
+
+    private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
+        const buildBeforeLaunch = dbgConfig.buildBeforeLaunch || "always";
+        switch (buildBeforeLaunch) {
+            case "ask":
+                return await askIfBuild();
+            case "never":
+                return false;
+            default:
+                return true;
+        }
     }
 
     async build(dbgConfig: vscode.DebugConfiguration) {

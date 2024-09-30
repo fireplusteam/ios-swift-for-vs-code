@@ -7,6 +7,12 @@ export async function askIfDebuggable() {
     return option === "Debug";
 }
 
+export async function askIfBuild() {
+    const items: QuickPickItem[] = [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }];
+    const option = await showPicker(items, "Prebuild before launch?", "", false, false, true);
+    return option === "Yes";
+}
+
 let extContext: vscode.ExtensionContext;
 
 export function setContext(context: vscode.ExtensionContext) {

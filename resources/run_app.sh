@@ -42,6 +42,13 @@ EOF
 
 echo "Path to the built app: ${APP_PATH}"
 
+check_exit_status() {
+    local exit_status="$1"
+    if [ "${exit_status}" -ne 0 ]; then
+        exit 1
+    fi
+}
+
 is_empty "$APP_PATH"
 IFS=' |'
 for SINGLE_DESTINATION in $DESTINATION; do
@@ -59,6 +66,7 @@ for SINGLE_DESTINATION in $DESTINATION; do
     xcrun simctl boot "$SIMULATOR_UDID"
 
     open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/
+    check_exit_status $?
 
     # Wait until the simulator is booted
     while [ "$(xcrun simctl list devices | grep "$SIMULATOR_UDID" | grep -c 'Booted')" -eq 0 ]; do
@@ -68,6 +76,7 @@ for SINGLE_DESTINATION in $DESTINATION; do
     sleep 2
     # install on simulator
     xcrun simctl install "$SIMULATOR_UDID" "$APP_PATH"
+    check_exit_status $?
     # Get PID of run process
     echo "LAUNCHING..."
     python3 "$VS_IOS_SCRIPT_PATH/async_launcher.py" "$VS_IOS_SCRIPT_PATH/launch.py" "$SIMULATOR_UDID" "$BUNDLE_APP_NAME" "$2" "$1"

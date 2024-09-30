@@ -165,7 +165,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 sessionId: sessionID,
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
-                testsToRun: dbgConfig.testsToRun
+                testsToRun: dbgConfig.testsToRun,
+                buildBeforeLaunch: dbgConfig.buildBeforeLaunch
             };
             return debugSession;
         } else { // old code-lldb way: deprecated
@@ -196,6 +197,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
+                buildBeforeLaunch: dbgConfig.buildBeforeLaunch
             };
             return debugSession;
         }
