@@ -5,12 +5,14 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { currentPlatform, getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
+import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
+import { DebugConfigurationProvider } from './Debug/DebugConfigurationProvider';
+import { DebugAdapterTracker } from './Debug/DebugAdapterTracker';
 
 export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
@@ -266,17 +268,23 @@ export async function openXCode(activeFile: string) {
     }
 }
 
-export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string, silent = false, shouldKillAll = true) {
-    await commandContext.execShell(
-        "Terminate Current iOS App",
-        "terminate_current_running_app.sh",
-        [sessionID],
-        false,
-        ExecutorReturnType.statusCode,
-        silent ? ExecutorMode.silently : ExecutorMode.verbose
-    );
-    if (shouldKillAll)
-        await killSpawnLaunchedProcesses(sessionID);
+export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string | undefined, silent = false) {
+    try {
+        await commandContext.execShell(
+            { name: "Terminate iOS App", isShell: true },
+            "xcrun",
+            ["simctl", "terminate", getDeviceId(), getBundleAppName()],
+            false,
+            ExecutorReturnType.statusCode,
+            silent ? ExecutorMode.silently : ExecutorMode.verbose
+        );
+    } catch { }
+    try {
+        if (sessionID) {
+            await DebugAdapterTracker.updateStatus(sessionID, "stopped");
+            await killSpawnLaunchedProcesses(sessionID);
+        }
+    } catch { }
 }
 
 export async function runApp(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
@@ -291,7 +299,7 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
     }
     else {
         emptyAppLog(getDeviceId());
-        await terminateCurrentIOSApp(commandContext, "some@DUMMY_SESSION_iOS_Name", true, false);
+        await terminateCurrentIOSApp(commandContext, undefined, true);
         await commandContext.execShell(
             "Run App",
             "run_app.sh",

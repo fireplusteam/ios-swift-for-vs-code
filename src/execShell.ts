@@ -43,6 +43,11 @@ export enum ExecutorMode {
     silently
 }
 
+export interface ShellCommandName {
+    name?: string
+    isShell: boolean
+}
+
 export class Executor {
     private _executingCommand: string | undefined;
     private terminal: vscode.Terminal | undefined;
@@ -138,7 +143,7 @@ export class Executor {
 
     public async execShell(
         cancellationToken: vscode.CancellationToken | undefined,
-        commandName: string | "shellScript",
+        commandName: string | ShellCommandName,
         fileOrCommand: string,
         args: string[] = [],
         showTerminal = false,
@@ -157,26 +162,38 @@ export class Executor {
             ...env,
         };
         let script: string = fileOrCommand;
-        if (commandName != "shellScript") {
+        let displayCommandName = "";
+
+        if (typeof commandName === 'string') {
             script = getScriptPath(fileOrCommand);
             if (script.indexOf(".py") !== -1) {
                 script = `python3 "${script}"`;
             }
+            displayCommandName = commandName;
+        } else {
+            displayCommandName = commandName.name || "";
+            if (commandName.isShell === false) {
+                script = getScriptPath(fileOrCommand);
+                if (script.indexOf(".py") !== -1) {
+                    script = `python3 "${script}"`;
+                }
+            }
         }
+
         const proc = this.execShellImp(script, args, {
             cwd: getWorkspacePath(),
             shell: true,
             env: envOptions,
             stdio: "pipe",
         });
-        this._executingCommand = commandName;
+        this._executingCommand = displayCommandName;
         this.childProc = proc;
-        const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(commandName);
+        const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(displayCommandName);
         if (showTerminal) {
             terminal?.show();
         }
         if (mode === ExecutorMode.verbose) {
-            this.writeEmitter?.fire(`COMMAND: ${commandName}\n`);
+            this.writeEmitter?.fire(`COMMAND: ${displayCommandName}\n`);
         }
         let stdout = "";
         proc.stdout?.on("data", (data) => {
@@ -206,7 +223,7 @@ export class Executor {
                 this.terminateShellImp(proc);
                 if (mode !== ExecutorMode.silently) {
                     this.changeNameEmitter?.fire(
-                        `🚫 ${this.getTerminalName(commandName)}`
+                        `🚫 ${this.getTerminalName(displayCommandName)}`
                     );
                 }
                 killAll(proc.pid, "SIGKILL");
@@ -246,27 +263,27 @@ export class Executor {
                 if (signal !== null) {
                     if (mode !== ExecutorMode.silently) {
                         this.changeNameEmitter?.fire(
-                            `❌ ${this.getTerminalName(commandName)}`
+                            `❌ ${this.getTerminalName(displayCommandName)}`
                         );
                     }
-                    reject(new ExecutorTerminated(`${this.getTerminalName(commandName)} is terminated with SIGNAL : ${error}`));
+                    reject(new ExecutorTerminated(`${this.getTerminalName(displayCommandName)} is terminated with SIGNAL : ${error}`));
                     return;
                 }
 
                 if (mode === ExecutorMode.verbose) {
                     this.writeEmitter?.fire(
-                        this.dataToPrint(`${this.getTerminalName(commandName)} exits with status code: ${code}\n`)
+                        this.dataToPrint(`${this.getTerminalName(displayCommandName)} exits with status code: ${code}\n`)
                     );
                 }
                 if (code !== 0) {
                     if (mode !== ExecutorMode.silently) {
                         this.changeNameEmitter?.fire(
-                            `❌ ${this.getTerminalName(commandName)}`
+                            `❌ ${this.getTerminalName(displayCommandName)}`
                         );
                     }
                     reject(
                         new ExecutorTaskError(
-                            `Task: ${this.getTerminalName(commandName)} exits with ${code}`,
+                            `Task: ${this.getTerminalName(displayCommandName)} exits with ${code}`,
                             code,
                             terminal
                         )
@@ -274,7 +291,7 @@ export class Executor {
                 } else {
                     if (mode !== ExecutorMode.silently) {
                         this.changeNameEmitter?.fire(
-                            `✅ ${this.getTerminalName(commandName)}`
+                            `✅ ${this.getTerminalName(displayCommandName)}`
                         );
                     }
                     switch (returnType) {

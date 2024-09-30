@@ -74,9 +74,6 @@ export function getScriptPath(script: string | undefined = undefined) {
     if (script === undefined) {
         return path.join(__dirname, "..", "resources");
     }
-    if (script === "python3") {
-        return script;
-    }
     return path.join(__dirname, "..", "resources", script);
 }
 
@@ -104,6 +101,10 @@ export function getProjectConfiguration() {
 
 export function getDeviceId() {
     return getEnvList()["DEVICE_ID"].replace(/^"|"$/g, '');
+}
+
+export function getBundleAppName() {
+    return getEnvList()["BUNDLE_APP_NAME"].replace(/^"|"$/g, '');
 }
 
 export function getProjectPath() {

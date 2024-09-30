@@ -296,14 +296,12 @@ def wait_debugger_to_launch(session_id):
         time.sleep(1)
 
 
-def is_debug_session_valid(session_id, start_time) -> bool:
+def is_debug_session_valid(session_id) -> bool:
     try:
         with FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
             if not session_id in config:
-                return False
-            if config[session_id]["sessionEndTime"] >= start_time:
                 return False
             if config[session_id]["status"] == "stopped":
                 return False
@@ -312,8 +310,6 @@ def is_debug_session_valid(session_id, start_time) -> bool:
     except: # no file or a key, so the session is valid
         return True
     
-def update_debug_session_time(session_id: str):
-    update_debugger_launch_config(session_id, "sessionEndTime", time.time())
 
 def get_debugger_launch_config(session_id, key):
     with FileLock(debugger_config_file):
@@ -338,6 +334,9 @@ def update_debugger_launch_config(session_id, key, value):
                     pass
 
             if session_id in config:
+                # stopped can not be updated once reported
+                if key == "status" and key in config[session_id] and config[session_id][key] == 'stopped':
+                    return
                 config[session_id][key] = value;
             else:
                 config[session_id] = {}

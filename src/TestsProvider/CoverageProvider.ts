@@ -33,7 +33,7 @@ export class CoverageProvider {
         const executor = new Executor();
         const outFileCoverageStr = (await executor.execShell(
             undefined,
-            "shellScript",
+            { isShell: true },
             command,
             [],
             false,
@@ -66,7 +66,7 @@ export class CoverageProvider {
         const command = `xcrun xccov view --report --json '${this.xcresultPath}'`
         const coverageJsonStr = (await shell.execShell(
             undefined,
-            "shellScript",
+            { isShell: true },
             command,
             [],
             false,

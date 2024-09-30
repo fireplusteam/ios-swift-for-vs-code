@@ -107,6 +107,11 @@ export function emptyAppLog(deviceId: string) {
     deleteLockFile(getWorkspacePath(), fileName);
 }
 
+export function emptyLog(filePath: string) {
+    emptyFile(getWorkspacePath(), filePath);
+    deleteLockFile(getWorkspacePath(), filePath);
+}
+
 export function isFolder(path: string) {
     let stats = fs.statSync(path);
     if (stats.isFile()) {

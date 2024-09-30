@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
+import { Executor, ExecutorMode, ExecutorReturnType, ShellCommandName } from "../execShell";
 
 export const UserTerminatedError: Error = new Error("Terminated");
 
@@ -20,7 +20,7 @@ export class CommandContext {
     }
 
     public async execShell(
-        commandName: string | "shellScript",
+        commandName: string | ShellCommandName,
         fileOrCommand: string,
         args: string[] = [],
         showTerminal = false,

@@ -52,16 +52,16 @@ class AppLogger:
             pass
 
 
-    def _watch_file(self, start_time):
+    def _watch_file(self):
         while True:
             self.print_new_lines()
-            if not helper.is_debug_session_valid(self.session_id, start_time):
+            if not helper.is_debug_session_valid(self.session_id):
                 return
             time.sleep(1)
             
     
-    def watch_app_log(self, start_time = time.time()):
-        self._watch_file(start_time)
+    def watch_app_log(self):
+        self._watch_file()
 
 
 if __name__ == "__main__":

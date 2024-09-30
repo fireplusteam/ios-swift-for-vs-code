@@ -21,7 +21,7 @@ import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, setContext } from "./inputPicker";
-import { getSessionId } from "./utils";
+import { emptyLog, getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
@@ -31,7 +31,6 @@ import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsL
 import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
 import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
-import { CommandContext } from "./CommandManagement/CommandContext";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -101,6 +100,8 @@ export async function activate(context: vscode.ExtensionContext) {
     // initialise code
 
     setContext(context);
+
+    emptyLog(".logs/debugger.launching");
 
     await initialize(atomicCommand, projectManager, autocompleteWatcher);
 

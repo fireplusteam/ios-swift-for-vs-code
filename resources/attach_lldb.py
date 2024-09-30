@@ -70,11 +70,11 @@ def kill_codelldb(debugger):
     perform_debugger_command(debugger, f"process attach --pid {process.pid}")
 
 
-def wait_for_exit(debugger, start_time, session_id):
+def wait_for_exit(debugger, session_id):
     logMessage("Waiting for exit")
     
     while True:
-        if not helper.is_debug_session_valid(session_id, start_time):
+        if not helper.is_debug_session_valid(session_id):
             perform_debugger_command(debugger, "process detach")
             return
         time.sleep(0.5)
@@ -112,14 +112,13 @@ def print_app_log(debugger, pid):
 
 is_process_watching = False 
 
-def wait_for_process(process_name, debugger, existing_pids, start_time, session_id):
+def wait_for_process(process_name, debugger, existing_pids, session_id):
     global is_process_watching
-    logMessage("Start time:" + str(start_time))
     try:
         logMessage(f"Waiting for process: {process_name}")
         logMessage(f"Session_id: {session_id}") 
         while True:
-            if not helper.is_debug_session_valid(session_id, start_time):
+            if not helper.is_debug_session_valid(session_id):
                 kill_codelldb(debugger)
                 return
 
@@ -127,7 +126,7 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
             new_list = [x for x in new_list if not x in existing_pids]
 
             if len(new_list) > 0:
-                threading.Thread(target=wait_for_exit, args=(debugger, start_time, session_id)).start()
+                threading.Thread(target=wait_for_exit, args=(debugger, session_id)).start()
                 is_process_watching = True
                 
                 pid = new_list.pop()
@@ -144,26 +143,22 @@ def wait_for_process(process_name, debugger, existing_pids, start_time, session_
     except Exception as e:
         logMessage(str(e))
 
-start_time = time.time()
-
-
 def watch_new_process(debugger, command, result, internal_dict):
     logMessage("Debugger: " + str(debugger))
     global existing_pids
-    global start_time
 
     logMessage(f"Watching command: {command}")
     commands = command.split(" ")
 
     session_id = commands[0]
-    if not helper.is_debug_session_valid(session_id, start_time):
+    if not helper.is_debug_session_valid(session_id):
         kill_codelldb(debugger)
         return
 
     process_name = helper.get_process_name()
     existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
-    wait_for_process(process_name, debugger, existing_pids, start_time, session_id)
+    wait_for_process(process_name, debugger, existing_pids, session_id)
     env_list = helper.get_env_list()
     device_id = env_list["DEVICE_ID"].strip("\n")
     perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
@@ -245,7 +240,7 @@ def printRuntimeWarning(debugger, command, result, internal_dict):
 
 def wait_until_build(debugger, session_id):
     while True:
-        if not helper.is_debug_session_valid(session_id, start_time):
+        if not helper.is_debug_session_valid(session_id):
             kill_codelldb(debugger)
             return "stopped"
         status = helper.get_debugger_launch_config(session_id, "status")

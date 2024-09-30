@@ -29,12 +29,10 @@ else:
     
 cwd = os.getcwd()
 
-start_time = time.time()
-
 
 def session_validation(process):
-    if not helper.is_debug_session_valid(session_id, start_time):
-        logMessage(f"Should BE TERMINATED {session_id}, {start_time}")
+    if not helper.is_debug_session_valid(session_id):
+        logMessage(f"Should BE TERMINATED {session_id}")
         try:
             process.kill()
         except: pass
@@ -95,7 +93,7 @@ def main():
     
     # Run the command asynchronously
     return_code, is_ok = run_process(' '.join(commandLaunch), f".logs/app_{device_uuid}.log")
-    helper.update_debug_session_time(session_id)
+    helper.update_debugger_launch_config(session_id, "status", "stopped")
 
     # Print or process the output as needed
     print(f"LAUNCHER: iOS App Finished with {return_code}, session id {session_id}")
