@@ -336,7 +336,7 @@ def start_monitor(debugger, command, exe_ctx, result, internal_dict):
         try:
             # logMessage(f"Focus start: {command}, {start_time}, {current_time}")
             # wait for 1 second to make sure that a user is actually run the app, not stepping over the code
-            time.sleep(1)
+            time.sleep(2)
             if current_focus_time == start_time and process.GetState() == lldb.eStateRunning:
                 focus_simulator(command)
         except Exception as e:

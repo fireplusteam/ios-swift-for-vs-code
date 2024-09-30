@@ -85,7 +85,8 @@ This's just needed to override the **continueBuildingAfterError** property when 
         "name": "iOS: Run App & Debug",
         "request": "launch",
         "target": "app",
-        "isDebuggable": true
+        "isDebuggable": true,
+        "buildBeforeLaunch": "always"
     }
 ]
 ```

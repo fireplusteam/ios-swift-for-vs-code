@@ -266,7 +266,7 @@ export async function openXCode(activeFile: string) {
     }
 }
 
-export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string, silent = false) {
+export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string, silent = false, shouldKillAll = true) {
     await commandContext.execShell(
         "Terminate Current iOS App",
         "terminate_current_running_app.sh",
@@ -275,7 +275,8 @@ export async function terminateCurrentIOSApp(commandContext: CommandContext, ses
         ExecutorReturnType.statusCode,
         silent ? ExecutorMode.silently : ExecutorMode.verbose
     );
-    await killSpawnLaunchedProcesses(sessionID);
+    if (shouldKillAll)
+        await killSpawnLaunchedProcesses(sessionID);
 }
 
 export async function runApp(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
@@ -290,6 +291,7 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
     }
     else {
         emptyAppLog(getDeviceId());
+        await terminateCurrentIOSApp(commandContext, "some@DUMMY_SESSION_iOS_Name", true, false);
         await commandContext.execShell(
             "Run App",
             "run_app.sh",

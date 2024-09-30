@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { quickPickWithHistory } from "./quickPickHistory";
+import { UserTerminatedError } from "./CommandManagement/CommandContext";
 
 export async function askIfDebuggable() {
     const items: QuickPickItem[] = [{ label: "Debug", value: "Debug" }, { label: "Run", value: "Run" }];
@@ -9,7 +10,9 @@ export async function askIfDebuggable() {
 
 export async function askIfBuild() {
     const items: QuickPickItem[] = [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }];
-    const option = await showPicker(items, "Prebuild before launch?", "", false, false, true);
+    const option = await showPicker(items, "Prebuild before launch?", "(Esc) to cancel", false, false, true);
+    if (option === undefined)
+        throw UserTerminatedError;
     return option === "Yes";
 }
 

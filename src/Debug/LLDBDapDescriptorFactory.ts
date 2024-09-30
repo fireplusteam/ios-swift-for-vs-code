@@ -1,6 +1,13 @@
-import { exec } from "child_process";
 import * as vscode from "vscode";
 import { XCRunHelper } from "../Tools/XCRunHelper";
+
+function useLLDB_DAP() {
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("debug.lldb-debug");
+    if (!isEnabled) {
+        return false;
+    }
+    return true;
+}
 
 /**
  * This class defines a factory used to find the lldb-dap binary to use
@@ -79,7 +86,7 @@ export class LLDBDapDescriptorFactory
             const fileUri = vscode.Uri.file(path);
             const majorSwiftVersion = Number((await XCRunHelper.swiftToolchainVersion())[0]);
             // starting swift 6, lldb-dap is included in swift toolchain, so use is
-            if (majorSwiftVersion >= 6 && (await LLDBDapDescriptorFactory.isValidDebugAdapterPath(fileUri))) {
+            if (majorSwiftVersion >= 6 && useLLDB_DAP() && (await LLDBDapDescriptorFactory.isValidDebugAdapterPath(fileUri))) {
                 return path;
             }
             return null;
