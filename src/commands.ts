@@ -9,7 +9,7 @@ import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getProjectC
 import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
 import { sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
-import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses } from "./utils";
+import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses, promiseWithTimeout, TimeoutError } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
 import { DebugConfigurationProvider } from './Debug/DebugConfigurationProvider';
 import { DebugAdapterTracker } from './Debug/DebugAdapterTracker';
@@ -270,15 +270,32 @@ export async function openXCode(activeFile: string) {
 
 export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string | undefined, silent = false) {
     try {
-        await commandContext.execShell(
-            { name: "Terminate iOS App", isShell: true },
-            "xcrun",
-            ["simctl", "terminate", getDeviceId(), getBundleAppName()],
-            false,
-            ExecutorReturnType.statusCode,
-            silent ? ExecutorMode.silently : ExecutorMode.verbose
-        );
-    } catch { }
+        // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
+        await promiseWithTimeout(6000, async () => {
+            await commandContext.execShell(
+                { name: "Terminate iOS App", isShell: true },
+                "xcrun",
+                ["simctl", "terminate", getDeviceId(), getBundleAppName()],
+                false,
+                ExecutorReturnType.statusCode,
+                silent ? ExecutorMode.silently : ExecutorMode.verbose
+            );
+        });
+    } catch (err) {
+        if (err == TimeoutError) {
+            // we should cancel it in a new executor as it can not be executed 
+            await new Executor().execShell(
+                commandContext.cancellationToken,
+                { name: "Shutdown Simulator", isShell: true },
+                "xcrun",
+                ["simctl", "shutdown", getDeviceId()],
+                false,
+                ExecutorReturnType.statusCode,
+                ExecutorMode.silently
+            );
+            vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
+        }
+    }
     try {
         if (sessionID) {
             await DebugAdapterTracker.updateStatus(sessionID, "stopped");
@@ -299,7 +316,7 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
     }
     else {
         emptyAppLog(getDeviceId());
-        await terminateCurrentIOSApp(commandContext, undefined, true);
+        await terminateCurrentIOSApp(commandContext, undefined, false);
         await commandContext.execShell(
             "Run App",
             "run_app.sh",

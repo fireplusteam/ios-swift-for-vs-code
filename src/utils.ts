@@ -5,6 +5,20 @@ import find from "find-process";
 import treeKill from "tree-kill";
 import psTree from "ps-tree";
 
+export const TimeoutError = new Error("Timed out");
+export function promiseWithTimeout<T>(ms: number, promise: () => Promise<T>): Promise<T> {
+    // Create a timeout promise that rejects after "ms" milliseconds
+    const timeout = new Promise<T>((_, reject) => {
+        const id = setTimeout(() => {
+            clearTimeout(id);
+            reject(TimeoutError);
+        }, ms);
+    });
+
+    // Returns a race between the timeout and the passed promise
+    return Promise.race([promise(), timeout]);
+}
+
 export async function killSpawnLaunchedProcesses(sessionId: string) {
     try {
         let processList = await find("name", `${getScriptPath()}/launch.py`);
