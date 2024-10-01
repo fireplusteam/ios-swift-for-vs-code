@@ -47,7 +47,7 @@ export class RunManager {
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
         try {
             for (const device of devices) {
-                await this.runOnSimulator(context, device.substring("id=".length), false);
+                await this.runOnSimulator(context, device, false);
             }
         } catch (error) {
             console.log(error);

@@ -41,6 +41,7 @@ export interface SetProjectEnvInterface {
     setProjectConfiguration(configuration: string): Promise<void>
     setDebugDeviceID(deviceID: string): Promise<void>
     setMultipleDeviceID(multiId: string): Promise<void>
+    setPlatform(platform: string): Promise<void>
 }
 
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
@@ -83,13 +84,16 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         await saveKeyToEnvList("PROJECT_SCHEME", scheme);
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
-
+        await saveKeyToEnvList("PROJECT_CONFIGURATION", configuration);
     }
     async setDebugDeviceID(deviceID: string): Promise<void> {
-
+        await saveKeyToEnvList("DEVICE_ID", deviceID);
     }
     async setMultipleDeviceID(multiId: string): Promise<void> {
-
+        await saveKeyToEnvList("MULTIPLE_DEVICE_ID", multiId);
+    }
+    async setPlatform(platform: string): Promise<void> {
+        await saveKeyToEnvList("PLATFORM", platform);
     }
 }
 
@@ -132,11 +136,10 @@ export function getEnvFilePath() {
     return path.join(getVSCodePath(), ".env");
 }
 
-export function updateProject(projectPath: string) {
+export async function updateProject(projectEvn: ProjectEnv, projectPath: string) {
     const relative = path.relative(getWorkspacePath(), projectPath);
     fs.mkdirSync(getVSCodePath(), { recursive: true });
-    const defaultContent = `PROJECT_FILE="${relative}"`;
-    fs.writeFileSync(getEnvFilePath(), defaultContent, "utf-8");
+    await projectEvn.setProjectFile(relative);
 }
 
 export async function getEnv() {
@@ -274,7 +277,7 @@ export async function saveKeyToEnvList(key: string, value: string) {
             json += `${key}=${val}\n`
         }
 
-        fs.writeFileSync(getEnvFilePath(), json);
+        fs.writeFileSync(getEnvFilePath(), json, "utf-8");
     });
 }
 

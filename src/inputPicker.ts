@@ -23,7 +23,7 @@ export function setContext(context: vscode.ExtensionContext) {
 }
 
 export interface QuickPickItem extends vscode.QuickPickItem {
-    value: string;
+    value: string | any;
 }
 
 export async function showPicker(
@@ -32,8 +32,7 @@ export async function showPicker(
     placeholder: string,
     canPickMany = false,
     ignoreFocusOut = false,
-    useHistory = false,
-    separator: string = " "
+    useHistory = false
 ) {
     let items: QuickPickItem[]
     if (typeof json === 'string' || json instanceof String) {
@@ -64,7 +63,7 @@ export async function showPicker(
         return undefined;
     }
 
-    let value: string | undefined;
+    let value: string | any | undefined;
 
     if (typeof selection === "string") {
         value = selection as string;
@@ -79,7 +78,7 @@ export async function showPicker(
                     return e["value"];
                 });
 
-                value = array.join(separator);
+                value = array;
             } else {
                 const dict = selection as { [key: string]: any };
                 value = dict["value"];

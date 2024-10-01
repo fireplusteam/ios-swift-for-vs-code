@@ -9,11 +9,32 @@ import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getMultiDev
 import { Executor, ExecutorMode } from "./execShell";
 import { sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
-import { emptyAppLog, getLastLine, isFolder, promiseWithTimeout, TimeoutError } from "./utils";
+import { emptyAppLog, getLastLine, isFolder } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
-import { DebugAdapterTracker } from './Debug/DebugAdapterTracker';
 import { RunManager } from './Services/RunManager';
-import { ProjectSettingsProvider } from './Services/ProjectSettingsProvider';
+
+function filterDevices(devices: { [name: string]: string }[], isSelected: (device: { [name: string]: string }) => boolean) {
+    const items = devices.map<QuickPickItem | undefined>(device => {
+        let formattedKey = "";
+        if (device.hasOwnProperty("name") && device.hasOwnProperty("OS"))
+            formattedKey = `${device["name"]} - OS ${device["OS"]} `;
+        else if (device.hasOwnProperty("name"))
+            formattedKey = device["name"];
+        else if (device.hasOwnProperty("platform"))
+            formattedKey = device["platform"];
+        else return undefined;
+        if (device.hasOwnProperty("variant")) {
+            formattedKey += " " + device["variant"];
+        }
+
+        if (isSelected(device)) {
+            return { label: "$(notebook-state-success) " + formattedKey, picked: true, value: device };
+        } else {
+            return { label: formattedKey, value: device }
+        }
+    }).filter((item): item is QuickPickItem => item !== undefined);
+    return items;
+}
 
 export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
@@ -78,13 +99,13 @@ export async function selectProjectFile(commandContext: CommandContext, projectM
     if (selection === undefined || selection === '') {
         return false;
     }
-    updateProject(selection);
+    await updateProject(commandContext.projectSettingsProvider.projectEnv, selection);
     await projectManager.loadProjectFiles(true);
     await checkWorkspace(commandContext, true);
     return true;
 }
 
-export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false, shouldCheckWorkspace = true) {
+export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false) {
     const schemes = await commandContext.projectSettingsProvider.getSchemes();
     const currentScheme = await commandContext.projectSettingsProvider.projectEnv.projectScheme;
     const json = JSON.stringify(schemes.map(scheme => {
@@ -107,22 +128,16 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
     await commandContext.projectSettingsProvider.projectEnv.setProjectScheme(option);
 }
 
-export async function selectConfiguration(commandContext: CommandContext, ignoreFocusOut = false, shouldCheckWorkspace = true) {
-    if (shouldCheckWorkspace) {
-        const selected = await checkWorkspace(commandContext, ignoreFocusOut);
-        if (selected.selectedConfiguration)
-            return;
-    }
+export async function selectConfiguration(commandContext: CommandContext, ignoreFocusOut = false) {
+    const configurations = await commandContext.projectSettingsProvider.getConfigurations();
+    const currentConfiguration = await commandContext.projectSettingsProvider.projectEnv.projectConfiguration;
+    const json = JSON.stringify(configurations.map(configuration => {
+        if (currentConfiguration == configuration)
+            return { label: "$(notebook-state-success) " + configuration, value: configuration };
+        else return { label: configuration, value: configuration };
+    }));
 
-    let stdout = getLastLine((await commandContext.execShell(
-        "Fetch Project Configurations",
-        { file: "populate_configurations.sh" },
-        [ // TODO: Need to figure out if we can pass ProjectManager here
-            (await getProjectFiles(await getProjectPath())).at(0) || "Debug"
-        ]
-    )).stdout);
-
-    let option = await showPicker(stdout,
+    let option = await showPicker(json,
         "Configuration",
         "Please Select Build Configuration",
         false,
@@ -134,26 +149,15 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
         return;
     }
 
-    await commandContext.execShell(
-        "Update Selected Configuration",
-        { file: "update_environment.sh" },
-        ["-destinationConfiguration", option]
-    );
+    await commandContext.projectSettingsProvider.projectEnv.setProjectConfiguration(option);
 }
 
 export async function selectDevice(commandContext: CommandContext, shouldCheckWorkspace = true, ignoreFocusOut = false) {
-    if (shouldCheckWorkspace === true) {
-        const selected = await checkWorkspace(commandContext);
-        if (selected.selectedDevice)
-            return;
-    }
-    let stdout = getLastLine((await commandContext.execShell(
-        "Fetch Devices",
-        { file: "populate_devices.sh" },
-        ["-single"],
-    )).stdout);
 
-    const items: QuickPickItem[] = JSON.parse(stdout);
+    const devices = await commandContext.projectSettingsProvider.getDevices();
+    const selectedDeviceID = await commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
+    const items = filterDevices(devices, device => selectedDeviceID == device["id"]);
+
     if (items.length == 0) {
         vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
         return false;
@@ -171,12 +175,11 @@ export async function selectDevice(commandContext: CommandContext, shouldCheckWo
     if (option === undefined) {
         return false;
     }
-
-    return await commandContext.execShell(
-        "Update DEBUG Device",
-        { file: "update_environment.sh" },
-        ["-destinationDevice", option]
-    );
+    if (typeof option == "object") {
+        const obj = option as { [key: string]: any };
+        await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj.id)
+        await commandContext.projectSettingsProvider.projectEnv.setPlatform(obj.platform);
+    }
 }
 
 export async function restartLSP() {
@@ -184,45 +187,9 @@ export async function restartLSP() {
 }
 
 export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
-    let selectedConfiguration = false;
-    try {
-        if ((await getProjectConfiguration()).length == 0) {
-            await selectConfiguration(commandContext, true, false);
-            selectedConfiguration = true;
-        }
-    } catch {
-        await selectConfiguration(commandContext, true, false);
-        selectedConfiguration = true;
-    }
-
-    let selectedTarget = false;
-    try {
-        if ((await getProjectScheme()).length == 0) {
-            await selectTarget(commandContext, true, false);
-            selectedTarget = true;
-        }
-    } catch {
-        await selectTarget(commandContext, true, false);
-        selectedTarget = true;
-    }
-
-    const command = getLastLine((await commandContext.execShell(
-        "Validate Environment",
-        { file: "check_workspace.sh" },
-        [],
-    )).stdout);
-    if (command === "Restarting LSP") {
-        restartLSP();
-    }
-
-    const env = getEnvList();
-    let selectedDevice = false;
-    if (!env.hasOwnProperty("DEVICE_ID") || !env.hasOwnProperty("PLATFORM")) {
-        await selectDevice(commandContext, false, ignoreFocusOut);
-        selectedDevice = true;
-    }
-
-    return { selectedTarget: selectedTarget, selectedConfiguration: selectedConfiguration, selectedDevice: selectedDevice };
+    await selectTarget(commandContext, ignoreFocusOut);
+    await selectConfiguration(commandContext, ignoreFocusOut);
+    await selectDevice(commandContext, false, ignoreFocusOut)
 }
 
 export async function generateXcodeServer(commandContext: CommandContext) {
@@ -243,7 +210,7 @@ export async function openXCode(activeFile: string) {
     })).stdout;
     console.log(stdout);
     if (!isFolder(activeFile)) {
-        exec(`open -a Xcode ${activeFile}`);
+        exec(`open - a Xcode ${activeFile} `);
     }
 }
 
@@ -261,26 +228,24 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
         vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
         return;
     }
-    let stdout = getLastLine((await commandContext.execShell(
-        "Fetch Multiple Devices",
-        { file: "populate_devices.sh" },
-        ["-multi"],
-    )).stdout);
 
-    const items: QuickPickItem[] = JSON.parse(stdout);
+    const devices = await commandContext.projectSettingsProvider.getDevices();
+    const selectedDeviceID = (await commandContext.projectSettingsProvider.projectEnv.multipleDeviceID).split(" |").map(device => device.substring("id=".length));
+
+    const items = filterDevices(devices, device => selectedDeviceID.find(id => device["id"] == id) !== undefined);
+
     if (items.length == 0) {
         vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
         return false;
     }
 
-    let option = await showPicker(
+    const option = await showPicker(
         items,
         "Devices",
         "Please select Multiple Devices to Run You App",
         true,
         false,
-        true,
-        " |"
+        true
     );
 
     if (option === undefined || option === '') {
@@ -289,15 +254,19 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
 
     const projectEvn = new ProjectEnv();
 
-    await commandContext.execShellWithOptions({
-        scriptOrCommand: { file: "update_environment.py" },
-        args: [await projectEvn.projectFile, "-multipleDestinationDevices", option]
-    });
+    const deviceIds: string[] = [];
+    if (Array.isArray(option)) {
+        for (const device of option)
+            deviceIds.push(device.id);
+        commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(
+            deviceIds.map(device => `id=${device}`).join(" |")
+        );
+    }
 
     await buildSelectedTarget(commandContext, problemResolver);
 
-    for (let device of option.split(" ")) {
-        emptyAppLog(device.substring("id=".length));
+    for (let device of deviceIds) {
+        emptyAppLog(device);
     }
     const runApp = new RunManager(
         sessionID,
@@ -317,7 +286,7 @@ export async function runAndDebugTests(commandContext: CommandContext, sessionID
 
 export async function runAndDebugTestsForCurrentFile(commandContext: CommandContext, sessionID: string, isDebuggable: boolean, tests: string[]) {
     const option = tests.map(e => {
-        return `-only-testing:${e}`;
+        return `- only - testing: ${e} `;
     }).join(" ");
     await commandContext.execShell(
         "Run Tests For Current File",
@@ -328,7 +297,7 @@ export async function runAndDebugTestsForCurrentFile(commandContext: CommandCont
 
 export async function enableXCBBuildService(enabled: boolean) {
     await sleep(5000);
-    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
+    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} - isProxyInjected`;
 
     return new Promise<void>((resolve) => {
         exec(checkIfInjectedCommand, async (error, stdout, stderr) => {
@@ -343,7 +312,7 @@ export async function enableXCBBuildService(enabled: boolean) {
                 return;
             }
             const install = enabled ? "-install" : "-uninstall"
-            const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()}`;
+            const command = `echo '${password}' | sudo - S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
             exec(command, (error, stdout, stderr) => {
                 if (error) {
                     if (enabled)

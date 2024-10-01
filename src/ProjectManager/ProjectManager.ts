@@ -420,10 +420,12 @@ export class ProjectManager {
         const fileTargets = await listTargetsForFile(getFilePathInWorkspace(selectedProject[0]), file.fsPath);
         const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject[0]));
         const items: QuickPickItem[] = sortTargets(targets, fileTargets);
-        const selectedTargets = await showPicker(items, "Edit targets of a file", "", true, false, false, ",");
+        let selectedTargets = await showPicker(items, "Edit targets of a file", "", true, false, false);
 
         if (selectedTargets === undefined)
             return;
+
+        selectedTargets = selectedTargets.join(",");
 
         await updateFileToProject(getFilePathInWorkspace(selectedProject[0]), selectedTargets, file.fsPath);
         await saveProject(getFilePathInWorkspace(selectedProject[0]));
@@ -503,10 +505,11 @@ export class ProjectManager {
             const proposedTargets = await this.determineTargetForFile([...filesToAdd][0], selectedProject);
             const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
             const items = sortTargets(targets, proposedTargets);
-            selectedTargets = await showPicker(items, "Select Targets for The Files", "", true, false, false, ",");
-            if (selectedTargets === undefined) {
+            const selectedTargetsArray = await showPicker(items, "Select Targets for The Files", "", true, false, false);
+            if (selectedTargetsArray === undefined) {
                 return;
             }
+            selectedTargets = selectedTargetsArray.join(",");
         }
 
         for (const folder of foldersToAdd) {

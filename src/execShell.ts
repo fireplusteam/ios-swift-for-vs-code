@@ -195,9 +195,14 @@ export class Executor {
         this._executingCommand = displayCommandName;
         this.childProc = proc;
         const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(displayCommandName);
+        const debugCommand = `COMMAND: ${script} ${args.reduce((prev, curr) => {
+            return prev += " " + curr
+        })}\r\n`;
         if (mode === ExecutorMode.verbose) {
-            this.writeEmitter?.fire(`COMMAND: ${script}, args: ${args}}\r\n`);
+            this.writeEmitter?.fire(debugCommand);
         }
+        console.log(debugCommand);
+
         let stdout = "";
         proc.stdout?.on("data", (data) => {
             const str = data.toString();
