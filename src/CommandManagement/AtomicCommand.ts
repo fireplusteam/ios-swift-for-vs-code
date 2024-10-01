@@ -55,8 +55,6 @@ export class AtomicCommand {
                 } else {
                     throw UserCommandIsExecuting;
                 }
-            } else {
-                this._prevCommandContext?.cancel();
             }
             release = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID)
@@ -112,8 +110,6 @@ export class AtomicCommand {
                 } else {
                     throw UserCommandIsExecuting;
                 }
-            } else {
-                this._prevCommandContext?.cancel();
             }
             releaser = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID)

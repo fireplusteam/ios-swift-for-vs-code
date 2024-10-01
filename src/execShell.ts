@@ -196,7 +196,7 @@ export class Executor {
         this.childProc = proc;
         const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(displayCommandName);
         if (mode === ExecutorMode.verbose) {
-            this.writeEmitter?.fire(`COMMAND: ${displayCommandName}\n`);
+            this.writeEmitter?.fire(`COMMAND: ${script}, args: ${args}}\r\n`);
         }
         let stdout = "";
         proc.stdout?.on("data", (data) => {

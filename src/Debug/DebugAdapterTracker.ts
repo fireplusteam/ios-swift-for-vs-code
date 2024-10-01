@@ -7,8 +7,6 @@ import { error } from "console";
 import { Executor, ExecutorMode } from "../execShell";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
-import { killSpawnLaunchedProcesses } from "../utils";
-import { kill } from "process";
 import { sleep } from "../extension";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
@@ -72,14 +70,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }
             this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
-
-            this.killSpawnLaunchedProcess();
         }
-    }
-
-    async killSpawnLaunchedProcess() {
-        await sleep(1000);
-        await killSpawnLaunchedProcesses(this.sessionID);
     }
 
     public static async updateStatus(sessionId: string, status: string) {
@@ -136,7 +127,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     await runAndDebugTestsForCurrentFile(context, this.sessionID, isDebuggable, this.testsToRun);
                 }, "All Tests Are Passed");
             }
-        } catch {
+        } catch (error) {
             console.log(error);
             await this.terminateCurrentSession();
         } finally {

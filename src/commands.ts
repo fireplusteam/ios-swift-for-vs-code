@@ -5,14 +5,14 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
+import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getMultiDeviceIds, getProjectConfiguration, getProjectEnv, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
 import { Executor, ExecutorMode } from "./execShell";
 import { sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
-import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses, promiseWithTimeout, TimeoutError } from "./utils";
+import { emptyAppLog, getLastLine, isFolder, promiseWithTimeout, TimeoutError } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
-import { DebugConfigurationProvider } from './Debug/DebugConfigurationProvider';
 import { DebugAdapterTracker } from './Debug/DebugAdapterTracker';
+import { RunManager } from './Run/RunManager';
 
 export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
@@ -257,53 +257,13 @@ export async function openXCode(activeFile: string) {
     }
 }
 
-export async function terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string | undefined, silent = false) {
-    try {
-        // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
-        await promiseWithTimeout(6000, async () => {
-            await commandContext.execShell(
-                "Terminate iOS App",
-                { command: "xcrun" },
-                ["simctl", "terminate", getDeviceId(), getBundleAppName()],
-                silent ? ExecutorMode.silently : ExecutorMode.verbose
-            );
-        });
-    } catch (err) {
-        if (err == TimeoutError) {
-            // we should cancel it in a new executor as it can not be executed 
-            await commandContext.execShellParallel({
-                scriptOrCommand: { command: "xcrun" },
-                args: ["simctl", "shutdown", getDeviceId()],
-            });
-            vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
-        }
-    }
-    try {
-        if (sessionID) {
-            await DebugAdapterTracker.updateStatus(sessionID, "stopped");
-            await killSpawnLaunchedProcesses(sessionID);
-        }
-    } catch { }
-}
-
 export async function runApp(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
-    if (currentPlatform() == Platform.macOS) {
-        emptyAppLog("MAC_OS");
-        await commandContext.execShell(
-            "Run App",
-            { file: "run_app.sh" },
-            [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING", "-MAC_OS"],
-        );
-    }
-    else {
-        emptyAppLog(getDeviceId());
-        await terminateCurrentIOSApp(commandContext, undefined, false);
-        await commandContext.execShell(
-            "Run App",
-            { file: "run_app.sh" },
-            [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
-        );
-    }
+    const runManager = new RunManager(
+        sessionID,
+        isDebuggable,
+        await getProjectEnv()
+    );
+    await runManager.runOnDebugDevice(commandContext);
 }
 
 export async function runAppOnMultipleDevices(commandContext: CommandContext, sessionID: string, problemResolver: ProblemDiagnosticResolver) {
@@ -337,17 +297,24 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
         return;
     }
 
+    let projectEvn = await getProjectEnv();
+    await commandContext.execShellWithOptions({
+        scriptOrCommand: { file: "update_environment.py" },
+        args: [projectEvn.projectFile, "-multipleDestinationDevices", option]
+    });
+    projectEvn.multipleDeviceID = getMultiDeviceIds(); // update it
+
     await buildSelectedTarget(commandContext, problemResolver);
-    await terminateCurrentIOSApp(commandContext, sessionID);
 
     for (let device of option.split(" ")) {
         emptyAppLog(device.substring("id=".length));
     }
-    await commandContext.execShell(
-        "Run App On Multiple Devices",
-        { file: "run_app.sh" },
-        [sessionID, "RUNNING", "-DEVICES", `${option}`],
+    const runApp = new RunManager(
+        sessionID,
+        false,
+        projectEvn
     );
+    await runApp.runOnMultipleDevices(commandContext);
 }
 
 export async function runAndDebugTests(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {

@@ -1,6 +1,7 @@
 import path from "path";
 import * as vscode from "vscode";
 import fs from "fs";
+import { Executor } from "./execShell";
 
 export enum Platform {
     macOS,
@@ -10,7 +11,32 @@ export enum Platform {
     tvOSSimulator
 };
 
-export function currentPlatform(): Platform | undefined {
+export interface ProjectEnv {
+    platform: Platform
+    projectFile: string
+    projectScheme: string
+    projectConfiguration: string
+    debugDeviceID: string
+    multipleDeviceID?: string
+    bundleAppName: string
+    appExecutablePath: string
+}
+
+export async function getProjectEnv() {
+    const exe = await getTargetExecutable();
+    return {
+        platform: currentPlatform(),
+        projectFile: getProjectFileName(),
+        projectScheme: getProjectScheme(),
+        projectConfiguration: getProjectConfiguration(),
+        debugDeviceID: getDeviceId(),
+        multipleDeviceID: getMultiDeviceIds(),
+        bundleAppName: getBundleAppName(),
+        appExecutablePath: exe
+    }
+}
+
+export function currentPlatform(): Platform {
     const platform = getProjectPlatform();
     switch (platform) {
         case "macOS":
@@ -24,6 +50,7 @@ export function currentPlatform(): Platform | undefined {
         case "tvOS Simulator":
             return Platform.tvOSSimulator;
     }
+    return Platform.iOSSimulator;
 }
 
 function sdk() {
@@ -103,6 +130,10 @@ export function getDeviceId() {
     return getEnvList()["DEVICE_ID"].replace(/^"|"$/g, '');
 }
 
+export function getMultiDeviceIds() {
+    return getEnvList()["MULTIPLE_DEVICE_ID"].replace(/^"|"$/g, '');
+}
+
 export function getBundleAppName() {
     return getEnvList()["BUNDLE_APP_NAME"].replace(/^"|"$/g, '');
 }
@@ -161,5 +192,50 @@ export function getBuildRootPath() {
     } catch (error) {
         console.log(`Building folder is not set : ${error}`)
         return undefined;
+    }
+}
+
+function getProjectType(projectFile: string): string {
+    if (projectFile.includes(".xcodeproj")) {
+        return "-project";
+    }
+    if (projectFile.includes("Package.swift")) {
+        return "-package";
+    }
+    return "-workspace";
+}
+
+export async function projectXcodeBuildSettings(projectFile: string, scheme: string, buildConfiguration: string) {
+    const settings = await new Executor().execShell({
+        cancellationToken: undefined,
+        scriptOrCommand: { command: "xcodebuild" },
+        args: ["-showBuildSettings", getProjectType(projectFile), projectFile, "-scheme", scheme, "-configuration", buildConfiguration, "-json"]
+    });
+    return JSON.parse(settings.stdout);
+}
+
+export async function getProductName() {
+    const scheme = getProjectScheme();
+    const projectFile = getProjectFileName();
+    const projectSettings: any[] = await projectXcodeBuildSettings(projectFile, scheme, getProjectConfiguration());
+
+    return projectSettings[0].buildSettings.PRODUCT_NAME;
+}
+
+export async function getTargetExecutable() {
+    const product_name = await getProductName();
+    const build_path = getBuildRootPath();
+    const build_configuration = getProjectConfiguration();
+    switch (currentPlatform()) {
+        case Platform.macOS:
+            return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`
+        case Platform.watchOSSimulator:
+            return `${build_path}/Build/Products/${build_configuration}-watchsimulator/${product_name}.app`
+        case Platform.visionOSSimulator:
+            return `${build_path}/Build/Products/${build_configuration}-xrsimulator/${product_name}.app`
+        case Platform.tvOSSimulator:
+            return `${build_path}/Build/Products/${build_configuration}-appletvsimulator/${product_name}.app`
+        case Platform.iOSSimulator:
+            return `${build_path}/Build/Products/${build_configuration}-iphonesimulator/${product_name}.app`
     }
 }

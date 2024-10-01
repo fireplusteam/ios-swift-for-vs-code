@@ -11,6 +11,7 @@ device_uuid = sys.argv[1]
 bundle = sys.argv[2]
 debugger_arg = sys.argv[3]
 session_id = sys.argv[4]
+wait_debugger = sys.argv[5]
 
 launch_log_path = f'.logs/app_launch_{device_uuid}.log'
 with open(launch_log_path, "w+") as file:
@@ -89,7 +90,8 @@ def logMessage(e):
 
 
 def main():
-    helper.wait_debugger_to_launch(session_id)
+    if wait_debugger == "true":
+        helper.wait_debugger_to_launch(session_id)
     
     # Run the command asynchronously
     return_code, is_ok = run_process(' '.join(commandLaunch), f".logs/app_{device_uuid}.log")

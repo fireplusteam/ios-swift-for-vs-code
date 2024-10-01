@@ -283,10 +283,12 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
+    let multiDevicesSessionCounter = 1;
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
             await atomicCommand.userCommandWithoutThrowingException(async (context) => {
-                const id = getSessionId("multiple_devices");
+                const id = getSessionId(`multiple_devices`) + `_${multiDevicesSessionCounter}`;
+                multiDevicesSessionCounter++;
                 await runAppOnMultipleDevices(context, id, problemDiagnosticResolver);
             });
             return ""; // we need to return string as it's going to be used for launch configuration
