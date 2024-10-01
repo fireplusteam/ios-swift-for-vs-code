@@ -82,7 +82,7 @@ export function getLockFilePath(filePath: string) {
 export function deleteLockFile(filePath: string, fileName: string) {
     const lockFilePath = path.join(filePath, fileName + ".lock");
     if (fs.existsSync(lockFilePath)) {
-        fs.rmSync(lockFilePath, { force: true, maxRetries: 3 });
+        fs.rmSync(lockFilePath, { force: true, maxRetries: 10 });
     }
 }
 

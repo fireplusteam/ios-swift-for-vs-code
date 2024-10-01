@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import fs from "fs";
 import { Executor } from "./execShell";
 import { lock } from "lockfile";
-import { asyncLock } from "./utils";
+import { asyncLock, emptyLog } from "./utils";
 
 export enum Platform {
     macOS,
@@ -44,12 +44,20 @@ export interface SetProjectEnvInterface {
     setPlatform(platform: string): Promise<void>
 }
 
+export const ProjectEnvFilePath = ".logs/.env";
+
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     get platform(): Promise<Platform> {
         return currentPlatform();
     }
     get projectFile(): Promise<string> {
-        return getProjectFileName();
+        return getProjectFileName().then(projectFile => {
+            if (!fs.existsSync(getFilePathInWorkspace(projectFile))) {
+                this.emptySessions();
+                return Promise.reject(ProjectFileMissedError);
+            }
+            return projectFile;
+        });
     }
 
     get projectScheme(): Promise<string> {
@@ -94,6 +102,10 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
     async setPlatform(platform: string): Promise<void> {
         await saveKeyToEnvList("PLATFORM", platform);
+    }
+
+    async emptySessions() {
+        emptyLog(ProjectEnvFilePath);
     }
 }
 

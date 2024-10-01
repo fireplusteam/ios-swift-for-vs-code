@@ -5,9 +5,9 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getMultiDeviceIds, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, ProjectEnv, updateProject } from "./env";
+import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getMultiDeviceIds, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, ProjectEnv, ProjectFileMissedError, updateProject } from "./env";
 import { Executor, ExecutorMode } from "./execShell";
-import { sleep } from './extension';
+import { handleValidationErrors, sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
@@ -106,79 +106,111 @@ export async function selectProjectFile(commandContext: CommandContext, projectM
 }
 
 export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false) {
-    const schemes = await commandContext.projectSettingsProvider.getSchemes();
-    const currentScheme = await commandContext.projectSettingsProvider.projectEnv.projectScheme;
-    const json = JSON.stringify(schemes.map(scheme => {
-        if (currentScheme == scheme)
-            return { label: "$(notebook-state-success) " + scheme, value: scheme };
-        else return { label: scheme, value: scheme };
-    }));
+    try {
+        const schemes = await commandContext.projectSettingsProvider.getSchemes();
+        let currentScheme: string;
+        try {
+            currentScheme = await commandContext.projectSettingsProvider.projectEnv.projectScheme;
+        } catch {
+            currentScheme = "";
+        }
+        const json = JSON.stringify(schemes.map(scheme => {
+            if (currentScheme == scheme)
+                return { label: "$(notebook-state-success) " + scheme, value: scheme };
+            else return { label: scheme, value: scheme };
+        }));
 
-    let option = await showPicker(json,
-        "Target",
-        "Please select Target",
-        false,
-        ignoreFocusOut,
-        true
-    );
+        let option = await showPicker(json,
+            "Target",
+            "Please select Target",
+            false,
+            ignoreFocusOut,
+            true
+        );
 
-    if (option === undefined) {
-        return;
+        if (option === undefined) {
+            return false;
+        }
+        await commandContext.projectSettingsProvider.projectEnv.setProjectScheme(option);
+    } catch (error) {
+        return await handleValidationErrors(commandContext, error, async () => {
+            await selectTarget(commandContext, ignoreFocusOut);
+        });
     }
-    await commandContext.projectSettingsProvider.projectEnv.setProjectScheme(option);
 }
 
 export async function selectConfiguration(commandContext: CommandContext, ignoreFocusOut = false) {
-    const configurations = await commandContext.projectSettingsProvider.getConfigurations();
-    const currentConfiguration = await commandContext.projectSettingsProvider.projectEnv.projectConfiguration;
-    const json = JSON.stringify(configurations.map(configuration => {
-        if (currentConfiguration == configuration)
-            return { label: "$(notebook-state-success) " + configuration, value: configuration };
-        else return { label: configuration, value: configuration };
-    }));
+    try {
+        const configurations = await commandContext.projectSettingsProvider.getConfigurations();
+        let currentConfiguration: string;
+        try {
+            currentConfiguration = await commandContext.projectSettingsProvider.projectEnv.projectConfiguration;
+        } catch {
+            currentConfiguration = "";
+        }
+        const json = JSON.stringify(configurations.map(configuration => {
+            if (currentConfiguration == configuration)
+                return { label: "$(notebook-state-success) " + configuration, value: configuration };
+            else return { label: configuration, value: configuration };
+        }));
 
-    let option = await showPicker(json,
-        "Configuration",
-        "Please Select Build Configuration",
-        false,
-        ignoreFocusOut,
-        true
-    );
+        let option = await showPicker(json,
+            "Configuration",
+            "Please Select Build Configuration",
+            false,
+            ignoreFocusOut,
+            true
+        );
 
-    if (option === undefined) {
-        return;
+        if (option === undefined) {
+            return false;
+        }
+
+        await commandContext.projectSettingsProvider.projectEnv.setProjectConfiguration(option);
+    } catch (error) {
+        return await handleValidationErrors(commandContext, error, async () => {
+            await selectConfiguration(commandContext, ignoreFocusOut);
+        });
     }
-
-    await commandContext.projectSettingsProvider.projectEnv.setProjectConfiguration(option);
 }
 
-export async function selectDevice(commandContext: CommandContext, shouldCheckWorkspace = true, ignoreFocusOut = false) {
+export async function selectDevice(commandContext: CommandContext, ignoreFocusOut = false) {
+    try {
+        const devices = await commandContext.projectSettingsProvider.getDevices();
+        let selectedDeviceID: string;
+        try {
+            selectedDeviceID = await commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
+        } catch {
+            selectedDeviceID = "";
+        }
+        const items = filterDevices(devices, device => selectedDeviceID == device["id"]);
 
-    const devices = await commandContext.projectSettingsProvider.getDevices();
-    const selectedDeviceID = await commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
-    const items = filterDevices(devices, device => selectedDeviceID == device["id"]);
+        if (items.length == 0) {
+            vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
+            return false;
+        }
 
-    if (items.length == 0) {
-        vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
-        return false;
-    }
+        let option = await showPicker(
+            items,
+            "Device",
+            "Please select Device for DEBUG",
+            false,
+            ignoreFocusOut,
+            true
+        );
 
-    let option = await showPicker(
-        items,
-        "Device",
-        "Please select Device for DEBUG",
-        false,
-        ignoreFocusOut,
-        true
-    );
-
-    if (option === undefined) {
-        return false;
-    }
-    if (typeof option == "object") {
-        const obj = option as { [key: string]: any };
-        await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj.id)
-        await commandContext.projectSettingsProvider.projectEnv.setPlatform(obj.platform);
+        if (option === undefined) {
+            return false;
+        }
+        if (typeof option == "object") {
+            const obj = option as { [key: string]: any };
+            await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj.id)
+            await commandContext.projectSettingsProvider.projectEnv.setPlatform(obj.platform);
+        }
+    } catch (error) {
+        return await handleValidationErrors(commandContext, error, async () => {
+            await selectDevice(commandContext, ignoreFocusOut);
+        });
     }
 }
 
@@ -187,9 +219,21 @@ export async function restartLSP() {
 }
 
 export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
-    await selectTarget(commandContext, ignoreFocusOut);
-    await selectConfiguration(commandContext, ignoreFocusOut);
-    await selectDevice(commandContext, false, ignoreFocusOut)
+    try {
+        if ((await commandContext.projectSettingsProvider.projectEnv.projectScheme === ""))
+            if (await selectTarget(commandContext, ignoreFocusOut) === false)
+                return false;
+        if (await commandContext.projectSettingsProvider.projectEnv.projectConfiguration == "")
+            if (await selectConfiguration(commandContext, ignoreFocusOut) === false)
+                return false;
+        if (await commandContext.projectSettingsProvider.projectEnv.debugDeviceID == "")
+            if (await selectDevice(commandContext, ignoreFocusOut) === false)
+                return false;
+    } catch (error) {
+        await handleValidationErrors(commandContext, error, async () => {
+            return await checkWorkspace(commandContext, ignoreFocusOut);
+        })
+    }
 }
 
 export async function generateXcodeServer(commandContext: CommandContext) {
@@ -215,6 +259,7 @@ export async function openXCode(activeFile: string) {
 }
 
 export async function runApp(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
+    await checkWorkspace(commandContext, false);
     const runManager = new RunManager(
         sessionID,
         isDebuggable,
@@ -224,59 +269,70 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
 }
 
 export async function runAppOnMultipleDevices(commandContext: CommandContext, sessionID: string, problemResolver: ProblemDiagnosticResolver) {
-    if (await currentPlatform() == Platform.macOS) {
-        vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
-        return;
-    }
+    try {
+        if (await currentPlatform() == Platform.macOS) {
+            vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
+            return;
+        }
 
-    const devices = await commandContext.projectSettingsProvider.getDevices();
-    const selectedDeviceID = (await commandContext.projectSettingsProvider.projectEnv.multipleDeviceID).split(" |").map(device => device.substring("id=".length));
+        const devices = await commandContext.projectSettingsProvider.getDevices();
+        let selectedDeviceID: string[];
+        try {
+            selectedDeviceID = (await commandContext.projectSettingsProvider.projectEnv.multipleDeviceID).split(" |").map(device => device.substring("id=".length));
+        } catch {
+            selectedDeviceID = [];
+        }
+        const items = filterDevices(devices, device => selectedDeviceID.find(id => device["id"] == id) !== undefined);
 
-    const items = filterDevices(devices, device => selectedDeviceID.find(id => device["id"] == id) !== undefined);
+        if (items.length == 0) {
+            vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
+            return false;
+        }
 
-    if (items.length == 0) {
-        vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
-        return false;
-    }
-
-    const option = await showPicker(
-        items,
-        "Devices",
-        "Please select Multiple Devices to Run You App",
-        true,
-        false,
-        true
-    );
-
-    if (option === undefined || option === '') {
-        return;
-    }
-
-    const projectEvn = new ProjectEnv();
-
-    const deviceIds: string[] = [];
-    if (Array.isArray(option)) {
-        for (const device of option)
-            deviceIds.push(device.id);
-        commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(
-            deviceIds.map(device => `id=${device}`).join(" |")
+        const option = await showPicker(
+            items,
+            "Devices",
+            "Please select Multiple Devices to Run You App",
+            true,
+            false,
+            true
         );
-    }
 
-    await buildSelectedTarget(commandContext, problemResolver);
+        if (option === undefined || option === '') {
+            return false;
+        }
 
-    for (let device of deviceIds) {
-        emptyAppLog(device);
+        const projectEvn = new ProjectEnv();
+
+        const deviceIds: string[] = [];
+        if (Array.isArray(option)) {
+            for (const device of option)
+                deviceIds.push(device.id);
+            commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(
+                deviceIds.map(device => `id=${device}`).join(" |")
+            );
+        }
+
+        await buildSelectedTarget(commandContext, problemResolver);
+
+        for (let device of deviceIds) {
+            emptyAppLog(device);
+        }
+        const runApp = new RunManager(
+            sessionID,
+            false,
+            projectEvn
+        );
+        await runApp.runOnMultipleDevices(commandContext);
+    } catch (error) {
+        await handleValidationErrors(commandContext, error, async () => {
+            return await runAppOnMultipleDevices(commandContext, sessionID, problemResolver);
+        });
     }
-    const runApp = new RunManager(
-        sessionID,
-        false,
-        projectEvn
-    );
-    await runApp.runOnMultipleDevices(commandContext);
 }
 
 export async function runAndDebugTests(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
+    await checkWorkspace(commandContext, false);
     await commandContext.execShell(
         "Run Tests",
         { file: "test_app.sh" },
@@ -285,6 +341,7 @@ export async function runAndDebugTests(commandContext: CommandContext, sessionID
 }
 
 export async function runAndDebugTestsForCurrentFile(commandContext: CommandContext, sessionID: string, isDebuggable: boolean, tests: string[]) {
+    await checkWorkspace(commandContext, false);
     const option = tests.map(e => {
         return `- only - testing: ${e} `;
     }).join(" ");

@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { isActivated } from "./env";
+import { DebugDeviceIDMissedError, getFilePathInWorkspace, isActivated, ProjectConfigurationMissedError, ProjectEnvFilePath, ProjectFileMissedError, ProjectSchemeMissedError } from "./env";
 import {
     checkWorkspace,
     enableXCBBuildService,
@@ -31,6 +31,9 @@ import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsL
 import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
 import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
+import * as fs from 'fs';
+import { CommandContext } from "./CommandManagement/CommandContext";
+import common from "mocha/lib/interfaces/common";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -76,7 +79,8 @@ export function sleep(ms: number) {
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
     emptyLog(".logs/debugger.launching");
-    emptyLog(".logs/.env");
+    emptyLog(ProjectEnvFilePath);
+    fs.mkdir(getFilePathInWorkspace(".logs"), () => { });
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
@@ -346,4 +350,31 @@ export async function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
     autocompleteWatcher?.terminate();
     // await projectExecutor.terminateShell();
+}
+
+export async function handleValidationErrors<T>(commandContext: CommandContext, error: any, repeatOnChange: () => Promise<T>) {
+    if (error == ProjectFileMissedError) {
+        if (!projectManager)
+            throw Error("ProjectManager is not valid")
+
+        if ((await selectProjectFile(commandContext, projectManager, false, true)) === false) {
+            throw error; // cancelled
+        }
+        return await repeatOnChange();
+    } else if (error == ProjectSchemeMissedError) {
+        if ((await selectTarget(commandContext, true)) === false) {
+            throw error; // cancelled
+        }
+        return await repeatOnChange();
+    } else if (error == ProjectConfigurationMissedError) {
+        if ((await selectConfiguration(commandContext, true)) === false) {
+            throw error;
+        }
+        return await repeatOnChange();
+    } else if (error == DebugDeviceIDMissedError) {
+        if ((await selectDevice(commandContext, true)) === false) {
+            throw error;
+        }
+        return await repeatOnChange();
+    }
 }

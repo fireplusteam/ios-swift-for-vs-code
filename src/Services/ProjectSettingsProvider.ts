@@ -1,6 +1,7 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getProjectPath, getProjectType, ProjectEnv, ProjectFileMissedError } from "../env";
+import { getFilePathInWorkspace, getProjectPath, getProjectType, ProjectEnv, ProjectFileMissedError } from "../env";
 import { getProjectFiles } from "../ProjectManager/ProjectManager";
+import fs from "fs";
 
 export class ProjectSettingsProvider {
     private _projectEnv = new ProjectEnv();
