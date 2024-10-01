@@ -2,11 +2,14 @@ import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
-import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "../commands";
+import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp } from "../commands";
 import { error } from "console";
 import { Executor, ExecutorMode } from "../execShell";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
+import { killSpawnLaunchedProcesses } from "../utils";
+import { kill } from "process";
+import { sleep } from "../extension";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -63,15 +66,20 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         try {
             this.isTerminated = true;
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
-            const terminationContext = new CommandContext(new vscode.CancellationTokenSource(), new Executor());
-            await terminateCurrentIOSApp(terminationContext, this.sessionID, true);
         } finally {
             try {
                 this.commandContext?.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }
             this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
+
+            this.killSpawnLaunchedProcess();
         }
+    }
+
+    async killSpawnLaunchedProcess() {
+        await sleep(1000);
+        await killSpawnLaunchedProcesses(this.sessionID);
     }
 
     public static async updateStatus(sessionId: string, status: string) {

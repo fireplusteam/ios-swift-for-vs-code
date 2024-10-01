@@ -271,12 +271,9 @@ export async function terminateCurrentIOSApp(commandContext: CommandContext, ses
     } catch (err) {
         if (err == TimeoutError) {
             // we should cancel it in a new executor as it can not be executed 
-            await new Executor().execShell({
-                cancellationToken: commandContext.cancellationToken,
-                terminalName: "Shutdown Simulator",
+            await commandContext.execShellParallel({
                 scriptOrCommand: { command: "xcrun" },
                 args: ["simctl", "shutdown", getDeviceId()],
-                mode: ExecutorMode.silently
             });
             vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
         }

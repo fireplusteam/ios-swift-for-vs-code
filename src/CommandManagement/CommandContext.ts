@@ -3,6 +3,13 @@ import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } fr
 
 export const UserTerminatedError: Error = new Error("Terminated");
 
+interface CommandOptions {
+    terminalName?: string
+    scriptOrCommand: ShellCommand | ShellFileScript,
+    args?: string[]
+    mode?: ExecutorMode
+}
+
 export class CommandContext {
 
     private _cancellationTokenSource: vscode.CancellationTokenSource;
@@ -19,6 +26,17 @@ export class CommandContext {
         this._executor = executor;
     }
 
+    public async execShellWithOptions(
+        shell: CommandOptions
+    ): Promise<ShellResult> {
+        return await this._executor.execShell(
+            {
+                cancellationToken: this._cancellationTokenSource.token,
+                ...shell
+            }
+        );
+    }
+
     public async execShell(
         terminalName: string,
         scriptOrCommand: ShellCommand | ShellFileScript,
@@ -31,6 +49,15 @@ export class CommandContext {
             scriptOrCommand: scriptOrCommand,
             args: args,
             mode: mode
+        })
+    }
+
+    public async execShellParallel(
+        shell: CommandOptions
+    ): Promise<ShellResult> {
+        return await new Executor().execShell({
+            cancellationToken: this._cancellationTokenSource.token,
+            ...shell
         })
     }
 
