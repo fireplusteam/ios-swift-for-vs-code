@@ -5,14 +5,15 @@ import * as vscode from 'vscode';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
-import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getMultiDeviceIds, getProjectConfiguration, getProjectEnv, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
+import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getMultiDeviceIds, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, ProjectEnv, updateProject } from "./env";
 import { Executor, ExecutorMode } from "./execShell";
 import { sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder, promiseWithTimeout, TimeoutError } from "./utils";
 import { CommandContext } from './CommandManagement/CommandContext';
 import { DebugAdapterTracker } from './Debug/DebugAdapterTracker';
-import { RunManager } from './Run/RunManager';
+import { RunManager } from './Services/RunManager';
+import { ProjectSettingsProvider } from './Services/ProjectSettingsProvider';
 
 export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
@@ -84,19 +85,15 @@ export async function selectProjectFile(commandContext: CommandContext, projectM
 }
 
 export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false, shouldCheckWorkspace = true) {
-    if (shouldCheckWorkspace) {
-        const selected = await checkWorkspace(commandContext, ignoreFocusOut);
-        if (selected.selectedTarget)
-            return;
-    }
+    const schemes = await commandContext.projectSettingsProvider.getSchemes();
+    const currentScheme = await commandContext.projectSettingsProvider.projectEnv.projectScheme;
+    const json = JSON.stringify(schemes.map(scheme => {
+        if (currentScheme == scheme)
+            return { label: "$(notebook-state-success) " + scheme, value: scheme };
+        else return { label: scheme, value: scheme };
+    }));
 
-    let stdout = getLastLine((await commandContext.execShell(
-        "Fetch Project Targets",
-        { file: "populate_schemes.sh" },
-        [],
-    )).stdout);
-
-    let option = await showPicker(stdout,
+    let option = await showPicker(json,
         "Target",
         "Please select Target",
         false,
@@ -107,14 +104,7 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
     if (option === undefined) {
         return;
     }
-
-    await commandContext.execShell(
-        "Update Selected Target",
-        { file: "update_environment.sh" },
-        ["-destinationScheme", option]
-    );
-
-    await checkWorkspace(commandContext);
+    await commandContext.projectSettingsProvider.projectEnv.setProjectScheme(option);
 }
 
 export async function selectConfiguration(commandContext: CommandContext, ignoreFocusOut = false, shouldCheckWorkspace = true) {
@@ -128,7 +118,7 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
         "Fetch Project Configurations",
         { file: "populate_configurations.sh" },
         [ // TODO: Need to figure out if we can pass ProjectManager here
-            getProjectFiles(getProjectPath()).at(0) || "Debug"
+            (await getProjectFiles(await getProjectPath())).at(0) || "Debug"
         ]
     )).stdout);
 
@@ -196,7 +186,7 @@ export async function restartLSP() {
 export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
     let selectedConfiguration = false;
     try {
-        if (getProjectConfiguration().length == 0) {
+        if ((await getProjectConfiguration()).length == 0) {
             await selectConfiguration(commandContext, true, false);
             selectedConfiguration = true;
         }
@@ -207,7 +197,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
 
     let selectedTarget = false;
     try {
-        if (getProjectScheme().length == 0) {
+        if ((await getProjectScheme()).length == 0) {
             await selectTarget(commandContext, true, false);
             selectedTarget = true;
         }
@@ -248,7 +238,7 @@ export async function openXCode(activeFile: string) {
     const stdout = (await openExec.execShell({
         terminalName: "Open Xcode",
         scriptOrCommand: { file: "open_xcode.sh" },
-        args: [getProjectPath()],
+        args: [await getProjectPath()],
         mode: ExecutorMode.silently
     })).stdout;
     console.log(stdout);
@@ -261,13 +251,13 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
     const runManager = new RunManager(
         sessionID,
         isDebuggable,
-        await getProjectEnv()
+        new ProjectEnv()
     );
     await runManager.runOnDebugDevice(commandContext);
 }
 
 export async function runAppOnMultipleDevices(commandContext: CommandContext, sessionID: string, problemResolver: ProblemDiagnosticResolver) {
-    if (currentPlatform() == Platform.macOS) {
+    if (await currentPlatform() == Platform.macOS) {
         vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
         return;
     }
@@ -297,12 +287,12 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
         return;
     }
 
-    let projectEvn = await getProjectEnv();
+    const projectEvn = new ProjectEnv();
+
     await commandContext.execShellWithOptions({
         scriptOrCommand: { file: "update_environment.py" },
-        args: [projectEvn.projectFile, "-multipleDestinationDevices", option]
+        args: [await projectEvn.projectFile, "-multipleDestinationDevices", option]
     });
-    projectEvn.multipleDeviceID = getMultiDeviceIds(); // update it
 
     await buildSelectedTarget(commandContext, problemResolver);
 

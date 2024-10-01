@@ -128,7 +128,7 @@ export class AutocompleteWatcher {
                 if (this.buildId !== buildId || !this.isWatcherEnabled())
                     return;
                 try {
-                    const scheme = getProjectScheme();
+                    const scheme = await getProjectScheme();
                     emptyAutobuildLog();
                     this.problemResolver.parseAsyncLogs(
                         getWorkspacePath(),

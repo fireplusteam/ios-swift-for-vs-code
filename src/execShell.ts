@@ -169,7 +169,7 @@ export class Executor {
         if (this.isRunning) {
             throw Promise.reject(new ExecutorRunningError("Another task is running", this._executingCommand));
         }
-        const env = getEnv();
+        const env = await getEnv();
         const envOptions = {
             ...process.env,
             ...env,

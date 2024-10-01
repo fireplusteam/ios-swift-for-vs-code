@@ -114,7 +114,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const sessionID = getSessionId(`debugger`) + this.counterID;
         await DebugAdapterTracker.updateStatus(sessionID, "configuring");
 
-        if (runtimeWarningsConfigStatus() !== "off" && currentPlatform() != Platform.macOS) // mac OS doesn't support that feature at the moment
+        if (runtimeWarningsConfigStatus() !== "off" && await currentPlatform() != Platform.macOS) // mac OS doesn't support that feature at the moment
             this.runtimeWarningsWatcher.startWatcher();
 
         return await this.debugSession(dbgConfig, sessionID, isDebuggable);

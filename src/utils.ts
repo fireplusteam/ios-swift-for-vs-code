@@ -4,6 +4,7 @@ import fs from "fs";
 import find from "find-process";
 import treeKill from "tree-kill";
 import psTree from "ps-tree";
+import { lock, unlock } from "lockfile";
 
 export const TimeoutError = new Error("Timed out");
 export function promiseWithTimeout<T>(ms: number, promise: () => Promise<T>): Promise<T> {
@@ -40,6 +41,21 @@ export function killAll(pid: number | undefined, signal: string) {
     });
 }
 
+export async function asyncLock<T>(path: string, block: () => T) {
+    return new Promise<T>((resolve, reject) => {
+        lock(getLockFilePath(path), { wait: 100000 }, (error) => {
+            if (error) {
+                reject(error);
+            } else {
+                const val = block();
+                unlock(getLockFilePath(path), (error) => {
+                    resolve(val);
+                });
+            }
+        })
+    })
+}
+
 export function getSessionId(key: String) {
     const path = `${getWorkspacePath()} ${key}`;
     return Buffer.from(path, 'utf-8').toString('base64');
@@ -57,6 +73,10 @@ export function emptyFile(filePath: string, fileName: string) {
     }
     const fileFullPath = path.join(filePath, fileName);
     fs.writeFileSync(fileFullPath, "", "utf-8");
+}
+
+export function getLockFilePath(filePath: string) {
+    return filePath + ".lock";
 }
 
 export function deleteLockFile(filePath: string, fileName: string) {

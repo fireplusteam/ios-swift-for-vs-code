@@ -4,6 +4,7 @@
 npm install # resolve dependencies
 npm install --save @types/ps-tree
 npm install --save @types/find-process
+npm install --save @types/lockfile
 
 pyinstaller --onefile src/XCBBuildServiceProxy/XCBBuildService.py
 

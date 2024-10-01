@@ -75,6 +75,8 @@ export function sleep(ms: number) {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
+    emptyLog(".logs/debugger.launching");
+    emptyLog(".logs/.env");
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
@@ -100,8 +102,6 @@ export async function activate(context: vscode.ExtensionContext) {
     // initialise code
 
     setContext(context);
-
-    emptyLog(".logs/debugger.launching");
 
     await initialize(atomicCommand, projectManager, autocompleteWatcher);
 

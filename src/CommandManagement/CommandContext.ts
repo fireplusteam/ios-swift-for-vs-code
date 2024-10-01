@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } from "../execShell";
+import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
 
 export const UserTerminatedError: Error = new Error("Terminated");
 
@@ -11,6 +12,10 @@ interface CommandOptions {
 }
 
 export class CommandContext {
+    private _projectSettingsProvider: ProjectSettingsProvider;
+    get projectSettingsProvider(): ProjectSettingsProvider {
+        return this._projectSettingsProvider;
+    }
 
     private _cancellationTokenSource: vscode.CancellationTokenSource;
     private _executor: Executor;
@@ -24,6 +29,7 @@ export class CommandContext {
     constructor(cancellationToken: vscode.CancellationTokenSource, executor: Executor) {
         this._cancellationTokenSource = cancellationToken;
         this._executor = executor;
+        this._projectSettingsProvider = new ProjectSettingsProvider(this);
     }
 
     public async execShellWithOptions(

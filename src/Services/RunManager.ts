@@ -26,22 +26,22 @@ export class RunManager {
     }
 
     async runOnDebugDevice(context: CommandContext) {
-        if (this.env.platform == Platform.macOS) {
+        if (await this.env.platform == Platform.macOS) {
             return await this.runOnMac(context);
         }
 
-        return await this.runOnSimulator(context, this.env.debugDeviceID, true);
+        return await this.runOnSimulator(context, await this.env.debugDeviceID, true);
     }
 
     async runOnMultipleDevices(context: CommandContext) {
-        if (this.env.platform == Platform.macOS) {
+        if (await this.env.platform == Platform.macOS) {
             throw Error("MacOS Platform doesn't support running on Multiple Devices!");
         }
         if (this.isDebuggable) {
             throw Error("Debug mode is not supported in run on multiple devices");
         }
 
-        const devices = this.env.multipleDeviceID?.split(" |");
+        const devices = (await this.env.multipleDeviceID).split(" |");
         if (devices == undefined || devices.length == 0)
             throw Error("Can not run on empty device");
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
@@ -97,12 +97,12 @@ export class RunManager {
         await context.execShellWithOptions({
             terminalName: this.terminalName,
             scriptOrCommand: { command: "xcrun" },
-            args: ["simctl", "install", deviceId, this.env.appExecutablePath]
+            args: ["simctl", "install", deviceId, await this.env.appExecutablePath]
         });
 
         context.execShellParallel({
             scriptOrCommand: { file: "launch.py" },
-            args: [deviceId, this.env.bundleAppName, this.debuggerArg, this.sessionID, waitDebugger ? "true" : "false"]
+            args: [deviceId, await this.env.bundleAppName, this.debuggerArg, this.sessionID, waitDebugger ? "true" : "false"]
         }).catch(reason => {
             console.warn(`Session ID: ${this.sessionID}, terminated with error: ${error}}`);
         });
@@ -111,7 +111,7 @@ export class RunManager {
     private async runOnMac(context: CommandContext) {
         context.execShellParallel({
             scriptOrCommand: { file: "launch.py" },
-            args: ["MAC_OS", this.env.bundleAppName, this.debuggerArg, this.sessionID]
+            args: ["MAC_OS", await this.env.bundleAppName, this.debuggerArg, this.sessionID]
         });
     }
 
@@ -122,7 +122,7 @@ export class RunManager {
                 await commandContext.execShell(
                     "Terminate iOS App",
                     { command: "xcrun" },
-                    ["simctl", "terminate", deviceId, this.env.bundleAppName]
+                    ["simctl", "terminate", deviceId, await this.env.bundleAppName]
                 );
             });
         } catch (err) {
