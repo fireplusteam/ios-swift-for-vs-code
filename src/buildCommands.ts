@@ -11,7 +11,10 @@ export function getFileNameLog() {
 }
 
 export async function cleanDerivedData(context: CommandContext) {
-    await context.execShell("Clean Derived Data", "clean_derived_data.sh");
+    await context.execShell(
+        "Clean Derived Data",
+        { file: "clean_derived_data.sh" }
+    );
 }
 
 export async function buildSelectedTarget(context: CommandContext, problemResolver: ProblemDiagnosticResolver) {
@@ -21,9 +24,8 @@ export async function buildSelectedTarget(context: CommandContext, problemResolv
     problemResolver.parseAsyncLogs(getWorkspacePath(), filePath);
     await context.execShell(
         "Build",
-        "build_app.sh",
+        { file: "build_app.sh" },
         ["-TARGET"],
-        false
     );
 }
 
@@ -36,9 +38,8 @@ export async function buildTests(context: CommandContext, problemResolver: Probl
     problemResolver.parseAsyncLogs(getWorkspacePath(), filePath);
     await context.execShell(
         "Build Tests",
-        "build_app.sh",
+        { file: "build_app.sh" },
         ["-TESTING"],
-        false
     );
 }
 
@@ -52,8 +53,7 @@ export async function buildTestsForCurrentFile(context: CommandContext, problemR
     problemResolver.parseAsyncLogs(getWorkspacePath(), filePath);
     await context.execShell(
         "Build Tests",
-        "build_app.sh",
+        { file: "build_app.sh" },
         ["-TESTING_ONLY_TESTS", option],
-        false
     );
 }

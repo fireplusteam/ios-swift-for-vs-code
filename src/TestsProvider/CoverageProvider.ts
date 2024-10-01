@@ -1,4 +1,4 @@
-import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
+import { Executor, ExecutorMode } from "../execShell";
 import { getFilePathInWorkspace } from "../env";
 import * as vscode from 'vscode';
 
@@ -31,16 +31,10 @@ export class CoverageProvider {
     public async getStatementCoverageFor(fileCoverage: vscode.FileCoverage): Promise<vscode.StatementCoverage[]> {
         const command = `xcrun xccov view --archive --json --file '${fileCoverage.uri.fsPath}' '${this.xcresultPath}'`;
         const executor = new Executor();
-        const outFileCoverageStr = (await executor.execShell(
-            undefined,
-            { isShell: true },
-            command,
-            [],
-            false,
-            ExecutorReturnType.stdout,
-            ExecutorMode.silently
-        )) as string;
-        const coverage = JSON.parse(outFileCoverageStr);
+        const outFileCoverageStr = (await executor.execShell({
+            scriptOrCommand: { command: command }
+        }));
+        const coverage = JSON.parse(outFileCoverageStr.stdout);
 
         if (fileCoverage instanceof XCFileCoverage) {
             if (fileCoverage.lineCoverage)
@@ -64,17 +58,11 @@ export class CoverageProvider {
     private async getCoverageData() {
         const shell = new Executor();
         const command = `xcrun xccov view --report --json '${this.xcresultPath}'`
-        const coverageJsonStr = (await shell.execShell(
-            undefined,
-            { isShell: true },
-            command,
-            [],
-            false,
-            ExecutorReturnType.stdout,
-            ExecutorMode.silently
-        )) as string;
+        const coverageJsonStr = (await shell.execShell({
+            scriptOrCommand: { command: command }
+        }));
 
-        return JSON.parse(coverageJsonStr);
+        return JSON.parse(coverageJsonStr.stdout);
     }
 
 }

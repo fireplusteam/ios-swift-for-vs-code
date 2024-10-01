@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ExecutorReturnType, ShellCommandName } from "../execShell";
+import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } from "../execShell";
 
 export const UserTerminatedError: Error = new Error("Terminated");
 
@@ -20,22 +20,18 @@ export class CommandContext {
     }
 
     public async execShell(
-        commandName: string | ShellCommandName,
-        fileOrCommand: string,
+        terminalName: string,
+        scriptOrCommand: ShellCommand | ShellFileScript,
         args: string[] = [],
-        showTerminal = false,
-        returnType = ExecutorReturnType.statusCode,
-        mode: ExecutorMode = ExecutorMode.verbose
-    ): Promise<boolean | string> {
-        return await this._executor.execShell(
-            this._cancellationTokenSource.token,
-            commandName,
-            fileOrCommand,
-            args,
-            showTerminal,
-            returnType,
-            mode
-        )
+        mode: ExecutorMode = ExecutorMode.verbose,
+    ): Promise<ShellResult> {
+        return await this._executor.execShell({
+            cancellationToken: this._cancellationTokenSource.token,
+            terminalName: terminalName,
+            scriptOrCommand: scriptOrCommand,
+            args: args,
+            mode: mode
+        })
     }
 
     public cancel() {

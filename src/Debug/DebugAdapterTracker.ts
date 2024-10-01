@@ -4,7 +4,7 @@ import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp, terminateCurrentIOSApp } from "../commands";
 import { error } from "console";
-import { Executor, ExecutorMode, ExecutorReturnType } from "../execShell";
+import { Executor, ExecutorMode } from "../execShell";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
 
@@ -75,15 +75,11 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     public static async updateStatus(sessionId: string, status: string) {
-        await new Executor().execShell(
-            undefined,
-            "Debugger Launching",
-            "debugger_launching.sh",
-            [sessionId, status],
-            false,
-            ExecutorReturnType.statusCode,
-            ExecutorMode.silently
-        );
+        await new Executor().execShell({
+            scriptOrCommand: { file: "debugger_launching.sh" },
+            args: [sessionId, status],
+            mode: ExecutorMode.silently
+        });
     }
 
     private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {

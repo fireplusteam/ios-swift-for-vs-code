@@ -25,17 +25,14 @@ export class ExecutorRunningError extends Error {
 
 export class ExecutorTaskError extends Error {
     code: number | null;
+    stderr: string;
     terminal: vscode.Terminal | null;
-    public constructor(message: string, code: number | null, terminal: vscode.Terminal | null) {
+    public constructor(message: string, code: number | null, stderr: string, terminal: vscode.Terminal | null) {
         super(message);
         this.code = code;
+        this.stderr = stderr;
         this.terminal = terminal;
     }
-}
-
-export enum ExecutorReturnType {
-    statusCode,
-    stdout
 }
 
 export enum ExecutorMode {
@@ -43,9 +40,25 @@ export enum ExecutorMode {
     silently
 }
 
-export interface ShellCommandName {
-    name?: string
-    isShell: boolean
+export interface ShellCommand {
+    command: string
+}
+
+export interface ShellExec {
+    cancellationToken?: vscode.CancellationToken
+    terminalName?: string
+    scriptOrCommand: ShellCommand | ShellFileScript,
+    args?: string[]
+    mode?: ExecutorMode
+}
+
+export interface ShellFileScript {
+    file: string
+}
+
+export interface ShellResult {
+    stdout: string
+    stderr: string
 }
 
 export class Executor {
@@ -142,14 +155,14 @@ export class Executor {
     }
 
     public async execShell(
-        cancellationToken: vscode.CancellationToken | undefined,
-        commandName: string | ShellCommandName,
-        fileOrCommand: string,
-        args: string[] = [],
-        showTerminal = false,
-        returnType = ExecutorReturnType.statusCode,
-        mode: ExecutorMode = ExecutorMode.verbose
-    ): Promise<boolean | string> {
+        shell: ShellExec
+    ): Promise<ShellResult> {
+        const cancellationToken = shell.cancellationToken;
+        const terminalName = shell.terminalName ?? "";
+        const scriptOrCommand = shell.scriptOrCommand;
+        const args = shell.args || [];
+        const mode = shell.mode || (shell.terminalName ? ExecutorMode.verbose : ExecutorMode.silently);
+
         if (cancellationToken && cancellationToken.isCancellationRequested) {
             throw Promise.reject(UserTerminatedError);
         }
@@ -161,23 +174,16 @@ export class Executor {
             ...process.env,
             ...env,
         };
-        let script: string = fileOrCommand;
-        let displayCommandName = "";
+        let script: string = "";
+        let displayCommandName = terminalName;
 
-        if (typeof commandName === 'string') {
-            script = getScriptPath(fileOrCommand);
+        if ("file" in scriptOrCommand) {
+            script = getScriptPath(scriptOrCommand.file);
             if (script.indexOf(".py") !== -1) {
                 script = `python3 "${script}"`;
             }
-            displayCommandName = commandName;
         } else {
-            displayCommandName = commandName.name || "";
-            if (commandName.isShell === false) {
-                script = getScriptPath(fileOrCommand);
-                if (script.indexOf(".py") !== -1) {
-                    script = `python3 "${script}"`;
-                }
-            }
+            script = scriptOrCommand.command;
         }
 
         const proc = this.execShellImp(script, args, {
@@ -189,25 +195,24 @@ export class Executor {
         this._executingCommand = displayCommandName;
         this.childProc = proc;
         const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(displayCommandName);
-        if (showTerminal) {
-            terminal?.show();
-        }
         if (mode === ExecutorMode.verbose) {
             this.writeEmitter?.fire(`COMMAND: ${displayCommandName}\n`);
         }
         let stdout = "";
         proc.stdout?.on("data", (data) => {
+            const str = data.toString();
             if (mode === ExecutorMode.verbose) {
-                this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+                this.writeEmitter?.fire(this.dataToPrint(str));
             }
-            if (returnType === ExecutorReturnType.stdout) {
-                stdout += data.toString();
-            }
+            stdout += str;
         });
+        let stderr = "";
         proc.stderr?.on("data", (data) => {
+            const str = data.toString();
             if (mode === ExecutorMode.verbose) {
-                this.writeEmitter?.fire(this.dataToPrint(data.toString()));
+                this.writeEmitter?.fire(this.dataToPrint(str));
             }
+            stderr += str;
         });
 
         return new Promise((resolve, reject) => {
@@ -285,6 +290,7 @@ export class Executor {
                         new ExecutorTaskError(
                             `Task: ${this.getTerminalName(displayCommandName)} exits with ${code}`,
                             code,
+                            stderr,
                             terminal
                         )
                     );
@@ -294,14 +300,7 @@ export class Executor {
                             `✅ ${this.getTerminalName(displayCommandName)}`
                         );
                     }
-                    switch (returnType) {
-                        case ExecutorReturnType.statusCode:
-                            resolve(true);
-                            break;
-                        case ExecutorReturnType.stdout:
-                            resolve(stdout);
-                            break;
-                    }
+                    resolve({ stdout: stdout, stderr: stderr });
                 }
             });
         });

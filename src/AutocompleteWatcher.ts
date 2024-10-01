@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ExecutorMode, ExecutorReturnType } from "./execShell";
+import { ExecutorMode } from "./execShell";
 import { getWorkspacePath, getProjectScheme } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
@@ -137,10 +137,8 @@ export class AutocompleteWatcher {
                     );
                     await context.execShell(
                         AutocompleteWatcher.AutocompleteCommandName,
-                        "compile_module.sh",
+                        { file: "compile_module.sh" },
                         [scheme],
-                        false,
-                        ExecutorReturnType.statusCode,
                         ExecutorMode.silently
                     );
                 } catch (err) {

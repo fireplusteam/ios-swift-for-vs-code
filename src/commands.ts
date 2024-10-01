@@ -6,7 +6,7 @@ import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager, getProjectFiles } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
 import { currentPlatform, getBundleAppName, getDeviceId, getEnvList, getProjectConfiguration, getProjectPath, getProjectScheme, getScriptPath, getWorkspacePath, getXCBBuildServicePath, Platform, updateProject } from "./env";
-import { Executor, ExecutorMode, ExecutorReturnType } from "./execShell";
+import { Executor, ExecutorMode } from "./execShell";
 import { sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, getLastLine, isFolder, killSpawnLaunchedProcesses, promiseWithTimeout, TimeoutError } from "./utils";
@@ -92,11 +92,9 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
 
     let stdout = getLastLine((await commandContext.execShell(
         "Fetch Project Targets",
-        "populate_schemes.sh",
+        { file: "populate_schemes.sh" },
         [],
-        false,
-        ExecutorReturnType.stdout
-    )) as string);
+    )).stdout);
 
     let option = await showPicker(stdout,
         "Target",
@@ -112,7 +110,7 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
 
     await commandContext.execShell(
         "Update Selected Target",
-        "update_environment.sh",
+        { file: "update_environment.sh" },
         ["-destinationScheme", option]
     );
 
@@ -128,13 +126,11 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
 
     let stdout = getLastLine((await commandContext.execShell(
         "Fetch Project Configurations",
-        "populate_configurations.sh",
+        { file: "populate_configurations.sh" },
         [ // TODO: Need to figure out if we can pass ProjectManager here
             getProjectFiles(getProjectPath()).at(0) || "Debug"
-        ],
-        false,
-        ExecutorReturnType.stdout
-    )) as string);
+        ]
+    )).stdout);
 
     let option = await showPicker(stdout,
         "Configuration",
@@ -150,7 +146,7 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
 
     await commandContext.execShell(
         "Update Selected Configuration",
-        "update_environment.sh",
+        { file: "update_environment.sh" },
         ["-destinationConfiguration", option]
     );
 }
@@ -163,11 +159,9 @@ export async function selectDevice(commandContext: CommandContext, shouldCheckWo
     }
     let stdout = getLastLine((await commandContext.execShell(
         "Fetch Devices",
-        "populate_devices.sh",
+        { file: "populate_devices.sh" },
         ["-single"],
-        false,
-        ExecutorReturnType.stdout,
-    )) as string);
+    )).stdout);
 
     const items: QuickPickItem[] = JSON.parse(stdout);
     if (items.length == 0) {
@@ -190,7 +184,7 @@ export async function selectDevice(commandContext: CommandContext, shouldCheckWo
 
     return await commandContext.execShell(
         "Update DEBUG Device",
-        "update_environment.sh",
+        { file: "update_environment.sh" },
         ["-destinationDevice", option]
     );
 }
@@ -222,13 +216,11 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         selectedTarget = true;
     }
 
-    const command = getLastLine(await commandContext.execShell(
+    const command = getLastLine((await commandContext.execShell(
         "Validate Environment",
-        "check_workspace.sh",
+        { file: "check_workspace.sh" },
         [],
-        false,
-        ExecutorReturnType.stdout
-    ) as string);
+    )).stdout);
     if (command === "Restarting LSP") {
         restartLSP();
     }
@@ -247,21 +239,18 @@ export async function generateXcodeServer(commandContext: CommandContext) {
     await checkWorkspace(commandContext);
     await commandContext.execShell(
         "Generate xCode Server",
-        "build_autocomplete.sh"
+        { file: "build_autocomplete.sh" }
     );
 }
 
 export async function openXCode(activeFile: string) {
     const openExec = new Executor();
-    const stdout = await openExec.execShell(
-        undefined,
-        "Open Xcode",
-        "open_xcode.sh",
-        [getProjectPath()],
-        false,
-        ExecutorReturnType.stdout,
-        ExecutorMode.silently
-    ) as string;
+    const stdout = (await openExec.execShell({
+        terminalName: "Open Xcode",
+        scriptOrCommand: { file: "open_xcode.sh" },
+        args: [getProjectPath()],
+        mode: ExecutorMode.silently
+    })).stdout;
     console.log(stdout);
     if (!isFolder(activeFile)) {
         exec(`open -a Xcode ${activeFile}`);
@@ -273,26 +262,22 @@ export async function terminateCurrentIOSApp(commandContext: CommandContext, ses
         // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
         await promiseWithTimeout(6000, async () => {
             await commandContext.execShell(
-                { name: "Terminate iOS App", isShell: true },
-                "xcrun",
+                "Terminate iOS App",
+                { command: "xcrun" },
                 ["simctl", "terminate", getDeviceId(), getBundleAppName()],
-                false,
-                ExecutorReturnType.statusCode,
                 silent ? ExecutorMode.silently : ExecutorMode.verbose
             );
         });
     } catch (err) {
         if (err == TimeoutError) {
             // we should cancel it in a new executor as it can not be executed 
-            await new Executor().execShell(
-                commandContext.cancellationToken,
-                { name: "Shutdown Simulator", isShell: true },
-                "xcrun",
-                ["simctl", "shutdown", getDeviceId()],
-                false,
-                ExecutorReturnType.statusCode,
-                ExecutorMode.silently
-            );
+            await new Executor().execShell({
+                cancellationToken: commandContext.cancellationToken,
+                terminalName: "Shutdown Simulator",
+                scriptOrCommand: { command: "xcrun" },
+                args: ["simctl", "shutdown", getDeviceId()],
+                mode: ExecutorMode.silently
+            });
             vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
         }
     }
@@ -309,9 +294,8 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
         emptyAppLog("MAC_OS");
         await commandContext.execShell(
             "Run App",
-            "run_app.sh",
+            { file: "run_app.sh" },
             [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING", "-MAC_OS"],
-            false
         );
     }
     else {
@@ -319,9 +303,8 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
         await terminateCurrentIOSApp(commandContext, undefined, false);
         await commandContext.execShell(
             "Run App",
-            "run_app.sh",
+            { file: "run_app.sh" },
             [sessionID, isDebuggable ? "LLDB_DEBUG" : "RUNNING"],
-            false
         );
     }
 }
@@ -333,11 +316,9 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
     }
     let stdout = getLastLine((await commandContext.execShell(
         "Fetch Multiple Devices",
-        "populate_devices.sh",
+        { file: "populate_devices.sh" },
         ["-multi"],
-        false,
-        ExecutorReturnType.stdout
-    )) as string);
+    )).stdout);
 
     const items: QuickPickItem[] = JSON.parse(stdout);
     if (items.length == 0) {
@@ -367,18 +348,16 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
     }
     await commandContext.execShell(
         "Run App On Multiple Devices",
-        "run_app.sh",
+        { file: "run_app.sh" },
         [sessionID, "RUNNING", "-DEVICES", `${option}`],
-        false
     );
 }
 
 export async function runAndDebugTests(commandContext: CommandContext, sessionID: string, isDebuggable: boolean) {
     await commandContext.execShell(
         "Run Tests",
-        "test_app.sh",
+        { file: "test_app.sh" },
         [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-ALL"],
-        false
     );
 }
 
@@ -388,9 +367,8 @@ export async function runAndDebugTestsForCurrentFile(commandContext: CommandCont
     }).join(" ");
     await commandContext.execShell(
         "Run Tests For Current File",
-        "test_app.sh",
+        { file: "test_app.sh" },
         [sessionID, isDebuggable ? "DEBUG_LLDB" : "RUNNING", "-SELECTED", option],
-        false
     );
 }
 
