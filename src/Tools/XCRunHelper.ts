@@ -26,8 +26,11 @@ export class XCRunHelper {
         return this.getStdOut("xcrun -f clang");
     }
 
+    private static lldbDapPath?: string;
     public static async getLLDBDapPath(): Promise<string> {
-        return this.getStdOut("xcrun -find lldb-dap");
+        if (this.lldbDapPath == undefined)
+            this.lldbDapPath = await this.getStdOut("xcrun -find lldb-dap");
+        return this.lldbDapPath;
     }
 
     public static async swiftToolchainVersion(): Promise<[string, string, string]> {

@@ -100,7 +100,7 @@ export class AutocompleteWatcher {
     }
 
     private isWatcherEnabled() {
-        const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher");
+        const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher.whole");
         if (!isWatcherEnabled || this.terminatingExtension) {
             return false;
         }
