@@ -67,6 +67,20 @@ export class CommandContext {
         })
     }
 
+    public async waitToCancel() {
+        let dis: vscode.Disposable;
+        return new Promise<void>((resolve) => {
+            if (this.cancellationToken.isCancellationRequested) {
+                resolve();
+                return;
+            }
+            dis = this.cancellationToken.onCancellationRequested(e => {
+                dis.dispose();
+                resolve();
+            });
+        });
+    }
+
     public cancel() {
         this._cancellationTokenSource.cancel();
     }

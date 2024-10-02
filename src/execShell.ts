@@ -6,7 +6,7 @@ import {
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
-import { CommandContext, UserTerminatedError } from "./CommandManagement/CommandContext";
+import { UserTerminatedError } from "./CommandManagement/CommandContext";
 import { error } from "console";
 
 export class ExecutorTerminated extends Error {
@@ -37,11 +37,18 @@ export class ExecutorTaskError extends Error {
 
 export enum ExecutorMode {
     verbose,
-    silently
+    silently,
+    onlyCommandNameAndResult
 }
 
 export interface ShellCommand {
     command: string
+    labelInTerminal?: string
+}
+
+export interface ShellFileScript {
+    file: string
+    labelInTerminal?: string
 }
 
 export interface ShellExec {
@@ -50,10 +57,6 @@ export interface ShellExec {
     scriptOrCommand: ShellCommand | ShellFileScript,
     args?: string[]
     mode?: ExecutorMode
-}
-
-export interface ShellFileScript {
-    file: string
 }
 
 export interface ShellResult {
@@ -114,7 +117,7 @@ export class Executor {
         const pty: vscode.Pseudoterminal = {
             onDidWrite: this.writeEmitter.event,
             onDidChangeName: this.changeNameEmitter.event,
-            open: () => this.writeEmitter?.fire(`\x1b[31${terminalId}\x1b[0m`),
+            open: () => this.writeEmitter?.fire(`\x1b[42m${terminalId}:\x1b[0m\r\n`), //BgGreen
             close: () => {
                 this.terminal = undefined;
                 this.onExit.fire();
@@ -169,145 +172,175 @@ export class Executor {
         if (this.isRunning) {
             throw Promise.reject(new ExecutorRunningError("Another task is running", this._executingCommand));
         }
-        const env = await getEnv();
-        const envOptions = {
-            ...process.env,
-            ...env,
-        };
-        let script: string = "";
-        let displayCommandName = terminalName;
+        try {
+            const env = await getEnv();
+            const envOptions = {
+                ...process.env,
+                ...env,
+            };
+            let script: string = "";
+            let displayCommandName = terminalName;
 
-        if ("file" in scriptOrCommand) {
-            script = getScriptPath(scriptOrCommand.file);
-            if (script.indexOf(".py") !== -1) {
-                script = `python3 "${script}"`;
+            if ("file" in scriptOrCommand) {
+                script = getScriptPath(scriptOrCommand.file);
+                if (script.indexOf(".py") !== -1) {
+                    script = `python3 "${script}"`;
+                }
+            } else {
+                script = scriptOrCommand.command;
             }
-        } else {
-            script = scriptOrCommand.command;
-        }
 
-        const proc = this.execShellImp(script, args, {
-            cwd: getWorkspacePath(),
-            shell: true,
-            env: envOptions,
-            stdio: "pipe",
-        });
-        this._executingCommand = displayCommandName;
-        this.childProc = proc;
-        const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(displayCommandName);
-        const debugCommand = `COMMAND: ${script} ${args.reduce((prev, curr) => {
-            return prev += " " + curr
-        })}\r\n`;
-        if (mode === ExecutorMode.verbose) {
-            this.writeEmitter?.fire(debugCommand);
-        }
-        console.log(debugCommand);
+            const proc = this.execShellImp(script, args, {
+                cwd: getWorkspacePath(),
+                shell: true,
+                env: envOptions,
+                stdio: "pipe",
+            });
+            this._executingCommand = displayCommandName;
+            this.childProc = proc;
+            const terminal = mode === ExecutorMode.silently ? null : this.getTerminal(displayCommandName);
 
-        let stdout = "";
-        proc.stdout?.on("data", (data) => {
-            const str = data.toString();
-            if (mode === ExecutorMode.verbose) {
-                this.writeEmitter?.fire(this.dataToPrint(str));
+            let debugCommand: string;
+            if (scriptOrCommand.labelInTerminal) {
+                debugCommand = `COMMAND: ${scriptOrCommand.labelInTerminal}`;
+            } else
+                if (args.length > 0) {
+                    debugCommand = `COMMAND: ${script} ${args.reduce((prev, curr) => {
+                        return prev += " " + curr
+                    })}\r\n`;
+                } else {
+                    debugCommand = `COMMAND: ${script}`;
+                }
+
+            if (mode === ExecutorMode.verbose || mode == ExecutorMode.onlyCommandNameAndResult) {
+                this.writeEmitter?.fire(this.dataToPrint(`\x1b[100m${debugCommand}\x1b[0m\n`));
             }
-            stdout += str;
-        });
-        let stderr = "";
-        proc.stderr?.on("data", (data) => {
-            const str = data.toString();
-            if (mode === ExecutorMode.verbose) {
-                this.writeEmitter?.fire(this.dataToPrint(str));
-            }
-            stderr += str;
-        });
+            console.log(debugCommand);
 
-        return new Promise((resolve, reject) => {
-            let userCancel: vscode.Disposable | undefined;
-            let terminalClose: vscode.Disposable | undefined;
-            userCancel = cancellationToken?.onCancellationRequested(() => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-                reject(UserTerminatedError);
-                if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
-                    return;
+            let stdout = "";
+            proc.stdout?.on("data", (data) => {
+                const str = data.toString();
+                if (mode === ExecutorMode.verbose) {
+                    this.writeEmitter?.fire(this.dataToPrint(str));
+                }
+                stdout += str;
+            });
+            let stderr = "";
+            proc.stderr?.on("data", (data) => {
+                const str = data.toString();
+                stderr += str;
+            });
 
-                this.terminateShellImp(proc);
-                if (mode !== ExecutorMode.silently) {
+            return new Promise((resolve, reject) => {
+                let userCancel: vscode.Disposable | undefined;
+                let terminalClose: vscode.Disposable | undefined;
+                userCancel = cancellationToken?.onCancellationRequested(() => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    reject(UserTerminatedError);
+                    if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
+                        return;
+
+                    this.terminateShellImp(proc);
                     this.changeNameEmitter?.fire(
                         `🚫 ${this.getTerminalName(displayCommandName)}`
                     );
-                }
-                killAll(proc.pid, "SIGKILL");
-            });
-            terminalClose = this.onExit.event(() => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-                reject(UserTerminatedError);
-                if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
-                    return;
+                    killAll(proc.pid, "SIGKILL");
+                });
+                terminalClose = this.onExit.event(() => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    reject(UserTerminatedError);
+                    if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
+                        return;
 
-                this.terminateShellImp(proc);
-                killAll(proc.pid, "SIGKILL");
-            });
-
-            proc.once("error", (err) => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-                if (this.childProc !== proc) {
-                    console.log("Error, wrong child process error")
+                    this.terminateShellImp(proc);
+                    killAll(proc.pid, "SIGKILL");
+                });
+                if (cancellationToken?.isCancellationRequested) {
+                    this.terminateShellImp(proc);
                     return;
                 }
-                this.terminateShellImp(proc);
-                reject(err);
-            });
 
-            proc.once("exit", (code, signal) => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
+                proc.once("error", (err) => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    if (this.childProc !== proc) {
+                        console.log("Error, wrong child process error")
+                        return;
+                    }
+                    this.terminateShellImp(proc);
+                    reject(err);
+                });
 
-                if (this.childProc !== proc) {
-                    console.log("Error, wrong child process terminated")
-                    return;
-                }
-                this.terminateShellImp(proc)
+                proc.once("exit", (code, signal) => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
 
-                if (signal !== null) {
-                    if (mode !== ExecutorMode.silently) {
-                        this.changeNameEmitter?.fire(
-                            `❌ ${this.getTerminalName(displayCommandName)}`
+                    if (this.childProc !== proc) {
+                        console.log("Error, wrong child process terminated")
+                        return;
+                    }
+                    this.terminateShellImp(proc)
+
+                    if (signal !== null) {
+                        if (mode === ExecutorMode.verbose) {
+                            this.changeNameEmitter?.fire(
+                                `❌ ${this.getTerminalName(displayCommandName)}`
+                            );
+                        }
+                        if (mode !== ExecutorMode.silently && stderr.length > 0) {
+                            this.writeEmitter?.fire(
+                                this.dataToPrint(`\x1b[41m${stderr}\x1b[0m`) // BgRed
+                            )
+                        }
+                        reject(new ExecutorTerminated(`${this.getTerminalName(displayCommandName)} is terminated with SIGNAL : ${error}`));
+                        return;
+                    }
+
+                    if (mode !== ExecutorMode.verbose) {
+                        this.writeEmitter?.fire(
+                            this.dataToPrint(`\x1b[42m$ Exits with status code: ${code}\x1b[0m\n`) // BgGreen
                         );
                     }
-                    reject(new ExecutorTerminated(`${this.getTerminalName(displayCommandName)} is terminated with SIGNAL : ${error}`));
-                    return;
-                }
-
-                if (mode === ExecutorMode.verbose) {
-                    this.writeEmitter?.fire(
-                        this.dataToPrint(`${this.getTerminalName(displayCommandName)} exits with status code: ${code}\n`)
-                    );
-                }
-                if (code !== 0) {
-                    if (mode !== ExecutorMode.silently) {
-                        this.changeNameEmitter?.fire(
-                            `❌ ${this.getTerminalName(displayCommandName)}`
+                    if (code !== 0) {
+                        if (mode === ExecutorMode.verbose) {
+                            this.changeNameEmitter?.fire(
+                                `❌ ${this.getTerminalName(displayCommandName)}`
+                            );
+                        }
+                        if (mode !== ExecutorMode.silently) {
+                            this.writeEmitter?.fire(
+                                this.dataToPrint(`\x1b[41m${stderr}\x1b[0m`) // BgRed
+                            );
+                        }
+                        reject(
+                            new ExecutorTaskError(
+                                `Task: ${this.getTerminalName(displayCommandName)} exits with ${code}`,
+                                code,
+                                stderr,
+                                terminal
+                            )
                         );
+                    } else {
+                        if (mode === ExecutorMode.verbose) {
+                            this.changeNameEmitter?.fire(
+                                `✅ ${this.getTerminalName(displayCommandName)}`
+                            );
+                        }
+                        if (mode !== ExecutorMode.silently) {
+                            this.writeEmitter?.fire(
+                                this.dataToPrint(stderr)
+                            )
+                        }
+                        resolve({ stdout: stdout, stderr: stderr });
                     }
-                    reject(
-                        new ExecutorTaskError(
-                            `Task: ${this.getTerminalName(displayCommandName)} exits with ${code}`,
-                            code,
-                            stderr,
-                            terminal
-                        )
-                    );
-                } else {
-                    if (mode !== ExecutorMode.silently) {
-                        this.changeNameEmitter?.fire(
-                            `✅ ${this.getTerminalName(displayCommandName)}`
-                        );
-                    }
-                    resolve({ stdout: stdout, stderr: stderr });
-                }
+                });
             });
-        });
+        } catch (error) {
+            if (this.childProc)
+                this.terminateShellImp(this.childProc);
+            throw error;
+        }
     }
 }

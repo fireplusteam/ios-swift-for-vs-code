@@ -45,8 +45,8 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         this.atomicCommand = atomicCommand;
     }
 
-    public provideTasks(token?: vscode.CancellationToken): vscode.ProviderResult<vscode.Task[]> {
-        if (!isActivated()) {
+    public async provideTasks(token?: vscode.CancellationToken): Promise<vscode.Task[]> {
+        if (await isActivated() === false) {
             return [];
         }
 

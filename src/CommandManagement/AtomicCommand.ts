@@ -73,9 +73,9 @@ export class AtomicCommand {
         }
     }
 
-    private async withCancellation(closure: () => Promise<void>, cancellation: vscode.CancellationToken) {
+    private async withCancellation<T>(closure: () => Promise<T>, cancellation: vscode.CancellationToken) {
         let dis: vscode.Disposable;
-        return new Promise<void>(async (resolve, reject) => {
+        return new Promise<T>(async (resolve, reject) => {
             try {
                 dis = cancellation.onCancellationRequested(e => {
                     dis.dispose();
@@ -88,10 +88,11 @@ export class AtomicCommand {
         });
     }
 
-    async userCommand(commandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
+    async userCommand<T>(commandClosure: (commandContext: CommandContext) => Promise<T>, successMessage: string | undefined = undefined) {
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
+        let result: T;
         try {
             if (this._mutex.isLocked()) {
                 let choice: string | undefined;
@@ -117,12 +118,13 @@ export class AtomicCommand {
             this._executingCommand = "user";
             const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this._executor);
             this._prevCommandContext = commandContext;
-            await this.withCancellation(async () => {
-                await commandClosure(commandContext);
+            result = await this.withCancellation(async () => {
+                return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
             if (successMessage) {
                 vscode.window.showInformationMessage(successMessage);
             }
+            return result;
         } catch (err) {
             if (err instanceof ExecutorRunningError) {
                 throw err;

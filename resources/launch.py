@@ -2,10 +2,8 @@ import fcntl
 import subprocess
 import sys
 import os
-import asyncio
 import helper
 import time
-import threading
 
 device_uuid = sys.argv[1]
 bundle = sys.argv[2]
@@ -20,7 +18,7 @@ with open(launch_log_path, "w+") as file:
 print("INPUT", device_uuid, bundle, session_id)
 
 if device_uuid == "MAC_OS":
-   exe = f"{helper.get_target_executable()}/Contents/MacOS/{helper.get_product_name()}"
+   exe = bundle # in case of mac, instead of bundle, the exe path is passed
    commandLaunch = [exe]
 else: 
     commandLaunch = ["xcrun", "simctl", "launch", "--console-pty", device_uuid, bundle]
@@ -78,6 +76,7 @@ def run_process(command: str, log_file_path):
         except Exception as e:
             logMessage(e)
     
+    process.kill()
     logMessage("Terminating...")
     return process.returncode,is_ok
 
@@ -99,6 +98,7 @@ def main():
 
     # Print or process the output as needed
     print(f"LAUNCHER: iOS App Finished with {return_code}, session id {session_id}")
+    exit(return_code)
 
 
 main()

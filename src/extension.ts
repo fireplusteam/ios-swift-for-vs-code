@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { DebugDeviceIDMissedError, getFilePathInWorkspace, isActivated, ProjectConfigurationMissedError, ProjectEnvFilePath, ProjectFileMissedError, ProjectSchemeMissedError } from "./env";
+import { DebugDeviceIDMissedError, getFilePathInWorkspace, getWorkspacePath, isActivated, isBuildServerValid, ProjectConfigurationMissedError, ProjectEnvFilePath, ProjectFileMissedError, ProjectSchemeMissedError } from "./env";
 import {
     checkWorkspace,
     enableXCBBuildService,
@@ -21,7 +21,7 @@ import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, setContext } from "./inputPicker";
-import { emptyLog, getSessionId } from "./utils";
+import { deleteLockFile, emptyLog, getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
@@ -33,7 +33,6 @@ import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
 import * as fs from 'fs';
 import { CommandContext } from "./CommandManagement/CommandContext";
-import common from "mocha/lib/interfaces/common";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -44,7 +43,7 @@ function shouldInjectXCBBuildService() {
 }
 
 async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectManager, autocompleteWatcher: AutocompleteWatcher) {
-    if (!isActivated()) {
+    if (await isActivated() === false) {
         try {
             await atomicCommand.userCommand(async (context) => {
                 if (await selectProjectFile(context, projectManager, true, true)) {
@@ -55,7 +54,20 @@ async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectM
         } catch {
             vscode.window.showErrorMessage("Project was not loaded due to error");
         }
+        emptyLog(".logs/debugger.launching");
     } else {
+        emptyLog(".logs/debugger.launching");
+        try {
+            if (await isBuildServerValid() == false) {
+                await atomicCommand.userCommand(async (context) => {
+                    try {
+                        await generateXcodeServer(context, false);
+                    } catch { }
+                });
+            }
+        } catch {
+            // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
+        }
         restartLSP();
         await enableXCBBuildService(shouldInjectXCBBuildService());
         await projectManager.loadProjectFiles();
@@ -78,8 +90,6 @@ export function sleep(ms: number) {
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-    emptyLog(".logs/debugger.launching");
-    emptyLog(ProjectEnvFilePath);
     fs.mkdir(getFilePathInWorkspace(".logs"), () => { });
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
@@ -122,7 +132,7 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
     const debugSessionEndEvent = new vscode.EventEmitter<string>();
-    const debugAdapterFactory = new DebugAdapterTrackerFactory(problemDiagnosticResolver, atomicCommand, debugSessionEndEvent);
+    const debugAdapterFactory = new DebugAdapterTrackerFactory(problemDiagnosticResolver, debugSessionEndEvent);
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterTrackerFactory('xcode-lldb', debugAdapterFactory)
     );
@@ -132,6 +142,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     debugConfiguration = new DebugConfigurationProvider(
         runtimeWarningLogWatcher,
+        atomicCommand,
         debugSessionEndEvent.event
     );
 

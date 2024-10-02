@@ -68,10 +68,11 @@ export function getLastLine(stdout: string) {
 }
 
 export function emptyFile(filePath: string, fileName: string) {
-    if (fs.existsSync(filePath) === false) {
-        fs.mkdirSync(filePath, { recursive: true });
-    }
     const fileFullPath = path.join(filePath, fileName);
+    const dir = fileFullPath.split(path.sep).slice(0, -1).join(path.sep);
+    if (fs.existsSync(dir) === false) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
     fs.writeFileSync(fileFullPath, "", "utf-8");
 }
 

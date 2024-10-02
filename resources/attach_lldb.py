@@ -13,13 +13,7 @@ import runtime_warning_database
 LOG_DEBUG = 1
 
 def create_app_logger():
-    list = helper.get_env_list()
-    scheme = list["PROJECT_SCHEME"].strip("\"")
-    device = list["DEVICE_ID"].strip("\"")
-    platform = list["PLATFORM"].strip("\"")
-    if platform == "macOS":
-        device = "MAC_OS"
-    app_logger = AppLogger(f".logs/app_{device}.log", scheme, "")
+    app_logger = AppLogger("",  "")
     return app_logger
 
 # GLOBAL
@@ -87,10 +81,9 @@ def wait_for_exit(debugger, session_id):
 def create_apple_runtime_warning_watch_process(debugger, pid):
     global runtime_warning_process
     try: 
-        env_list = helper.get_env_list()
-        device_id = env_list["DEVICE_ID"].strip("\n")
+        device_id = os.getenv( "DEVICE_ID" ).strip("\n")
         
-        if env_list["PLATFORM"].strip("\"") == "macOS":
+        if os.getenv( "PLATFORM" ).strip("\"") == "macOS":
             logMessage("Runtime warnings are not supported for MacOS apps")
             return
         
@@ -109,6 +102,13 @@ def print_app_log(debugger, pid):
     logMessage("Waiting for logs")
         
     try:
+        scheme = os.getenv( "PROJECT_SCHEME" ).strip("\"")
+        device = os.getenv( "DEVICE_ID" ).strip("\"")
+        platform = os.getenv( "PLATFORM" ).strip("\"")
+        logMessage(f"SCHEME: {scheme}, device: {device}, platform: {platform}")
+        if platform == "macOS":
+            device = "MAC_OS"
+        app_logger.file_path = f".logs/app_{device}.log"
         app_logger.watch_app_log()
     except Exception as e:
         print(f"Printer crashed: {str(e)}")
@@ -158,12 +158,11 @@ def watch_new_process(debugger, command, result, internal_dict):
         kill_codelldb(debugger)
         return
 
-    process_name = helper.get_process_name()
+    process_name = os.getenv("PROCESS_EXE")
     existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
     wait_for_process(process_name, debugger, existing_pids, session_id)
-    env_list = helper.get_env_list()
-    device_id = env_list["DEVICE_ID"].strip("\n")
+    device_id = os.getenv( "DEVICE_ID" ).strip("\n")
     perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
 
 
@@ -252,6 +251,11 @@ def wait_until_build(debugger, session_id):
         time.sleep(0.3) 
 
 
+def set_environmental_var(debugger, command, result, internal_dict):
+    key, value = command.split("=!!=")
+    os.environ.setdefault(key, value)
+
+
 def create_target(debugger, command, result, internal_dict):
     try:
         global app_logger
@@ -264,10 +268,9 @@ def create_target(debugger, command, result, internal_dict):
         logMessage(f"Creating Session with session id: {session_id}")
         result.AppendMessage("Start lldb watching new instance of App")
         
-        list = helper.get_env_list()
         result.AppendMessage(f"Environment: {list}")
 
-        executable = helper.get_target_executable()
+        executable = os.getenv("APP_EXE")
         logMessage(f"Exe: {executable}")
         result.AppendMessage(f"Creating {executable}")
         perform_debugger_command(debugger, f"target create \"{executable}\"")
@@ -308,16 +311,14 @@ current_focus_time = time.time()
 def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     "Start monitor to manage simulator window focus while debugging. (Usage: simulator-focus-monitor Simulator)"
     process = exe_ctx.GetProcess()
-    list = helper.get_env_list()
-    product_name = helper.get_product_name()
+    product_name = os.getenv("PRODUCT_NAME")
 
     def focus_simulator(udid):
-        nonlocal list
         nonlocal product_name
         global is_process_watching
         if not is_process_watching:
             return
-        platform = list["PLATFORM"].strip("\"")
+        platform = os.getenv("PLATFORM").strip("\"")
         if (platform == "macOS"):
             logMessage(f"UDID: {platform}")
             subprocess.run(["osascript", "-e", f"tell application \"{product_name}\" to activate"])

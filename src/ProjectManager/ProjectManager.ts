@@ -285,7 +285,7 @@ export class ProjectManager {
     }
 
     private async isAllowed() {
-        if (!isActivated()) {
+        if (await isActivated() === false) {
             return false;
         }
         if (await getProjectFileName() == "Package.swift") {

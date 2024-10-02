@@ -4,7 +4,7 @@ import { getScriptPath, Platform, ProjectEnv } from "../env";
 import { sleep } from "../extension";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from '../Debug/DebugAdapterTracker';
-import { ExecutorMode } from '../execShell';
+import { Executor, ExecutorMode, ExecutorTaskError } from '../execShell';
 import { error } from 'console';
 
 
@@ -68,15 +68,21 @@ export class RunManager {
 
         }
 
-        await context.execShellWithOptions({
-            terminalName: this.terminalName,
-            scriptOrCommand: { command: "open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/" }
-        });
+        try {
+            await context.execShellWithOptions({
+                terminalName: this.terminalName,
+                scriptOrCommand: { command: "open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/", labelInTerminal: "Opening Simulator" },
+                mode: ExecutorMode.onlyCommandNameAndResult
+            });
+        } catch (error) {
+            console.log("Simulator loaded");
+        }
 
         while (true) {
             const result = await context.execShellWithOptions({
-                scriptOrCommand: { command: `xcrun` },
+                scriptOrCommand: { command: `xcrun`, labelInTerminal: "Check if simulator opened" },
                 args: ["simctl", "list", "devices", "-j"],
+                mode: ExecutorMode.onlyCommandNameAndResult
             });
             const json = JSON.parse(result.stdout);
             let booted = false;
@@ -103,37 +109,51 @@ export class RunManager {
         context.execShellParallel({
             scriptOrCommand: { file: "launch.py" },
             args: [deviceId, await this.env.bundleAppName, this.debuggerArg, this.sessionID, waitDebugger ? "true" : "false"]
-        }).catch(reason => {
+        }).catch(async error => {
             console.warn(`Session ID: ${this.sessionID}, terminated with error: ${error}}`);
+            if (error instanceof ExecutorTaskError) {
+                if (error.code === 3) { //simulator is not responding
+                    const backgroundContext = new CommandContext(new vscode.CancellationTokenSource, new Executor);
+                    this.shutdownSimulator(backgroundContext, deviceId);
+                    vscode.window.showErrorMessage("Simulator freezed, rebooted it! Please re-run the application");
+                }
+            }
         });
     }
 
     private async runOnMac(context: CommandContext) {
+        const exePath = await this.env.appExecutablePath;
+        const productName = await this.env.productName;
         context.execShellParallel({
             scriptOrCommand: { file: "launch.py" },
-            args: ["MAC_OS", await this.env.bundleAppName, this.debuggerArg, this.sessionID]
+            args: ["MAC_OS", `${exePath}/Contents/MacOS/${productName}`, this.debuggerArg, this.sessionID, "true"]
         });
     }
 
     private async terminateCurrentIOSApp(commandContext: CommandContext, sessionID: string, deviceId: string) {
+        const bundleAppName = await this.env.bundleAppName;
         try {
             // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
-            await promiseWithTimeout(6000, async () => {
+            await promiseWithTimeout(10000, async () => {
                 await commandContext.execShell(
-                    "Terminate iOS App",
+                    "Terminate Previous Running App",
                     { command: "xcrun" },
-                    ["simctl", "terminate", deviceId, await this.env.bundleAppName]
+                    ["simctl", "terminate", deviceId, bundleAppName]
                 );
             });
         } catch (err) {
             if (err == TimeoutError) {
                 // we should cancel it in a new executor as it can not be executed 
-                await commandContext.execShellParallel({
-                    scriptOrCommand: { command: "xcrun" },
-                    args: ["simctl", "shutdown", deviceId],
-                });
+                await this.shutdownSimulator(commandContext, deviceId);
                 vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
             }
         }
+    }
+
+    private async shutdownSimulator(commandContext: CommandContext, deviceId: string) {
+        await commandContext.execShellParallel({
+            scriptOrCommand: { command: "xcrun" },
+            args: ["simctl", "shutdown", deviceId],
+        });
     }
 }

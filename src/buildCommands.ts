@@ -1,7 +1,7 @@
 import { checkWorkspace } from "./commands";
 import { emptyBuildLog } from './utils';
 import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
-import { getWorkspacePath } from './env';
+import { getBuildRootPath, getWorkspacePath } from './env';
 import path from 'path';
 import { CommandContext } from "./CommandManagement/CommandContext";
 
@@ -11,10 +11,11 @@ export function getFileNameLog() {
 }
 
 export async function cleanDerivedData(context: CommandContext) {
-    await context.execShell(
-        "Clean Derived Data",
-        { file: "clean_derived_data.sh" }
-    );
+    await context.execShellWithOptions({
+        terminalName: "Clean Derived Data",
+        scriptOrCommand: { command: "rm" },
+        args: ["-rf", getBuildRootPath()]
+    });
 }
 
 export async function buildSelectedTarget(context: CommandContext, problemResolver: ProblemDiagnosticResolver) {

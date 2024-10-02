@@ -1,9 +1,13 @@
 import * as vscode from "vscode";
-import { currentPlatform, getScriptPath, getWorkspacePath, isActivated, Platform } from "../env";
+import { currentPlatform, getScriptPath, getWorkspacePath, isActivated, Platform, ProjectFileMissedError } from "../env";
 import { getSessionId } from "../utils";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
+import { AtomicCommand } from "../CommandManagement/AtomicCommand";
+import { CommandContext } from "../CommandManagement/CommandContext";
+import { checkWorkspace } from "../commands";
+import { resolve } from "path";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace.getConfiguration("vscode-ios").get<string>("swiftui.runtimeWarnings");
@@ -32,10 +36,14 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
 
     private debugTestSessionEvent: vscode.Event<string>;
+    private atomicCommand: AtomicCommand
 
-    constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, debugTestSessionEvent: vscode.Event<string>) {
+    static contextBinder = new Map<string, CommandContext>();
+
+    constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, atomicCommand: AtomicCommand, debugTestSessionEvent: vscode.Event<string>) {
         this.runtimeWarningsWatcher = runtimeWarningsWatcher;
         this.debugTestSessionEvent = debugTestSessionEvent;
+        this.atomicCommand = atomicCommand;
     }
 
     async startIOSDebugger(isDebuggable: boolean) {
@@ -103,24 +111,48 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, dbgConfig: vscode.DebugConfiguration, token: vscode.CancellationToken) {
-        if (!isActivated()) {
-            return null;
+        if (await isActivated() == false) {
+            throw ProjectFileMissedError;
         }
         if (dbgConfig.type !== DebugConfigurationProvider.Type) {
-            return null;
+            throw new Error(`Supported type is xcode-lldb. The passed type is: ${dbgConfig.type}`);
         }
         const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
 
         const sessionID = getSessionId(`debugger`) + this.counterID;
-        await DebugAdapterTracker.updateStatus(sessionID, "configuring");
 
-        if (runtimeWarningsConfigStatus() !== "off" && await currentPlatform() != Platform.macOS) // mac OS doesn't support that feature at the moment
-            this.runtimeWarningsWatcher.startWatcher();
+        const context = await new Promise<CommandContext>((resolve, reject) => {
+            this.atomicCommand.userCommand(async (context: CommandContext) => {
+                try {
+                    await checkWorkspace(context);
+                    await DebugAdapterTracker.updateStatus(sessionID, "configuring");
 
-        return await this.debugSession(dbgConfig, sessionID, isDebuggable);
+                    if (runtimeWarningsConfigStatus() !== "off" && await currentPlatform() != Platform.macOS) // mac OS doesn't support that feature at the moment
+                        this.runtimeWarningsWatcher.startWatcher();
+
+                    DebugConfigurationProvider.contextBinder.set(sessionID, context);
+                    resolve(context);
+                    await context.waitToCancel();
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+
+        return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
     }
 
-    private async debugSession(dbgConfig: vscode.DebugConfiguration, sessionID: string, isDebuggable: boolean): Promise<vscode.DebugConfiguration> {
+    private async processName(context: CommandContext) {
+        const process_name = await context.projectSettingsProvider.projectEnv.productName;
+        if (await context.projectSettingsProvider.projectEnv.platform == Platform.macOS) {
+            return `${process_name}.app/Contents/MacOS/${process_name}`;
+        }
+        // if process_name == "xctest":
+        //     return process_name
+        return `${process_name}.app/${process_name}`;
+    }
+
+    private async debugSession(context: CommandContext, dbgConfig: vscode.DebugConfiguration, sessionID: string, isDebuggable: boolean): Promise<vscode.DebugConfiguration> {
         const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
         const lldbCommands = dbgConfig.lldbCommands || [];
         const command = runtimeWarningBreakPointCommand();
@@ -133,6 +165,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         // TODO: try to refactor launch logic
         // https://junch.github.io/debug/2016/09/19/original-lldb.html
+        const exe = await context.projectSettingsProvider.projectEnv.appExecutablePath;
+
         if (lldExePath) {
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
@@ -140,6 +174,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 name: DebugConfigurationProvider.lldbName,
                 attachCommands: [
                     `command script import '${getScriptPath()}/attach_lldb.py'`,
+                    "command script add -f attach_lldb.set_environmental_var set_environmental_var",
                     "command script add -f attach_lldb.create_target create_target",
                     "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
@@ -147,6 +182,14 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
                     "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
+
+                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
+                    `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
+                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platform}`,
+                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
+                    `set_environmental_var APP_EXE=!!=${exe}`,
+                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
+
                     `create_target ${sessionID}`,
 
                     ...lldbCommands,
@@ -177,6 +220,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 name: DebugConfigurationProvider.lldbName,
                 targetCreateCommands: [
                     `command script import '${getScriptPath()}/attach_lldb.py'`,
+                    "command script add -f attach_lldb.set_environmental_var set_environmental_var",
                     "command script add -f attach_lldb.create_target create_target",
                     "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
@@ -184,6 +228,14 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
                     "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
+
+                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
+                    `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
+                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platform}`,
+                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
+                    `set_environmental_var APP_EXE=!!=${exe}`,
+                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
+
                     `create_target ${sessionID}`
                 ],
                 processCreateCommands: [

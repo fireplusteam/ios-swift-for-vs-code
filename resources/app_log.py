@@ -4,9 +4,8 @@ import sys
 import helper
 
 class AppLogger:
-    def __init__(self, file_path, project_scheme, session_id, printer = print) -> None:
+    def __init__(self, file_path, session_id, printer = print) -> None:
         self.file_path = file_path
-        self.project_scheme = project_scheme
         self.last_known_position = 0
         self.printer = printer
         self.enabled = True

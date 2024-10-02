@@ -1,21 +1,18 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
-import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp } from "../commands";
-import { error } from "console";
 import { Executor, ExecutorMode } from "../execShell";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
-import { sleep } from "../extension";
+import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
+import * as fs from 'fs'
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
     private problemResolver: ProblemDiagnosticResolver;
-    private atomicCommand: AtomicCommand;
     private debugTestSessionEvent: vscode.EventEmitter<string>;
     private isTerminated = false;
-    private commandContext: CommandContext | undefined;
 
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
@@ -23,11 +20,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get testsToRun(): string[] {
         return this.debugSession.configuration.testsToRun || [];
     }
+    private get context(): CommandContext {
+        return DebugConfigurationProvider.contextBinder.get(this.sessionID)!;
+    }
 
-    constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver, atomicCommand: AtomicCommand, debugTestSessionEvent: vscode.EventEmitter<string>) {
+    constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver, debugTestSessionEvent: vscode.EventEmitter<string>) {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
-        this.atomicCommand = atomicCommand;
         this.debugTestSessionEvent = debugTestSessionEvent;
     }
 
@@ -66,7 +65,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {
             try {
-                this.commandContext?.cancel();
+                this.context.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }
             this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
@@ -82,18 +81,19 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
-        await this.atomicCommand.userCommand(async (context) => {
-            this.commandContext = context;
-            if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
-                await DebugAdapterTracker.updateStatus(this.sessionID, "building");
-                await buildCommand(context);
-            }
-            await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-            await runCommandClosure(context);
-        }, successMessage);
+        if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
+            await DebugAdapterTracker.updateStatus(this.sessionID, "building");
+            await buildCommand(this.context);
+        }
+        await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
+        await runCommandClosure(this.context);
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
+        const exe = await (this.context.projectSettingsProvider.projectEnv.appExecutablePath);
+        if (!fs.existsSync(exe)) {
+            return true;
+        }
         const buildBeforeLaunch = dbgConfig.buildBeforeLaunch || "always";
         switch (buildBeforeLaunch) {
             case "ask":

@@ -4,6 +4,7 @@ import fs from "fs";
 import { Executor } from "./execShell";
 import { lock } from "lockfile";
 import { asyncLock, emptyLog } from "./utils";
+import { XCodeSettings } from "./Services/ProjectSettingsProvider";
 
 export enum Platform {
     macOS,
@@ -13,15 +14,16 @@ export enum Platform {
     tvOSSimulator
 };
 
-export const ProjectFileMissedError = new Error("ProjectFileMissedError");
-export const ProjectSchemeMissedError = new Error("ProjectSchemeMissedError");
-export const ProjectConfigurationMissedError = new Error("ProjectConfigurationMissedError");
+export const ProjectFileMissedError = new Error("Project File is not set in .vscode/.env file. Please select project or workspace Xcode file");
+export const ProjectSchemeMissedError = new Error("Project scheme is not set in .vscode/.env file. Please run the command to select it!");
+export const ProjectConfigurationMissedError = new Error("Project configuration is not set in .vscode/.env. Please run the command to select it");
 export const DebugDeviceIDMissedError = new Error("DebugDeviceIDMissedError");
 export const MultipleDeviceMissedError = new Error("MultipleDeviceMissedError");
 export const BundleAppNameMissedError = new Error("BundleAppNameMissedError");
 export const AppExecutablePathMissedError = new Error("AppExecutablePathMissedError");
 export const PlatformMissedError = new Error("PlatformMissedError");
 export const AppTargetExecutableMissedError = new Error("AppTargetExecutableMissedError");
+export const ProductNameMissedError = new Error("ProductNameMissedError");
 
 export interface ProjectEnvInterface {
     platform: Promise<Platform>
@@ -33,6 +35,7 @@ export interface ProjectEnvInterface {
     bundleAppName: Promise<string>
     appExecutablePath: Promise<string>
     projectType: Promise<"-workspace" | "-project" | "-package">
+    productName: Promise<string>
 }
 
 export interface SetProjectEnvInterface {
@@ -44,12 +47,29 @@ export interface SetProjectEnvInterface {
     setPlatform(platform: string): Promise<void>
 }
 
-export const ProjectEnvFilePath = ".logs/.env";
+export const ProjectEnvFilePath = ".vscode/.env";
 
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
+    private settingsProvider: XCodeSettings;
+
+    constructor(settings: XCodeSettings) {
+        this.settingsProvider = settings;
+    }
+
+    get productName(): Promise<string> {
+        return this.settingsProvider.settings.then((projectSettings: any) => {
+            try {
+                return projectSettings[0].buildSettings.PRODUCT_NAME;
+            } catch {
+                throw ProductNameMissedError;
+            }
+        });
+    }
+
     get platform(): Promise<Platform> {
         return currentPlatform();
     }
+
     get projectFile(): Promise<string> {
         return getProjectFileName().then(projectFile => {
             if (!fs.existsSync(getFilePathInWorkspace(projectFile))) {
@@ -73,10 +93,20 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         return getMultiDeviceIds();
     }
     get bundleAppName(): Promise<string> {
-        return getBundleAppName();
+        return this.settingsProvider.settings.then((projectSettings: any) => {
+            try {
+                return projectSettings[0].buildSettings.PRODUCT_BUNDLE_IDENTIFIER;
+            } catch {
+                throw BundleAppNameMissedError;
+            }
+        });
     }
     get appExecutablePath(): Promise<string> {
-        return getTargetExecutable();
+        return this.productName.then(productName => {
+            return this.projectConfiguration.then(configuration => {
+                return getTargetExecutable(productName, configuration);
+            });
+        });
     }
 
     get projectType(): Promise<"-workspace" | "-project" | "-package"> {
@@ -86,22 +116,22 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
 
     async setProjectFile(file: string): Promise<void> {
-        await saveKeyToEnvList("PROJECT_FILE", file);
+        saveKeyToEnvList("PROJECT_FILE", file);
     }
     async setProjectScheme(scheme: string): Promise<void> {
-        await saveKeyToEnvList("PROJECT_SCHEME", scheme);
+        saveKeyToEnvList("PROJECT_SCHEME", scheme);
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
-        await saveKeyToEnvList("PROJECT_CONFIGURATION", configuration);
+        saveKeyToEnvList("PROJECT_CONFIGURATION", configuration);
     }
     async setDebugDeviceID(deviceID: string): Promise<void> {
-        await saveKeyToEnvList("DEVICE_ID", deviceID);
+        saveKeyToEnvList("DEVICE_ID", deviceID);
     }
     async setMultipleDeviceID(multiId: string): Promise<void> {
-        await saveKeyToEnvList("MULTIPLE_DEVICE_ID", multiId);
+        saveKeyToEnvList("MULTIPLE_DEVICE_ID", multiId);
     }
     async setPlatform(platform: string): Promise<void> {
-        await saveKeyToEnvList("PLATFORM", platform);
+        saveKeyToEnvList("PLATFORM", platform);
     }
 
     async emptySessions() {
@@ -160,12 +190,17 @@ export async function getEnv() {
         const defaultContent = 'PROJECT_FILE=""';
         fs.writeFileSync(getEnvFilePath(), defaultContent, "utf-8");
     }
+    let xcodeSdk: string;
+    try {
+        xcodeSdk = await sdk();
+    } catch {
+        xcodeSdk = ""
+    }
     return {
         VS_IOS_PROJECT_ENV_FILE: getEnvFilePath(),
         VS_IOS_WORKSPACE_PATH: getWorkspacePath(),
         VS_IOS_SCRIPT_PATH: getScriptPath(),
-        VS_IOS_XCODE_BUILD_SERVER_PATH: getXCodeBuildServerPath(),
-        VS_IOS_XCODE_SDK: await sdk()
+        VS_IOS_XCODE_SDK: xcodeSdk
     }; // empty
 }
 
@@ -182,7 +217,7 @@ export function getFilePathInWorkspace(fileName: string) {
 
 export async function getProjectFileName() {
     try {
-        return (await getEnvList())["PROJECT_FILE"].replace(/^"|"$/g, '');
+        return (getEnvList())["PROJECT_FILE"].replace(/^"|"$/g, '');
     } catch {
         throw ProjectFileMissedError;
     }
@@ -190,7 +225,7 @@ export async function getProjectFileName() {
 
 export async function getProjectScheme() {
     try {
-        return (await getEnvList())["PROJECT_SCHEME"].replace(/^"|"$/g, '');
+        return (getEnvList())["PROJECT_SCHEME"].replace(/^"|"$/g, '');
     }
     catch {
         throw ProjectSchemeMissedError;
@@ -199,7 +234,7 @@ export async function getProjectScheme() {
 
 export async function getProjectPlatform() {
     try {
-        return (await getEnvList())["PLATFORM"].replace(/^"|"$/g, '');
+        return (getEnvList())["PLATFORM"].replace(/^"|"$/g, '');
     } catch {
         throw PlatformMissedError;
     }
@@ -207,7 +242,7 @@ export async function getProjectPlatform() {
 
 export async function getProjectConfiguration() {
     try {
-        return (await getEnvList())["PROJECT_CONFIGURATION"].replace(/^"|"$/g, '');
+        return (getEnvList())["PROJECT_CONFIGURATION"].replace(/^"|"$/g, '');
     } catch {
         throw ProjectConfigurationMissedError;
     }
@@ -215,25 +250,17 @@ export async function getProjectConfiguration() {
 
 export async function getDeviceId() {
     try {
-        return (await getEnvList())["DEVICE_ID"].replace(/^"|"$/g, '');
+        return (getEnvList())["DEVICE_ID"].replace(/^"|"$/g, '');
     } catch {
-        throw MultipleDeviceMissedError;
+        throw DebugDeviceIDMissedError;
     }
 }
 
 export async function getMultiDeviceIds() {
     try {
-        return (await getEnvList())["MULTIPLE_DEVICE_ID"].replace(/^"|"$/g, '');
+        return (getEnvList())["MULTIPLE_DEVICE_ID"].replace(/^"|"$/g, '');
     } catch {
         throw MultipleDeviceMissedError;
-    }
-}
-
-export async function getBundleAppName() {
-    try {
-        return (await getEnvList())["BUNDLE_APP_NAME"].replace(/^"|"$/g, '');
-    } catch {
-        throw BundleAppNameMissedError;
     }
 }
 
@@ -251,7 +278,7 @@ export async function getProjectFolderPath() {
 }
 
 export function getXCodeBuildServerPath() {
-    return path.join(__dirname, "..", "xcode-build-server");
+    return path.join(__dirname, "..", "xcode-build-server", "xcode-build-server");
 }
 
 export function getXCBBuildServicePath() {
@@ -273,24 +300,22 @@ function readEnvFileToDict() {
     return dict;
 }
 
-export async function getEnvList() {
-    return await asyncLock(getEnvFilePath(), () => {
-        return readEnvFileToDict();
-    });
+export function getEnvList() {
+    return readEnvFileToDict();
 }
 
-export async function saveKeyToEnvList(key: string, value: string) {
-    return await asyncLock(getEnvFilePath(), () => {
-        const dict = readEnvFileToDict();
-        dict[key] = `"${value}"`;
+export function saveKeyToEnvList(key: string, value: string) {
+    const dict = readEnvFileToDict();
+    dict[key] = `"${value}"`;
 
-        let json = "";
-        for (const [key, val] of Object.entries(dict)) {
-            json += `${key}=${val}\n`
-        }
+    let json = "";
+    for (const [key, val] of Object.entries(dict)) {
+        if (key === "" || val === "")
+            continue;
+        json += `${key}=${val}\n`
+    }
 
-        fs.writeFileSync(getEnvFilePath(), json, "utf-8");
-    });
+    fs.writeFileSync(getEnvFilePath(), json, "utf-8");
 }
 
 export async function isActivated() {
@@ -304,6 +329,10 @@ export async function isActivated() {
     return true;
 }
 
+function getBuildServerJson() {
+    return JSON.parse(fs.readFileSync(getFilePathInWorkspace("buildServer.json"), "utf-8"));
+}
+
 export function getBuildRootPath() {
     try {
         const json = JSON.parse(fs.readFileSync(getFilePathInWorkspace("buildServer.json"), "utf-8"));
@@ -311,6 +340,31 @@ export function getBuildRootPath() {
     } catch (error) {
         console.log(`Building folder is not set : ${error}`)
         return undefined;
+    }
+}
+
+export async function isBuildServerValid() {
+    try {
+        const buildServer = getBuildServerJson();
+        if (buildServer.workspace.indexOf(getFilePathInWorkspace(await getProjectFileName())) == -1) {
+            return false;
+        }
+        if (await getProjectScheme() !== buildServer.scheme) {
+            return false;
+        }
+        let isValid = false;
+        for (const arg of buildServer.argv) {
+            const path = getXCodeBuildServerPath();
+            if (path === arg) {
+                isValid = true;
+            }
+        }
+        if (!isValid) {
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
     }
 }
 
@@ -324,28 +378,11 @@ export function getProjectType(projectFile: string) {
     return "-workspace";
 }
 
-export async function projectXcodeBuildSettings(projectFile: string, scheme: string, buildConfiguration: string) {
-    const settings = await new Executor().execShell({
-        cancellationToken: undefined,
-        scriptOrCommand: { command: "xcodebuild" },
-        args: ["-showBuildSettings", getProjectType(projectFile), projectFile, "-scheme", scheme, "-configuration", buildConfiguration, "-json"]
-    });
-    return JSON.parse(settings.stdout);
-}
-
-export async function getProductName() {
-    const scheme = await getProjectScheme();
-    const projectFile = await getProjectFileName();
-    const projectSettings: any[] = await projectXcodeBuildSettings(projectFile, scheme, await getProjectConfiguration());
-
-    return projectSettings[0].buildSettings.PRODUCT_NAME;
-}
-
-export async function getTargetExecutable() {
+export async function getTargetExecutable(product_name: string, build_configuration: string) {
     try {
-        const product_name = await getProductName();
+        // if get_project_type(list["PROJECT_FILE"]) == "-package":
+        //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
         const build_path = getBuildRootPath();
-        const build_configuration = await getProjectConfiguration();
         switch (await currentPlatform()) {
             case Platform.macOS:
                 return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`

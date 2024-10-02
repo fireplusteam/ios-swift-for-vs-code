@@ -3,8 +3,12 @@ import { getFilePathInWorkspace, getProjectPath, getProjectType, ProjectEnv, Pro
 import { getProjectFiles } from "../ProjectManager/ProjectManager";
 import fs from "fs";
 
-export class ProjectSettingsProvider {
-    private _projectEnv = new ProjectEnv();
+export interface XCodeSettings {
+    settings: Promise<any>
+}
+
+export class ProjectSettingsProvider implements XCodeSettings {
+    private _projectEnv: ProjectEnv;
     get projectEnv(): ProjectEnv {
         return this._projectEnv;
     }
@@ -12,26 +16,31 @@ export class ProjectSettingsProvider {
 
     constructor(context: CommandContext) {
         this._context = context;
+        this._projectEnv = new ProjectEnv(this);
     }
 
-    async getSchemes(): Promise<string[]> {
-        const json = await this.getXcodeList(await this._projectEnv.projectFile);
+    get settings(): Promise<any> {
+        return this.fetchProjectXcodeBuildSettings();
+    }
+
+    async fetchSchemes(): Promise<string[]> {
+        const json = await this.fetchXcodeList(await this._projectEnv.projectFile);
         if (await this.projectEnv.projectType == "-workspace") {
             return json.workspace.schemes;
         }
         return json.project.schemes;
     }
 
-    async getConfigurations(): Promise<string[]> {
+    async fetchConfigurations(): Promise<string[]> {
         const projectFile = (await getProjectFiles(await getProjectPath())).at(0);
         if (projectFile == undefined) {
             throw ProjectFileMissedError;
         }
-        const json = await this.getXcodeList(projectFile);
+        const json = await this.fetchXcodeList(projectFile);
         return json.project.configurations;
     }
 
-    async getDevices() {
+    async fetchDevices() {
         const args = ["-scheme", await this.projectEnv.projectScheme, "-showdestinations", "-json"];
         const projectType = await this.projectEnv.projectType;
         if (projectType != "-package") {
@@ -70,7 +79,31 @@ export class ProjectSettingsProvider {
         return json;
     }
 
-    private async getXcodeList(projectFile: string) {
+    private static cachedSettings: [string, string, string, any] | undefined = undefined;
+
+    private async fetchProjectXcodeBuildSettings() {
+        const projectFile = await this.projectEnv.projectFile;
+        const scheme = await this.projectEnv.projectScheme;
+        const buildConfiguration = await this.projectEnv.projectConfiguration;
+
+        if (ProjectSettingsProvider.cachedSettings) {
+            const [_pF, _pS, _bC, _settings] = ProjectSettingsProvider.cachedSettings;
+            if (_pF === projectFile && _pS == scheme && _bC === buildConfiguration) {
+                return _settings;
+            }
+        }
+
+        const settings = await this._context.execShellWithOptions({
+            scriptOrCommand: { command: "xcodebuild" },
+            args: ["-showBuildSettings", getProjectType(projectFile), projectFile, "-scheme", scheme, "-configuration", buildConfiguration, "-json"]
+        });
+        const jsonSettings = JSON.parse(settings.stdout);
+        ProjectSettingsProvider.cachedSettings = [projectFile, scheme, buildConfiguration, jsonSettings];
+
+        return jsonSettings;
+    }
+
+    private async fetchXcodeList(projectFile: string) {
         const args = ["-list", "-json"];
         if (await getProjectType(projectFile) != "-package") {
             args.push(getProjectType(projectFile), projectFile);
