@@ -27,6 +27,7 @@ export const ProductNameMissedError = new Error("ProductNameMissedError");
 
 export interface ProjectEnvInterface {
     platform: Promise<Platform>
+    platformString: Promise<String>
     projectFile: Promise<string>
     projectScheme: Promise<string>
     projectConfiguration: Promise<string>
@@ -68,6 +69,10 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
 
     get platform(): Promise<Platform> {
         return currentPlatform();
+    }
+
+    get platformString(): Promise<String> {
+        return getProjectPlatform();
     }
 
     get projectFile(): Promise<string> {

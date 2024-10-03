@@ -7,12 +7,14 @@ import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import * as fs from 'fs'
+import { getFilePathInWorkspace } from "../env";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
     private problemResolver: ProblemDiagnosticResolver;
     private debugTestSessionEvent: vscode.EventEmitter<string>;
     private isTerminated = false;
+    private debugConsoleOutput?: vscode.Disposable;
 
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
@@ -23,15 +25,25 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get context(): CommandContext {
         return DebugConfigurationProvider.contextBinder.get(this.sessionID)!;
     }
+    private _stream: fs.WriteStream;
 
     constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver, debugTestSessionEvent: vscode.EventEmitter<string>) {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this.debugTestSessionEvent = debugTestSessionEvent;
+        this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a" });
+    }
+
+    private get logPath(): string {
+        return this.debugSession.configuration.logPath;
     }
 
     onWillStartSession() {
         console.log('Session is starting');
+        vscode.debug.activeDebugSession
+        this.debugConsoleOutput = this.context.debugConsoleEvent((std) => {
+            this._stream.write(std);
+        });
         this.build(this.debugSession.configuration);
     }
 
@@ -61,6 +73,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         if (this.isTerminated)
             return
         try {
+            this.debugConsoleOutput?.dispose();
+            this._stream.close();
             this.isTerminated = true;
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {

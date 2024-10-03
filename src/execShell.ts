@@ -25,11 +25,13 @@ export class ExecutorRunningError extends Error {
 
 export class ExecutorTaskError extends Error {
     code: number | null;
+    signal: NodeJS.Signals | null;
     stderr: string;
     terminal: vscode.Terminal | null;
-    public constructor(message: string, code: number | null, stderr: string, terminal: vscode.Terminal | null) {
+    public constructor(message: string, code: number | null, signal: NodeJS.Signals | null, stderr: string, terminal: vscode.Terminal | null) {
         super(message);
         this.code = code;
+        this.signal = signal;
         this.stderr = stderr;
         this.terminal = terminal;
     }
@@ -57,6 +59,7 @@ export interface ShellExec {
     scriptOrCommand: ShellCommand | ShellFileScript,
     args?: string[]
     mode?: ExecutorMode
+    stdoutCallback?: (out: string) => void
 }
 
 export interface ShellResult {
@@ -224,6 +227,8 @@ export class Executor {
                     this.writeEmitter?.fire(this.dataToPrint(str));
                 }
                 stdout += str;
+                if (shell.stdoutCallback)
+                    shell.stdoutCallback(str);
             });
             let stderr = "";
             proc.stderr?.on("data", (data) => {
@@ -318,6 +323,7 @@ export class Executor {
                             new ExecutorTaskError(
                                 `Task: ${this.getTerminalName(displayCommandName)} exits with ${code}`,
                                 code,
+                                signal,
                                 stderr,
                                 terminal
                             )

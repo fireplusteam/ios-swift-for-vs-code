@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
-import { CommandContext } from "../CommandManagement/CommandContext";
-import { getScriptPath, Platform, ProjectEnv } from "../env";
+import { CommandContext, UserTerminatedError } from "../CommandManagement/CommandContext";
+import { getScriptPath, getWorkspaceId, getWorkspacePath, Platform, ProjectEnv } from "../env";
 import { sleep } from "../extension";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from '../Debug/DebugAdapterTracker';
 import { Executor, ExecutorMode, ExecutorTaskError } from '../execShell';
 import { error } from 'console';
-
+import { ChildProcess, spawn } from 'child_process';
+import { stdout } from 'process';
 
 export class RunManager {
     private sessionID: string;
@@ -106,17 +107,27 @@ export class RunManager {
             args: ["simctl", "install", deviceId, await this.env.appExecutablePath]
         });
 
+        await this.waitDebugger(context);
+
         context.execShellParallel({
-            scriptOrCommand: { file: "launch.py" },
-            args: [deviceId, await this.env.bundleAppName, this.debuggerArg, this.sessionID, waitDebugger ? "true" : "false"]
+            scriptOrCommand: { command: "xcrun" },
+            args: ["simctl", "launch", "--console-pty", deviceId, await this.env.bundleAppName, "--wait-for-debugger"],
+            pipeToDebugConsole: true
         }).catch(async error => {
             console.warn(`Session ID: ${this.sessionID}, terminated with error: ${error}}`);
+            let isHandled = false;
             if (error instanceof ExecutorTaskError) {
                 if (error.code === 3) { //simulator is not responding
                     const backgroundContext = new CommandContext(new vscode.CancellationTokenSource, new Executor);
-                    this.shutdownSimulator(backgroundContext, deviceId);
-                    vscode.window.showErrorMessage("Simulator freezed, rebooted it! Please re-run the application");
+                    await this.shutdownSimulator(backgroundContext, deviceId);
+                    if (context.cancellationToken.isCancellationRequested == false) {
+                        isHandled = true;
+                        this.runOnSimulator(context, deviceId, waitDebugger);
+                    }
                 }
+            }
+            if (!isHandled) {
+                DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
             }
         });
     }
@@ -124,11 +135,26 @@ export class RunManager {
     private async runOnMac(context: CommandContext) {
         const exePath = await this.env.appExecutablePath;
         const productName = await this.env.productName;
-        context.execShellParallel({
-            scriptOrCommand: { file: "launch.py" },
-            args: ["MAC_OS", `${exePath}/Contents/MacOS/${productName}`, this.debuggerArg, this.sessionID, "true"]
-        }).catch(reason => {
+
+        await this.waitDebugger(context);
+
+        spawnProcess(`${exePath}/Contents/MacOS/${productName}`,
+            ["--wait-for-debugger"],
+            context.cancellationToken,
+            (out) => {
+                // at the moment it fires at the end of session, so it's not supported
+                console.log(out);
+            }
+        ).catch(error => {
             console.log(`Error in launched app: ${error}`);
+            DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
+        });
+    }
+
+    private async waitDebugger(context: CommandContext) {
+        await context.execShellParallel({
+            scriptOrCommand: { file: "wait_debugger.py" },
+            args: [this.sessionID]
         });
     }
 
@@ -147,7 +173,6 @@ export class RunManager {
             if (err == TimeoutError) {
                 // we should cancel it in a new executor as it can not be executed 
                 await this.shutdownSimulator(commandContext, deviceId);
-                vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
             }
         }
     }
@@ -157,5 +182,68 @@ export class RunManager {
             scriptOrCommand: { command: "xcrun" },
             args: ["simctl", "shutdown", deviceId],
         });
+        vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
     }
+}
+
+
+async function spawnProcess(path: string, args: string[], cancellation: vscode.CancellationToken, stdout: (out: string) => void) {
+    let proc: ChildProcess | null = null;
+    return new Promise((resolve, reject) => {
+        if (cancellation.isCancellationRequested) {
+            reject(UserTerminatedError);
+            return;
+        }
+        proc = spawn(path, args, { stdio: "pipe" });
+
+        let dis: vscode.Disposable;
+        dis = cancellation.onCancellationRequested(() => {
+            dis.dispose;
+            if (proc?.killed == false)
+                proc?.kill();
+            reject(UserTerminatedError);
+        });
+
+        proc?.stdout?.on("data", (data) => {
+            stdout(data.toString());
+        });
+
+        let stderr = ";"
+        proc?.stderr?.on("data", (data) => {
+            stderr += data.toString();
+        });
+        proc.on("exit", (code, signal) => {
+            dis.dispose();
+            if (code != 0) {
+                reject(new ExecutorTaskError(
+                    `Spawn process: ${path} exits with ${code}`,
+                    code,
+                    signal,
+                    stderr,
+                    null
+                ));
+            }
+            if (signal) {
+                reject(new ExecutorTaskError(
+                    `Spawn process: ${path} KILLED with ${signal}`,
+                    code,
+                    signal,
+                    stderr,
+                    null
+                ));
+            }
+            resolve(code);
+        });
+        proc.once("error", (err) => {
+            dis.dispose();
+            console.log(err.toString());
+            reject(new ExecutorTaskError(
+                `Error for spawn process: ${path}`,
+                null,
+                null,
+                "",
+                null
+            ));
+        });
+    });
 }

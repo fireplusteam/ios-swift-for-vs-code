@@ -9,12 +9,17 @@ interface CommandOptions {
     scriptOrCommand: ShellCommand | ShellFileScript,
     args?: string[]
     mode?: ExecutorMode
+    pipeToDebugConsole?: boolean
 }
 
 export class CommandContext {
     private _projectSettingsProvider: ProjectSettingsProvider;
     get projectSettingsProvider(): ProjectSettingsProvider {
         return this._projectSettingsProvider;
+    }
+    private _debugConsoleEmitter = new vscode.EventEmitter<string>();
+    get debugConsoleEvent(): vscode.Event<string> {
+        return this._debugConsoleEmitter.event;
     }
 
     private _cancellationTokenSource: vscode.CancellationTokenSource;
@@ -35,10 +40,15 @@ export class CommandContext {
     public async execShellWithOptions(
         shell: CommandOptions
     ): Promise<ShellResult> {
+        const stdoutCallback = shell.pipeToDebugConsole ? (out: string) => {
+            this._debugConsoleEmitter.fire(out);
+        } : undefined;
+
         return await this._executor.execShell(
             {
                 cancellationToken: this._cancellationTokenSource.token,
-                ...shell
+                ...shell,
+                stdoutCallback: stdoutCallback
             }
         );
     }
@@ -55,16 +65,21 @@ export class CommandContext {
             scriptOrCommand: scriptOrCommand,
             args: args,
             mode: mode
-        })
+        });
     }
 
     public async execShellParallel(
         shell: CommandOptions
     ): Promise<ShellResult> {
+        const stdoutCallback = shell.pipeToDebugConsole ? (out: string) => {
+            this._debugConsoleEmitter.fire(out);
+        } : undefined;
+
         return await new Executor().execShell({
             cancellationToken: this._cancellationTokenSource.token,
-            ...shell
-        })
+            ...shell,
+            stdoutCallback: stdoutCallback
+        });
     }
 
     public async waitToCancel() {

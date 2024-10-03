@@ -270,6 +270,53 @@
                 "title": "iOS: Project: Reload"
             }
         ],
+        "languages": [
+            {
+                "id": "lldb.disassembly",
+                "aliases": [
+                    "Disassembly"
+                ],
+                "extensions": [
+                    ".disasm"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "lldb.disassembly",
+                "scopeName": "source.disassembly",
+                "path": "./syntaxes/disassembly.json"
+            }
+        ],
+        "breakpoints": [
+            {
+                "language": "arm"
+            },
+            {
+                "language": "arm64"
+            },
+            {
+                "language": "asm"
+            },
+            {
+                "language": "c"
+            },
+            {
+                "language": "cpp"
+            },
+            {
+                "language": "objective-c"
+            },
+            {
+                "language": "objective-cpp"
+            },
+            {
+                "language": "rust"
+            },
+            {
+                "language": "swift"
+            }
+        ],
         "debuggers": [
             {
                 "type": "xcode-lldb",

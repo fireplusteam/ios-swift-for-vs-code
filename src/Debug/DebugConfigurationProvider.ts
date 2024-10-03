@@ -167,6 +167,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         // https://junch.github.io/debug/2016/09/19/original-lldb.html
         const exe = await context.projectSettingsProvider.projectEnv.appExecutablePath;
 
+        const logId = await context.projectSettingsProvider.projectEnv.platform == Platform.macOS ? "MAC_OS" : await context.projectSettingsProvider.projectEnv.debugDeviceID;
+
         if (lldExePath) {
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
@@ -185,7 +187,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
-                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platform}`,
+                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platformString}`,
                     `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
@@ -210,7 +212,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
-                buildBeforeLaunch: dbgConfig.buildBeforeLaunch
+                buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
+                logPath: `.logs/app_${logId}.log`
             };
             return debugSession;
         } else { // old code-lldb way: deprecated
@@ -231,7 +234,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
-                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platform}`,
+                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platformString}`,
                     `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
@@ -250,7 +253,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
-                buildBeforeLaunch: dbgConfig.buildBeforeLaunch
+                buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
+                logPath: `.logs/app_${logId}.log`
             };
             return debugSession;
         }
