@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { currentPlatform, getScriptPath, getWorkspacePath, isActivated, Platform, ProjectFileMissedError } from "../env";
-import { getSessionId } from "../utils";
 import { emptyAppLog, getSessionId } from "../utils";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
@@ -8,7 +7,6 @@ import { DebugAdapterTracker } from "./DebugAdapterTracker";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { checkWorkspace } from "../commands";
-import { resolve } from "path";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace.getConfiguration("vscode-ios").get<string>("swiftui.runtimeWarnings");
@@ -217,7 +215,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
                 logPath: `.logs/app_${logId}.log`,
-                sourcePath: getFilePathInWorkspace(await getProjectFolderPath())
             };
             return debugSession;
         } else { // old code-lldb way: deprecated

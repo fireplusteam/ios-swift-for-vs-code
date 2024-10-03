@@ -48,6 +48,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onDidSendMessage(message: any) {
         // console.log('Sent:', message);
+
     }
 
     onWillReceiveMessage(message: any) {
@@ -78,7 +79,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {
             try {
-                this.debugSession.customRequest("cancel");
+                // this.debugSession.customRequest("cancel");
                 this.context.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }

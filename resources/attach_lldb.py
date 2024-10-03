@@ -307,7 +307,7 @@ def terminate_debugger(debugger, command, result, internal_dict):
 
 # ---------------------------FOCUS-SIMULATOR
 
-current_focus_time = time.time()
+current_focus_time = 0
 def start_monitor(debugger, command, exe_ctx, result, internal_dict):
     "Start monitor to manage simulator window focus while debugging. (Usage: simulator-focus-monitor Simulator)"
     process = exe_ctx.GetProcess()
@@ -350,7 +350,7 @@ def start_monitor(debugger, command, exe_ctx, result, internal_dict):
                 process = debugger.GetSelectedTarget().GetProcess()
                 if prevState != process.GetState():
                     prevState = process.GetState()
-                    current_focus_time = time.time();
+                    current_focus_time = current_focus_time + 1
                     if (process.GetState() == lldb.eStateRunning):
                         focus_thread = threading.Thread(target=focus_simulator_launcher, args=( process, command, current_focus_time ))
                         focus_thread.start()
