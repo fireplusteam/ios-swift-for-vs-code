@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 
 function useLLDB_DAP() {
-    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("debug.lldb-debug");
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("debug.lldb-dap");
     if (!isEnabled) {
         return false;
     }

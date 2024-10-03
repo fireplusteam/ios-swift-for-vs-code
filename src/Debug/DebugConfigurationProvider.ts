@@ -115,7 +115,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             throw ProjectFileMissedError;
         }
         if (dbgConfig.type !== DebugConfigurationProvider.Type) {
-            throw new Error(`Supported type is xcode-lldb. The passed type is: ${dbgConfig.type}`);
+            return null;
         }
         const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
 

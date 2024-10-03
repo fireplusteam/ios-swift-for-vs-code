@@ -127,6 +127,8 @@ export class RunManager {
         context.execShellParallel({
             scriptOrCommand: { file: "launch.py" },
             args: ["MAC_OS", `${exePath}/Contents/MacOS/${productName}`, this.debuggerArg, this.sessionID, "true"]
+        }).catch(reason => {
+            console.log(`Error in launched app: ${error}`);
         });
     }
 
