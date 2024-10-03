@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { XCRunHelper } from "../Tools/XCRunHelper";
+import { getFilePathInWorkspace } from "../env";
 
 function useLLDB_DAP() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("debug.lldb-dap");
@@ -47,10 +48,10 @@ export class LLDBDapDescriptorFactory
             return undefined;
         }
 
-        const log_path = null; // TODO: add log path to extension settings
+        const log_path = session.configuration.logPath + ".lldb";
         let env: { [key: string]: string } = {};
         if (log_path) {
-            env["LLDBDAP_LOG"] = log_path;
+            env["LLDBDAP_LOG"] = getFilePathInWorkspace(log_path);
         }
 
         // const configEnvironment = config.get<{ [key: string]: string }>("lldb.environment") || {};

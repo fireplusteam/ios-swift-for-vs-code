@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { currentPlatform, getScriptPath, getWorkspacePath, isActivated, Platform, ProjectFileMissedError } from "../env";
 import { getSessionId } from "../utils";
+import { emptyAppLog, getSessionId } from "../utils";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
@@ -169,6 +170,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         const logId = await context.projectSettingsProvider.projectEnv.platform == Platform.macOS ? "MAC_OS" : await context.projectSettingsProvider.projectEnv.debugDeviceID;
 
+        emptyAppLog(logId);
+
         if (lldExePath) {
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
@@ -213,7 +216,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
-                logPath: `.logs/app_${logId}.log`
+                logPath: `.logs/app_${logId}.log`,
+                sourcePath: getFilePathInWorkspace(await getProjectFolderPath())
             };
             return debugSession;
         } else { // old code-lldb way: deprecated

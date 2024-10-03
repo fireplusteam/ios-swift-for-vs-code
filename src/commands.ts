@@ -374,7 +374,7 @@ export async function runAndDebugTests(commandContext: CommandContext, sessionID
 export async function runAndDebugTestsForCurrentFile(commandContext: CommandContext, sessionID: string, isDebuggable: boolean, tests: string[]) {
     await checkWorkspace(commandContext, false);
     const option = tests.map(e => {
-        return `-only-testing: ${e} `;
+        return `-only-testing:${e} `;
     }).join(" ");
     await commandContext.execShell(
         "Run Tests For Current File",

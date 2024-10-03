@@ -31,13 +31,12 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this.debugTestSessionEvent = debugTestSessionEvent;
-        this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a" });
+        this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
     }
 
     private get logPath(): string {
         return this.debugSession.configuration.logPath;
     }
-
     onWillStartSession() {
         console.log('Session is starting');
         vscode.debug.activeDebugSession
@@ -79,6 +78,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {
             try {
+                this.debugSession.customRequest("cancel");
                 this.context.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }
