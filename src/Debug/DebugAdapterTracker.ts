@@ -8,6 +8,9 @@ import { askIfBuild } from "../inputPicker";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import * as fs from 'fs'
 import { getFilePathInWorkspace } from "../env";
+import { sleep } from "../extension";
+import { exec } from "child_process";
+import { SimulatorFocus } from "./SimulatorFocus";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -15,6 +18,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugTestSessionEvent: vscode.EventEmitter<string>;
     private isTerminated = false;
     private debugConsoleOutput?: vscode.Disposable;
+    private simulatorInteractor: SimulatorFocus;
 
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
@@ -32,12 +36,15 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.problemResolver = problemResolver;
         this.debugTestSessionEvent = debugTestSessionEvent;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
+        this.simulatorInteractor = new SimulatorFocus(this.context);
     }
 
     private get logPath(): string {
         return this.debugSession.configuration.logPath;
     }
+
     onWillStartSession() {
+        this.simulatorInteractor.init();
         console.log('Session is starting');
         vscode.debug.activeDebugSession
         this.debugConsoleOutput = this.context.debugConsoleEvent((std) => {
@@ -48,11 +55,23 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onDidSendMessage(message: any) {
         // console.log('Sent:', message);
-
+        if (message.command === "continue") {
+            this.simulatorInteractor.focus();
+        }
     }
 
+    private refreshBreakpoints = false;
+
     onWillReceiveMessage(message: any) {
-        // console.log('Will receive:', message);
+        // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
+        if (message.command === "continue" && this.refreshBreakpoints == false) {
+            this.refreshBreakpoints = true;
+            if (this.debugSession.configuration.type == "xcode-lldb") {
+                const breakpoints = vscode.debug.breakpoints;
+                vscode.debug.removeBreakpoints(breakpoints);
+                vscode.debug.addBreakpoints(breakpoints);
+            }
+        }
     }
 
     onWillStopSession() {

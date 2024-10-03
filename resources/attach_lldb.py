@@ -10,7 +10,7 @@ import time
 import os
 import runtime_warning_database
 
-LOG_DEBUG = 1
+LOG_DEBUG = 0
 
 def create_app_logger():
     app_logger = AppLogger("",  "")
@@ -113,10 +113,8 @@ def print_app_log(debugger, pid):
     except Exception as e:
         print(f"Printer crashed: {str(e)}")
 
-is_process_watching = False 
 
 def wait_for_process(process_name, debugger, existing_pids, session_id):
-    global is_process_watching
     try:
         logMessage(f"Waiting for process: {process_name}")
         logMessage(f"Session_id: {session_id}") 
@@ -130,7 +128,6 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
 
             if len(new_list) > 0:
                 threading.Thread(target=wait_for_exit, args=(debugger, session_id)).start()
-                is_process_watching = True
                 
                 pid = new_list.pop()
                 logMessage(f"Attaching to pid: {pid}")
@@ -162,8 +159,6 @@ def watch_new_process(debugger, command, result, internal_dict):
     existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
     wait_for_process(process_name, debugger, existing_pids, session_id)
-    device_id = os.getenv( "DEVICE_ID" ).strip("\n")
-    perform_debugger_command(debugger,f"simulator-focus-monitor {device_id}")
 
 
 def setScriptPath(debugger, command, result, internal_dict):
@@ -304,60 +299,3 @@ def app_log(debugger, command, result, internal_dict):
 
 def terminate_debugger(debugger, command, result, internal_dict):
     perform_debugger_command(debugger, "process detach")
-
-# ---------------------------FOCUS-SIMULATOR
-
-current_focus_time = 0
-def start_monitor(debugger, command, exe_ctx, result, internal_dict):
-    "Start monitor to manage simulator window focus while debugging. (Usage: simulator-focus-monitor Simulator)"
-    process = exe_ctx.GetProcess()
-    product_name = os.getenv("PRODUCT_NAME")
-
-    def focus_simulator(udid):
-        nonlocal product_name
-        global is_process_watching
-        if not is_process_watching:
-            return
-        platform = os.getenv("PLATFORM").strip("\"")
-        if (platform == "macOS"):
-            logMessage(f"UDID: {platform}")
-            subprocess.run(["osascript", "-e", f"tell application \"{product_name}\" to activate"])
-        else:
-            logMessage(f"UDID: {udid}")
-            subprocess.run(['open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', udid])
-
-    # Focus simulator if the process is currently running
-    if (process.GetState() == lldb.eStateRunning):
-        focus_simulator(command)
-
-    def focus_simulator_launcher(process, command, start_time):
-        global current_focus_time
-        try:
-            # logMessage(f"Focus start: {command}, {start_time}, {current_time}")
-            # wait for 1 second to make sure that a user is actually run the app, not stepping over the code
-            time.sleep(2)
-            if current_focus_time == start_time and process.GetState() == lldb.eStateRunning:
-                focus_simulator(command)
-        except Exception as e:
-            logMessage(f"Focus failed: {str(e)}")
-            
-    # Method to wait for state changes
-    def listen_process_events():
-        global current_focus_time
-        try: 
-            prevState = None
-            while True:
-                process = debugger.GetSelectedTarget().GetProcess()
-                if prevState != process.GetState():
-                    prevState = process.GetState()
-                    current_focus_time = current_focus_time + 1
-                    if (process.GetState() == lldb.eStateRunning):
-                        focus_thread = threading.Thread(target=focus_simulator_launcher, args=( process, command, current_focus_time ))
-                        focus_thread.start()
-                time.sleep(0.1)
-        except Exception as e:
-            logMessage(f"LISTENER_ERROR {str(e)}")
-
-    event_listener = threading.Thread(target=listen_process_events)
-    event_listener.daemon = True
-    event_listener.start()

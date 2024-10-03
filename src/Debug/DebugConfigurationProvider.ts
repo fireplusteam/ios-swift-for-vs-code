@@ -184,7 +184,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.setScriptPath setScriptPath",
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
-                    "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
@@ -231,7 +230,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.setScriptPath setScriptPath",
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
-                    "command script add -f attach_lldb.start_monitor simulator-focus-monitor",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
