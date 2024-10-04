@@ -1,9 +1,7 @@
 import path from "path";
 import * as vscode from "vscode";
 import fs from "fs";
-import { Executor } from "./execShell";
-import { lock } from "lockfile";
-import { asyncLock, emptyLog } from "./utils";
+import { emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
 
 export enum Platform {

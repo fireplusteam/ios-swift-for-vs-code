@@ -6,7 +6,7 @@ import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
 import { currentPlatform, getProjectPath, getScriptPath, getWorkspacePath, getXCBBuildServicePath, getXCodeBuildServerPath, isBuildServerValid, Platform, updateProject } from "./env";
-import { Executor, ExecutorMode } from "./execShell";
+import { Executor, ExecutorMode } from "./Executor";
 import { handleValidationErrors, sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, isFolder } from "./utils";
@@ -265,7 +265,6 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         await checkWorkspace(commandContext);
     const env = commandContext.projectSettingsProvider.projectEnv;
     await commandContext.execShellWithOptions({
-        terminalName: "Generate xCode Server",
         scriptOrCommand: { command: getXCodeBuildServerPath() },
         args: ["config", "-scheme", await env.projectScheme, await env.projectType, await env.projectFile]
     });
@@ -280,10 +279,8 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
 export async function openXCode(activeFile: string) {
     const openExec = new Executor();
     const stdout = (await openExec.execShell({
-        terminalName: "Open Xcode",
         scriptOrCommand: { file: "open_xcode.sh" },
-        args: [await getProjectPath()],
-        mode: ExecutorMode.silently
+        args: [await getProjectPath()]
     })).stdout;
     console.log(stdout);
     if (!isFolder(activeFile)) {

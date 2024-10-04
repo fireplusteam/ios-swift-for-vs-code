@@ -56,13 +56,9 @@ def perform_debugger_command(debugger, command):
 
 
 script_path = None
-runtime_warning_process: subprocess.Popen = None
 
 def kill_codelldb(debugger):
     global script_path
-    if runtime_warning_process:
-        runtime_warning_process.kill()
-        
     perform_debugger_command(debugger, f"target create {script_path}/lldb_exe_stub")
     process = subprocess.Popen(f"{script_path}/lldb_exe_stub")
     perform_debugger_command(debugger, f"process attach --pid {process.pid}")

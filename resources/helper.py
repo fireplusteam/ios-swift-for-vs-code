@@ -1,8 +1,8 @@
+#!/usr/bin/env python3
 import subprocess
 import json
 import os
 import time
-import sys
 
 #-----------------------FILE_LOCK
 class FileLock:

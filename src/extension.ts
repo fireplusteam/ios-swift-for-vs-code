@@ -16,12 +16,12 @@ import {
     selectProjectFile,
     selectTarget,
 } from "./commands";
-import { Executor } from "./execShell";
+import { Executor } from "./Executor";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, setContext } from "./inputPicker";
-import { deleteLockFile, emptyLog, getSessionId } from "./utils";
+import { emptyLog, getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
@@ -50,7 +50,7 @@ async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectM
                     await enableXCBBuildService(shouldInjectXCBBuildService());
                     autocompleteWatcher.triggerIncrementalBuild();
                 }
-            });
+            }, undefined);
         } catch {
             vscode.window.showErrorMessage("Project was not loaded due to error");
         }
@@ -63,7 +63,7 @@ async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectM
                     try {
                         await generateXcodeServer(context, false);
                     } catch { }
-                });
+                }, "Initialize");
             }
         } catch {
             // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
@@ -183,7 +183,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         throw Error("project manager is not initialised");
                     await selectProjectFile(context, projectManager);
                     autocompleteWatcher?.triggerIncrementalBuild();
-                });
+                }, "Select Project");
             } catch {
                 vscode.window.showErrorMessage("Project was not loaded due to error");
             }
@@ -228,7 +228,7 @@ export async function activate(context: vscode.ExtensionContext) {
             async () => {
                 await atomicCommand.userCommandWithoutThrowingException(async (context) => {
                     await selectTarget(context);
-                });
+                }, "Select Target");
             }
         )
     );
@@ -239,7 +239,7 @@ export async function activate(context: vscode.ExtensionContext) {
             async () => {
                 await atomicCommand.userCommandWithoutThrowingException(async (context) => {
                     await selectConfiguration(context);
-                });
+                }, "Select Configuration");
             }
         )
     );
@@ -250,7 +250,7 @@ export async function activate(context: vscode.ExtensionContext) {
             async () => {
                 await atomicCommand.userCommandWithoutThrowingException(async (context) => {
                     await selectDevice(context);
-                });
+                }, "Select DEBUG Device");
             }
         )
     );
@@ -259,7 +259,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand("vscode-ios.check.workspace", async () => {
             await atomicCommand.userCommandWithoutThrowingException(async (context) => {
                 await checkWorkspace(context);
-            });
+            }, "Validate Workspace");
         })
     );
 
@@ -269,7 +269,7 @@ export async function activate(context: vscode.ExtensionContext) {
             async () => {
                 await atomicCommand.userCommandWithoutThrowingException(async (context) => {
                     await generateXcodeServer(context);
-                });
+                }, "Generate Xcode Build Server");
             }
         )
     );
@@ -305,7 +305,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const id = getSessionId(`multiple_devices`) + `_${multiDevicesSessionCounter}`;
                 multiDevicesSessionCounter++;
                 await runAppOnMultipleDevices(context, id, problemDiagnosticResolver);
-            });
+            }, "Run On Multiple Devices");
             return ""; // we need to return string as it's going to be used for launch configuration
         })
     );

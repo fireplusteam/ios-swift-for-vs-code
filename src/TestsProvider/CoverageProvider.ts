@@ -1,4 +1,4 @@
-import { Executor, ExecutorMode } from "../execShell";
+import { Executor, ExecutorMode } from "../Executor";
 import { getFilePathInWorkspace } from "../env";
 import * as vscode from 'vscode';
 

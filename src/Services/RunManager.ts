@@ -1,13 +1,10 @@
 import * as vscode from 'vscode';
-import { CommandContext, UserTerminatedError } from "../CommandManagement/CommandContext";
-import { getScriptPath, getWorkspaceId, getWorkspacePath, Platform, ProjectEnv } from "../env";
+import { CommandContext } from "../CommandManagement/CommandContext";
+import { Platform, ProjectEnv } from "../env";
 import { sleep } from "../extension";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from '../Debug/DebugAdapterTracker';
-import { Executor, ExecutorMode, ExecutorTaskError } from '../execShell';
-import { error } from 'console';
-import { ChildProcess, spawn } from 'child_process';
-import { stdout } from 'process';
+import { ExecutorMode, ExecutorTaskError } from '../Executor';
 
 export class RunManager {
     private sessionID: string;
@@ -15,10 +12,6 @@ export class RunManager {
     private env: ProjectEnv
 
     private terminalName = "Run App";
-
-    private get debuggerArg(): string {
-        return this.isDebuggable ? "LLDB_DEBUG" : "RUNNING";
-    }
 
     constructor(sessionID: string, isDebuggable: boolean, env: ProjectEnv) {
         this.sessionID = sessionID;
@@ -61,7 +54,6 @@ export class RunManager {
 
         try {
             await context.execShellWithOptions({
-                terminalName: this.terminalName,
                 scriptOrCommand: { command: "xcrun" },
                 args: ["simctl", "boot", deviceId]
             });
@@ -71,7 +63,6 @@ export class RunManager {
 
         try {
             await context.execShellWithOptions({
-                terminalName: this.terminalName,
                 scriptOrCommand: { command: "open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/", labelInTerminal: "Opening Simulator" },
                 mode: ExecutorMode.onlyCommandNameAndResult
             });
@@ -102,12 +93,18 @@ export class RunManager {
             sleep(1)
         }
         await context.execShellWithOptions({
-            terminalName: this.terminalName,
             scriptOrCommand: { command: "xcrun" },
             args: ["simctl", "install", deviceId, await this.env.appExecutablePath]
         });
 
-        await this.waitDebugger(context);
+        if (context.terminal)
+            context.terminal.terminalName = "Waiting Debugger";
+
+        if (waitDebugger)
+            await this.waitDebugger(context);
+
+        if (context.terminal)
+            context.terminal.terminalName = "App Running";
 
         context.execShellParallel({
             scriptOrCommand: { command: "xcrun" },
@@ -118,8 +115,7 @@ export class RunManager {
             let isHandled = false;
             if (error instanceof ExecutorTaskError) {
                 if (error.code === 3) { //simulator is not responding
-                    const backgroundContext = new CommandContext(new vscode.CancellationTokenSource, new Executor);
-                    await this.shutdownSimulator(backgroundContext, deviceId);
+                    await this.shutdownSimulator(context, deviceId);
                     if (context.cancellationToken.isCancellationRequested == false) {
                         isHandled = true;
                         this.runOnSimulator(context, deviceId, waitDebugger);
@@ -136,23 +132,26 @@ export class RunManager {
         const exePath = await this.env.appExecutablePath;
         const productName = await this.env.productName;
 
+        if (context.terminal)
+            context.terminal.terminalName = "Waiting Debugger";
+
         await this.waitDebugger(context);
 
-        spawnProcess(`${exePath}/Contents/MacOS/${productName}`,
-            ["--wait-for-debugger"],
-            context.cancellationToken,
-            (out) => {
-                // at the moment it fires at the end of session, so it's not supported
-                console.log(out);
-            }
-        ).catch(error => {
+        if (context.terminal)
+            context.terminal.terminalName = "App Running";
+
+        context.execShellParallel({
+            scriptOrCommand: { command: `${exePath}/Contents/MacOS/${productName}` },
+            args: ["--wait-for-debugger"],
+            pipeToDebugConsole: true
+        }).catch(error => {
             console.log(`Error in launched app: ${error}`);
             DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         });
     }
 
     private async waitDebugger(context: CommandContext) {
-        await context.execShellParallel({
+        await context.execShellWithOptions({
             scriptOrCommand: { file: "wait_debugger.py" },
             args: [this.sessionID]
         });
@@ -184,66 +183,4 @@ export class RunManager {
         });
         vscode.window.showInformationMessage("Simulator freezed, rebooted it!");
     }
-}
-
-
-async function spawnProcess(path: string, args: string[], cancellation: vscode.CancellationToken, stdout: (out: string) => void) {
-    let proc: ChildProcess | null = null;
-    return new Promise((resolve, reject) => {
-        if (cancellation.isCancellationRequested) {
-            reject(UserTerminatedError);
-            return;
-        }
-        proc = spawn(path, args, { stdio: "pipe" });
-
-        let dis: vscode.Disposable;
-        dis = cancellation.onCancellationRequested(() => {
-            dis.dispose;
-            if (proc?.killed == false)
-                proc?.kill();
-            reject(UserTerminatedError);
-        });
-
-        proc?.stdout?.on("data", (data) => {
-            stdout(data.toString());
-        });
-
-        let stderr = ";"
-        proc?.stderr?.on("data", (data) => {
-            stderr += data.toString();
-        });
-        proc.on("exit", (code, signal) => {
-            dis.dispose();
-            if (code != 0) {
-                reject(new ExecutorTaskError(
-                    `Spawn process: ${path} exits with ${code}`,
-                    code,
-                    signal,
-                    stderr,
-                    null
-                ));
-            }
-            if (signal) {
-                reject(new ExecutorTaskError(
-                    `Spawn process: ${path} KILLED with ${signal}`,
-                    code,
-                    signal,
-                    stderr,
-                    null
-                ));
-            }
-            resolve(code);
-        });
-        proc.once("error", (err) => {
-            dis.dispose();
-            console.log(err.toString());
-            reject(new ExecutorTaskError(
-                `Error for spawn process: ${path}`,
-                null,
-                null,
-                "",
-                null
-            ));
-        });
-    });
 }

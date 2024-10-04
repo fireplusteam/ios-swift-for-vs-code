@@ -1,7 +1,6 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getFilePathInWorkspace, getProjectPath, getProjectType, ProjectEnv, ProjectFileMissedError } from "../env";
+import { getProjectPath, getProjectType, ProjectEnv, ProjectFileMissedError } from "../env";
 import { getProjectFiles } from "../ProjectManager/ProjectManager";
-import fs from "fs";
 
 export interface XCodeSettings {
     settings: Promise<any>
@@ -47,7 +46,6 @@ export class ProjectSettingsProvider implements XCodeSettings {
             args.push(projectType, await this.projectEnv.projectFile);
         }
         const result = await this._context.execShellWithOptions({
-            terminalName: "Fetch Devices",
             scriptOrCommand: { command: "xcodebuild" },
             args: args
         });

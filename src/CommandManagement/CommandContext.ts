@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } from "../execShell";
+import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } from "../Executor";
 import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
+import { TerminalShell } from "../TerminalShell";
 
-export const UserTerminatedError: Error = new Error("Terminated");
+export const UserTerminatedError: Error = new Error("User Terminated");
+export const UserTerminalCloseError: Error = new Error("User Terminal Close");
 
 interface CommandOptions {
-    terminalName?: string
     scriptOrCommand: ShellCommand | ShellFileScript,
     args?: string[]
     mode?: ExecutorMode
@@ -22,19 +23,20 @@ export class CommandContext {
         return this._debugConsoleEmitter.event;
     }
 
-    private _cancellationTokenSource: vscode.CancellationTokenSource;
-    private _executor: Executor;
-    public get executor(): Executor {
-        return this.executor;
+    private _terminal?: TerminalShell;
+    public get terminal(): TerminalShell | undefined {
+        return this._terminal;
     }
+
+    private _cancellationTokenSource: vscode.CancellationTokenSource;
     public get cancellationToken(): vscode.CancellationToken {
         return this._cancellationTokenSource.token;
     }
 
-    constructor(cancellationToken: vscode.CancellationTokenSource, executor: Executor) {
+    constructor(cancellationToken: vscode.CancellationTokenSource, terminal: TerminalShell | undefined) {
         this._cancellationTokenSource = cancellationToken;
-        this._executor = executor;
         this._projectSettingsProvider = new ProjectSettingsProvider(this);
+        this._terminal = terminal;
     }
 
     public async execShellWithOptions(
@@ -44,10 +46,11 @@ export class CommandContext {
             this._debugConsoleEmitter.fire(out);
         } : undefined;
 
-        return await this._executor.execShell(
+        return await new Executor().execShell(
             {
                 cancellationToken: this._cancellationTokenSource.token,
                 ...shell,
+                terminal: this._terminal,
                 stdoutCallback: stdoutCallback
             }
         );
@@ -59,12 +62,12 @@ export class CommandContext {
         args: string[] = [],
         mode: ExecutorMode = ExecutorMode.verbose,
     ): Promise<ShellResult> {
-        return await this._executor.execShell({
+        return await new Executor().execShell({
             cancellationToken: this._cancellationTokenSource.token,
-            terminalName: terminalName,
             scriptOrCommand: scriptOrCommand,
             args: args,
-            mode: mode
+            mode: mode,
+            terminal: this._terminal
         });
     }
 

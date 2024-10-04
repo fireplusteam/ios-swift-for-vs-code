@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
-import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
 
 export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {

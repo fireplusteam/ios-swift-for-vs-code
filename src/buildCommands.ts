@@ -12,7 +12,6 @@ export function getFileNameLog() {
 
 export async function cleanDerivedData(context: CommandContext) {
     await context.execShellWithOptions({
-        terminalName: "Clean Derived Data",
         scriptOrCommand: { command: "rm" },
         args: ["-rf", getBuildRootPath()]
     });

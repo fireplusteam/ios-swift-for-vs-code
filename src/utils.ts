@@ -20,6 +20,28 @@ export function promiseWithTimeout<T>(ms: number, promise: () => Promise<T>): Pr
     return Promise.race([promise(), timeout]);
 }
 
+export async function killSpawnLaunchedProcesses(deviceID: string) {
+    try {
+        const processList = await find("name", `simctl`);
+        const cmdTarget = `spawn ${deviceID} log stream`;
+        for (let process of processList) {
+            console.log(`process is still running ${process.cmd}`);
+            const cmd = process.cmd as string;
+            if (cmd.indexOf(cmdTarget) === -1) {
+                continue;
+            }
+            await new Promise((resolve) => {
+                treeKill(process.pid, 'SIGKILL', (err) => {
+                    resolve(true);
+                });
+            });
+        }
+    }
+    catch (err) {
+        console.log(err);
+    }
+}
+
 // for some reason kill function doesn't kill all child process in some cases, so we need to do it manually to make sure it's actually killed
 export function killAll(pid: number | undefined, signal: string) {
     if (pid === undefined)

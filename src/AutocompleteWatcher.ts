@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { ExecutorMode } from "./execShell";
-import { getWorkspacePath, getProjectScheme } from "./env";
+import { ExecutorMode } from "./Executor";
+import { getWorkspacePath, getProjectScheme, isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
@@ -15,7 +15,7 @@ enum State {
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
 
-    static AutocompleteCommandName = "Autocomplete Build";
+    static AutocompleteCommandName = "Watch";
 
     private disposable: vscode.Disposable[] = [];
     private atomicCommand: AtomicCommand;
@@ -32,20 +32,15 @@ export class AutocompleteWatcher {
 
     constructor(atomicCommand: AtomicCommand, problemResolver: ProblemDiagnosticResolver, projectManager: ProjectManager) {
         this.atomicCommand = atomicCommand;
-        this.disposable.push(vscode.workspace.onDidChangeTextDocument(e => {
+        this.disposable.push(vscode.workspace.onDidSaveTextDocument(e => {
             if (!e || !this.isWatcherEnabledAnyFile()) {
                 return;
             }
 
-            let isChanged = false;
-            for (const ch of e.contentChanges) {
-                if (ch.text.includes('\n')) // '' means deleted
-                    isChanged = true;
-            }
             this.triggerIncrementalBuild();
         }));
         this.disposable.push(vscode.window.onDidChangeActiveTextEditor(async (e) => {
-            if (!e || !this.isWatcherEnabled()) {
+            if (!e || await this.isWatcherEnabled() === false) {
                 return;
             }
 
@@ -88,8 +83,8 @@ export class AutocompleteWatcher {
         this.projectManager = projectManager;
     }
 
-    triggerIncrementalBuild() {
-        if (!this.isWatcherEnabled())
+    async triggerIncrementalBuild() {
+        if (await this.isWatcherEnabled() === false)
             return;
         this.buildId++;
         this.incrementalBuild(this.buildId);
@@ -99,7 +94,10 @@ export class AutocompleteWatcher {
         this.terminatingExtension = true;
     }
 
-    private isWatcherEnabled() {
+    private async isWatcherEnabled() {
+        if (await isActivated() == false) {
+            return false;
+        }
         const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher.whole");
         if (!isWatcherEnabled || this.terminatingExtension) {
             return false;
@@ -107,7 +105,10 @@ export class AutocompleteWatcher {
         return true;
     }
 
-    private isWatcherEnabledAnyFile() {
+    private async isWatcherEnabledAnyFile() {
+        if (await isActivated() == false) {
+            return false;
+        }
         const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher.singleModule");
         if (!isWatcherEnabled || this.terminatingExtension) {
             return false;
@@ -125,30 +126,29 @@ export class AutocompleteWatcher {
     private async incrementalBuild(buildId: number): Promise<any> {
         try {
             await this.atomicCommand.autoWatchCommand(async (context) => {
-                if (this.buildId !== buildId || !this.isWatcherEnabled())
+                if (this.buildId !== buildId || await this.isWatcherEnabled() === false)
                     return;
-                try {
-                    const scheme = await getProjectScheme();
-                    emptyAutobuildLog();
-                    this.problemResolver.parseAsyncLogs(
-                        getWorkspacePath(),
-                        ".logs/autocomplete.log",
-                        false
-                    );
-                    await context.execShell(
-                        AutocompleteWatcher.AutocompleteCommandName,
-                        { file: "compile_module.sh" },
-                        [scheme],
-                        ExecutorMode.silently
-                    );
-                } catch (err) {
-                }
+                const scheme = await getProjectScheme();
+                emptyAutobuildLog();
+                this.problemResolver.parseAsyncLogs(
+                    getWorkspacePath(),
+                    ".logs/autocomplete.log",
+                    false
+                );
+                await context.execShell(
+                    AutocompleteWatcher.AutocompleteCommandName,
+                    { file: "compile_module.sh" },
+                    [scheme],
+                    ExecutorMode.onlyCommandNameAndResult
+                );
             });
         } catch (err) {
             if (err == UserCommandIsExecuting) {
                 await sleep(1000);
                 if (buildId == this.buildId) // still valid
                     this.incrementalBuild(buildId);
+            } else {
+                throw err;
             }
         }
     }

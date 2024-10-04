@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorRunningError, ExecutorTaskError, ExecutorTerminated } from "../execShell";
+import { Executor, ExecutorTaskError, ExecutorTerminated } from "../Executor";
 import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
-import { CommandContext, UserTerminatedError } from "./CommandContext";
+import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./CommandContext";
+import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
 
 export const UserCommandIsExecuting: Error = new Error("User task is currently executing");
 
@@ -24,17 +25,21 @@ function shouldAskTerminateCurrentTask() {
 export class AtomicCommand {
     private _mutex = new Mutex();
     private _executor: Executor;
+    private _watcherExecutor = new Executor();
     private _executingCommand: "user" | "autowatcher" | undefined = undefined;
     private latestOperationID: { id: number, type: "user" | "autowatcher" | undefined } = { id: 0, type: undefined };
     private _prevCommandContext?: CommandContext
+
+    private userTerminal = new TerminalShell("User");
+    private watcherTerminal = new TerminalShell("Watch");
 
     constructor(executor: Executor) {
         this._executor = executor;
     }
 
-    async userCommandWithoutThrowingException(commandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
+    async userCommandWithoutThrowingException(commandClosure: (commandContext: CommandContext) => Promise<void>, taskName: string | undefined) {
         try {
-            await this.userCommand(commandClosure, successMessage);
+            await this.userCommand(commandClosure, taskName);
         } catch (err) {
             // command wrapper shows an error, no more need to propagate it further
         }
@@ -60,11 +65,24 @@ export class AtomicCommand {
             if (currentOperationID !== this.latestOperationID)
                 throw E_CANCELED;
             this._executingCommand = "autowatcher";
-            const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this._executor);
+            const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this.watcherTerminal);
             this._prevCommandContext = commandContext;
+            this.watcherTerminal.terminalName = "Watcher";
             await this.withCancellation(async () => {
                 await commandClosure(commandContext);
             }, commandContext.cancellationToken);
+            this.watcherTerminal.success();
+        }
+        catch (error) {
+            if (error !== UserCommandIsExecuting) {
+                if (error === UserTerminatedError) {
+                    this.watcherTerminal.cancel();
+                } else if (error !== UserTerminalCloseError) {
+                    this.watcherTerminal.error();
+                }
+                this.watcherTerminal.write(`${error}\n`, TerminalMessageStyle.error);
+            }
+            throw error;
         } finally {
             this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
@@ -88,7 +106,7 @@ export class AtomicCommand {
         });
     }
 
-    async userCommand<T>(commandClosure: (commandContext: CommandContext) => Promise<T>, successMessage: string | undefined = undefined) {
+    async userCommand<T>(commandClosure: (commandContext: CommandContext) => Promise<T>, taskName: string | undefined) {
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
@@ -116,19 +134,28 @@ export class AtomicCommand {
             if (currentOperationID !== this.latestOperationID)
                 throw E_CANCELED;
             this._executingCommand = "user";
-            const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this._executor);
+            const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this.userTerminal);
             this._prevCommandContext = commandContext;
+            if (taskName)
+                this.userTerminal.terminalName = `User: ${taskName}`
             result = await this.withCancellation(async () => {
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
-            if (successMessage) {
-                vscode.window.showInformationMessage(successMessage);
-            }
+            if (taskName)
+                this.userTerminal.success();
+
             return result;
         } catch (err) {
-            if (err instanceof ExecutorRunningError) {
-                throw err;
-            } else if (err instanceof ExecutorTaskError) {
+            if (err !== UserCommandIsExecuting && taskName) {
+                if (err === UserTerminatedError)
+                    this.userTerminal.cancel();
+                else if (err !== UserTerminalCloseError) {
+                    this.userTerminal.error();
+                    this.userTerminal.write(`${err}\n`, TerminalMessageStyle.error);
+                }
+            }
+
+            if (err instanceof ExecutorTaskError) {
                 if (isShowErrorEnabled()) {
                     const error = err as ExecutorTaskError;
                     vscode.window.showErrorMessage(error.message, "Show log")

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import subprocess
 import json
 import xml.etree.ElementTree as ET

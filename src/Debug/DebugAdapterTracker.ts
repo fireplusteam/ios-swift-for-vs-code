@@ -2,15 +2,14 @@ import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
 import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp } from "../commands";
-import { Executor, ExecutorMode } from "../execShell";
+import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
 import * as fs from 'fs'
 import { getFilePathInWorkspace } from "../env";
-import { sleep } from "../extension";
-import { exec } from "child_process";
 import { SimulatorFocus } from "./SimulatorFocus";
+import { killSpawnLaunchedProcesses } from "../utils";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -23,11 +22,14 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
     }
+    private get deviceID(): string {
+        return this.debugSession.configuration.deviceID;
+    }
     private get testsToRun(): string[] {
         return this.debugSession.configuration.testsToRun || [];
     }
     private get context(): CommandContext {
-        return DebugConfigurationProvider.contextBinder.get(this.sessionID)!;
+        return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
     }
     private _stream: fs.WriteStream;
 
@@ -98,7 +100,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {
             try {
-                // this.debugSession.customRequest("cancel");
+                killSpawnLaunchedProcesses(this.deviceID);
                 this.context.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }
@@ -121,6 +123,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
         await runCommandClosure(this.context);
+        if (successMessage) {
+            vscode.window.showInformationMessage(successMessage);
+        }
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {

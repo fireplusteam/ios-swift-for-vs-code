@@ -37,7 +37,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private debugTestSessionEvent: vscode.Event<string>;
     private atomicCommand: AtomicCommand
 
-    static contextBinder = new Map<string, CommandContext>();
+    private static contextBinder = new Map<string, CommandContext>();
+    public static getContextForSession(session: string) {
+        return this.contextBinder.get(session);
+    }
 
     constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, atomicCommand: AtomicCommand, debugTestSessionEvent: vscode.Event<string>) {
         this.runtimeWarningsWatcher = runtimeWarningsWatcher;
@@ -131,11 +134,15 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
                     DebugConfigurationProvider.contextBinder.set(sessionID, context);
                     resolve(context);
-                    await context.waitToCancel();
+                    try {
+                        await context.waitToCancel();
+                    } finally {
+                        DebugConfigurationProvider.contextBinder.delete(sessionID);
+                    }
                 } catch (error) {
                     reject(error);
                 }
-            });
+            }, "Start Debug");
         });
 
         return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
@@ -170,6 +177,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         emptyAppLog(logId);
 
+        const deviceID = await context.projectSettingsProvider.projectEnv.debugDeviceID;
+
         if (lldExePath) {
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
@@ -186,7 +195,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.app_log app_log",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
-                    `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
+                    `set_environmental_var DEVICE_ID=!!=${deviceID}`,
                     `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platformString}`,
                     `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
@@ -214,6 +223,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
                 logPath: `.logs/app_${logId}.log`,
+                deviceID: deviceID
             };
             return debugSession;
         } else { // old code-lldb way: deprecated
@@ -232,7 +242,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.app_log app_log",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
-                    `set_environmental_var DEVICE_ID=!!=${await context.projectSettingsProvider.projectEnv.debugDeviceID}`,
+                    `set_environmental_var DEVICE_ID=!!=${deviceID}`,
                     `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platformString}`,
                     `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
@@ -253,7 +263,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
-                logPath: `.logs/app_${logId}.log`
+                logPath: `.logs/app_${logId}.log`,
+                deviceID: deviceID
             };
             return debugSession;
         }
