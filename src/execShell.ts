@@ -243,23 +243,29 @@ export class Executor {
                     userCancel?.dispose();
                     terminalClose?.dispose();
                     reject(UserTerminatedError);
-                    if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
+                    if (proc.killed || proc.exitCode != null || proc.signalCode != null)
                         return;
 
-                    this.terminateShellImp(proc);
-                    this.changeNameEmitter?.fire(
-                        `🚫 ${this.getTerminalName(displayCommandName)}`
-                    );
+                    if (this.childProc === proc) {
+                        this.terminateShellImp(proc);
+
+                        if (mode === ExecutorMode.verbose) {
+                            this.changeNameEmitter?.fire(
+                                `🚫 ${this.getTerminalName(displayCommandName)}`
+                            );
+                        }
+                    }
                     killAll(proc.pid, "SIGKILL");
                 });
                 terminalClose = this.onExit.event(() => {
                     userCancel?.dispose();
                     terminalClose?.dispose();
                     reject(UserTerminatedError);
-                    if (proc.killed || proc.exitCode != null || proc.signalCode != null || this.childProc != proc)
+                    if (proc.killed || proc.exitCode != null || proc.signalCode != null)
                         return;
 
-                    this.terminateShellImp(proc);
+                    if (this.childProc == proc)
+                        this.terminateShellImp(proc);
                     killAll(proc.pid, "SIGKILL");
                 });
                 if (cancellationToken?.isCancellationRequested) {
@@ -270,11 +276,9 @@ export class Executor {
                 proc.once("error", (err) => {
                     userCancel?.dispose();
                     terminalClose?.dispose();
-                    if (this.childProc !== proc) {
-                        console.log("Error, wrong child process error")
-                        return;
+                    if (this.childProc === proc) {
+                        this.terminateShellImp(proc);
                     }
-                    this.terminateShellImp(proc);
                     reject(err);
                 });
 
@@ -282,19 +286,17 @@ export class Executor {
                     userCancel?.dispose();
                     terminalClose?.dispose();
 
-                    if (this.childProc !== proc) {
-                        console.log("Error, wrong child process terminated")
-                        return;
+                    if (this.childProc === proc) {
+                        this.terminateShellImp(proc)
                     }
-                    this.terminateShellImp(proc)
 
                     if (signal !== null) {
-                        if (mode === ExecutorMode.verbose) {
+                        if (this.childProc === proc && mode === ExecutorMode.verbose) {
                             this.changeNameEmitter?.fire(
                                 `❌ ${this.getTerminalName(displayCommandName)}`
                             );
                         }
-                        if (mode !== ExecutorMode.silently && stderr.length > 0) {
+                        if (this.childProc === proc && mode !== ExecutorMode.silently && stderr.length > 0) {
                             this.writeEmitter?.fire(
                                 this.dataToPrint(`\x1b[41m${stderr}\x1b[0m`) // BgRed
                             )
@@ -303,18 +305,18 @@ export class Executor {
                         return;
                     }
 
-                    if (mode !== ExecutorMode.verbose) {
+                    if (this.childProc === proc && mode !== ExecutorMode.verbose) {
                         this.writeEmitter?.fire(
                             this.dataToPrint(`\x1b[42m$ Exits with status code: ${code}\x1b[0m\n`) // BgGreen
                         );
                     }
                     if (code !== 0) {
-                        if (mode === ExecutorMode.verbose) {
+                        if (this.childProc === proc && mode === ExecutorMode.verbose) {
                             this.changeNameEmitter?.fire(
                                 `❌ ${this.getTerminalName(displayCommandName)}`
                             );
                         }
-                        if (mode !== ExecutorMode.silently) {
+                        if (this.childProc === proc && mode !== ExecutorMode.silently) {
                             this.writeEmitter?.fire(
                                 this.dataToPrint(`\x1b[41m${stderr}\x1b[0m`) // BgRed
                             );
@@ -329,12 +331,12 @@ export class Executor {
                             )
                         );
                     } else {
-                        if (mode === ExecutorMode.verbose) {
+                        if (this.childProc === proc && mode === ExecutorMode.verbose) {
                             this.changeNameEmitter?.fire(
                                 `✅ ${this.getTerminalName(displayCommandName)}`
                             );
                         }
-                        if (mode !== ExecutorMode.silently) {
+                        if (this.childProc === proc && mode !== ExecutorMode.silently) {
                             this.writeEmitter?.fire(
                                 this.dataToPrint(stderr)
                             )

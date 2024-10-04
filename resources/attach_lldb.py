@@ -13,7 +13,7 @@ import runtime_warning_database
 LOG_DEBUG = 0
 
 def create_app_logger():
-    app_logger = AppLogger("",  "")
+    app_logger = AppLogger("")
     return app_logger
 
 # GLOBAL
