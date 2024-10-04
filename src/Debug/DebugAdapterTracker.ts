@@ -31,6 +31,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get context(): CommandContext {
         return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
     }
+    private get isDebuggable(): boolean {
+        return this.debugSession.configuration.noDebug === true ? false : this.debugSession.configuration.isDebuggable as boolean;
+    }
     private _stream: fs.WriteStream;
 
     constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver, debugTestSessionEvent: vscode.EventEmitter<string>) {
@@ -119,6 +122,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
         if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
             await DebugAdapterTracker.updateStatus(this.sessionID, "building");
+            this.context.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
             await buildCommand(this.context);
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
@@ -145,8 +149,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     async build(dbgConfig: vscode.DebugConfiguration) {
-        const isDebuggable = dbgConfig.noDebug === true ? false : dbgConfig.isDebuggable as boolean;
         try {
+            const isDebuggable = this.isDebuggable;
             if (dbgConfig.target === "app") {
                 await this.executeAppCommand(async (context) => {
                     await buildSelectedTarget(context, this.problemResolver);

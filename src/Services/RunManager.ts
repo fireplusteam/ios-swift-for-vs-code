@@ -11,7 +11,6 @@ export class RunManager {
     private isDebuggable: boolean;
     private env: ProjectEnv
 
-    private terminalName = "Run App";
 
     constructor(sessionID: string, isDebuggable: boolean, env: ProjectEnv) {
         this.sessionID = sessionID;
