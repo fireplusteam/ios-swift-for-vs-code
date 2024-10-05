@@ -31,7 +31,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 - Debug/Run unit/snapshot tests. Support running single/multiple tests for a class/target/set of classes
 - Support code coverage
 - Run an application on multiple simulator with a single command
-- Support project/workspace and iOS Package.swift
+- Support project/workspace
 - Support launch configuration for app
 - Support diff snapshots testing
 - Add/Delete/Rename/Move files/folders inside vscode
