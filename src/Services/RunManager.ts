@@ -34,7 +34,7 @@ export class RunManager {
             throw Error("Debug mode is not supported in run on multiple devices");
         }
 
-        const devices = (await this.env.multipleDeviceID).split(" |");
+        const devices = (await this.env.multipleDeviceID).split(" |").map(deviceId => deviceId.substring("id=".length));
         if (devices == undefined || devices.length == 0)
             throw Error("Can not run on empty device");
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
