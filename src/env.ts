@@ -168,8 +168,13 @@ async function sdk() {
     }
 }
 
+export function getWorkspaceFolder() {
+    const workspace = vscode.workspace.workspaceFolders?.at(0)?.uri;
+    return workspace;
+}
+
 export function getWorkspacePath() {
-    const workspace = vscode.workspace.workspaceFolders?.at(0)?.uri.fsPath || "";
+    const workspace = getWorkspaceFolder()?.fsPath || "";
     return workspace;
 }
 

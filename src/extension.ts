@@ -33,6 +33,7 @@ import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
 import * as fs from 'fs';
 import { CommandContext } from "./CommandManagement/CommandContext";
+import { SwiftLSPClient } from "./lspExtension";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -82,6 +83,7 @@ let debugConfiguration: DebugConfigurationProvider;
 let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
+let sourceLsp = new SwiftLSPClient();
 
 export function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -112,6 +114,8 @@ export async function activate(context: vscode.ExtensionContext) {
         problemDiagnosticResolver,
         projectManager
     );
+
+    sourceLsp.fetchTests(vscode.Uri.file("/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/Test_iosTests/Test_iosTests.swift"));
 
     // initialise code
 

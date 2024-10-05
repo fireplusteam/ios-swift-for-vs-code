@@ -2,12 +2,83 @@ import * as ls from "vscode-languageserver-protocol";
 import * as langclient from "vscode-languageclient/node";
 import * as vscode from "vscode";
 import path from "path";
+import { getWorkspaceFolder, getWorkspacePath } from "./env";
 
-class LanExt {
+// Test styles where test-target represents a test target that contains tests
+export type TestStyle = "XCTest" | "swift-testing" | "test-target";
+
+export interface LSPTestItem {
+    /**
+     * This identifier uniquely identifies the test case or test suite. It can be used to run an individual test (suite).
+     */
+    id: string;
+
+    /**
+     * Display name describing the test.
+     */
+    label: string;
+
+    /**
+     * Optional description that appears next to the label.
+     */
+    description?: string;
+
+    /**
+     * A string that should be used when comparing this item with other items.
+     *
+     * When `undefined` the `label` is used.
+     */
+    sortText?: string;
+
+    /**
+     *  Whether the test is disabled.
+     */
+    disabled: boolean;
+
+    /**
+     * The type of test, eg. the testing framework that was used to declare the test.
+     */
+    style: TestStyle;
+
+    /**
+     * The location of the test item in the source code.
+     */
+    location: ls.Location;
+
+    /**
+     * The children of this test item.
+     *
+     * For a test suite, this may contain the individual test cases or nested suites.
+     */
+    children: LSPTestItem[];
+
+    /**
+     * Tags associated with this test item.
+     */
+    tags: { id: string }[];
+}
+
+interface DocumentTestsParams {
+    textDocument: {
+        uri: ls.URI;
+    };
+}
+
+export const textDocumentTestsRequest = new langclient.RequestType<
+    DocumentTestsParams,
+    LSPTestItem[],
+    unknown
+>("textDocument/tests");
+
+export class SwiftLSPClient {
 
     private languageClient: langclient.LanguageClient | null | undefined;
 
     private clientReadyPromise?: Promise<void>;
+
+    constructor() {
+        this.setupLanguageClient(getWorkspaceFolder())
+    }
 
     private async setupLanguageClient(folder?: vscode.Uri) {
         const { client, errorHandler } = this.createLSPClient(folder);
@@ -39,92 +110,24 @@ class LanExt {
 
         const errorHandler = new SourceKitLSPErrorHandler(5);
         const clientOptions: langclient.LanguageClientOptions = {
-            documentSelector: LanguageClientManager.documentSelector,
+            documentSelector: [
+                {
+                    language: "swift"
+                }
+            ],
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
-            outputChannel: new SwiftOutputChannel("SourceKit Language Server", false),
-            middleware: {
-                provideDocumentSymbols: async (document, token, next) => {
-                    const result = await next(document, token);
-                    const documentSymbols = result as vscode.DocumentSymbol[];
-                    if (this.documentSymbolWatcher && documentSymbols) {
-                        this.documentSymbolWatcher(document, documentSymbols);
-                    }
-                    return result;
-                },
-                provideDefinition: async (document, position, token, next) => {
-                    const result = await next(document, position, token);
-                    const definitions = result as vscode.Location[];
-                    if (
-                        definitions &&
-                        path.extname(definitions[0].uri.path) === ".swiftinterface"
-                    ) {
-                        const uri = definitions[0].uri.with({ scheme: "readonly" });
-                        return new vscode.Location(uri, definitions[0].range);
-                    }
-                    return result;
-                },
-                // temporarily remove text edit from Inlay hints while SourceKit-LSP
-                // returns invalid replacement text
-                provideInlayHints: async (document, position, token, next) => {
-                    const result = await next(document, position, token);
-                    // remove textEdits for swift version earlier than 5.10 as it sometimes
-                    // generated invalid textEdits
-                    if (this.workspaceContext.swiftVersion.isLessThan(new Version(5, 10, 0))) {
-                        result?.forEach(r => (r.textEdits = undefined));
-                    }
-                    return result;
-                },
-                provideDiagnostics: async (uri, previousResultId, token, next) => {
-                    const result = await next(uri, previousResultId, token);
-                    if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
-                        return undefined;
-                    }
-                    const document = uri as vscode.TextDocument;
-                    this.workspaceContext.diagnostics.handleDiagnostics(
-                        document.uri ?? uri,
-                        DiagnosticsManager.isSourcekit,
-                        result?.items ?? []
-                    );
-                    return undefined;
-                },
-                handleDiagnostics: (uri, diagnostics) => {
-                    this.workspaceContext.diagnostics.handleDiagnostics(
-                        uri,
-                        DiagnosticsManager.isSourcekit,
-                        diagnostics
-                    );
-                },
-                handleWorkDoneProgress: (() => {
-                    let lastPrompted = new Date(0).getTime();
-                    return async (token, params, next) => {
-                        const result = await next(token, params);
-                        const now = new Date().getTime();
-                        const oneHour = 60 * 60 * 1000;
-                        if (
-                            now - lastPrompted > oneHour &&
-                            token.toString().startsWith("sourcekitd-crashed")
-                        ) {
-                            // Only prompt once an hour in case sourcekit is in a crash loop
-                            lastPrompted = now;
-                            promptForDiagnostics(this.workspaceContext);
-                        }
-                        return result;
-                    };
-                })(),
-            },
-            uriConverters,
-            errorHandler,
+            outputChannel: new SwiftOutputChannel(),
+            errorHandler: errorHandler,
             // Avoid attempting to reinitialize multiple times. If we fail to initialize
             // we aren't doing anything different the second time and so will fail again.
-            initializationFailedHandler: () => false,
-            initializationOptions: this.initializationOptions(),
+            initializationFailedHandler: () => false
         };
 
         return {
             client: new langclient.LanguageClient(
-                "swift.sourcekit-lsp",
-                "SourceKit Language Server",
+                "xcode.sourcekit-lsp",
+                "Xcode SourceKit Language Server",
                 serverOptions,
                 clientOptions
             ),
@@ -145,18 +148,9 @@ class LanExt {
                 e.oldState === langclient.State.Starting &&
                 e.newState === langclient.State.Running
             ) {
-                this.addSubFolderWorkspaces(client);
+                // this.addSubFolderWorkspaces(client);
             }
         });
-        if (client.clientOptions.workspaceFolder) {
-            this.workspaceContext.outputChannel.log(
-                `SourceKit-LSP setup for ${FolderContext.uriName(
-                    client.clientOptions.workspaceFolder.uri
-                )}`
-            );
-        } else {
-            this.workspaceContext.outputChannel.log(`SourceKit-LSP setup`);
-        }
 
         client.onNotification(langclient.LogMessageNotification.type, params => {
             console.log("error");
@@ -170,28 +164,65 @@ class LanExt {
                 // Now that we've started up correctly, start the error handler to auto-restart
                 // if sourcekit-lsp crashes during normal operation.
                 errorHandler.enable();
-
-                if (this.workspaceContext.swiftVersion.isLessThan(new Version(5, 7, 0))) {
-                    this.legacyInlayHints = activateLegacyInlayHints(client);
-                }
-
-                this.peekDocuments = activatePeekDocuments(client);
-                this.getReferenceDocument = activateGetReferenceDocument(client);
-                this.workspaceContext.subscriptions.push(this.getReferenceDocument);
             })
             .catch(reason => {
-                this.workspaceContext.outputChannel.log(`${reason}`);
                 this.languageClient?.stop();
                 this.languageClient = undefined;
                 throw reason;
             });
 
         this.languageClient = client;
-        this.cancellationToken = new vscode.CancellationTokenSource();
 
         return this.clientReadyPromise;
     }
+
+    async fetchTests(document: vscode.Uri) {
+        if (this.languageClient == undefined) {
+            await this.clientReadyPromise;
+        }
+        if (this.languageClient == undefined) return;
+        try {
+            const testsInDocument = await this.languageClient.sendRequest(
+                textDocumentTestsRequest,
+                { textDocument: { uri: document.toString() } }
+            );
+            console.log(testsInDocument);
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
 }
+
+export class SwiftOutputChannel implements vscode.OutputChannel {
+    name: string = "Xcode Swift LSP";
+
+    append(value: string): void {
+        console.log(`${this.name}: ${value}`);
+    }
+
+    appendLine(value: string): void {
+        console.log(`${this.name}: ${value}`);
+    }
+
+    replace(value: string): void {
+        console.log(`${this.name} replace: ${value}`);
+    }
+
+
+    clear(): void {
+    }
+
+    show(column?: unknown, preserveFocus?: unknown): void {
+    }
+
+    hide(): void {
+    }
+
+    dispose(): void {
+    }
+}
+
 
 /**
  * SourceKit-LSP error handler. Copy of the default error handler, except it includes
