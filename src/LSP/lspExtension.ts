@@ -130,6 +130,7 @@ export class SwiftLSPClient {
                 provideDocumentSymbols: async (document, token, next) => {
                     const result = await next(document, token);
                     const documentSymbols = result as vscode.DocumentSymbol[];
+                    const tests = this.fetchTests(document.uri);
                     return result;
                 },
                 provideDefinition: async (document, position, token, next) => {
@@ -244,7 +245,6 @@ export class SwiftLSPClient {
             console.log(testsInDocument);
         }
         catch (error) {
-            await sleep(1000);
             console.log(error);
             this.fetchTests(document);
         }

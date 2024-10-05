@@ -115,8 +115,6 @@ export async function activate(context: vscode.ExtensionContext) {
         projectManager
     );
 
-    sourceLsp.fetchTests(vscode.Uri.file("/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/Test_iosTests/Test_iosTests.swift"));
-
     // initialise code
 
     setContext(context);
