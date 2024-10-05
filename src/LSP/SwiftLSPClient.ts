@@ -53,54 +53,54 @@ export class SwiftLSPClient {
 
         const errorHandler = new SourceKitLSPErrorHandler(5);
         const clientOptions: langclient.LanguageClientOptions = {
+            // at the moment it's empty, as it's should not be active, only used for tests parsing at the moment
             documentSelector: [
-                { scheme: "sourcekit-lsp", language: "swift" },
-                { scheme: "file", language: "swift" },
-                { scheme: "untitled", language: "swift" },
-                { scheme: "file", language: "objective-c" },
-                { scheme: "untitled", language: "objective-c" },
-                { scheme: "file", language: "objective-cpp" },
-                { scheme: "untitled", language: "objective-cpp" },
+                // { scheme: "sourcekit-lsp", language: "swift" },
+                // { scheme: "file", language: "swift" },
+                // { scheme: "untitled", language: "swift" },
+                // { scheme: "file", language: "objective-c" },
+                // { scheme: "untitled", language: "objective-c" },
+                // { scheme: "file", language: "objective-cpp" },
+                // { scheme: "untitled", language: "objective-cpp" },
             ],
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
             outputChannel: new SwiftOutputChannel(),
             middleware: {
                 provideDocumentSymbols: async (document, token, next) => {
-                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    const result = await next(document, token);
-                    const documentSymbols = result as vscode.DocumentSymbol[];
-                    return result;
+                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser at the moment
+                    // const result = await next(document, token);
+                    // const documentSymbols = result as vscode.DocumentSymbol[];
+                    // return result;
                 },
                 provideDefinition: async (document, position, token, next) => {
                     return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    return [];
-                    const result = await next(document, position, token);
-                    const definitions = result as vscode.Location[];
-                    if (
-                        definitions &&
-                        path.extname(definitions[0].uri.path) === ".swiftinterface"
-                    ) {
-                        const uri = definitions[0].uri.with({ scheme: "readonly" });
-                        return new vscode.Location(uri, definitions[0].range);
-                    }
-                    return result;
+                    // const result = await next(document, position, token);
+                    // const definitions = result as vscode.Location[];
+                    // if (
+                    //     definitions &&
+                    //     path.extname(definitions[0].uri.path) === ".swiftinterface"
+                    // ) {
+                    //     const uri = definitions[0].uri.with({ scheme: "readonly" });
+                    //     return new vscode.Location(uri, definitions[0].range);
+                    // }
+                    // return result;
                 },
                 // temporarily remove text edit from Inlay hints while SourceKit-LSP
                 // returns invalid replacement text
                 provideInlayHints: async (document, position, token, next) => {
                     return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    const result = await next(document, position, token);
-                    return result;
+                    // const result = await next(document, position, token);
+                    // return result;
                 },
                 provideDiagnostics: async (uri, previousResultId, token, next) => {
                     return undefined; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    const result = await next(uri, previousResultId, token);
-                    if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
-                        return undefined;
-                    }
-                    const document = uri as vscode.TextDocument;
-                    return undefined;
+                    // const result = await next(uri, previousResultId, token);
+                    // if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
+                    //     return undefined;
+                    // }
+                    // const document = uri as vscode.TextDocument;
+                    // return undefined;
                 },
                 handleDiagnostics: (uri, diagnostics) => {
                     return () => {
@@ -110,11 +110,11 @@ export class SwiftLSPClient {
                     return () => {
                         return;
                     }
-                    let lastPrompted = new Date(0).getTime();
-                    return async (token, params, next) => {
-                        const result = await next(token, params);
-                        return result;
-                    };
+                    // let lastPrompted = new Date(0).getTime();
+                    // return async (token, params, next) => {
+                    //     const result = await next(token, params);
+                    //     return result;
+                    // };
                 })(),
             },
             uriConverters: uriConverters,
