@@ -279,6 +279,16 @@
                 "extensions": [
                     ".disasm"
                 ]
+            },
+            {
+                "id": "swift",
+                "aliases": [
+                    "Swift"
+                ],
+                "extensions": [
+                    ".swiftinterface",
+                    ".swift"
+                ]
             }
         ],
         "grammars": [
