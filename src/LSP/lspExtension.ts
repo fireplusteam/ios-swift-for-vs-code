@@ -2,7 +2,9 @@ import * as ls from "vscode-languageserver-protocol";
 import * as langclient from "vscode-languageclient/node";
 import * as vscode from "vscode";
 import path from "path";
-import { getWorkspaceFolder, getWorkspacePath } from "./env";
+import { getWorkspaceFolder, getWorkspacePath } from "../env";
+import { sleep } from "../extension";
+import { uriConverters } from "./uriConverters";
 
 // Test styles where test-target represents a test target that contains tests
 export type TestStyle = "XCTest" | "swift-testing" | "test-target";
@@ -97,6 +99,8 @@ export class SwiftLSPClient {
             options: {
                 env: {
                     ...process.env,
+                    SOURCEKIT_LOGGING: 3,
+                    SOURCEKIT_TOOLCHAIN_PATH: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
                 },
             },
         };
@@ -111,13 +115,61 @@ export class SwiftLSPClient {
         const errorHandler = new SourceKitLSPErrorHandler(5);
         const clientOptions: langclient.LanguageClientOptions = {
             documentSelector: [
-                {
-                    language: "swift"
-                }
+                { scheme: "sourcekit-lsp", language: "swift" },
+                { scheme: "file", language: "swift" },
+                { scheme: "untitled", language: "swift" },
+                { scheme: "file", language: "objective-c" },
+                { scheme: "untitled", language: "objective-c" },
+                { scheme: "file", language: "objective-cpp" },
+                { scheme: "untitled", language: "objective-cpp" },
             ],
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
             outputChannel: new SwiftOutputChannel(),
+            middleware: {
+                provideDocumentSymbols: async (document, token, next) => {
+                    const result = await next(document, token);
+                    const documentSymbols = result as vscode.DocumentSymbol[];
+                    return result;
+                },
+                provideDefinition: async (document, position, token, next) => {
+                    const result = await next(document, position, token);
+                    const definitions = result as vscode.Location[];
+                    if (
+                        definitions &&
+                        path.extname(definitions[0].uri.path) === ".swiftinterface"
+                    ) {
+                        const uri = definitions[0].uri.with({ scheme: "readonly" });
+                        return new vscode.Location(uri, definitions[0].range);
+                    }
+                    return result;
+                },
+                // temporarily remove text edit from Inlay hints while SourceKit-LSP
+                // returns invalid replacement text
+                provideInlayHints: async (document, position, token, next) => {
+                    const result = await next(document, position, token);
+                    return result;
+                },
+                provideDiagnostics: async (uri, previousResultId, token, next) => {
+                    const result = await next(uri, previousResultId, token);
+                    if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
+                        return undefined;
+                    }
+                    const document = uri as vscode.TextDocument;
+                    return undefined;
+                },
+                handleDiagnostics: (uri, diagnostics) => {
+                    console.log("fdf");
+                },
+                handleWorkDoneProgress: (() => {
+                    let lastPrompted = new Date(0).getTime();
+                    return async (token, params, next) => {
+                        const result = await next(token, params);
+                        return result;
+                    };
+                })(),
+            },
+            uriConverters: uriConverters,
             errorHandler: errorHandler,
             // Avoid attempting to reinitialize multiple times. If we fail to initialize
             // we aren't doing anything different the second time and so will fail again.
@@ -126,7 +178,7 @@ export class SwiftLSPClient {
 
         return {
             client: new langclient.LanguageClient(
-                "xcode.sourcekit-lsp",
+                "sourcekit-lsp",
                 "Xcode SourceKit Language Server",
                 serverOptions,
                 clientOptions
@@ -155,6 +207,9 @@ export class SwiftLSPClient {
         client.onNotification(langclient.LogMessageNotification.type, params => {
             console.log("error");
             // this.logMessage(client, params as SourceKitLogMessageParams);
+        });
+        client.onNotification(langclient.LogMessageNotification.method, e => {
+            console.log("error");
         });
 
         // start client
@@ -189,7 +244,9 @@ export class SwiftLSPClient {
             console.log(testsInDocument);
         }
         catch (error) {
+            await sleep(1000);
             console.log(error);
+            this.fetchTests(document);
         }
     }
 }
