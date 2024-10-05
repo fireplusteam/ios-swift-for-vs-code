@@ -382,7 +382,7 @@ export async function runAndDebugTestsForCurrentFile(commandContext: CommandCont
 
 export async function enableXCBBuildService(enabled: boolean) {
     await sleep(5000);
-    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} - isProxyInjected`;
+    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
 
     return new Promise<void>((resolve) => {
         exec(checkIfInjectedCommand, async (error, stdout, stderr) => {
@@ -397,7 +397,7 @@ export async function enableXCBBuildService(enabled: boolean) {
                 return;
             }
             const install = enabled ? "-install" : "-uninstall"
-            const command = `echo '${password}' | sudo - S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
+            const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
             exec(command, (error, stdout, stderr) => {
                 if (error) {
                     if (enabled)
