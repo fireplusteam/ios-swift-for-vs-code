@@ -4,7 +4,6 @@ import { getWorkspaceFolder } from "../env";
 import { SourceKitLSPErrorHandler } from "./SourceKitLSPErrorHandler";
 import path from "path";
 import { uriConverters } from "./uriConverters";
-import { textDocumentTestsRequest } from "./lspExtension";
 import { SwiftOutputChannel } from "./SwiftOutputChannel";
 
 export class SwiftLSPClient {
@@ -12,6 +11,12 @@ export class SwiftLSPClient {
     private languageClient: langclient.LanguageClient | null | undefined;
 
     private clientReadyPromise?: Promise<void>;
+
+    public async client(): Promise<langclient.LanguageClient> {
+        if (this.languageClient == undefined)
+            await this.clientReadyPromise;
+        return this.languageClient!;
+    }
 
     constructor() {
         this.setupLanguageClient(getWorkspaceFolder())
@@ -62,13 +67,13 @@ export class SwiftLSPClient {
             outputChannel: new SwiftOutputChannel(),
             middleware: {
                 provideDocumentSymbols: async (document, token, next) => {
-                    return [];
+                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
                     const result = await next(document, token);
                     const documentSymbols = result as vscode.DocumentSymbol[];
-                    const tests = this.fetchTests(document.uri);
                     return result;
                 },
                 provideDefinition: async (document, position, token, next) => {
+                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
                     return [];
                     const result = await next(document, position, token);
                     const definitions = result as vscode.Location[];
@@ -84,12 +89,12 @@ export class SwiftLSPClient {
                 // temporarily remove text edit from Inlay hints while SourceKit-LSP
                 // returns invalid replacement text
                 provideInlayHints: async (document, position, token, next) => {
-                    return [];
+                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
                     const result = await next(document, position, token);
                     return result;
                 },
                 provideDiagnostics: async (uri, previousResultId, token, next) => {
-                    return undefined;
+                    return undefined; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
                     const result = await next(uri, previousResultId, token);
                     if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
                         return undefined;
@@ -121,7 +126,7 @@ export class SwiftLSPClient {
 
         return {
             client: new langclient.LanguageClient(
-                "sourcekit-lsp",
+                "xcode.sourcekit-lsp",
                 "Xcode SourceKit Language Server",
                 serverOptions,
                 clientOptions
@@ -166,22 +171,4 @@ export class SwiftLSPClient {
         return this.clientReadyPromise;
     }
 
-    async fetchTests(document: vscode.Uri) {
-        if (this.languageClient == undefined) {
-            await this.clientReadyPromise;
-        }
-        if (this.languageClient == undefined) return;
-        try {
-            const testsInDocument = await this.languageClient.sendRequest(
-                textDocumentTestsRequest,
-                { textDocument: { uri: document.toString() } }
-            );
-            console.log(testsInDocument);
-            return testsInDocument;
-        }
-        catch (error) {
-            console.log(error);
-            this.fetchTests(document);
-        }
-    }
 }

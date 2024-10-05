@@ -4,6 +4,7 @@ import { TestContainer } from './TestContainer';
 import { TestCase } from './TestCase';
 import { TestHeading } from './TestHeading';
 import { CoverageProvider } from './CoverageProvider';
+import { LSPTestsProvider } from '../LSP/LSPTestsProvider';
 
 const textDecoder = new TextDecoder('utf-8');
 
@@ -13,6 +14,11 @@ export class TestTreeContext {
     testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
     ctrl: vscode.TestController = vscode.tests.createTestController('iOSTestController', 'iOS Tests');
     coverage: CoverageProvider = new CoverageProvider(".vscode/.bundle.xcresult");
+    lspTestProvider: LSPTestsProvider;
+
+    constructor(lspTestProvider: LSPTestsProvider) {
+        this.lspTestProvider = lspTestProvider;
+    }
 
     getOrCreateTest(
         uri: vscode.Uri,

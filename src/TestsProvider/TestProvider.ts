@@ -14,12 +14,13 @@ import { error } from 'console';
 export class TestProvider {
     projectManager: ProjectManager
     executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>;
-    context = new TestTreeContext();
+    context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser()
     asyncTestCaseParser = new TestCaseProblemParser();
 
-    constructor(projectManager: ProjectManager, executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>) {
+    constructor(projectManager: ProjectManager, context: TestTreeContext, executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>) {
         this.projectManager = projectManager;
+        this.context = context;
         this.executeTests = executeTests;
     }
 

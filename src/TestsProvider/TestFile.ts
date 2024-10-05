@@ -17,9 +17,18 @@ export class TestFile implements TestContainer {
 
     public async updateFromDisk(controller: vscode.TestController, item: vscode.TestItem) {
         try {
-            const content = await getContentFromFilesystem(item.uri!);
-            item.error = undefined;
-            await this.updateFromContents(controller, content, item);
+            const url = item.uri;
+            if (url) {
+                const tests = await this.context.lspTestProvider.fetchTests(url);
+
+                this.didResolve = true;
+
+
+            } else { // legacy as fallback
+                const content = await getContentFromFilesystem(item.uri!);
+                item.error = undefined;
+                await this.updateFromContents(controller, content, item);
+            }
         } catch (e) {
             item.error = (e as Error).stack;
         }

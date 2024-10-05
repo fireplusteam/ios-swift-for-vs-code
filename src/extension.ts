@@ -35,6 +35,8 @@ import * as fs from 'fs';
 import { CommandContext } from "./CommandManagement/CommandContext";
 import * as lspExtension from "./LSP/lspExtension";
 import { SwiftLSPClient } from "./LSP/SwiftLSPClient";
+import { TestTreeContext } from "./TestsProvider/TestTreeContext";
+import { LSPTestsProvider } from "./LSP/LSPTestsProvider";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -103,6 +105,10 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     logChannel.appendLine("Activated");
 
+    const tP = new LSPTestsProvider(sourceLsp);
+    tP.fetchTests(vscode.Uri.file("/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/Test_iosTests/Test_iosTests.swift"));
+
+
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
 
@@ -115,8 +121,6 @@ export async function activate(context: vscode.ExtensionContext) {
         problemDiagnosticResolver,
         projectManager
     );
-
-    sourceLsp.fetchTests(vscode.Uri.file("/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/Test_iosTests/Test_iosTests.swift"));
 
     // initialise code
 
@@ -151,13 +155,15 @@ export async function activate(context: vscode.ExtensionContext) {
         debugSessionEndEvent.event
     );
 
-    testProvider = new TestProvider(projectManager, async (tests, isDebuggable, testRun) => {
-        if (tests) {
-            return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable, testRun);
-        } else {
-            return await debugConfiguration.startIOSTestsDebugger(isDebuggable, testRun);
-        }
-    });
+    testProvider = new TestProvider(projectManager,
+        new TestTreeContext(new LSPTestsProvider(sourceLsp)),
+        async (tests, isDebuggable, testRun) => {
+            if (tests) {
+                return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable, testRun);
+            } else {
+                return await debugConfiguration.startIOSTestsDebugger(isDebuggable, testRun);
+            }
+        });
     testProvider.activateTests(context);
 
     context.subscriptions.push(projectManager.onProjectUpdate.event(e => {
