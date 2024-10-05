@@ -25,19 +25,19 @@ export class LSPTestsProvider {
 
             await client.sendNotification(lp.DidOpenTextDocumentNotification.method, didOpenParam);
 
-            const testsInDocument = await (await this.lspClient.client()).sendRequest(
-                textDocumentTestsRequest,
-                { textDocument: { uri: document.toString() } }
-            );
+            try {
+                const testsInDocument = await (await this.lspClient.client()).sendRequest(
+                    textDocumentTestsRequest,
+                    { textDocument: { uri: document.toString() } }
+                );
+                return testsInDocument;
+            } finally {
+                const didCloseParam: lp.DidCloseTextDocumentParams = {
+                    textDocument: { uri: document.toString() }
+                };
 
-            const didCloseParam: lp.DidCloseTextDocumentParams = {
-                textDocument: { uri: document.toString() }
-            };
-
-            await client.sendNotification(lp.DidCloseTextDocumentNotification.method, didCloseParam);
-
-            console.log(testsInDocument);
-            return testsInDocument;
+                await client.sendNotification(lp.DidCloseTextDocumentNotification.method, didCloseParam);
+            }
         }
         catch (error) {
             throw error;
