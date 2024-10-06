@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { parseMarkdown } from './parseClass';
 import { TestContainer } from './TestContainer';
-import { TestCase } from './TestCase';
 import { TestHeading } from './TestHeading';
-import { TestTreeContext, getContentFromFilesystem } from './TestTreeContext';
-import { getTestIDComponents, LSPTestItem } from '../LSP/lspExtension';
+import { TestTreeContext, getContentFromFilesystem } from '../TestTreeContext';
+import { getTestIDComponents, LSPTestItem } from '../../LSP/lspExtension';
+import { TestCase } from './TestCase';
 
 let generationCounter = 0;
 

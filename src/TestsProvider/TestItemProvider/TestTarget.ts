@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TestTreeContext } from './TestTreeContext';
+import { TestTreeContext } from '../TestTreeContext';
 import { TestFile } from './TestFile';
 import { TestContainer } from './TestContainer';
 

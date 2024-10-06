@@ -15,10 +15,11 @@ export class TestCase {
 
     getXCodeBuildTest() {
         if (this.target && this.testName) {
+            const testName = this.testName.replaceAll("(", "").replace(")", "");
             if (this.suite)
-                return `${this.target}/${this.suite}/${this.testName}`;
+                return `${this.target}/${this.suite}/${testName}`;
             else
-                return `${this.target}/${this.testName}`;
+                return `${this.target}/${testName}`;
         }
         throw InvalidTestCase;
     }

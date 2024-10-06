@@ -1,16 +1,15 @@
 import * as vscode from 'vscode';
-import { TestFile } from './TestFile';
-import { TestCase } from './TestCase';
-import { TestProject } from './TestProject';
+import { TestFile } from './TestItemProvider/TestFile';
+import { TestCase } from './TestItemProvider/TestCase';
+import { TestProject } from './TestItemProvider/TestProject';
 import { ProjectManager } from '../ProjectManager/ProjectManager';
-import { TestTarget } from './TestTarget';
+import { TestTarget } from './TestItemProvider/TestTarget';
 import { emptyTestsLog } from '../utils';
-import { TestCaseAsyncParser } from './TestCaseAsyncParser';
+import { TestCaseAsyncParser } from './RawLogParsers/TestCaseAsyncParser';
 import { getWorkspacePath } from '../env';
 import { TestTreeContext } from './TestTreeContext';
-import { TestCaseProblemParser } from './TestCaseProblemParser';
+import { TestCaseProblemParser } from './RawLogParsers/TestCaseProblemParser';
 import { error } from 'console';
-import { Test } from 'mocha';
 
 enum TestProviderLoadingState {
     nonInitialised,
@@ -116,6 +115,7 @@ export class TestProvider {
                             console.log("log");
                         });
                     await this.executeTests(request.include === undefined ? undefined : tests, request.profile?.kind === vscode.TestRunProfileKind.Debug, run);
+
                 }
                 catch (err) {
                     console.log(`Run with error: ${err}`);

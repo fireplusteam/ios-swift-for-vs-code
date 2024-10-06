@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import { TestTreeContext } from './TestTreeContext';
+import { TestTreeContext } from '../TestTreeContext';
 import { TestContainer } from './TestContainer';
-import { TestTarget } from './TestTarget';
-import { getFilePathInWorkspace } from '../env';
+import { getFilePathInWorkspace } from '../../env';
 import { FSWatcher, watch } from 'fs';
 import path from 'path';
+import { TestTarget } from './TestTarget';
 
 export class TestProject implements TestContainer {
     public didResolve = false;

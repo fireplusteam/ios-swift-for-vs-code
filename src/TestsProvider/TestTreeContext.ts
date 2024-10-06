@@ -1,8 +1,8 @@
 import { TextDecoder } from 'util';
 import * as vscode from 'vscode';
-import { TestContainer } from './TestContainer';
-import { TestCase } from './TestCase';
-import { TestHeading } from './TestHeading';
+import { TestContainer } from './TestItemProvider/TestContainer';
+import { TestCase } from './TestItemProvider/TestCase';
+import { TestHeading } from './TestItemProvider/TestHeading';
 import { CoverageProvider } from './CoverageProvider';
 import { LSPTestsProvider } from '../LSP/LSPTestsProvider';
 
