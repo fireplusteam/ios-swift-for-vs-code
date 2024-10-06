@@ -101,7 +101,7 @@ export class TestProvider {
                         getWorkspacePath(),
                         ".logs/tests.log",
                         async (result, rawMessage, target, className, testName, duration) => {
-                            const key = `${target}/${className}/${testName}`;
+                            const key = `${target}/${className}/${testName}()`;
                             const item = mapTests.get(key)?.test;
                             if (item) {
                                 run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);

@@ -46,7 +46,7 @@ export async function buildTests(context: CommandContext, problemResolver: Probl
 export async function buildTestsForCurrentFile(context: CommandContext, problemResolver: ProblemDiagnosticResolver, tests: string[]) {
     await checkWorkspace(context);
     const option = tests.map(e => {
-        return `-only-testing:${e}`;
+        return `'-only-testing:${e}'`;
     }).join(" ");
     emptyBuildLog();
     const filePath = getFileNameLog();
