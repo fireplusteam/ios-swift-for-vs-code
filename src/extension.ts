@@ -105,10 +105,6 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     logChannel.appendLine("Activated");
 
-    const tP = new LSPTestsProvider(sourceLsp);
-    tP.fetchTests(vscode.Uri.file("/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/Test_iosTests/Test_iosTests.swift"));
-
-
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
 

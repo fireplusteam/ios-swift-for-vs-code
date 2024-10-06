@@ -5,13 +5,14 @@ import * as lp from "vscode-languageserver-protocol";
 import * as fs from 'fs';
 
 export class LSPTestsProvider {
+    private version = 0;
 
     constructor(private lspClient: SwiftLSPClient) {
     }
 
-    async fetchTests(document: vscode.Uri): Promise<LSPTestItem[]> {
+    async fetchTests(document: vscode.Uri, content: string): Promise<LSPTestItem[]> {
         try {
-            const content = fs.readFileSync(document.fsPath).toString();
+            this.version++;
             // TODO: if you decide to implement you full support of lsp support for all the features and get rid of official Swift extension, then the next line should be uncommented
             // until then leave it commented, as this lsp client is used only for test parser
             // document = vscode.Uri.file(document.fsPath + "_f"); // create a fake file, it's used just for lexical parsing of test location
@@ -20,7 +21,7 @@ export class LSPTestsProvider {
             const client = await this.lspClient.client();
 
             const didOpenParam: lp.DidOpenTextDocumentParams = {
-                textDocument: { uri: document.toString(), languageId: "swift", text: content, version: 1 }
+                textDocument: { uri: document.toString(), languageId: "swift", text: content, version: this.version }
             };
 
             await client.sendNotification(lp.DidOpenTextDocumentNotification.method, didOpenParam);

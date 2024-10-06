@@ -71,3 +71,15 @@ export const textDocumentTestsRequest = new langclient.RequestType<
 export enum LanguageClientError {
     LanguageClientUnavailable,
 }
+
+export function getTestIDComponents(id: string) {
+    const dotIndex = id.indexOf(".");
+    let target = "";
+    if (dotIndex !== -1) {
+        target = id.substring(0, dotIndex);
+        id = id.substring(dotIndex + 1);
+    }
+    const suite = id.split("/").slice(0, -1).join("/");
+    const testName = id.split("/")[id.length - 1];
+    return { target: target, suite: suite, testName: testName };
+}

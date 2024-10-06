@@ -2,16 +2,16 @@ import * as vscode from 'vscode';
 
 export class TestCase {
     constructor(
-        private readonly testName: String
+        private readonly testName: String,
+        private readonly suite: String,
+        private readonly target: String
     ) { }
 
     getLabel() {
         return this.testName as string;
     }
 
-    getXCodeBuildTest(item: vscode.TestItem) {
-        const className = item.parent?.label;
-        const target = item.parent?.parent?.parent?.label;
-        return `${target}/${className}/${this.testName}`;
+    getXCodeBuildTest() {
+        return `${this.target}/${this.suite}/${this.testName}`;
     }
 }

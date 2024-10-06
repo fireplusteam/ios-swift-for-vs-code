@@ -21,15 +21,17 @@ export class TestTreeContext {
     }
 
     getOrCreateTest(
+        id: string,
         uri: vscode.Uri,
         provider: () => any
     ) {
-        const existing = this.ctrl.items.get(uri.toString());
+        const uniqueId = `${id}/${uri.toString()}`;
+        const existing = this.ctrl.items.get(uniqueId);
         if (existing) {
             return { file: existing, data: this.testData.get(existing) };
         }
 
-        const file = this.ctrl.createTestItem(uri.toString(), uri.path.split('/').pop()!, uri);
+        const file = this.ctrl.createTestItem(uniqueId, uri.path.split('/').pop()!, uri);
         this.ctrl.items.add(file);
 
         const data = provider();

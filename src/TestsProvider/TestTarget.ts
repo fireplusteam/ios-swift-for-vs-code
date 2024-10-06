@@ -27,7 +27,7 @@ export class TestTarget implements TestContainer {
         const files = await this.filesForTargetProvider();
         for (const fileInTarget of files) {
             const url = vscode.Uri.file(fileInTarget);
-            const { file, data } = this.context.getOrCreateTest(url,
+            const { file, data } = this.context.getOrCreateTest("file://", url,
                 () => {
                     return new TestFile(this.context);
                 });

@@ -38,9 +38,8 @@ export class TestProject implements TestContainer {
         const weakRef = new WeakRef(this);
 
         for (const target of targets) {
-            const id = `${item.uri?.path || ""}/${target}`;
-            const url = vscode.Uri.file(id);
-            const { file, data } = this.context.getOrCreateTest(url,
+            const url = vscode.Uri.file(`${item.uri?.path || ""}/${target}`);
+            const { file, data } = this.context.getOrCreateTest("target://", url,
                 () => {
                     return new TestTarget(this.context,
                         async () => {

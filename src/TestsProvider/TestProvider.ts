@@ -71,9 +71,9 @@ export class TestProvider {
                         run.skipped(test);
                     } else {
                         run.started(test);
-                        tests.push(data.getXCodeBuildTest(test));
+                        tests.push(data.getXCodeBuildTest());
                         mapTests.set(
-                            data.getXCodeBuildTest(test),
+                            data.getXCodeBuildTest(),
                             { test: test, data: data }
                         );
                     }
@@ -162,7 +162,7 @@ export class TestProvider {
             return;
         }
 
-        const { file, data } = this.context.getOrCreateTest(e.uri, () => {
+        const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
             return new TestFile(this.context);
         });
         const testFile = data as TestFile;
@@ -194,6 +194,7 @@ export class TestProvider {
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;
             const { file, data } = this.context.getOrCreateTest(
+                "project://",
                 vscode.Uri.file(url),
                 () => {
                     return new TestProject(this.context,
