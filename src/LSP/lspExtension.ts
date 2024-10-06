@@ -79,7 +79,8 @@ export function getTestIDComponents(id: string) {
         target = id.substring(0, dotIndex);
         id = id.substring(dotIndex + 1);
     }
-    const suite = id.split("/").slice(0, -1).join("/");
-    const testName = id.split("/")[id.length - 1];
+    const components = id.split("/");
+    const suite = components.length <= 1 ? undefined : components.slice(0, -1).join("/");
+    const testName = components.at(-1);
     return { target: target, suite: suite, testName: testName };
 }

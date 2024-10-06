@@ -11,12 +11,14 @@ let generationCounter = 0;
 export class TestFile implements TestContainer {
     public didResolve = false;
     context: TestTreeContext;
+    private target: string
 
-    constructor(context: TestTreeContext) {
+    constructor(context: TestTreeContext, target: string) {
         this.context = context;
+        this.target = target;
     }
 
-    private mapTestItems(parent: vscode.TestItem, target: string, lspTest: LSPTestItem, controller: vscode.TestController, suiteGeneration: number): vscode.TestItem[] {
+    private mapTestItems(parent: vscode.TestItem, target: string | undefined, lspTest: LSPTestItem, controller: vscode.TestController, suiteGeneration: number): vscode.TestItem[] {
         const id = `${parent.uri}/${lspTest.id}`;
         const testItem = controller.createTestItem(id, lspTest.label, parent.uri);
         testItem.range = new vscode.Range(
@@ -55,8 +57,9 @@ export class TestFile implements TestContainer {
             const tests = await this.context.lspTestProvider.fetchTests(url, content);
 
             const itemChildren: vscode.TestItem[] = [];
+            const target = this.target;
             for (const lspChild of tests) {
-                itemChildren.push(...this.mapTestItems(item, item.label, lspChild, controller, 1));
+                itemChildren.push(...this.mapTestItems(item, target, lspChild, controller, 1));
             }
             item.children.replace(itemChildren);
         } catch { // legacy fallback

@@ -20,13 +20,17 @@ export class TestTreeContext {
         this.lspTestProvider = lspTestProvider;
     }
 
+    static TestID(id: string, uri: vscode.Uri) {
+        return `${id}/${uri.toString()}`;
+    }
+
     getOrCreateTest(
         id: string,
         uri: vscode.Uri,
         provider: () => any
     ) {
-        const uniqueId = `${id}/${uri.toString()}`;
-        const existing = this.ctrl.items.get(uniqueId);
+        const uniqueId = TestTreeContext.TestID(id, uri);
+        const existing = this.get(uniqueId, this.ctrl.items);
         if (existing) {
             return { file: existing, data: this.testData.get(existing) };
         }
@@ -39,6 +43,31 @@ export class TestTreeContext {
 
         file.canResolveChildren = true;
         return { file, data };
+    }
+
+    private get(key: string, items: vscode.TestItemCollection) {
+        for (const [id, item] of items) {
+            if (id == key) {
+                return;
+            }
+            const value = this.getImp(key, item);
+            if (value !== undefined) {
+                return value;
+            }
+        }
+    }
+
+    private getImp(key: string, item: vscode.TestItem): vscode.TestItem | undefined {
+        if (item.id === key)
+            return item;
+
+        for (const [id, child] of item.children) {
+            const value = this.getImp(key, child);
+            if (value !== undefined) {
+                return value;
+            }
+        }
+        return undefined;
     }
 
     addItem(item: vscode.TestItem, shouldAdd: (root: vscode.TestItem) => boolean) {

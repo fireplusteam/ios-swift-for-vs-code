@@ -10,6 +10,14 @@ import { getWorkspacePath } from '../env';
 import { TestTreeContext } from './TestTreeContext';
 import { TestCaseProblemParser } from './TestCaseProblemParser';
 import { error } from 'console';
+import { Test } from 'mocha';
+
+enum TestProviderLoadingState {
+    nonInitialised,
+    loading,
+    loaded,
+    error
+}
 
 export class TestProvider {
     projectManager: ProjectManager
@@ -17,6 +25,9 @@ export class TestProvider {
     context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser()
     asyncTestCaseParser = new TestCaseProblemParser();
+
+    private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialised;
+    private initialFilesLoadingPromise = Promise.resolve();
 
     constructor(projectManager: ProjectManager, context: TestTreeContext, executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>) {
         this.projectManager = projectManager;
@@ -70,12 +81,18 @@ export class TestProvider {
                     if (run.token.isCancellationRequested) {
                         run.skipped(test);
                     } else {
-                        run.started(test);
-                        tests.push(data.getXCodeBuildTest());
-                        mapTests.set(
-                            data.getXCodeBuildTest(),
-                            { test: test, data: data }
-                        );
+                        try {
+                            run.started(test);
+                            const xCodeBuildTest = data.getXCodeBuildTest();
+                            tests.push(xCodeBuildTest);
+                            mapTests.set(
+                                xCodeBuildTest,
+                                { test: test, data: data }
+                            );
+                        } catch (error) {
+                            run.failed(test, { message: "Test Case was not well parsed" });
+                            console.error(`Test was not correctly parsed: ${test}`);
+                        }
                     }
                 }
 
@@ -116,7 +133,7 @@ export class TestProvider {
             };
             // resolve all tree before start testing
             await this.findInitialFiles(this.context.ctrl);
-            discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(runTestQueue);
+            await discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(runTestQueue);
         };
 
         ctrl.refreshHandler = async () => {
@@ -133,7 +150,7 @@ export class TestProvider {
 
         ctrl.resolveHandler = async item => {
             if (!item) {
-                this.findInitialFiles(ctrl);
+                await this.findInitialFiles(ctrl);
                 return;
             }
 
@@ -162,8 +179,12 @@ export class TestProvider {
             return;
         }
 
+        if (this.loadingState != TestProviderLoadingState.loaded)
+            await this.findInitialFiles(this.context.ctrl);
+
+        const targets = await this.projectManager.listTargetsForFile(e.uri.fsPath);
         const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
-            return new TestFile(this.context);
+            return new TestFile(this.context, targets[0]);
         });
         const testFile = data as TestFile;
         await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
@@ -171,10 +192,9 @@ export class TestProvider {
             this.context.deleteItem(file.id);
         }
         else {
-            const targets = await this.projectManager.listTargetsForFile(e.uri.fsPath);
-            const project = (await this.projectManager.getProjects()).at(0);
+            const project = (await this.projectManager.getProjects()).at(0) || "";
             this.context.addItem(file, root => {
-                return root.uri?.path === `/${project}/${targets[0]}`;
+                return root.id === TestTreeContext.TestID(TestProject.getTargetId(), TestProject.getTargetFilePath(vscode.Uri.file(project), targets[0]));
             });
         }
     }
@@ -191,6 +211,23 @@ export class TestProvider {
     }
 
     async findInitialFiles(controller: vscode.TestController) {
+        if (this.loadingState == TestProviderLoadingState.loading) {
+            return this.initialFilesLoadingPromise;
+        }
+        try {
+            this.loadingState = TestProviderLoadingState.loading;
+            this.initialFilesLoadingPromise = this.findInitialFilesIml(controller);
+            await this.initialFilesLoadingPromise;
+            this.loadingState = TestProviderLoadingState.loaded;
+        } catch (err) {
+            this.loadingState = TestProviderLoadingState.error;
+            throw err;
+        }
+    }
+
+    async findInitialFilesIml(controller: vscode.TestController) {
+        this.context.ctrl.items.replace([]);
+        let items: vscode.TestItem[] = [];
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;
             const { file, data } = this.context.getOrCreateTest(
@@ -207,11 +244,13 @@ export class TestProvider {
                         });
                 }
             );
+            items.push(file);
             if (!data.didResolve) {
                 await data.updateFromDisk(controller, file);
             }
             break; // only first target 
         }
+        this.context.ctrl.items.replace(items);
         return;
     }
 }

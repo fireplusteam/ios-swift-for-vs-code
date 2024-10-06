@@ -82,7 +82,7 @@ export class ProjectManager {
             this.projectCache.clear();
         } else {
             try {
-                await this.projectCache.preloadCacheFromFile(this.xCodeCachePath());
+                await this.projectCache.preloadCacheFromFile(await this.xCodeCachePath());
             } catch (err) {
                 console.log(`Project files cache is broken ${err}`);
             }
@@ -203,7 +203,7 @@ export class ProjectManager {
             });
         }
 
-        await this.projectCache.saveCacheToFile(this.xCodeCachePath());
+        await this.projectCache.saveCacheToFile(await this.xCodeCachePath());
         await this.saveWorkspace(xCodeWorkspace);
     }
 
@@ -246,12 +246,12 @@ export class ProjectManager {
     private async saveWorkspace(workspace: any) {
         const json = JSON.stringify(workspace, null, 4);
         return new Promise<void>(async (resolve, reject) => {
-            fs.writeFile(this.xCodeWorkspacePath(), json, async e => {
+            fs.writeFile(await this.xCodeWorkspacePath(), json, async e => {
                 console.log(e);
                 try {
                     if (e === null) {
-                        if (vscode.workspace.workspaceFile?.fsPath !== this.xCodeWorkspacePath()) {
-                            await this.openXCodeWorkspace(this.xCodeWorkspacePath());
+                        if (vscode.workspace.workspaceFile?.fsPath !== await this.xCodeWorkspacePath()) {
+                            await this.openXCodeWorkspace(await this.xCodeWorkspacePath());
                             reject(new Error("Opening in Workspace")); // xcode workspace is reloading, reject further execution
                             return;
                         } else {
@@ -272,12 +272,12 @@ export class ProjectManager {
         return ".vscode/xcode";
     }
 
-    private xCodeCachePath() {
-        return getFilePathInWorkspace(path.join(this.cachePath(), `${getWorkspaceId()}_projects.json`));
+    private async xCodeCachePath() {
+        return getFilePathInWorkspace(path.join(this.cachePath(), `${await getWorkspaceId()}_projects.json`));
     }
 
-    private xCodeWorkspacePath() {
-        return getFilePathInWorkspace(path.join(this.cachePath(), `${getWorkspaceId()}.code-workspace`));
+    private async xCodeWorkspacePath() {
+        return getFilePathInWorkspace(path.join(this.cachePath(), `${await getWorkspaceId()}.code-workspace`));
     }
 
     private async openXCodeWorkspace(file: string) {

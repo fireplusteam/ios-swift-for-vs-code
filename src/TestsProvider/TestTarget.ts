@@ -29,7 +29,7 @@ export class TestTarget implements TestContainer {
             const url = vscode.Uri.file(fileInTarget);
             const { file, data } = this.context.getOrCreateTest("file://", url,
                 () => {
-                    return new TestFile(this.context);
+                    return new TestFile(this.context, item.label);
                 });
 
             try {

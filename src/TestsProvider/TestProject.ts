@@ -18,6 +18,14 @@ export class TestProject implements TestContainer {
     private fsWatcher: FSWatcher | undefined;
     private projectContent: Buffer | undefined;
 
+    static getTargetFilePath(projectPath: vscode.Uri | undefined, target: string) {
+        return vscode.Uri.file(`${projectPath?.toString() || ""}/${target}`);
+    }
+
+    static getTargetId() {
+        return "target://";
+    }
+
     constructor(context: TestTreeContext, targetProvider: () => Promise<string[]>, filesForTargetProvider: (target: string) => Promise<string[]>) {
         this.context = context;
         this.targetProvider = targetProvider;
@@ -38,8 +46,8 @@ export class TestProject implements TestContainer {
         const weakRef = new WeakRef(this);
 
         for (const target of targets) {
-            const url = vscode.Uri.file(`${item.uri?.path || ""}/${target}`);
-            const { file, data } = this.context.getOrCreateTest("target://", url,
+            const url = TestProject.getTargetFilePath(item.uri, target);
+            const { file, data } = this.context.getOrCreateTest(TestProject.getTargetId(), url,
                 () => {
                     return new TestTarget(this.context,
                         async () => {
