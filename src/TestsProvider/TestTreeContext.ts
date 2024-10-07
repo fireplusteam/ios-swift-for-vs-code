@@ -48,7 +48,7 @@ export class TestTreeContext {
     private get(key: string, items: vscode.TestItemCollection) {
         for (const [id, item] of items) {
             if (id == key) {
-                return;
+                return item;
             }
             const value = this.getImp(key, item);
             if (value !== undefined) {
@@ -94,10 +94,31 @@ export class TestTreeContext {
         }
     }
 
-    deleteItem(id: string) {
-        this.ctrl.items.forEach(item => {
-            this.deleteItemImp(id, item);
-        })
+    deleteItem(id: string | vscode.TestItem) {
+        let tree: vscode.TestItem | undefined;
+        if (typeof id == "string") {
+            tree = this.get(id, this.ctrl.items);
+        } else {
+            tree = id;
+        }
+        if (tree) {
+            this.testData.delete(tree);
+            if (tree.parent)
+                tree.parent.children.delete(tree.id);
+            else
+                this.ctrl.items.delete(tree.id);
+        }
+    }
+
+    public replaceItemsChildren(item: vscode.TestItem, itemsChildren: vscode.TestItem[]) {
+        const childs: vscode.TestItem[] = [];
+        for (const child of item.children) {
+            childs.push(child[1]);
+        }
+        for (const child of childs) {
+            this.deleteItem(child);
+        }
+        item.children.replace(itemsChildren);
     }
 
     allTestItems() {
@@ -113,22 +134,6 @@ export class TestTreeContext {
         root.children.forEach(item => {
             this.allTestItemsImp(list, item);
         })
-    }
-
-    private deleteItemImp(id: string, root: vscode.TestItem) {
-        if (root.id === id) {
-            // found
-            const parent = root.parent;
-            if (parent) {
-                parent.children.delete(root.id);
-            } else {
-                this.ctrl.items.delete(root.id);
-            }
-        } else {
-            root.children.forEach(item => {
-                this.deleteItemImp(id, item);
-            })
-        }
     }
 }
 

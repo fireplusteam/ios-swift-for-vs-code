@@ -76,7 +76,7 @@ export class TestFile implements TestContainer {
             parseMarkdown(content, {
                 onTest: (range: vscode.Range, testName: string) => {
                     const parent = ancestors[ancestors.length - 1];
-                    const data = new TestCase(testName, parent.item.label || "", parent.item.parent?.label || "");
+                    const data = new TestCase(testName, this.target, parent.item.parent?.label || "");
                     const id = `${item.uri}/${data.getLabel()}`;
 
                     const tcase = controller.createTestItem(id, data.getLabel(), item.uri);

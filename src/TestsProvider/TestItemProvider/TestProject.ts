@@ -70,7 +70,8 @@ export class TestProject implements TestContainer {
 
         this.didResolve = true;
         // finish
-        item.children.replace(parent.children);
+
+        this.context.replaceItemsChildren(item, parent.children);
     }
 
     private watchFile(filePath: string, controller: vscode.TestController, item: vscode.TestItem, contentFile: Buffer | undefined = undefined) {
@@ -87,7 +88,7 @@ export class TestProject implements TestContainer {
             }
             this.projectContent = content;
             setTimeout(() => {
-                item.children.replace([]);
+                weakRef.deref()?.context.replaceItemsChildren(item, []);
                 weakRef.deref()?.updateFromDisk(controller, item);
             }, 1000);
         });

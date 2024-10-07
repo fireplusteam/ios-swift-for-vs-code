@@ -47,6 +47,6 @@ export class TestTarget implements TestContainer {
         }
         this.didResolve = true;
         // finish
-        item.children.replace(parent.children);
+        this.context.replaceItemsChildren(item, parent.children);
     }
 }

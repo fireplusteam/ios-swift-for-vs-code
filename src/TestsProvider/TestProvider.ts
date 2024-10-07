@@ -226,8 +226,6 @@ export class TestProvider {
     }
 
     async findInitialFilesIml(controller: vscode.TestController) {
-        this.context.ctrl.items.replace([]);
-        let items: vscode.TestItem[] = [];
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;
             const { file, data } = this.context.getOrCreateTest(
@@ -244,13 +242,11 @@ export class TestProvider {
                         });
                 }
             );
-            items.push(file);
             if (!data.didResolve) {
                 await data.updateFromDisk(controller, file);
             }
             break; // only first target 
         }
-        this.context.ctrl.items.replace(items);
         return;
     }
 }
