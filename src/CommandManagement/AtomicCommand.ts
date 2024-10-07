@@ -24,8 +24,6 @@ function shouldAskTerminateCurrentTask() {
 
 export class AtomicCommand {
     private _mutex = new Mutex();
-    private _executor: Executor;
-    private _watcherExecutor = new Executor();
     private _executingCommand: "user" | "autowatcher" | undefined = undefined;
     private latestOperationID: { id: number, type: "user" | "autowatcher" | undefined } = { id: 0, type: undefined };
     private _prevCommandContext?: CommandContext
@@ -33,8 +31,7 @@ export class AtomicCommand {
     private userTerminal = new TerminalShell("User");
     private watcherTerminal = new TerminalShell("Watch");
 
-    constructor(executor: Executor) {
-        this._executor = executor;
+    constructor() {
     }
 
     async userCommandWithoutThrowingException(commandClosure: (commandContext: CommandContext) => Promise<void>, taskName: string | undefined) {

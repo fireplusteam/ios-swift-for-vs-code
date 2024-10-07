@@ -5,27 +5,35 @@ import { TestCase } from './TestItemProvider/TestCase';
 import { TestHeading } from './TestItemProvider/TestHeading';
 import { CoverageProvider } from './CoverageProvider';
 import { LSPTestsProvider } from '../LSP/LSPTestsProvider';
+import { TestResultProvider } from './TestResultProvider';
 
 const textDecoder = new TextDecoder('utf-8');
 
 export type MarkdownTestData = TestHeading | TestCase | TestContainer;
 
+type TestNodeId = "file://" | "target://" | "project://";
+
 export class TestTreeContext {
     testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
     ctrl: vscode.TestController = vscode.tests.createTestController('iOSTestController', 'iOS Tests');
     coverage: CoverageProvider = new CoverageProvider(".vscode/.bundle.xcresult");
+    testResult: TestResultProvider = new TestResultProvider(".vscode/.bundle.xcresult");
     lspTestProvider: LSPTestsProvider;
 
     constructor(lspTestProvider: LSPTestsProvider) {
         this.lspTestProvider = lspTestProvider;
     }
 
-    static TestID(id: string, uri: vscode.Uri) {
+    static TestID(id: TestNodeId, uri: vscode.Uri) {
         return `${id}/${uri.toString()}`;
     }
 
+    static getTargetFilePath(projectPath: vscode.Uri | undefined, target: string) {
+        return vscode.Uri.file(`${projectPath?.toString() || ""}/${target}`);
+    }
+
     getOrCreateTest(
-        id: string,
+        id: TestNodeId,
         uri: vscode.Uri,
         provider: () => any
     ) {

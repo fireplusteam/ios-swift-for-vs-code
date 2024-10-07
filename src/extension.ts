@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { DebugDeviceIDMissedError, getFilePathInWorkspace, getWorkspacePath, isActivated, isBuildServerValid, ProjectConfigurationMissedError, ProjectEnvFilePath, ProjectFileMissedError, ProjectSchemeMissedError } from "./env";
+import { DebugDeviceIDMissedError, getFilePathInWorkspace, getLSPWorkspacePath, getWorkspaceFolder, getWorkspacePath, isActivated, isBuildServerValid, ProjectConfigurationMissedError, ProjectEnvFilePath, ProjectFileMissedError, ProjectSchemeMissedError } from "./env";
 import {
     checkWorkspace,
     enableXCBBuildService,
@@ -37,6 +37,8 @@ import * as lspExtension from "./LSP/lspExtension";
 import { SwiftLSPClient } from "./LSP/SwiftLSPClient";
 import { TestTreeContext } from "./TestsProvider/TestTreeContext";
 import { LSPTestsProvider } from "./LSP/LSPTestsProvider";
+import { TestResultProvider } from "./TestsProvider/TestResultProvider";
+import path from "path";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -79,14 +81,13 @@ async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectM
     }
 }
 
-const atomicCommand = new AtomicCommand(new Executor());
+const atomicCommand = new AtomicCommand();
 const problemDiagnosticResolver = new ProblemDiagnosticResolver();
 
 let debugConfiguration: DebugConfigurationProvider;
 let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
-let sourceLsp = new SwiftLSPClient();
 
 export function sleep(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -104,6 +105,7 @@ export async function activate(context: vscode.ExtensionContext) {
         logChannel
     );
     logChannel.appendLine("Activated");
+    const sourceLsp = new SwiftLSPClient(getLSPWorkspacePath(), logChannel);
 
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
@@ -160,7 +162,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 return await debugConfiguration.startIOSTestsDebugger(isDebuggable, testRun);
             }
         });
-    testProvider.activateTests(context);
+    if (await isActivated())
+        testProvider.activateTests(context);
 
     context.subscriptions.push(projectManager.onProjectUpdate.event(e => {
         autocompleteWatcher?.triggerIncrementalBuild();

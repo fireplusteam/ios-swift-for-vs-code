@@ -107,7 +107,9 @@ export class CommandContext {
                     disLocalCancel.forEach(e => e.dispose());
                     reject(error);
                 }));
-            }), token: finishToken, rejectToken: rejectToken
+            }),
+            token: finishToken,
+            rejectToken: rejectToken
         };
     }
 

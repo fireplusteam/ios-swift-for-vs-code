@@ -1,46 +1,47 @@
 import * as langclient from "vscode-languageclient/node"
 import * as vscode from "vscode"
-import { getWorkspaceFolder } from "../env";
 import { SourceKitLSPErrorHandler } from "./SourceKitLSPErrorHandler";
 import path from "path";
 import { uriConverters } from "./uriConverters";
-import { SwiftOutputChannel } from "./SwiftOutputChannel";
+import { XCRunHelper } from "../Tools/XCRunHelper";
 
 export class SwiftLSPClient {
 
     private languageClient: langclient.LanguageClient | null | undefined;
 
-    private clientReadyPromise?: Promise<void>;
+    private clientReadyPromise?: Promise<void> = undefined;
 
     public async client(): Promise<langclient.LanguageClient> {
-        if (this.languageClient == undefined)
+        if (this.languageClient == undefined) {
+            if (this.clientReadyPromise === undefined) {
+                await this.setupLanguageClient(this.workspaceFolder);
+            }
             await this.clientReadyPromise;
+        }
         return this.languageClient!;
     }
 
-    constructor() {
-        this.setupLanguageClient(getWorkspaceFolder())
+    constructor(private readonly workspaceFolder: vscode.Uri, private readonly logs: vscode.OutputChannel) {
     }
 
     private async setupLanguageClient(folder?: vscode.Uri) {
-        const { client, errorHandler } = this.createLSPClient(folder);
+        const { client, errorHandler } = await this.createLSPClient(folder);
         return this.startClient(client, errorHandler);
     }
 
-    private createLSPClient(folder?: vscode.Uri): {
+    private async createLSPClient(folder?: vscode.Uri): Promise<{
         client: langclient.LanguageClient;
         errorHandler: SourceKitLSPErrorHandler;
-    } {
-        const serverPath =
-            "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/sourcekit-lsp";
+    }> {
+        const serverPath = await XCRunHelper.sourcekitLSPPath();
         const sourcekit: langclient.Executable = {
             command: serverPath,
             args: [],
             options: {
                 env: {
                     ...process.env,
-                    SOURCEKIT_LOGGING: 3,
-                    SOURCEKIT_TOOLCHAIN_PATH: "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
+                    // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
+                    SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath()
                 },
             },
         };
@@ -65,7 +66,7 @@ export class SwiftLSPClient {
             ],
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
-            outputChannel: new SwiftOutputChannel(),
+            outputChannel: this.logs,
             middleware: {
                 provideDocumentSymbols: async (document, token, next) => {
                     return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser at the moment
@@ -140,16 +141,7 @@ export class SwiftLSPClient {
         errorHandler: SourceKitLSPErrorHandler
     ) {
         client.onDidChangeState(e => {
-            // if state is now running add in any sub-folder workspaces that
-            // we have cached. If this is the first time we are starting then
-            // we won't have any sub folder workspaces, but if the server crashed
-            // or we forced a restart then we need to do this
-            if (
-                e.oldState === langclient.State.Starting &&
-                e.newState === langclient.State.Running
-            ) {
-                // this.addSubFolderWorkspaces(client);
-            }
+            // TODO: for nuw on is empty
         });
 
         // start client

@@ -69,7 +69,7 @@ function isCommented(commented: boolean[], start: number, end: number) {
     return false;
 }
 
-export const parseMarkdown = (text: string, events: {
+export const parseSwiftSource = (text: string, events: {
     onTest(range: vscode.Range, testName: string): void;
     onHeading(range: vscode.Range, name: string): void;
 }) => {

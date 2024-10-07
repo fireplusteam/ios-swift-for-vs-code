@@ -1,4 +1,5 @@
 import { exec } from "child_process";
+import path from "path";
 
 export class XCRunHelper {
 
@@ -24,6 +25,15 @@ export class XCRunHelper {
 
     public static async getClangCompilerPath(): Promise<string> {
         return this.getStdOut("xcrun -f clang");
+    }
+
+    public static async sourcekitLSPPath() {
+        return this.getStdOut("xcrun -f sourcekit-lsp");
+    }
+    public static async swiftToolchainPath() {
+        const stdout = await this.getStdOut("xcrun --find swift");
+        const swift = stdout.trimEnd();
+        return path.dirname(path.dirname(swift));
     }
 
     private static lldbDapPath?: string;

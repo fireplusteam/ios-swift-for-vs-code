@@ -47,7 +47,6 @@ check_exit_status() {
     local exit_status="$1"
     if [ "${exit_status}" -ne 0 ]; then
         echo "Test Failed.■" >>.logs/tests.log
-        python3 "$VS_IOS_SCRIPT_PATH/print_errors.py" '.logs/tests.log'
         exit 1
     fi
 }
@@ -68,6 +67,7 @@ else
     else
         echo "Running tests: $TESTS"
 
+        echo "$XCODECMD $TESTS"
         set -o pipefail
         eval "$XCODECMD $TESTS | tee '.logs/tests.log' | tee '.logs/app_$DEVICE_ID.log' | xcbeautify"
         check_exit_status "${PIPESTATUS[0]}"
@@ -75,22 +75,3 @@ else
 fi
 
 echo "Test Finished.■" >>.logs/tests.log
-
-if [ $VALID_TESTS -eq 1 ]; then
-    # Open Results
-    REPORT_PATH='/.vscode/.bundle.xcresult'
-    LOCAL_PATH=$(pwd)
-
-    URL=$LOCAL_PATH$REPORT_PATH
-    URL=${URL// /%20}
-
-    echo "Test  Report: $URL"
-    # if you want to open a report in xcode, uncomment below line
-    #open -a XCode  "file://$URL"
-
-    # print errors
-    # Check the exit status
-    python3 "$VS_IOS_SCRIPT_PATH/print_errors.py" '.logs/tests.log'
-
-    echo 'Your testing results are in: .logs/tests.log'
-fi

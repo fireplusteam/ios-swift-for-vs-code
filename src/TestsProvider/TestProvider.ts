@@ -74,7 +74,7 @@ export class TestProvider {
 
             const runTestQueue = async () => {
                 const mapTests = new Map<string, { test: vscode.TestItem, data: TestCase }>();
-                const tests: string[] = [];
+                const xcodebuildTestsIds: string[] = [];
                 for (const { test, data } of queue) {
                     run.appendOutput(`Running ${test.id}\r\n`);
                     if (run.token.isCancellationRequested) {
@@ -83,9 +83,10 @@ export class TestProvider {
                         try {
                             run.started(test);
                             const xCodeBuildTest = data.getXCodeBuildTest();
-                            tests.push(xCodeBuildTest);
+                            const testId = data.getTestId();
+                            xcodebuildTestsIds.push(xCodeBuildTest);
                             mapTests.set(
-                                xCodeBuildTest,
+                                testId,
                                 { test: test, data: data }
                             );
                         } catch (error) {
@@ -111,11 +112,29 @@ export class TestProvider {
                                     const messages = await this.asyncTestCaseParser.parseAsyncLogs(rawMessage, item);
                                     run.failed(item, messages, duration);
                                 }
+                                mapTests.delete(key);
                             }
                             console.log("log");
                         });
-                    await this.executeTests(request.include === undefined ? undefined : tests, request.profile?.kind === vscode.TestRunProfileKind.Debug, run);
-
+                    try {
+                        await this.executeTests(request.include === undefined ? undefined : xcodebuildTestsIds, request.profile?.kind === vscode.TestRunProfileKind.Debug, run);
+                    } finally {
+                        await this.context.testResult.enumerateTestsResults((key) => {
+                            const item = mapTests.get(key)?.test;
+                            return item?.uri?.fsPath || key;
+                        }, (key, result, rawMessage, messages, duration) => {
+                            const item = mapTests.get(key)?.test;
+                            if (item) {
+                                run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
+                                if (result === "passed") {
+                                    run.passed(item, duration);
+                                } else if (result == "failed") {
+                                    run.failed(item, messages, duration);
+                                }
+                                mapTests.delete(key);
+                            }
+                        });
+                    }
                 }
                 catch (err) {
                     console.log(`Run with error: ${err}`);
@@ -194,7 +213,7 @@ export class TestProvider {
         else {
             const project = (await this.projectManager.getProjects()).at(0) || "";
             this.context.addItem(file, root => {
-                return root.id === TestTreeContext.TestID(TestProject.getTargetId(), TestProject.getTargetFilePath(vscode.Uri.file(project), targets[0]));
+                return root.id === TestTreeContext.TestID("target://", TestTreeContext.getTargetFilePath(vscode.Uri.file(project), targets[0]));
             });
         }
     }

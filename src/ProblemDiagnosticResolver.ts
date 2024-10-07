@@ -180,6 +180,7 @@ export class ProblemDiagnosticResolver {
 
     private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
     private problemLinkerPattern = /^(clang):\s+(error):\s+(.*)$/gm;
+    private frameworkErrorPattern = /^(error: )(.*?)$/gm;
 
     private column(output: string, messageEnd: number) {
         let newLineCounter = 0;
@@ -262,6 +263,31 @@ export class ProblemDiagnosticResolver {
                 }
 
                 const message = match[3];
+                let errorSeverity = vscode.DiagnosticSeverity.Error;
+
+                const diagnostic = new vscode.Diagnostic(
+                    new vscode.Range(
+                        new vscode.Position(line, 0),
+                        new vscode.Position(line, 0)),
+                    message,
+                    errorSeverity
+                );
+                diagnostic.source = "xcodebuild";
+                const value = files[file] || [];
+                value.push(diagnostic);
+                files[file] = value;
+            }
+            // parsing framework errors
+            matches = [...output.matchAll(this.frameworkErrorPattern)];
+            for (const match of matches) {
+                const file = this.buildLogFile || "";
+
+                let line = numberOfLines;
+                for (let i = 0; i < (match.index || 0); ++i) {
+                    line += (output[i] == '\n') ? 1 : 0;
+                }
+
+                const message = match[2];
                 let errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 const diagnostic = new vscode.Diagnostic(

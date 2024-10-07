@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseMarkdown } from './parseClass';
+import { parseSwiftSource } from './parseClass';
 import { TestContainer } from './TestContainer';
 import { TestHeading } from './TestHeading';
 import { TestTreeContext, getContentFromFilesystem } from '../TestTreeContext';
@@ -30,7 +30,7 @@ export class TestFile implements TestContainer {
             this.context.testData.set(testItem, test);
         } else {
             const idComponents = getTestIDComponents(lspTest.id);
-            const test = new TestCase(idComponents.testName, idComponents.suite, target);
+            const test = new TestCase(idComponents.testName, idComponents.suite, target, lspTest.style);
             this.context.testData.set(testItem, test);
         }
         const itemChildren: vscode.TestItem[] = [];
@@ -73,10 +73,10 @@ export class TestFile implements TestContainer {
                 }
             };
 
-            parseMarkdown(content, {
+            parseSwiftSource(content, {
                 onTest: (range: vscode.Range, testName: string) => {
                     const parent = ancestors[ancestors.length - 1];
-                    const data = new TestCase(testName, this.target, parent.item.parent?.label || "");
+                    const data = new TestCase(testName, parent.item.label, this.target, "XCTest");
                     const id = `${item.uri}/${data.getLabel()}`;
 
                     const tcase = controller.createTestItem(id, data.getLabel(), item.uri);

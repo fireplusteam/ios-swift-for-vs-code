@@ -2,7 +2,6 @@ import * as vscode from "vscode"
 import { LSPTestItem, textDocumentTestsRequest } from "./lspExtension";
 import { SwiftLSPClient } from "./SwiftLSPClient";
 import * as lp from "vscode-languageserver-protocol";
-import * as fs from 'fs';
 
 export class LSPTestsProvider {
     private version = 0;
