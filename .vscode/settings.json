@@ -29,7 +29,9 @@
         "isysroot",
         "langclient",
         "LLDBDAP",
+        "visionos",
         "waitfor",
+        "watchos",
         "xrsimulator"
     ]
 }

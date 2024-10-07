@@ -1,7 +1,7 @@
 {
     "name": "vscode-ios",
-    "displayName": "iOS Swift IDE: Develop/Run/Debug/Test",
-    "description": "Develop/Debug/Test your iOS application in VS Code",
+    "displayName": "Xcode iOS Swift IDE",
+    "description": "Develop/Debug/Test your iOS application in VS Code like in Xcode using Swift",
     "icon": "icons/icon.jpg",
     "keywords": [
         "ios",
@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.2.1",
+    "version": "0.3.0",
     "os": [
         "darwin"
     ],

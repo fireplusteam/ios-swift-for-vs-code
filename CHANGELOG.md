@@ -1,9 +1,11 @@
 # Change Log
 
-All notable changes to the "vscode-ios" extension will be documented in this file.
+## 0.3.0 - 2024-10-10
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+### Added
 
-## [Unreleased]
+- Support Swift Testing framework starting xCode 16.
 
-- Initial release
+### Fixed
+
+- Test debug session were treated as user cancelled on error
