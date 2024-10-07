@@ -189,12 +189,17 @@ export class TestProvider {
         );
     }
 
+    supportedFileExtensions(file: string) {
+        // sourcekit-lsp supports only swift file at the moment, we need to use workaround like legacy code parsing code for swift
+        return (file.endsWith('.swift'))// || file.endsWith(".m") || file.endsWith(".mm"));
+    }
+
     async updateNodeForDocument(e: vscode.TextDocument, ctrl: vscode.TestController) {
         if (e.uri.scheme !== 'file') {
             return;
         }
 
-        if (!e.uri.path.endsWith('.swift')) {
+        if (!this.supportedFileExtensions(e.uri.path)) {
             return;
         }
 
@@ -257,7 +262,7 @@ export class TestProvider {
                             return targets.filter(e => { return e.includes("Tests") });
                         }, async (targetName) => {
                             const files = await this.projectManager.getFilesForTarget(targetName);
-                            return files.filter(e => { return e.endsWith(".swift") });
+                            return files.filter(e => { return this.supportedFileExtensions(e) });
                         });
                 }
             );

@@ -9,6 +9,18 @@ export class LSPTestsProvider {
     constructor(private lspClient: SwiftLSPClient) {
     }
 
+    private launguageId(file: string) {
+        if (file.endsWith(".swift")) {
+            return "swift";
+        }
+        if (file.endsWith(".m")) {
+            return "objective-c";
+        }
+        if (file.endsWith(".mm")) {
+            return "objective-cpp";
+        }
+    }
+
     async fetchTests(document: vscode.Uri, content: string): Promise<LSPTestItem[]> {
         try {
             this.version++;
@@ -18,9 +30,13 @@ export class LSPTestsProvider {
             console.log(`FETCHING TESTS FOR URL: ${document.toString()}`);
 
             const client = await this.lspClient.client();
+            const languageId = this.launguageId(document.fsPath);
+            if (languageId == undefined) {
+                return [];
+            }
 
             const didOpenParam: lp.DidOpenTextDocumentParams = {
-                textDocument: { uri: document.toString(), languageId: "swift", text: content, version: this.version }
+                textDocument: { uri: document.toString(), languageId: languageId, text: content, version: this.version }
             };
 
             await client.sendNotification(lp.DidOpenTextDocumentNotification.method, didOpenParam);
