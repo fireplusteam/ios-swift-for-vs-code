@@ -27,6 +27,7 @@
         "appletvsimulator",
         "autowatcher",
         "isysroot",
+        "langclient",
         "LLDBDAP",
         "waitfor",
         "xrsimulator"
