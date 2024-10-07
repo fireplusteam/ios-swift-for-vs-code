@@ -28,9 +28,10 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get testsToRun(): string[] {
         return this.debugSession.configuration.testsToRun || [];
     }
-    private get context(): CommandContext {
+    private get context() {
         return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
     }
+
     private get isDebuggable(): boolean {
         return this.debugSession.configuration.noDebug === true ? false : this.debugSession.configuration.isDebuggable as boolean;
     }
@@ -41,7 +42,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.problemResolver = problemResolver;
         this.debugTestSessionEvent = debugTestSessionEvent;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
-        this.simulatorInteractor = new SimulatorFocus(this.context);
+        this.simulatorInteractor = new SimulatorFocus(this.context.commandContext);
     }
 
     private get logPath(): string {
@@ -52,7 +53,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.simulatorInteractor.init();
         console.log('Session is starting');
         vscode.debug.activeDebugSession
-        this.debugConsoleOutput = this.context.debugConsoleEvent((std) => {
+        this.debugConsoleOutput = this.context.commandContext.debugConsoleEvent((std) => {
             this._stream.write(std);
         });
         this.build(this.debugSession.configuration);
@@ -82,7 +83,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillStopSession() {
         console.log('Session will stop');
         if (this.debugSession.configuration.target === "app")
-            this.terminateCurrentSession();
+            this.terminateCurrentSession(true);
     }
 
     onError(error: Error) {
@@ -93,7 +94,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         console.log(`Exited with code ${code} and signal ${signal}`);
     }
 
-    private async terminateCurrentSession() {
+    private async terminateCurrentSession(isCancelled: boolean) {
         if (this.isTerminated)
             return
         try {
@@ -104,7 +105,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         } finally {
             try {
                 killSpawnLaunchedProcesses(this.deviceID);
-                this.context.cancel();
+                if (isCancelled)
+                    this.context.commandContext.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch { }
             this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
@@ -122,18 +124,18 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
         if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
             await DebugAdapterTracker.updateStatus(this.sessionID, "building");
-            this.context.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
-            await buildCommand(this.context);
+            this.context.commandContext.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
+            await buildCommand(this.context.commandContext);
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-        await runCommandClosure(this.context);
+        await runCommandClosure(this.context.commandContext);
         if (successMessage) {
             vscode.window.showInformationMessage(successMessage);
         }
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
-        const exe = await (this.context.projectSettingsProvider.projectEnv.appExecutablePath);
+        const exe = await (this.context.commandContext.projectSettingsProvider.projectEnv.appExecutablePath);
         if (!fs.existsSync(exe)) {
             return true;
         }
@@ -155,27 +157,32 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 await this.executeAppCommand(async (context) => {
                     await buildSelectedTarget(context, this.problemResolver);
                 }, async (context) => {
+                    this.context.commandContext.terminal!.terminalName = `Launching For ${this.isDebuggable ? "Debug" : "Run"}`;
                     await runApp(context, this.sessionID, isDebuggable);
                 });
             } else if (dbgConfig.target === "tests") {
                 await this.executeAppCommand(async (context) => {
                     await buildTests(context, this.problemResolver);
                 }, async (context) => {
+                    this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
                     await runAndDebugTests(context, this.sessionID, isDebuggable);
                 }, "All Tests Are Passed");
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(async (context) => {
                     await buildTestsForCurrentFile(context, this.problemResolver, this.testsToRun);
                 }, async (context) => {
+                    this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
                     await runAndDebugTestsForCurrentFile(context, this.sessionID, isDebuggable, this.testsToRun);
                 }, "All Tests Are Passed");
             }
         } catch (error) {
             console.log(error);
-            await this.terminateCurrentSession();
+            this.context.rejectToken.fire(error);
+            await this.terminateCurrentSession(false);
         } finally {
             if (dbgConfig.target !== 'app') {
-                await this.terminateCurrentSession();
+                await this.terminateCurrentSession(false);
+                this.context.token.fire();
             }
         }
     }

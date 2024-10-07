@@ -85,18 +85,30 @@ export class CommandContext {
         });
     }
 
-    public async waitToCancel() {
-        let dis: vscode.Disposable;
-        return new Promise<void>((resolve) => {
-            if (this.cancellationToken.isCancellationRequested) {
-                resolve();
-                return;
-            }
-            dis = this.cancellationToken.onCancellationRequested(e => {
-                dis.dispose();
-                resolve();
-            });
-        });
+    public waitToCancel() {
+        let disLocalCancel: vscode.Disposable[] = [];
+        const finishToken = new vscode.EventEmitter<void>();
+        const rejectToken = new vscode.EventEmitter<any>();
+        return {
+            wait: new Promise<void>((resolve, reject) => {
+                if (this.cancellationToken.isCancellationRequested) {
+                    resolve();
+                    return;
+                }
+                disLocalCancel.push(this.cancellationToken.onCancellationRequested(e => {
+                    disLocalCancel.forEach(e => e.dispose());
+                    resolve();
+                }));
+                disLocalCancel.push(finishToken.event(() => {
+                    disLocalCancel.forEach(e => e.dispose());
+                    resolve();
+                }));
+                disLocalCancel.push(rejectToken.event((error) => {
+                    disLocalCancel.forEach(e => e.dispose());
+                    reject(error);
+                }));
+            }), token: finishToken, rejectToken: rejectToken
+        };
     }
 
     public cancel() {

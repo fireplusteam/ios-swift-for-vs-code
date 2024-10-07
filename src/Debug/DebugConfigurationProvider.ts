@@ -37,7 +37,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private debugTestSessionEvent: vscode.Event<string>;
     private atomicCommand: AtomicCommand
 
-    private static contextBinder = new Map<string, CommandContext>();
+    private static contextBinder = new Map<string, { commandContext: CommandContext, token: vscode.EventEmitter<void>, rejectToken: vscode.EventEmitter<any> }>();
     public static getContextForSession(session: string) {
         return this.contextBinder.get(session);
     }
@@ -132,15 +132,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     if (runtimeWarningsConfigStatus() !== "off" && await currentPlatform() != Platform.macOS) // mac OS doesn't support that feature at the moment
                         this.runtimeWarningsWatcher.startWatcher();
 
-                    DebugConfigurationProvider.contextBinder.set(sessionID, context);
                     resolve(context);
                     try {
-                        await context.waitToCancel();
+                        const operation = context.waitToCancel();
+                        DebugConfigurationProvider.contextBinder.set(sessionID, { commandContext: context, token: operation.token, rejectToken: operation.rejectToken });
+                        await operation.wait;
                     } finally {
                         DebugConfigurationProvider.contextBinder.delete(sessionID);
                     }
                 } catch (error) {
                     reject(error);
+                    throw error;
                 }
             }, "Start Debug");
         });
