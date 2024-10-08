@@ -353,7 +353,7 @@ export async function openXCode(activeFile: string) {
     ).stdout;
     console.log(stdout);
     if (!isFolder(activeFile)) {
-        exec(`open - a Xcode ${activeFile} `);
+        exec(`open -a Xcode ${activeFile} `);
     }
 }
 
