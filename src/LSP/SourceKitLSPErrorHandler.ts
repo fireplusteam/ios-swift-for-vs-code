@@ -57,7 +57,8 @@ export class SourceKitLSPErrorHandler implements langclient.ErrorHandler {
                 return new Promise<langclient.CloseHandlerResult>(resolve => {
                     vscode.window
                         .showErrorMessage(
-                            `The SourceKit-LSP server crashed ${this.maxRestartCount + 1
+                            `The SourceKit-LSP server crashed ${
+                                this.maxRestartCount + 1
                             } times in the last 3 minutes. See the output for more information. Do you want to restart it again.`,
                             "Yes",
                             "No"

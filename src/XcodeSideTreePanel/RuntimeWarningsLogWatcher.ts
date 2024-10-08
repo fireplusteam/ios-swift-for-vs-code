@@ -1,13 +1,16 @@
-import * as fs from 'fs';
-import { FSWatcher, watch } from 'fs';
+import * as fs from "fs";
+import { FSWatcher, watch } from "fs";
 import { emptyAppLog, getAppLog } from "../utils";
-import { getWorkspacePath } from '../env';
-import path from 'path';
-import { RuntimeWarningMessageNode, RuntimeWarningStackNode, RuntimeWarningsDataProvider } from './RuntimeWarningsDataProvider';
-import { error } from 'console';
+import { getWorkspacePath } from "../env";
+import path from "path";
+import {
+    RuntimeWarningMessageNode,
+    RuntimeWarningStackNode,
+    RuntimeWarningsDataProvider,
+} from "./RuntimeWarningsDataProvider";
+import { error } from "console";
 
 export class RuntimeWarningsLogWatcher {
-
     private static LogPath = "runtime_warnings";
 
     private panel: RuntimeWarningsDataProvider;
@@ -28,7 +31,9 @@ export class RuntimeWarningsLogWatcher {
             this.panel.refresh([]);
             this.cachedContent = "";
             this.updateTree("");
-        } catch { /* empty */ }
+        } catch {
+            /* empty */
+        }
         this.startWatcherImp();
     }
 
@@ -42,7 +47,8 @@ export class RuntimeWarningsLogWatcher {
     }
 
     private readFileContent(numOfTries = 0) {
-        if (numOfTries >= 5) { // TODO: try 5 times, then give up
+        if (numOfTries >= 5) {
+            // TODO: try 5 times, then give up
             this.startWatcherImp();
             return;
         }
@@ -69,8 +75,7 @@ export class RuntimeWarningsLogWatcher {
     }
 
     private updateTree(content: string) {
-        if (content === this.cachedContent)
-            return;
+        if (content === this.cachedContent) return;
         //  convert to html
         const elements: RuntimeWarningMessageNode[] = [];
         try {
@@ -82,8 +87,16 @@ export class RuntimeWarningsLogWatcher {
                 const warning = new RuntimeWarningMessageNode(value.message, value.count, element);
                 const stacks = value.data;
                 for (const frame of stacks) {
-                    if (frame.file && frame.file.length > 0 && frame.file.indexOf("<compiler-generated>") === -1) {
-                        const frameNode = new RuntimeWarningStackNode(frame.function, frame.line, frame.file);
+                    if (
+                        frame.file &&
+                        frame.file.length > 0 &&
+                        frame.file.indexOf("<compiler-generated>") === -1
+                    ) {
+                        const frameNode = new RuntimeWarningStackNode(
+                            frame.function,
+                            frame.line,
+                            frame.file
+                        );
                         warning.stack.push(frameNode);
                     }
                 }
@@ -99,5 +112,4 @@ export class RuntimeWarningsLogWatcher {
             this.cachedContent = content;
         }
     }
-
 }

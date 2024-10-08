@@ -13,15 +13,10 @@ function useLLDB_DAP() {
  * This class defines a factory used to find the lldb-dap binary to use
  * depending on the session configuration.
  */
-export class LLDBDapDescriptorFactory
-    implements vscode.DebugAdapterDescriptorFactory {
+export class LLDBDapDescriptorFactory implements vscode.DebugAdapterDescriptorFactory {
+    constructor() {}
 
-    constructor() {
-    }
-
-    static async isValidDebugAdapterPath(
-        pathUri: vscode.Uri,
-    ): Promise<boolean> {
+    static async isValidDebugAdapterPath(pathUri: vscode.Uri): Promise<boolean> {
         try {
             const fileStats = await vscode.workspace.fs.stat(pathUri);
             if (!(fileStats.type & vscode.FileType.File)) {
@@ -35,7 +30,7 @@ export class LLDBDapDescriptorFactory
 
     async createDebugAdapterDescriptor(
         session: vscode.DebugSession,
-        executable: vscode.DebugAdapterExecutable | undefined,
+        executable: vscode.DebugAdapterExecutable | undefined
     ): Promise<vscode.DebugAdapterDescriptor | undefined> {
         if (session.configuration.isDummy === true) {
             // dummy session
@@ -60,22 +55,18 @@ export class LLDBDapDescriptorFactory
                 env: {
                     // ...configEnvironment,
                     ...env,
-                }
+                },
             };
             return new vscode.DebugAdapterExecutable(path, [], dbgOptions);
         } else if (executable) {
-            return new vscode.DebugAdapterExecutable(
-                executable.command,
-                executable.args,
-                {
-                    ...executable.options,
-                    env: {
-                        ...executable.options?.env,
-                        // ...configEnvironment,
-                        ...env,
-                    },
+            return new vscode.DebugAdapterExecutable(executable.command, executable.args, {
+                ...executable.options,
+                env: {
+                    ...executable.options?.env,
+                    // ...configEnvironment,
+                    ...env,
                 },
-            );
+            });
         } else {
             return undefined;
         }
@@ -87,7 +78,11 @@ export class LLDBDapDescriptorFactory
             const fileUri = vscode.Uri.file(path);
             const majorSwiftVersion = Number((await XCRunHelper.swiftToolchainVersion())[0]);
             // starting swift 6, lldb-dap is included in swift toolchain, so use is
-            if (majorSwiftVersion >= 6 && useLLDB_DAP() && (await LLDBDapDescriptorFactory.isValidDebugAdapterPath(fileUri))) {
+            if (
+                majorSwiftVersion >= 6 &&
+                useLLDB_DAP() &&
+                (await LLDBDapDescriptorFactory.isValidDebugAdapterPath(fileUri))
+            ) {
                 return path;
             }
             return null;
@@ -102,14 +97,11 @@ export class LLDBDapDescriptorFactory
         const openSettingsAction = "Reload VS Code";
         const callbackValue = await vscode.window.showErrorMessage(
             `Xcode Debug adapter is not valid. Please make sure that Xcode is installed and restart VS Code!`,
-            openSettingsAction,
+            openSettingsAction
         );
 
         if (openSettingsAction === callbackValue) {
-            vscode.commands.executeCommand(
-                "workbench.action.reloadWindow",
-            );
+            vscode.commands.executeCommand("workbench.action.reloadWindow");
         }
     }
-
 }

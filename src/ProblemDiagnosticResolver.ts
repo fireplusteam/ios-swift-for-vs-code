@@ -1,10 +1,9 @@
-import { ChildProcess, SpawnOptions, spawn } from 'child_process';
-import * as fs from 'fs';
-import path from 'path';
-import * as vscode from 'vscode';
+import { ChildProcess, SpawnOptions, spawn } from "child_process";
+import * as fs from "fs";
+import path from "path";
+import * as vscode from "vscode";
 
 export class ProblemDiagnosticResolver {
-
     disposable: vscode.Disposable[] = [];
     diagnosticBuildCollection: vscode.DiagnosticCollection;
 
@@ -14,19 +13,23 @@ export class ProblemDiagnosticResolver {
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("xcodebuild");
 
-        this.disposable.push(vscode.workspace.onDidChangeTextDocument((e) => {
-            const fileUrl = e.document.uri;
-            if (fileUrl === undefined) { return; }
-            if (fileUrl.fsPath.endsWith(".log")) return;
-            this.diagnosticBuildCollection.set(fileUrl, []);
-        }));
+        this.disposable.push(
+            vscode.workspace.onDidChangeTextDocument(e => {
+                const fileUrl = e.document.uri;
+                if (fileUrl === undefined) {
+                    return;
+                }
+                if (fileUrl.fsPath.endsWith(".log")) return;
+                this.diagnosticBuildCollection.set(fileUrl, []);
+            })
+        );
     }
 
     private watcherProc: ChildProcess | undefined;
 
     private clear() {
         this.buildErrors.clear();
-        this.diagnosticBuildCollection.forEach((uri,) => {
+        this.diagnosticBuildCollection.forEach(uri => {
             this.buildErrors.add(uri.fsPath);
         });
     }
@@ -37,14 +40,17 @@ export class ProblemDiagnosticResolver {
                 return range1.start.line - range2.start.line;
             if (range1.start.character !== range2.start.character)
                 return range1.start.character - range2.start.character;
-            if (range1.end.line !== range2.end.line)
-                return range1.end.line - range2.end.line;
+            if (range1.end.line !== range2.end.line) return range1.end.line - range2.end.line;
             if (range1.end.character !== range2.end.character)
                 return range1.end.character - range2.end.character;
             return 0;
         }
 
-        function comp(a: vscode.Diagnostic, b: vscode.Diagnostic, comp: (a: vscode.Range, b: vscode.Range) => number = compareRanges) {
+        function comp(
+            a: vscode.Diagnostic,
+            b: vscode.Diagnostic,
+            comp: (a: vscode.Range, b: vscode.Range) => number = compareRanges
+        ) {
             if (a.message.toLowerCase() !== b.message.toLowerCase()) {
                 return a.message.toLowerCase() < b.message.toLowerCase() ? -1 : 1;
             }
@@ -60,15 +66,18 @@ export class ProblemDiagnosticResolver {
         const res: vscode.Diagnostic[] = [];
         for (let i = 0; i < list.length; ++i) {
             if (res.length === 0 || comp(list[i], res[res.length - 1]) !== 0) {
-                if (sourcekitList.find((v) => {
-                    return comp(v, list[i], (a, b) => {
-                        if (a.start.line !== b.start.line)
-                            return a.start.line - b.start.line;
-                        if (a.end.line !== b.end.line)
-                            return a.end.line - b.end.line;
-                        return 0;
-                    }) === 0;
-                }) === undefined) {
+                if (
+                    sourcekitList.find(v => {
+                        return (
+                            comp(v, list[i], (a, b) => {
+                                if (a.start.line !== b.start.line)
+                                    return a.start.line - b.start.line;
+                                if (a.end.line !== b.end.line) return a.end.line - b.end.line;
+                                return 0;
+                            }) === 0
+                        );
+                    }) === undefined
+                ) {
                     res.push(list[i]);
                 }
             }
@@ -77,7 +86,7 @@ export class ProblemDiagnosticResolver {
     }
 
     private globalProblems(file: vscode.Uri) {
-        return vscode.languages.getDiagnostics(file).filter((e) => {
+        return vscode.languages.getDiagnostics(file).filter(e => {
             return e.source !== "xcodebuild" && e.source !== "xcodebuild-tests";
         });
     }
@@ -88,11 +97,11 @@ export class ProblemDiagnosticResolver {
             if (this.buildErrors.delete(file)) {
                 this.diagnosticBuildCollection.delete(fileUri);
             }
-            const list = [
-                ...this.diagnosticBuildCollection.get(fileUri) || [],
-                ...files[file]
-            ];
-            this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, this.globalProblems(fileUri)));
+            const list = [...(this.diagnosticBuildCollection.get(fileUri) || []), ...files[file]];
+            this.diagnosticBuildCollection.set(
+                fileUri,
+                this.uniqueProblems(list, this.globalProblems(fileUri))
+            );
         }
     }
 
@@ -106,13 +115,9 @@ export class ProblemDiagnosticResolver {
             const options: SpawnOptions = {
                 cwd: workspacePath,
                 shell: true,
-                stdio: "pipe"
+                stdio: "pipe",
             };
-            const child = spawn(
-                `tail`,
-                ["-f", `"${filePath}"`],
-                options
-            );
+            const child = spawn(`tail`, ["-f", `"${filePath}"`], options);
 
             this.clear();
             let firstIndex = 0;
@@ -122,13 +127,13 @@ export class ProblemDiagnosticResolver {
             let isError = false;
             let numberOfLines = 0;
 
-            child.stdout?.on("data", async (data) => {
+            child.stdout?.on("data", async data => {
                 stdout += decoder.decode(data);
                 let lastErrorIndex = -1;
                 for (let i = firstIndex; i < stdout.length; ++i) {
                     if (stdout[i] === triggerCharacter) {
                         lastErrorIndex = i;
-                        if (triggerCharacter === '^') {
+                        if (triggerCharacter === "^") {
                             triggerCharacter = "\n";
                             lastErrorIndex = -1;
                         }
@@ -141,15 +146,20 @@ export class ProblemDiagnosticResolver {
                 }
                 if (lastErrorIndex !== -1) {
                     triggerCharacter = "^";
-                    const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), numberOfLines);
+                    const problems = this.parseBuildLog(
+                        stdout.substring(0, lastErrorIndex + 1),
+                        numberOfLines
+                    );
                     for (const problem in problems) {
-                        isError = isError || problems[problem].filter(e => {
-                            return e.severity === vscode.DiagnosticSeverity.Error;
-                        }).length > 0;
+                        isError =
+                            isError ||
+                            problems[problem].filter(e => {
+                                return e.severity === vscode.DiagnosticSeverity.Error;
+                            }).length > 0;
                     }
                     this.storeProblems(problems);
                     for (let i = 0; i < lastErrorIndex + 1; ++i)
-                        numberOfLines += (stdout[i] === '\n') ? 1 : 0;
+                        numberOfLines += stdout[i] === "\n" ? 1 : 0;
                     stdout = stdout.substring(lastErrorIndex + 1);
                     firstIndex = 0;
                 } else {
@@ -167,7 +177,7 @@ export class ProblemDiagnosticResolver {
                 if (child === this.watcherProc) {
                     this.watcherProc = undefined;
                     if (showProblemPanelOnError && isError) {
-                        vscode.commands.executeCommand('workbench.action.problems.focus');
+                        vscode.commands.executeCommand("workbench.action.problems.focus");
                         reject();
                     } else {
                         resolve();
@@ -187,7 +197,7 @@ export class ProblemDiagnosticResolver {
         let str = "";
         let shouldBreak = false;
         for (let i = messageEnd; i < output.length; ++i) {
-            if (output[i] === '\n') {
+            if (output[i] === "\n") {
                 if (shouldBreak) {
                     break;
                 }
@@ -196,16 +206,17 @@ export class ProblemDiagnosticResolver {
             } else {
                 str += output[i];
             }
-            if (output[i] === '^') {
+            if (output[i] === "^") {
                 shouldBreak = true;
             }
             if (newLineCounter >= 3) {
                 break;
             }
         }
-        let start = str.length, end = 0;
+        let start = str.length,
+            end = 0;
         for (let i = 0; i < str.length; ++i) {
-            if (str[i] !== ' ') {
+            if (str[i] !== " ") {
                 start = Math.min(i, start);
                 end = Math.max(end, i);
             }
@@ -236,21 +247,22 @@ export class ProblemDiagnosticResolver {
                     case "note":
                         errorSeverity = vscode.DiagnosticSeverity.Information;
                         break;
-                    default: break;
+                    default:
+                        break;
                 }
 
                 const diagnostic = new vscode.Diagnostic(
                     new vscode.Range(
                         new vscode.Position(line, column[0]),
-                        new vscode.Position(line, column[1])),
+                        new vscode.Position(line, column[1])
+                    ),
                     message,
                     errorSeverity
                 );
                 diagnostic.source = "xcodebuild";
                 const value = files[file] || [];
                 value.push(diagnostic);
-                if (fs.existsSync(file))
-                    files[file] = value;
+                if (fs.existsSync(file)) files[file] = value;
             }
             // parsing linker errors
             matches = [...output.matchAll(this.problemLinkerPattern)];
@@ -259,16 +271,14 @@ export class ProblemDiagnosticResolver {
 
                 let line = numberOfLines;
                 for (let i = 0; i < (match.index || 0); ++i) {
-                    line += (output[i] === '\n') ? 1 : 0;
+                    line += output[i] === "\n" ? 1 : 0;
                 }
 
                 const message = match[3];
                 const errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 const diagnostic = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(line, 0),
-                        new vscode.Position(line, 0)),
+                    new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
                     message,
                     errorSeverity
                 );
@@ -284,16 +294,14 @@ export class ProblemDiagnosticResolver {
 
                 let line = numberOfLines;
                 for (let i = 0; i < (match.index || 0); ++i) {
-                    line += (output[i] === '\n') ? 1 : 0;
+                    line += output[i] === "\n" ? 1 : 0;
                 }
 
                 const message = match[2];
                 const errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 const diagnostic = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(line, 0),
-                        new vscode.Position(line, 0)),
+                    new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
                     message,
                     errorSeverity
                 );

@@ -19,7 +19,11 @@ export class SimulatorFocus {
     }
 
     focus() {
-        if (this.productName === undefined || this.platform === undefined || this.deviceID === undefined)
+        if (
+            this.productName === undefined ||
+            this.platform === undefined ||
+            this.deviceID === undefined
+        )
             return;
 
         try {

@@ -1,4 +1,4 @@
-import { TestStyle } from '../../LSP/lspExtension';
+import { TestStyle } from "../../LSP/lspExtension";
 
 const InvalidTestCase = new Error("Invalid Test Case");
 
@@ -8,7 +8,7 @@ export class TestCase {
         private readonly suite: string | undefined,
         private readonly target: string | undefined,
         private readonly testStyle: TestStyle
-    ) { }
+    ) {}
 
     getLabel() {
         return this.testName as string;
@@ -42,8 +42,7 @@ export class TestCase {
         if (this.target && this.testName) {
             if (this.suite) {
                 return `${this.target}/${this.suite}/${this.testName}`;
-            }
-            else {
+            } else {
                 return `${this.target}/${this.testName}`;
             }
         }

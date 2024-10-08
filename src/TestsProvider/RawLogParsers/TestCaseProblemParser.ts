@@ -1,14 +1,19 @@
-import path from 'path';
-import * as vscode from 'vscode';
+import path from "path";
+import * as vscode from "vscode";
 
-const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):?/m;
+const problemPattern =
+    /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):?/m;
 const diffPattern = /(XCTAssertEqual|XCTAssertNotEqual)\sfailed:\s\((.*?)\).*?\((.*?)\)/m;
 
 export class TestCaseProblemParser {
-
     async parseAsyncLogs(testCase: string, testItem: vscode.TestItem) {
         if (testItem.uri) {
-            const problems = this.parseBuildLog(testCase, testItem.uri, testItem.id.split(path.sep).at(-1) || "") || [];
+            const problems =
+                this.parseBuildLog(
+                    testCase,
+                    testItem.uri,
+                    testItem.id.split(path.sep).at(-1) || ""
+                ) || [];
             return problems;
         }
         return [];
@@ -25,9 +30,9 @@ export class TestCaseProblemParser {
         try {
             let startIndex = 0;
             while (startIndex < stdout.length) {
-                while (startIndex > 0) { // find the start of line for the next pattern search
-                    if (stdout[startIndex] === '\n')
-                        break;
+                while (startIndex > 0) {
+                    // find the start of line for the next pattern search
+                    if (stdout[startIndex] === "\n") break;
                     --startIndex;
                 }
 
@@ -39,17 +44,19 @@ export class TestCaseProblemParser {
 
                 let message = match[5];
                 const end = message.lastIndexOf("\n");
-                if (end !== -1)
-                    message = message.substring(0, end);
+                if (end !== -1) message = message.substring(0, end);
 
                 const expectedActualMatch = this.expectedActualValues(message);
                 const fullErrorMessage = this.errorMessage(message);
 
-
                 const diffName = `Diff: ${testName}`;
                 let diagnostic: vscode.TestMessage;
                 if (expectedActualMatch) {
-                    diagnostic = vscode.TestMessage.diff(fullErrorMessage, expectedActualMatch.expected, expectedActualMatch.actual);
+                    diagnostic = vscode.TestMessage.diff(
+                        fullErrorMessage,
+                        expectedActualMatch.expected,
+                        expectedActualMatch.actual
+                    );
                 } else {
                     diagnostic = new vscode.TestMessage(this.markDown(fullErrorMessage, diffName));
                 }
@@ -88,7 +95,7 @@ export class TestCaseProblemParser {
         }
 
         for (let i = index; i >= 0; --i)
-            if (message[i] === ':') {
+            if (message[i] === ":") {
                 return message.substring(i + 1).trim();
             }
         return message.substring(index).trim();
@@ -108,7 +115,9 @@ export class TestCaseProblemParser {
                 const files = [...pattern.matchAll(/^@[\s\S]*?"(file:.*?)"$/gm)];
                 mdString.appendMarkdown("\n" + pattern);
                 if (files.length === 2) {
-                    mdString.appendMarkdown(`\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, files[0][1], files[1][1]]))})`);
+                    mdString.appendMarkdown(
+                        `\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, files[0][1], files[1][1]]))})`
+                    );
                 }
             }
         } else {

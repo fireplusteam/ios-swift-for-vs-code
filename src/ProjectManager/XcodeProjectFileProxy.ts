@@ -5,7 +5,6 @@ import { createInterface } from "readline";
 import * as vscode from "vscode";
 
 export class XcodeProjectFileProxy {
-
     private process: ChildProcess | undefined;
     private commandQueue: Promise<string[]> | undefined;
     private rl: any | undefined;
@@ -17,13 +16,10 @@ export class XcodeProjectFileProxy {
     }
 
     private runProcess(projectPath: string) {
-        this.process = spawn(
-            `ruby '${getScriptPath("project_helper.rb")}' '${projectPath}'`,
-            {
-                shell: true,
-                stdio: "pipe"
-            }
-        );
+        this.process = spawn(`ruby '${getScriptPath("project_helper.rb")}' '${projectPath}'`, {
+            shell: true,
+            stdio: "pipe",
+        });
         let stderr = "";
         this.process.stderr?.on("data", data => {
             stderr += data.toString();
@@ -44,8 +40,8 @@ export class XcodeProjectFileProxy {
         try {
             if (this.process?.stdout)
                 this.rl = createInterface({
-                    input: this.process.stdout, //or fileStream 
-                    terminal: false
+                    input: this.process.stdout, //or fileStream
+                    terminal: false,
                 });
             let result = [] as string[];
             for await (const line of this.rl) {

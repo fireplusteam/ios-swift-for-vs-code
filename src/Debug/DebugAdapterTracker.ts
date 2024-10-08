@@ -6,7 +6,7 @@ import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
-import * as fs from 'fs';
+import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
 import { SimulatorFocus } from "./SimulatorFocus";
 import { killSpawnLaunchedProcesses } from "../utils";
@@ -33,11 +33,17 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private get isDebuggable(): boolean {
-        return this.debugSession.configuration.noDebug === true ? false : this.debugSession.configuration.isDebuggable as boolean;
+        return this.debugSession.configuration.noDebug === true
+            ? false
+            : (this.debugSession.configuration.isDebuggable as boolean);
     }
     private _stream: fs.WriteStream;
 
-    constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver, debugTestSessionEvent: vscode.EventEmitter<string>) {
+    constructor(
+        debugSession: vscode.DebugSession,
+        problemResolver: ProblemDiagnosticResolver,
+        debugTestSessionEvent: vscode.EventEmitter<string>
+    ) {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this.debugTestSessionEvent = debugTestSessionEvent;
@@ -51,9 +57,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStartSession() {
         this.simulatorInteractor.init();
-        console.log('Session is starting');
+        console.log("Session is starting");
         vscode.debug.activeDebugSession;
-        this.debugConsoleOutput = this.context.commandContext.debugConsoleEvent((std) => {
+        this.debugConsoleOutput = this.context.commandContext.debugConsoleEvent(std => {
             this._stream.write(std);
         });
         this.build(this.debugSession.configuration);
@@ -83,13 +89,12 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStopSession() {
-        console.log('Session will stop');
-        if (this.debugSession.configuration.target === "app")
-            this.terminateCurrentSession(true);
+        console.log("Session will stop");
+        if (this.debugSession.configuration.target === "app") this.terminateCurrentSession(true);
     }
 
     onError(error: Error) {
-        console.log('Error:', error);
+        console.log("Error:", error);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
@@ -97,8 +102,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async terminateCurrentSession(isCancelled: boolean) {
-        if (this.isTerminated)
-            return;
+        if (this.isTerminated) return;
         try {
             this.debugConsoleOutput?.dispose();
             this._stream.close();
@@ -107,11 +111,14 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         } finally {
             try {
                 killSpawnLaunchedProcesses(this.deviceID);
-                if (isCancelled)
-                    this.context.commandContext.cancel();
+                if (isCancelled) this.context.commandContext.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
-            } catch { /* empty */ }
-            this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
+            } catch {
+                /* empty */
+            }
+            this.debugTestSessionEvent.fire(
+                this.debugSession.configuration.appSessionId || this.sessionID
+            );
         }
     }
 
@@ -119,11 +126,15 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         await new Executor().execShell({
             scriptOrCommand: { file: "debugger_launching.sh" },
             args: [sessionId, status],
-            mode: ExecutorMode.silently
+            mode: ExecutorMode.silently,
         });
     }
 
-    private async executeAppCommand(buildCommand: (commandContext: CommandContext) => Promise<void>, runCommandClosure: (commandContext: CommandContext) => Promise<void>, successMessage: string | undefined = undefined) {
+    private async executeAppCommand(
+        buildCommand: (commandContext: CommandContext) => Promise<void>,
+        runCommandClosure: (commandContext: CommandContext) => Promise<void>,
+        successMessage: string | undefined = undefined
+    ) {
         if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
             await DebugAdapterTracker.updateStatus(this.sessionID, "building");
             this.context.commandContext.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
@@ -137,7 +148,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
-        const exe = await (this.context.commandContext.projectSettingsProvider.projectEnv.appExecutablePath);
+        const exe =
+            await this.context.commandContext.projectSettingsProvider.projectEnv.appExecutablePath;
         if (!fs.existsSync(exe)) {
             return true;
         }
@@ -156,33 +168,53 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         try {
             const isDebuggable = this.isDebuggable;
             if (dbgConfig.target === "app") {
-                await this.executeAppCommand(async (context) => {
-                    await buildSelectedTarget(context, this.problemResolver);
-                }, async (context) => {
-                    this.context.commandContext.terminal!.terminalName = `Launching For ${this.isDebuggable ? "Debug" : "Run"}`;
-                    await runApp(context, this.sessionID, isDebuggable);
-                });
+                await this.executeAppCommand(
+                    async context => {
+                        await buildSelectedTarget(context, this.problemResolver);
+                    },
+                    async context => {
+                        this.context.commandContext.terminal!.terminalName = `Launching For ${this.isDebuggable ? "Debug" : "Run"}`;
+                        await runApp(context, this.sessionID, isDebuggable);
+                    }
+                );
             } else if (dbgConfig.target === "tests") {
-                await this.executeAppCommand(async (context) => {
-                    await buildTests(context, this.problemResolver);
-                }, async (context) => {
-                    this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
-                    await runAndDebugTests(context, this.sessionID, isDebuggable);
-                }, "All Tests Are Passed");
+                await this.executeAppCommand(
+                    async context => {
+                        await buildTests(context, this.problemResolver);
+                    },
+                    async context => {
+                        this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
+                        await runAndDebugTests(context, this.sessionID, isDebuggable);
+                    },
+                    "All Tests Are Passed"
+                );
             } else if (dbgConfig.target === "testsForCurrentFile") {
-                await this.executeAppCommand(async (context) => {
-                    await buildTestsForCurrentFile(context, this.problemResolver, this.testsToRun);
-                }, async (context) => {
-                    this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
-                    await runAndDebugTestsForCurrentFile(context, this.sessionID, isDebuggable, this.testsToRun);
-                }, "All Tests Are Passed");
+                await this.executeAppCommand(
+                    async context => {
+                        await buildTestsForCurrentFile(
+                            context,
+                            this.problemResolver,
+                            this.testsToRun
+                        );
+                    },
+                    async context => {
+                        this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
+                        await runAndDebugTestsForCurrentFile(
+                            context,
+                            this.sessionID,
+                            isDebuggable,
+                            this.testsToRun
+                        );
+                    },
+                    "All Tests Are Passed"
+                );
             }
         } catch (error) {
             console.log(error);
             this.context.rejectToken.fire(error);
             await this.terminateCurrentSession(false);
         } finally {
-            if (dbgConfig.target !== 'app') {
+            if (dbgConfig.target !== "app") {
                 await this.terminateCurrentSession(false);
                 this.context.token.fire();
             }

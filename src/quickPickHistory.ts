@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
-import { getWorkspacePath } from './env';
-import { QuickPickItem } from './inputPicker';
+import * as vscode from "vscode";
+import { getWorkspacePath } from "./env";
+import { QuickPickItem } from "./inputPicker";
 
 export async function quickPickWithHistory(
     items: QuickPickItem[] | string[],
@@ -9,17 +9,12 @@ export async function quickPickWithHistory(
     showPickClosure: (items: QuickPickItem[]) => Promise<QuickPickItem | undefined>
 ) {
     const qItems: QuickPickItem[] = items.map(e => {
-        if (typeof e === 'string') {
+        if (typeof e === "string") {
             return { label: e, value: e };
         }
         return e;
     });
-    return await quickPickWithHistoryImp(
-        qItems,
-        context,
-        keyStorage,
-        showPickClosure
-    );
+    return await quickPickWithHistoryImp(qItems, context, keyStorage, showPickClosure);
 }
 
 async function quickPickWithHistoryImp(
@@ -29,19 +24,40 @@ async function quickPickWithHistoryImp(
     showPickClosure: (items: QuickPickItem[]) => Promise<QuickPickItem | undefined>
 ) {
     const key = `${keyStorage}${getWorkspacePath()}`;
-    let cache = context.globalState.get<QuickPickHistory[]>(key)?.filter((e: any) => { return e.title !== undefined; });
+    let cache = context.globalState.get<QuickPickHistory[]>(key)?.filter((e: any) => {
+        return e.title !== undefined;
+    });
 
-    if (cache === undefined || cache.map((e) => { return e.title; }).sort().toString() !== items.map(v => { return v.value; }).sort().toString()) {
+    if (
+        cache === undefined ||
+        cache
+            .map(e => {
+                return e.title;
+            })
+            .sort()
+            .toString() !==
+            items
+                .map(v => {
+                    return v.value;
+                })
+                .sort()
+                .toString()
+    ) {
         const oldCache = cache;
         cache = [];
         let i = 0;
         const date = Date.now();
         for (const item of items) {
-            const foundIndex = oldCache?.map(e => { return e.title; }).indexOf(item.value) || -1;
+            const foundIndex =
+                oldCache
+                    ?.map(e => {
+                        return e.title;
+                    })
+                    .indexOf(item.value) || -1;
             cache.push({
                 title: item.value,
                 order: i,
-                date: foundIndex === -1 ? date : oldCache?.at(foundIndex)?.date || date
+                date: foundIndex === -1 ? date : oldCache?.at(foundIndex)?.date || date,
             });
             ++i;
         }
@@ -53,7 +69,9 @@ async function quickPickWithHistoryImp(
             return a.order - b.order;
         });
     }
-    const indexedCache = cache.map(e => { return e.title; });
+    const indexedCache = cache.map(e => {
+        return e.title;
+    });
     const sortedItems = items.sort((a, b) => {
         return (indexedCache?.indexOf(a.value) || -1) - (indexedCache?.indexOf(b.value) || -1);
     });

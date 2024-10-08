@@ -30,14 +30,13 @@ export async function killSpawnLaunchedProcesses(deviceID: string) {
             if (cmd.indexOf(cmdTarget) === -1) {
                 continue;
             }
-            await new Promise((resolve) => {
-                treeKill(process.pid, 'SIGKILL', () => {
+            await new Promise(resolve => {
+                treeKill(process.pid, "SIGKILL", () => {
                     resolve(true);
                 });
             });
         }
-    }
-    catch (err) {
+    } catch (err) {
         console.log(err);
     }
 }
@@ -48,7 +47,7 @@ export function killAll(pid: number | undefined, signal: string) {
         return;
     }
     psTree(pid, function (_, children) {
-        treeKill(pid, signal, (err) => {
+        treeKill(pid, signal, err => {
             if (err !== undefined) {
                 console.log(err);
             }
@@ -57,7 +56,7 @@ export function killAll(pid: number | undefined, signal: string) {
             }
             for (const item of children) {
                 const pid: number = Number(item.PID);
-                treeKill(pid, signal, (err) => {
+                treeKill(pid, signal, err => {
                     if (err !== undefined) {
                         console.log(err);
                     }
@@ -69,7 +68,7 @@ export function killAll(pid: number | undefined, signal: string) {
 
 export async function asyncLock<T>(path: string, block: () => T) {
     return new Promise<T>((resolve, reject) => {
-        lock(getLockFilePath(path), { wait: 100000 }, (error) => {
+        lock(getLockFilePath(path), { wait: 100000 }, error => {
             if (error) {
                 reject(error);
             } else {
@@ -84,7 +83,7 @@ export async function asyncLock<T>(path: string, block: () => T) {
 
 export function getSessionId(key: string) {
     const path = `${getWorkspacePath()} ${key}`;
-    return Buffer.from(path, 'utf-8').toString('base64');
+    return Buffer.from(path, "utf-8").toString("base64");
 }
 
 export function getLastLine(stdout: string) {
@@ -164,7 +163,10 @@ export function isFolder(path: string) {
 }
 
 export function isFileMoved(oldFile: string, newFile: string) {
-    if (oldFile.split(path.sep).slice(0, -1).toString() !== newFile.split(path.sep).slice(0, -1).toString()) {
+    if (
+        oldFile.split(path.sep).slice(0, -1).toString() !==
+        newFile.split(path.sep).slice(0, -1).toString()
+    ) {
         return true;
     }
     return false;

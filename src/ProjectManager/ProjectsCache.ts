@@ -1,13 +1,13 @@
-import * as fs from 'fs';
+import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
 import { listFilesFromProject } from "./ProjectManager";
 import { watch } from "fs";
-import path from 'path';
+import path from "path";
 import * as vscode from "vscode";
 
 type ProjFilePath = {
-    path: string,
-    isFolder: boolean
+    path: string;
+    isFolder: boolean;
 };
 
 function isProjFilePath(obj: any): obj is ProjFilePath {
@@ -21,21 +21,21 @@ type ProjFile = {
 function mapReplacer(key: any, value: any) {
     if (value instanceof Map) {
         return {
-            dataType: 'Map',
+            dataType: "Map",
             value: Array.from(value.entries()), // or with spread: value: [...value]
         };
     } else if (value instanceof Set) {
         return {
             dataType: "Set",
-            value: [...value]
+            value: [...value],
         };
     } else {
         return value;
     }
 }
 function mapReviver(key: any, value: any) {
-    if (typeof value === 'object' && value !== null) {
-        if (value.dataType === 'Map') {
+    if (typeof value === "object" && value !== null) {
+        if (value.dataType === "Map") {
             return new Map(value.value);
         }
         if (value.dataType === "Set") {
@@ -53,11 +53,11 @@ function mapReviver(key: any, value: any) {
 }
 export class ProjectsCache {
     private cache = new Map<string, ProjFile>();
-    private watcher = new Map<string, { watcher: fs.FSWatcher, content: Buffer }>();
+    private watcher = new Map<string, { watcher: fs.FSWatcher; content: Buffer }>();
 
     onProjectChanged = new vscode.EventEmitter<void>();
 
-    constructor() { }
+    constructor() {}
 
     clear() {
         this.cache.clear();
@@ -79,8 +79,7 @@ export class ProjectsCache {
                         console.log(err);
                         reject(err);
                     }
-                }
-                else {
+                } else {
                     reject(e);
                 }
             });
@@ -91,8 +90,7 @@ export class ProjectsCache {
         return new Promise((resolve, reject) => {
             const proj = JSON.stringify(this.cache, mapReplacer, 4);
             fs.writeFile(filePath, proj, e => {
-                if (e === null)
-                    resolve();
+                if (e === null) resolve();
                 else {
                     reject(e);
                 }
@@ -107,11 +105,8 @@ export class ProjectsCache {
     getList(project: string, onlyFiles = true) {
         const res = new Set<string>();
         const projectList = this.cache.get(project)?.list;
-        if (!projectList)
-            return res;
-        for (const file of projectList)
-            if (!file.isFolder || !onlyFiles)
-                res.add(file.path);
+        if (!projectList) return res;
+        for (const file of projectList) if (!file.isFolder || !onlyFiles) res.add(file.path);
         return res;
     }
 
@@ -127,15 +122,14 @@ export class ProjectsCache {
         const files: string[] = [];
         for (const [, value] of this.cache) {
             for (const file of value.list) {
-                if (file.isFolder === isFolder)
-                    files.push(file.path);
+                if (file.isFolder === isFolder) files.push(file.path);
             }
         }
         return files;
     }
 
     async parseProjectList(files: string[]) {
-        const resPaths = new Set<{ path: string, isFolder: boolean }>();
+        const resPaths = new Set<{ path: string; isFolder: boolean }>();
         for (const file of files) {
             if (file.startsWith("group:/")) {
                 resPaths.add({ path: file.substring("group:".length), isFolder: true });
@@ -154,12 +148,17 @@ export class ProjectsCache {
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
             this.cache.set(projectPath, {
                 timestamp: time,
-                list: await this.parseProjectList(await listFilesFromProject(getFilePathInWorkspace(projectPath)))
+                list: await this.parseProjectList(
+                    await listFilesFromProject(getFilePathInWorkspace(projectPath))
+                ),
             });
             updated = true;
         }
         if (!this.watcher.has(projectPath)) {
-            const fullProjectPath = path.join(getFilePathInWorkspace(projectPath), "project.pbxproj");
+            const fullProjectPath = path.join(
+                getFilePathInWorkspace(projectPath),
+                "project.pbxproj"
+            );
             const fileWatch = watch(fullProjectPath, null);
             fileWatch.on("change", async () => {
                 const contentFile = fs.readFileSync(fullProjectPath);
@@ -179,11 +178,9 @@ export class ProjectsCache {
                 await this.update(projectPath);
                 this.onProjectChanged.fire();
             });
-            const contentProjectFile = contentFile === undefined ? fs.readFileSync(fullProjectPath) : contentFile;
-            this.watcher.set(
-                projectPath,
-                { watcher: fileWatch, content: contentProjectFile }
-            );
+            const contentProjectFile =
+                contentFile === undefined ? fs.readFileSync(fullProjectPath) : contentFile;
+            this.watcher.set(projectPath, { watcher: fileWatch, content: contentProjectFile });
         }
         return updated;
     }

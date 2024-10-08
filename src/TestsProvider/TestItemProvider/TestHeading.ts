@@ -1,4 +1,3 @@
-
 export class TestHeading {
-    constructor(public generation: number) { }
+    constructor(public generation: number) {}
 }

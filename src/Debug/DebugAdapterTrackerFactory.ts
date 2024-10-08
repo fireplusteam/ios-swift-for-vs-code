@@ -6,14 +6,26 @@ export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFac
     private problemResolver: ProblemDiagnosticResolver;
     private debugTestSessionEvent: vscode.EventEmitter<string>;
 
-    constructor(problemResolver: ProblemDiagnosticResolver, debugTestSessionEvent: vscode.EventEmitter<string>) {
+    constructor(
+        problemResolver: ProblemDiagnosticResolver,
+        debugTestSessionEvent: vscode.EventEmitter<string>
+    ) {
         this.problemResolver = problemResolver;
         this.debugTestSessionEvent = debugTestSessionEvent;
     }
 
-    createDebugAdapterTracker(session: vscode.DebugSession): vscode.ProviderResult<vscode.DebugAdapterTracker> {
-        if ((session.type === 'xcode-lldb' || session.type === 'lldb') && session.configuration.sessionId) {
-            return new DebugAdapterTracker(session, this.problemResolver, this.debugTestSessionEvent);
+    createDebugAdapterTracker(
+        session: vscode.DebugSession
+    ): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+        if (
+            (session.type === "xcode-lldb" || session.type === "lldb") &&
+            session.configuration.sessionId
+        ) {
+            return new DebugAdapterTracker(
+                session,
+                this.problemResolver,
+                this.debugTestSessionEvent
+            );
         }
     }
 }

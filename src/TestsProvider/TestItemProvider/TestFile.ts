@@ -1,10 +1,10 @@
-import * as vscode from 'vscode';
-import { parseSwiftSource } from './parseClass';
-import { TestContainer } from './TestContainer';
-import { TestHeading } from './TestHeading';
-import { TestTreeContext, getContentFromFilesystem } from '../TestTreeContext';
-import { getTestIDComponents, LSPTestItem } from '../../LSP/lspExtension';
-import { TestCase } from './TestCase';
+import * as vscode from "vscode";
+import { parseSwiftSource } from "./parseClass";
+import { TestContainer } from "./TestContainer";
+import { TestHeading } from "./TestHeading";
+import { TestTreeContext, getContentFromFilesystem } from "../TestTreeContext";
+import { getTestIDComponents, LSPTestItem } from "../../LSP/lspExtension";
+import { TestCase } from "./TestCase";
 
 let generationCounter = 0;
 
@@ -18,24 +18,43 @@ export class TestFile implements TestContainer {
         this.target = target;
     }
 
-    private mapTestItems(parent: vscode.TestItem, target: string | undefined, lspTest: LSPTestItem, controller: vscode.TestController, suiteGeneration: number): vscode.TestItem[] {
+    private mapTestItems(
+        parent: vscode.TestItem,
+        target: string | undefined,
+        lspTest: LSPTestItem,
+        controller: vscode.TestController,
+        suiteGeneration: number
+    ): vscode.TestItem[] {
         const id = `${parent.uri}/${lspTest.id}`;
         const testItem = controller.createTestItem(id, lspTest.label, parent.uri);
         testItem.range = new vscode.Range(
-            new vscode.Position(lspTest.location.range.start.line, lspTest.location.range.start.character),
-            new vscode.Position(lspTest.location.range.end.line, lspTest.location.range.end.character)
+            new vscode.Position(
+                lspTest.location.range.start.line,
+                lspTest.location.range.start.character
+            ),
+            new vscode.Position(
+                lspTest.location.range.end.line,
+                lspTest.location.range.end.character
+            )
         );
         if (lspTest.children.length !== 0) {
             const test = new TestHeading(suiteGeneration);
             this.context.testData.set(testItem, test);
         } else {
             const idComponents = getTestIDComponents(lspTest.id);
-            const test = new TestCase(idComponents.testName, idComponents.suite, target, lspTest.style);
+            const test = new TestCase(
+                idComponents.testName,
+                idComponents.suite,
+                target,
+                lspTest.style
+            );
             this.context.testData.set(testItem, test);
         }
         const itemChildren: vscode.TestItem[] = [];
         for (const lspChild of lspTest.children) {
-            itemChildren.push(...this.mapTestItems(testItem, target, lspChild, controller, suiteGeneration + 1));
+            itemChildren.push(
+                ...this.mapTestItems(testItem, target, lspChild, controller, suiteGeneration + 1)
+            );
         }
         testItem.children.replace(itemChildren);
         return [testItem];
@@ -51,7 +70,11 @@ export class TestFile implements TestContainer {
         }
     }
 
-    public async updateFromContents(controller: vscode.TestController, content: string, item: vscode.TestItem) {
+    public async updateFromContents(
+        controller: vscode.TestController,
+        content: string,
+        item: vscode.TestItem
+    ) {
         try {
             const url = item.uri!;
             const tests = await this.context.lspTestProvider.fetchTests(url, content);
@@ -62,7 +85,8 @@ export class TestFile implements TestContainer {
                 itemChildren.push(...this.mapTestItems(item, target, lspChild, controller, 1));
             }
             item.children.replace(itemChildren);
-        } catch { // legacy fallback
+        } catch {
+            // legacy fallback
             const ancestors = [{ item, children: [] as vscode.TestItem[] }];
             const thisGeneration = generationCounter++;
 

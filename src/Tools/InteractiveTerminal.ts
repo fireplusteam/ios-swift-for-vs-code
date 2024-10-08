@@ -13,8 +13,7 @@ export class InteractiveTerminal {
             }
             let disposal: vscode.Disposable | undefined = undefined;
             disposal = vscode.window.onDidChangeTerminalShellIntegration(eventShellCreated => {
-                if (eventShellCreated.terminal !== this.terminal)
-                    return;
+                if (eventShellCreated.terminal !== this.terminal) return;
                 resolve(eventShellCreated.shellIntegration);
                 disposal?.dispose();
                 disposal = undefined;
@@ -25,7 +24,7 @@ export class InteractiveTerminal {
     constructor(log: vscode.OutputChannel, name: string) {
         this.log = log;
         this.terminal = vscode.window.createTerminal({ name: name, hideFromUser: true });
-        this.closeDisposal = vscode.window.onDidCloseTerminal((event) => {
+        this.closeDisposal = vscode.window.onDidCloseTerminal(event => {
             if (event === this.terminal) {
                 this.terminal = vscode.window.createTerminal({ name: name, hideFromUser: true });
             }
@@ -43,7 +42,7 @@ export class InteractiveTerminal {
                 const command = (await this.shellIntegration()).executeCommand(installScript);
                 let dispose: vscode.Disposable | undefined = undefined;
                 const localTerminal = this.terminal;
-                dispose = vscode.window.onDidEndTerminalShellExecution(async (event) => {
+                dispose = vscode.window.onDidEndTerminalShellExecution(async event => {
                     if (command === event.execution) {
                         for await (const data of event.execution.read()) {
                             this.log.append(data);
@@ -60,7 +59,7 @@ export class InteractiveTerminal {
                     }
                 });
                 let closeDisposal: vscode.Disposable | undefined;
-                closeDisposal = vscode.window.onDidCloseTerminal((event) => {
+                closeDisposal = vscode.window.onDidCloseTerminal(event => {
                     if (event === localTerminal) {
                         this.log.appendLine(`Terminal is Closed`);
                         closeDisposal?.dispose();

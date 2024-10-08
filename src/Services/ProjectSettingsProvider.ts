@@ -4,7 +4,7 @@ import { getProjectFiles } from "../ProjectManager/ProjectManager";
 
 export interface XCodeSettings {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    settings: Promise<any>
+    settings: Promise<any>;
 }
 
 export class ProjectSettingsProvider implements XCodeSettings {
@@ -26,7 +26,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
 
     async fetchSchemes(): Promise<string[]> {
         const json = await this.fetchXcodeList(await this._projectEnv.projectFile);
-        if (await this.projectEnv.projectType === "-workspace") {
+        if ((await this.projectEnv.projectType) === "-workspace") {
             return json.workspace.schemes;
         }
         return json.project.schemes;
@@ -49,15 +49,19 @@ export class ProjectSettingsProvider implements XCodeSettings {
         }
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            args: args
+            args: args,
         });
 
-        const devices = result.stdout.split("\n")
-            .filter(e => e.indexOf("platform:") !== -1);
+        const devices = result.stdout.split("\n").filter(e => e.indexOf("platform:") !== -1);
 
         const json = [];
         for (const deviceLine of devices) {
-            const formatted = deviceLine.replace("{", "").replace("}", "").trim().split(", ").map(e => e.trim());
+            const formatted = deviceLine
+                .replace("{", "")
+                .replace("}", "")
+                .trim()
+                .split(", ")
+                .map(e => e.trim());
 
             let isValid = true;
             const formattedKey: { [name: string]: string } = {};
@@ -68,12 +72,17 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     break;
                 }
                 const [key, value] = [i.substring(0, sepPos), i.substring(sepPos + 1)];
-                if (key === "OS" || key === "name" || key === "platform" || key === "id" || key === "variant") {
+                if (
+                    key === "OS" ||
+                    key === "name" ||
+                    key === "platform" ||
+                    key === "id" ||
+                    key === "variant"
+                ) {
                     formattedKey[key] = value;
                 }
             }
-            if (isValid)
-                json.push(formattedKey);
+            if (isValid) json.push(formattedKey);
         }
 
         return json;
@@ -96,22 +105,36 @@ export class ProjectSettingsProvider implements XCodeSettings {
 
         const settings = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            args: ["-showBuildSettings", getProjectType(projectFile), projectFile, "-scheme", scheme, "-configuration", buildConfiguration, "-json"]
+            args: [
+                "-showBuildSettings",
+                getProjectType(projectFile),
+                projectFile,
+                "-scheme",
+                scheme,
+                "-configuration",
+                buildConfiguration,
+                "-json",
+            ],
         });
         const jsonSettings = JSON.parse(settings.stdout);
-        ProjectSettingsProvider.cachedSettings = [projectFile, scheme, buildConfiguration, jsonSettings];
+        ProjectSettingsProvider.cachedSettings = [
+            projectFile,
+            scheme,
+            buildConfiguration,
+            jsonSettings,
+        ];
 
         return jsonSettings;
     }
 
     private async fetchXcodeList(projectFile: string) {
         const args = ["-list", "-json"];
-        if (await getProjectType(projectFile) !== "-package") {
+        if ((await getProjectType(projectFile)) !== "-package") {
             args.push(getProjectType(projectFile), projectFile);
         }
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            args: args
+            args: args,
         });
         const json = JSON.parse(result.stdout);
 

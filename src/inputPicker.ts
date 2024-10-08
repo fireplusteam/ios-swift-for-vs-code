@@ -3,16 +3,28 @@ import { quickPickWithHistory } from "./quickPickHistory";
 import { UserTerminatedError } from "./CommandManagement/CommandContext";
 
 export async function askIfDebuggable() {
-    const items: QuickPickItem[] = [{ label: "Debug", value: "Debug" }, { label: "Run", value: "Run" }];
+    const items: QuickPickItem[] = [
+        { label: "Debug", value: "Debug" },
+        { label: "Run", value: "Run" },
+    ];
     const option = await showPicker(items, "Debug?", "", false, false, true);
     return option === "Debug";
 }
 
 export async function askIfBuild() {
-    const items: QuickPickItem[] = [{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }];
-    const option = await showPicker(items, "Prebuild before launch?", "(Esc) to cancel", false, false, true);
-    if (option === undefined)
-        throw UserTerminatedError;
+    const items: QuickPickItem[] = [
+        { label: "Yes", value: "Yes" },
+        { label: "No", value: "No" },
+    ];
+    const option = await showPicker(
+        items,
+        "Prebuild before launch?",
+        "(Esc) to cancel",
+        false,
+        false,
+        true
+    );
+    if (option === undefined) throw UserTerminatedError;
     return option === "Yes";
 }
 
@@ -35,22 +47,19 @@ export async function showPicker(
     useHistory = false
 ) {
     let items: QuickPickItem[];
-    if (typeof json === 'string' || json instanceof String) {
+    if (typeof json === "string" || json instanceof String) {
         items = JSON.parse(json as string);
     } else {
         items = json;
     }
 
     const selectionClosure = async (items: QuickPickItem[]) => {
-        return await vscode.window.showQuickPick<QuickPickItem>(
-            items,
-            {
-                title: title,
-                placeHolder: placeholder,
-                ignoreFocusOut: ignoreFocusOut,
-                canPickMany: canPickMany
-            }
-        );
+        return await vscode.window.showQuickPick<QuickPickItem>(items, {
+            title: title,
+            placeHolder: placeholder,
+            ignoreFocusOut: ignoreFocusOut,
+            canPickMany: canPickMany,
+        });
     };
     let selection: vscode.QuickPickItem | undefined;
     if (useHistory) {
@@ -74,7 +83,7 @@ export async function showPicker(
             value = undefined;
         } else {
             if (canPickMany) {
-                const array = (selection as unknown as { [key: string]: any }[]).map((e) => {
+                const array = (selection as unknown as { [key: string]: any }[]).map(e => {
                     return e["value"];
                 });
 

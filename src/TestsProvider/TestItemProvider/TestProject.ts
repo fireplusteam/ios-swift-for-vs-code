@@ -1,11 +1,11 @@
-import * as vscode from 'vscode';
-import * as fs from 'fs';
-import { TestTreeContext } from '../TestTreeContext';
-import { TestContainer } from './TestContainer';
-import { getFilePathInWorkspace } from '../../env';
-import { FSWatcher, watch } from 'fs';
-import path from 'path';
-import { TestTarget } from './TestTarget';
+import * as vscode from "vscode";
+import * as fs from "fs";
+import { TestTreeContext } from "../TestTreeContext";
+import { TestContainer } from "./TestContainer";
+import { getFilePathInWorkspace } from "../../env";
+import { FSWatcher, watch } from "fs";
+import path from "path";
+import { TestTarget } from "./TestTarget";
 
 export class TestProject implements TestContainer {
     public didResolve = false;
@@ -18,7 +18,11 @@ export class TestProject implements TestContainer {
     private fsWatcher: FSWatcher | undefined;
     private projectContent: Buffer | undefined;
 
-    constructor(context: TestTreeContext, targetProvider: () => Promise<string[]>, filesForTargetProvider: (target: string) => Promise<string[]>) {
+    constructor(
+        context: TestTreeContext,
+        targetProvider: () => Promise<string[]>,
+        filesForTargetProvider: (target: string) => Promise<string[]>
+    ) {
         this.context = context;
         this.targetProvider = targetProvider;
         this.filesForTargetProvider = filesForTargetProvider;
@@ -32,32 +36,34 @@ export class TestProject implements TestContainer {
         }
     }
 
-    public async updateFromContents(controller: vscode.TestController, content: string, item: vscode.TestItem) {
+    public async updateFromContents(
+        controller: vscode.TestController,
+        content: string,
+        item: vscode.TestItem
+    ) {
         const parent = { item, children: [] as vscode.TestItem[] };
         const targets = await this.targetProvider();
         const weakRef = new WeakRef(this);
 
         for (const target of targets) {
             const url = TestTreeContext.getTargetFilePath(item.uri, target);
-            const { file, data } = this.context.getOrCreateTest("target://", url,
-                () => {
-                    return new TestTarget(this.context,
-                        async () => {
-                            return await weakRef.deref()?.filesForTargetProvider(target) || [];
-                        });
+            const { file, data } = this.context.getOrCreateTest("target://", url, () => {
+                return new TestTarget(this.context, async () => {
+                    return (await weakRef.deref()?.filesForTargetProvider(target)) || [];
                 });
+            });
 
             if (!data.didResolve) {
                 await data.updateFromDisk(controller, file);
             }
-            if ([...file.children].length > 0)
-                parent.children.push(file);
-            else
-                this.context.deleteItem(file.id);
+            if ([...file.children].length > 0) parent.children.push(file);
+            else this.context.deleteItem(file.id);
         }
 
         // watch to changes for a file, if it's changed, refresh unit tests
-        const filePath = getFilePathInWorkspace(path.join(item.uri?.path || "", item.label === "Package.swift" ? "" : "project.pbxproj"));
+        const filePath = getFilePathInWorkspace(
+            path.join(item.uri?.path || "", item.label === "Package.swift" ? "" : "project.pbxproj")
+        );
         this.watchFile(filePath, controller, item);
 
         this.didResolve = true;
@@ -66,7 +72,12 @@ export class TestProject implements TestContainer {
         this.context.replaceItemsChildren(item, parent.children);
     }
 
-    private watchFile(filePath: string, controller: vscode.TestController, item: vscode.TestItem, contentFile: Buffer | undefined = undefined) {
+    private watchFile(
+        filePath: string,
+        controller: vscode.TestController,
+        item: vscode.TestItem,
+        contentFile: Buffer | undefined = undefined
+    ) {
         const weakRef = new WeakRef(this);
 
         this.fsWatcher?.close();
@@ -84,9 +95,7 @@ export class TestProject implements TestContainer {
                 weakRef.deref()?.updateFromDisk(controller, item);
             }, 1000);
         });
-        if (contentFile === undefined)
-            this.projectContent = fs.readFileSync(filePath);
-        else
-            this.projectContent = contentFile;
+        if (contentFile === undefined) this.projectContent = fs.readFileSync(filePath);
+        else this.projectContent = contentFile;
     }
 }

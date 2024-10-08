@@ -6,7 +6,6 @@ import { uriConverters } from "./uriConverters";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 
 export class SwiftLSPClient {
-
     private languageClient: langclient.LanguageClient | null | undefined;
 
     private clientReadyPromise?: Promise<void> = undefined;
@@ -21,8 +20,10 @@ export class SwiftLSPClient {
         return this.languageClient!;
     }
 
-    constructor(private readonly workspaceFolder: vscode.Uri, private readonly logs: vscode.OutputChannel) {
-    }
+    constructor(
+        private readonly workspaceFolder: vscode.Uri,
+        private readonly logs: vscode.OutputChannel
+    ) {}
 
     private async setupLanguageClient(folder?: vscode.Uri) {
         const { client, errorHandler } = await this.createLSPClient(folder);
@@ -41,7 +42,7 @@ export class SwiftLSPClient {
                 env: {
                     ...process.env,
                     // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
-                    SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath()
+                    SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
             },
         };
@@ -122,7 +123,7 @@ export class SwiftLSPClient {
             errorHandler: errorHandler,
             // Avoid attempting to reinitialize multiple times. If we fail to initialize
             // we aren't doing anything different the second time and so will fail again.
-            initializationFailedHandler: () => false
+            initializationFailedHandler: () => false,
         };
 
         return {
@@ -162,5 +163,4 @@ export class SwiftLSPClient {
 
         return this.clientReadyPromise;
     }
-
 }

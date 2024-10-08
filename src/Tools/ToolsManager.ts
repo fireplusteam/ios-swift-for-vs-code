@@ -15,15 +15,14 @@ export class ToolsManager {
     }
 
     private async isToolInstalled(name: string, version = "--version"): Promise<boolean> {
-        return new Promise((resolve,) => {
+        return new Promise(resolve => {
             const command = `${name} ${version}`;
             this.log.appendLine(command);
             exec(command, (error, stdout, stderr) => {
                 if (error) {
                     this.log.appendLine(stderr);
                     resolve(false);
-                }
-                else {
+                } else {
                     this.log.appendLine(stdout);
                     resolve(true);
                 }
@@ -33,7 +32,7 @@ export class ToolsManager {
 
     private isGemInstalled(gemName: string): Promise<boolean> {
         // return new Promise(resolve => { resolve(false) });
-        return new Promise((resolve,) => {
+        return new Promise(resolve => {
             const command = `gem list ^${gemName}$ -i`;
             this.log.appendLine(command);
             exec(command, (error, stdout, stderr) => {
@@ -43,7 +42,7 @@ export class ToolsManager {
                     resolve(false);
                 } else {
                     // stdout returns a boolean as a string, either 'true' or 'false'
-                    const isInstalled = stdout.trim() === 'true';
+                    const isInstalled = stdout.trim() === "true";
                     resolve(isInstalled);
                 }
             });
@@ -119,7 +118,9 @@ export class ToolsManager {
             await this.terminal.executeCommand("gem install xcodeproj");
         } catch (error) {
             this.log.appendLine(`Dependencies were not updated, error: ${error}`);
-            vscode.window.showErrorMessage("Dependencies were not updated. Try again or do it manually");
+            vscode.window.showErrorMessage(
+                "Dependencies were not updated. Try again or do it manually"
+            );
             throw error;
         }
     }
@@ -140,27 +141,40 @@ export class ToolsManager {
                 throw new Error("Xcode is not installed. Please install it and restart VS Code");
         }
 
-        if (!(await this.isHomebrewInstalled())
-            || !(await this.isXcbeautifyInstalled())
-            || !(await this.isRubyInstalled())
-            || !(await this.isGemInstalled("xcodeproj"))
-            || !(await this.isLLDBStubExeCompiled())
+        if (
+            !(await this.isHomebrewInstalled()) ||
+            !(await this.isXcbeautifyInstalled()) ||
+            !(await this.isRubyInstalled()) ||
+            !(await this.isGemInstalled("xcodeproj")) ||
+            !(await this.isLLDBStubExeCompiled())
         ) {
             let option: string | undefined = "Yes";
             if (!askUserToInstallDeps)
-                option = await vscode.window.showWarningMessage("Required tools are not installed. Without them extension would not work properly. Do you want to Install Them automatically?", "Yes", "No");
+                option = await vscode.window.showWarningMessage(
+                    "Required tools are not installed. Without them extension would not work properly. Do you want to Install Them automatically?",
+                    "Yes",
+                    "No"
+                );
             if (option === "Yes") {
                 try {
                     // install extensions
                     await this.installTools();
                     this.log.appendLine("All dependencies are installed. You are ready to go");
                 } catch (err) {
-                    this.log.appendLine(`Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`);
-                    throw new Error(`Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`);
+                    this.log.appendLine(
+                        `Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`
+                    );
+                    throw new Error(
+                        `Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`
+                    );
                 }
             } else {
-                this.log.appendLine("Dependencies are not installed. This extensions would not be working as expected!");
-                throw new Error("Dependencies are not installed. Extension would not be working properly");
+                this.log.appendLine(
+                    "Dependencies are not installed. This extensions would not be working as expected!"
+                );
+                throw new Error(
+                    "Dependencies are not installed. Extension would not be working properly"
+                );
             }
         } else {
             this.log.appendLine("All dependencies are installed. You are ready to go");

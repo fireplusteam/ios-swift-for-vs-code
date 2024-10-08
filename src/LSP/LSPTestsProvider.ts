@@ -6,8 +6,7 @@ import * as lp from "vscode-languageserver-protocol";
 export class LSPTestsProvider {
     private version = 0;
 
-    constructor(private lspClient: SwiftLSPClient) {
-    }
+    constructor(private lspClient: SwiftLSPClient) {}
 
     private languageId(file: string) {
         if (file.endsWith(".swift")) {
@@ -35,23 +34,30 @@ export class LSPTestsProvider {
         }
 
         const didOpenParam: lp.DidOpenTextDocumentParams = {
-            textDocument: { uri: document.toString(), languageId: languageId, text: content, version: this.version }
+            textDocument: {
+                uri: document.toString(),
+                languageId: languageId,
+                text: content,
+                version: this.version,
+            },
         };
 
         await client.sendNotification(lp.DidOpenTextDocumentNotification.method, didOpenParam);
 
         try {
-            const testsInDocument = await (await this.lspClient.client()).sendRequest(
-                textDocumentTestsRequest,
-                { textDocument: { uri: document.toString() } }
-            );
+            const testsInDocument = await (
+                await this.lspClient.client()
+            ).sendRequest(textDocumentTestsRequest, { textDocument: { uri: document.toString() } });
             return testsInDocument;
         } finally {
             const didCloseParam: lp.DidCloseTextDocumentParams = {
-                textDocument: { uri: document.toString() }
+                textDocument: { uri: document.toString() },
             };
 
-            await client.sendNotification(lp.DidCloseTextDocumentNotification.method, didCloseParam);
+            await client.sendNotification(
+                lp.DidCloseTextDocumentNotification.method,
+                didCloseParam
+            );
         }
     }
 }

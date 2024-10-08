@@ -1,7 +1,4 @@
-import {
-    spawn,
-    SpawnOptions,
-} from "child_process";
+import { spawn, SpawnOptions } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
@@ -20,7 +17,13 @@ export class ExecutorTaskError extends Error {
     signal: NodeJS.Signals | null;
     stderr: string;
     terminal?: TerminalShell;
-    public constructor(message: string, code: number | null, signal: NodeJS.Signals | null, stderr: string, terminal: TerminalShell | undefined) {
+    public constructor(
+        message: string,
+        code: number | null,
+        signal: NodeJS.Signals | null,
+        stderr: string,
+        terminal: TerminalShell | undefined
+    ) {
         super(message);
         this.code = code;
         this.signal = signal;
@@ -32,50 +35,44 @@ export class ExecutorTaskError extends Error {
 export enum ExecutorMode {
     verbose,
     silently,
-    onlyCommandNameAndResult
+    onlyCommandNameAndResult,
 }
 
 export interface ShellCommand {
-    command: string
-    labelInTerminal?: string
+    command: string;
+    labelInTerminal?: string;
 }
 
 export interface ShellFileScript {
-    file: string
-    labelInTerminal?: string
+    file: string;
+    labelInTerminal?: string;
 }
 
 export interface ShellExec {
-    cancellationToken?: vscode.CancellationToken
-    scriptOrCommand: ShellCommand | ShellFileScript,
-    args?: string[]
-    mode?: ExecutorMode
-    stdoutCallback?: (out: string) => void
-    terminal?: TerminalShell
+    cancellationToken?: vscode.CancellationToken;
+    scriptOrCommand: ShellCommand | ShellFileScript;
+    args?: string[];
+    mode?: ExecutorMode;
+    stdoutCallback?: (out: string) => void;
+    terminal?: TerminalShell;
 }
 
 export interface ShellResult {
-    stdout: string
-    stderr: string
+    stdout: string;
+    stderr: string;
 }
 
 export class Executor {
-    public constructor() { }
+    public constructor() {}
 
-    private execShellImp(
-        file: string,
-        args: ReadonlyArray<string>,
-        options: SpawnOptions
-    ) {
-        const quotedArgs = args.map((e) => {
+    private execShellImp(file: string, args: ReadonlyArray<string>, options: SpawnOptions) {
+        const quotedArgs = args.map(e => {
             return `"${e}"`;
         });
         return spawn(file, quotedArgs, options);
     }
 
-    public async execShell(
-        shell: ShellExec
-    ): Promise<ShellResult> {
+    public async execShell(shell: ShellExec): Promise<ShellResult> {
         const cancellationToken = shell.cancellationToken;
         const scriptOrCommand = shell.scriptOrCommand;
         const args = shell.args || [];
@@ -115,14 +112,13 @@ export class Executor {
         let debugCommand: string;
         if (scriptOrCommand.labelInTerminal) {
             debugCommand = `COMMAND: ${scriptOrCommand.labelInTerminal}\n`;
-        } else
-            if (args.length > 0) {
-                debugCommand = `COMMAND: ${script} ${args.reduce((prev, curr) => {
-                    return prev += " " + curr;
-                })}\n`;
-            } else {
-                debugCommand = `COMMAND: ${script}\n`;
-            }
+        } else if (args.length > 0) {
+            debugCommand = `COMMAND: ${script} ${args.reduce((prev, curr) => {
+                return (prev += " " + curr);
+            })}\n`;
+        } else {
+            debugCommand = `COMMAND: ${script}\n`;
+        }
 
         if (mode === ExecutorMode.verbose || mode === ExecutorMode.onlyCommandNameAndResult) {
             terminal?.write(debugCommand, TerminalMessageStyle.command);
@@ -130,17 +126,16 @@ export class Executor {
         console.log(debugCommand);
 
         let stdout = "";
-        proc.stdout?.on("data", (data) => {
+        proc.stdout?.on("data", data => {
             const str = data.toString();
             if (mode === ExecutorMode.verbose) {
                 terminal?.write(str);
             }
             stdout += str;
-            if (shell.stdoutCallback)
-                shell.stdoutCallback(str);
+            if (shell.stdoutCallback) shell.stdoutCallback(str);
         });
         let stderr = "";
-        proc.stderr?.on("data", (data) => {
+        proc.stderr?.on("data", data => {
             const str = data.toString();
             stderr += str;
         });
@@ -150,8 +145,7 @@ export class Executor {
                 userCancel?.dispose();
                 terminalClose?.dispose();
                 reject(UserTerminatedError);
-                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null)
-                    return;
+                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) return;
 
                 killAll(proc.pid, "SIGKILL");
             });
@@ -159,8 +153,7 @@ export class Executor {
                 userCancel?.dispose();
                 terminalClose?.dispose();
                 reject(UserTerminalCloseError);
-                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null)
-                    return;
+                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) return;
 
                 killAll(proc.pid, "SIGKILL");
             });
@@ -169,7 +162,7 @@ export class Executor {
                 return;
             }
 
-            proc.once("error", (err) => {
+            proc.once("error", err => {
                 userCancel?.dispose();
                 terminalClose?.dispose();
                 reject(err);
@@ -183,20 +176,23 @@ export class Executor {
                     if (mode !== ExecutorMode.silently && stderr.length > 0) {
                         terminal?.write(stderr, TerminalMessageStyle.warning);
                     }
-                    reject(new ExecutorTerminated(`${displayCommandName} is terminated with SIGNAL : ${error}`));
+                    reject(
+                        new ExecutorTerminated(
+                            `${displayCommandName} is terminated with SIGNAL : ${error}`
+                        )
+                    );
                     return;
                 }
 
                 if (mode !== ExecutorMode.silently) {
                     terminal?.write(
-                        `Exits with status code: ${code}\x1b\n`, code !== 0 ? TerminalMessageStyle.error : TerminalMessageStyle.success
+                        `Exits with status code: ${code}\x1b\n`,
+                        code !== 0 ? TerminalMessageStyle.error : TerminalMessageStyle.success
                     );
                 }
                 if (code !== 0) {
                     if (mode !== ExecutorMode.silently) {
-                        terminal?.write(
-                            stderr, TerminalMessageStyle.warning
-                        );
+                        terminal?.write(stderr, TerminalMessageStyle.warning);
                     }
                     reject(
                         new ExecutorTaskError(
@@ -209,9 +205,7 @@ export class Executor {
                     );
                 } else {
                     if (mode !== ExecutorMode.silently) {
-                        terminal?.write(
-                            stderr, TerminalMessageStyle.warning
-                        );
+                        terminal?.write(stderr, TerminalMessageStyle.warning);
                     }
                     resolve({ stdout: stdout, stderr: stderr });
                 }

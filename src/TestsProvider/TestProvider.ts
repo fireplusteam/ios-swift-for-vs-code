@@ -1,25 +1,29 @@
-import * as vscode from 'vscode';
-import { TestFile } from './TestItemProvider/TestFile';
-import { TestCase } from './TestItemProvider/TestCase';
-import { TestProject } from './TestItemProvider/TestProject';
-import { ProjectManager } from '../ProjectManager/ProjectManager';
-import { TestTarget } from './TestItemProvider/TestTarget';
-import { emptyTestsLog } from '../utils';
-import { TestCaseAsyncParser } from './RawLogParsers/TestCaseAsyncParser';
-import { TestTreeContext } from './TestTreeContext';
-import { TestCaseProblemParser } from './RawLogParsers/TestCaseProblemParser';
-import { getWorkspacePath } from '../env';
+import * as vscode from "vscode";
+import { TestFile } from "./TestItemProvider/TestFile";
+import { TestCase } from "./TestItemProvider/TestCase";
+import { TestProject } from "./TestItemProvider/TestProject";
+import { ProjectManager } from "../ProjectManager/ProjectManager";
+import { TestTarget } from "./TestItemProvider/TestTarget";
+import { emptyTestsLog } from "../utils";
+import { TestCaseAsyncParser } from "./RawLogParsers/TestCaseAsyncParser";
+import { TestTreeContext } from "./TestTreeContext";
+import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
+import { getWorkspacePath } from "../env";
 
 enum TestProviderLoadingState {
     nonInitialized,
     loading,
     loaded,
-    error
+    error,
 }
 
 export class TestProvider {
     projectManager: ProjectManager;
-    executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>;
+    executeTests: (
+        tests: string[] | undefined,
+        isDebuggable: boolean,
+        testRun: vscode.TestRun
+    ) => Promise<boolean>;
     context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser();
     asyncTestCaseParser = new TestCaseProblemParser();
@@ -27,7 +31,15 @@ export class TestProvider {
     private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialized;
     private initialFilesLoadingPromise = Promise.resolve();
 
-    constructor(projectManager: ProjectManager, context: TestTreeContext, executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>) {
+    constructor(
+        projectManager: ProjectManager,
+        context: TestTreeContext,
+        executeTests: (
+            tests: string[] | undefined,
+            isDebuggable: boolean,
+            testRun: vscode.TestRun
+        ) => Promise<boolean>
+    ) {
         this.projectManager = projectManager;
         this.context = context;
         this.executeTests = executeTests;
@@ -72,7 +84,7 @@ export class TestProvider {
             };
 
             const runTestQueue = async () => {
-                const mapTests = new Map<string, { test: vscode.TestItem, data: TestCase }>();
+                const mapTests = new Map<string, { test: vscode.TestItem; data: TestCase }>();
                 const xcodebuildTestsIds: string[] = [];
                 for (const { test, data } of queue) {
                     run.appendOutput(`Running ${test.id}\r\n`);
@@ -84,10 +96,7 @@ export class TestProvider {
                             const xCodeBuildTest = data.getXCodeBuildTest();
                             const testId = data.getTestId();
                             xcodebuildTestsIds.push(xCodeBuildTest);
-                            mapTests.set(
-                                testId,
-                                { test: test, data: data }
-                            );
+                            mapTests.set(testId, { test: test, data: data });
                         } catch (error) {
                             run.failed(test, { message: "Test Case was not well parsed" });
                             console.error(`Test was not correctly parsed: ${test}`);
@@ -104,41 +113,59 @@ export class TestProvider {
                             const key = `${target}/${className}/${testName}()`;
                             const item = mapTests.get(key)?.test;
                             if (item) {
-                                run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
+                                run.appendOutput(
+                                    rawMessage.replaceAll("\n", "\n\r"),
+                                    undefined,
+                                    item
+                                );
                                 if (result === "passed") {
                                     run.passed(item, duration);
                                 } else if (result === "failed") {
-                                    const messages = await this.asyncTestCaseParser.parseAsyncLogs(rawMessage, item);
+                                    const messages = await this.asyncTestCaseParser.parseAsyncLogs(
+                                        rawMessage,
+                                        item
+                                    );
                                     run.failed(item, messages, duration);
                                 }
                                 mapTests.delete(key);
                             }
                             console.log("log");
-                        });
+                        }
+                    );
                     try {
-                        await this.executeTests(request.include === undefined ? undefined : xcodebuildTestsIds, request.profile?.kind === vscode.TestRunProfileKind.Debug, run);
+                        await this.executeTests(
+                            request.include === undefined ? undefined : xcodebuildTestsIds,
+                            request.profile?.kind === vscode.TestRunProfileKind.Debug,
+                            run
+                        );
                     } catch (error) {
                         console.log("error");
                         throw error;
                     } finally {
-                        await this.context.testResult.enumerateTestsResults((key) => {
-                            const item = mapTests.get(key)?.test;
-                            return item?.uri?.fsPath || key;
-                        }, (key, result, rawMessage, messages, duration) => {
-                            const item = mapTests.get(key)?.test;
-                            if (item) {
-                                run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
-                                if (result === "passed") {
-                                    run.passed(item, duration);
-                                } else if (result === "failed") {
-                                    run.failed(item, messages, duration);
+                        await this.context.testResult.enumerateTestsResults(
+                            key => {
+                                const item = mapTests.get(key)?.test;
+                                return item?.uri?.fsPath || key;
+                            },
+                            (key, result, rawMessage, messages, duration) => {
+                                const item = mapTests.get(key)?.test;
+                                if (item) {
+                                    run.appendOutput(
+                                        rawMessage.replaceAll("\n", "\n\r"),
+                                        undefined,
+                                        item
+                                    );
+                                    if (result === "passed") {
+                                        run.passed(item, duration);
+                                    } else if (result === "failed") {
+                                        run.failed(item, messages, duration);
+                                    }
+                                    mapTests.delete(key);
                                 }
-                                mapTests.delete(key);
                             }
-                        });
+                        );
                     }
-                }
-                catch (err) {
+                } catch (err) {
                     console.log(`Run with error: ${err}`);
                 } finally {
                     try {
@@ -155,17 +182,40 @@ export class TestProvider {
             };
             // resolve all tree before start testing
             await this.findInitialFiles(this.context.ctrl);
-            await discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(runTestQueue);
+            await discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(
+                runTestQueue
+            );
         };
 
         ctrl.refreshHandler = async () => {
             await this.findInitialFiles(ctrl);
         };
 
-        ctrl.createRunProfile('Run Tests', vscode.TestRunProfileKind.Run, runHandler, true, undefined, false);
-        ctrl.createRunProfile('Debug Tests', vscode.TestRunProfileKind.Debug, runHandler, true, undefined, false);
+        ctrl.createRunProfile(
+            "Run Tests",
+            vscode.TestRunProfileKind.Run,
+            runHandler,
+            true,
+            undefined,
+            false
+        );
+        ctrl.createRunProfile(
+            "Debug Tests",
+            vscode.TestRunProfileKind.Debug,
+            runHandler,
+            true,
+            undefined,
+            false
+        );
 
-        const coverageTestProfile = ctrl.createRunProfile('Run with Coverage', vscode.TestRunProfileKind.Coverage, runHandler, true, undefined, false);
+        const coverageTestProfile = ctrl.createRunProfile(
+            "Run with Coverage",
+            vscode.TestRunProfileKind.Coverage,
+            runHandler,
+            true,
+            undefined,
+            false
+        );
         coverageTestProfile.loadDetailedCoverage = async (_, coverage) => {
             return await this.context.coverage.getStatementCoverageFor(coverage);
         };
@@ -187,14 +237,16 @@ export class TestProvider {
         }
 
         context.subscriptions.push(
-            vscode.workspace.onDidOpenTextDocument(e => { this.updateNodeForDocument(e); }),
-            vscode.workspace.onDidChangeTextDocument(e => this.updateNodeForDocument(e.document)),
+            vscode.workspace.onDidOpenTextDocument(e => {
+                this.updateNodeForDocument(e);
+            }),
+            vscode.workspace.onDidChangeTextDocument(e => this.updateNodeForDocument(e.document))
         );
     }
 
     supportedFileExtensions(file: string) {
         // sourcekit-lsp supports only swift file at the moment, we need to use workaround like legacy code parsing code for swift
-        return (file.endsWith('.swift'));// || file.endsWith(".m") || file.endsWith(".mm"));
+        return file.endsWith(".swift"); // || file.endsWith(".m") || file.endsWith(".mm"));
     }
 
     isTestTarget(target: string) {
@@ -202,7 +254,7 @@ export class TestProvider {
     }
 
     async updateNodeForDocument(e: vscode.TextDocument) {
-        if (e.uri.scheme !== 'file') {
+        if (e.uri.scheme !== "file") {
             return;
         }
 
@@ -227,10 +279,15 @@ export class TestProvider {
         await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
         if ([...file.children].length === 0) {
             this.context.deleteItem(file.id);
-        }
-        else {
+        } else {
             this.context.addItem(file, root => {
-                return root.id === TestTreeContext.TestID("target://", TestTreeContext.getTargetFilePath(vscode.Uri.file(project), target));
+                return (
+                    root.id ===
+                    TestTreeContext.TestID(
+                        "target://",
+                        TestTreeContext.getTargetFilePath(vscode.Uri.file(project), target)
+                    )
+                );
             });
         }
     }
@@ -269,23 +326,28 @@ export class TestProvider {
                 "project://",
                 vscode.Uri.file(url),
                 () => {
-                    return new TestProject(this.context,
+                    return new TestProject(
+                        this.context,
                         async () => {
                             const targets = await this.projectManager.getProjectTargets();
-                            return targets.filter(e => { return this.isTestTarget(e); });
-                        }, async (targetName) => {
+                            return targets.filter(e => {
+                                return this.isTestTarget(e);
+                            });
+                        },
+                        async targetName => {
                             const files = await this.projectManager.getFilesForTarget(targetName);
-                            return files.filter(e => { return this.supportedFileExtensions(e); });
-                        });
+                            return files.filter(e => {
+                                return this.supportedFileExtensions(e);
+                            });
+                        }
+                    );
                 }
             );
             if (!data.didResolve) {
                 await data.updateFromDisk(controller, file);
             }
-            break; // only first target 
+            break; // only first target
         }
         return;
     }
 }
-
-

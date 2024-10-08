@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
-import { TestTreeContext } from '../TestTreeContext';
-import { TestFile } from './TestFile';
-import { TestContainer } from './TestContainer';
+import * as vscode from "vscode";
+import { TestTreeContext } from "../TestTreeContext";
+import { TestFile } from "./TestFile";
+import { TestContainer } from "./TestContainer";
 
 export class TestTarget implements TestContainer {
     public didResolve = false;
@@ -22,24 +22,25 @@ export class TestTarget implements TestContainer {
         }
     }
 
-    public async updateFromContents(controller: vscode.TestController, content: string, item: vscode.TestItem) {
+    public async updateFromContents(
+        controller: vscode.TestController,
+        content: string,
+        item: vscode.TestItem
+    ) {
         const parent = { item, children: [] as vscode.TestItem[] };
         const files = await this.filesForTargetProvider();
         for (const fileInTarget of files) {
             const url = vscode.Uri.file(fileInTarget);
-            const { file, data } = this.context.getOrCreateTest("file://", url,
-                () => {
-                    return new TestFile(this.context, item.label);
-                });
+            const { file, data } = this.context.getOrCreateTest("file://", url, () => {
+                return new TestFile(this.context, item.label);
+            });
 
             try {
                 if (!data.didResolve) {
                     await data.updateFromDisk(controller, file);
                 }
-                if ([...file.children].length > 0)
-                    parent.children.push(file);
-                else
-                    this.context.deleteItem(file.id);
+                if ([...file.children].length > 0) parent.children.push(file);
+                else this.context.deleteItem(file.id);
             } catch (err) {
                 console.log(`Tests for a file ${url} can not be updated: ${err}`);
                 this.context.deleteItem(file.id);

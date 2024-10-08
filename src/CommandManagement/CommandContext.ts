@@ -7,10 +7,10 @@ export const UserTerminatedError: Error = new Error("User Terminated");
 export const UserTerminalCloseError: Error = new Error("User Terminal Close");
 
 interface CommandOptions {
-    scriptOrCommand: ShellCommand | ShellFileScript,
-    args?: string[]
-    mode?: ExecutorMode
-    pipeToDebugConsole?: boolean
+    scriptOrCommand: ShellCommand | ShellFileScript;
+    args?: string[];
+    mode?: ExecutorMode;
+    pipeToDebugConsole?: boolean;
 }
 
 export class CommandContext {
@@ -33,55 +33,56 @@ export class CommandContext {
         return this._cancellationTokenSource.token;
     }
 
-    constructor(cancellationToken: vscode.CancellationTokenSource, terminal: TerminalShell | undefined) {
+    constructor(
+        cancellationToken: vscode.CancellationTokenSource,
+        terminal: TerminalShell | undefined
+    ) {
         this._cancellationTokenSource = cancellationToken;
         this._projectSettingsProvider = new ProjectSettingsProvider(this);
         this._terminal = terminal;
     }
 
-    public async execShellWithOptions(
-        shell: CommandOptions
-    ): Promise<ShellResult> {
-        const stdoutCallback = shell.pipeToDebugConsole ? (out: string) => {
-            this._debugConsoleEmitter.fire(out);
-        } : undefined;
+    public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {
+        const stdoutCallback = shell.pipeToDebugConsole
+            ? (out: string) => {
+                  this._debugConsoleEmitter.fire(out);
+              }
+            : undefined;
 
-        return await new Executor().execShell(
-            {
-                cancellationToken: this._cancellationTokenSource.token,
-                ...shell,
-                terminal: this._terminal,
-                stdoutCallback: stdoutCallback
-            }
-        );
+        return await new Executor().execShell({
+            cancellationToken: this._cancellationTokenSource.token,
+            ...shell,
+            terminal: this._terminal,
+            stdoutCallback: stdoutCallback,
+        });
     }
 
     public async execShell(
         terminalName: string,
         scriptOrCommand: ShellCommand | ShellFileScript,
         args: string[] = [],
-        mode: ExecutorMode = ExecutorMode.verbose,
+        mode: ExecutorMode = ExecutorMode.verbose
     ): Promise<ShellResult> {
         return await new Executor().execShell({
             cancellationToken: this._cancellationTokenSource.token,
             scriptOrCommand: scriptOrCommand,
             args: args,
             mode: mode,
-            terminal: this._terminal
+            terminal: this._terminal,
         });
     }
 
-    public async execShellParallel(
-        shell: CommandOptions
-    ): Promise<ShellResult> {
-        const stdoutCallback = shell.pipeToDebugConsole ? (out: string) => {
-            this._debugConsoleEmitter.fire(out);
-        } : undefined;
+    public async execShellParallel(shell: CommandOptions): Promise<ShellResult> {
+        const stdoutCallback = shell.pipeToDebugConsole
+            ? (out: string) => {
+                  this._debugConsoleEmitter.fire(out);
+              }
+            : undefined;
 
         return await new Executor().execShell({
             cancellationToken: this._cancellationTokenSource.token,
             ...shell,
-            stdoutCallback: stdoutCallback
+            stdoutCallback: stdoutCallback,
         });
     }
 
@@ -95,21 +96,27 @@ export class CommandContext {
                     resolve();
                     return;
                 }
-                disLocalCancel.push(this.cancellationToken.onCancellationRequested(() => {
-                    disLocalCancel.forEach(e => e.dispose());
-                    resolve();
-                }));
-                disLocalCancel.push(finishToken.event(() => {
-                    disLocalCancel.forEach(e => e.dispose());
-                    resolve();
-                }));
-                disLocalCancel.push(rejectToken.event((error) => {
-                    disLocalCancel.forEach(e => e.dispose());
-                    reject(error);
-                }));
+                disLocalCancel.push(
+                    this.cancellationToken.onCancellationRequested(() => {
+                        disLocalCancel.forEach(e => e.dispose());
+                        resolve();
+                    })
+                );
+                disLocalCancel.push(
+                    finishToken.event(() => {
+                        disLocalCancel.forEach(e => e.dispose());
+                        resolve();
+                    })
+                );
+                disLocalCancel.push(
+                    rejectToken.event(error => {
+                        disLocalCancel.forEach(e => e.dispose());
+                        reject(error);
+                    })
+                );
             }),
             token: finishToken,
-            rejectToken: rejectToken
+            rejectToken: rejectToken,
         };
     }
 

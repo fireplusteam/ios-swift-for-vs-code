@@ -1,7 +1,16 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { DebugDeviceIDMissedError, getFilePathInWorkspace, getLSPWorkspacePath, isActivated, isBuildServerValid, ProjectConfigurationMissedError, ProjectFileMissedError, ProjectSchemeMissedError } from "./env";
+import {
+    DebugDeviceIDMissedError,
+    getFilePathInWorkspace,
+    getLSPWorkspacePath,
+    isActivated,
+    isBuildServerValid,
+    ProjectConfigurationMissedError,
+    ProjectFileMissedError,
+    ProjectSchemeMissedError,
+} from "./env";
 import {
     checkWorkspace,
     enableXCBBuildService,
@@ -30,7 +39,7 @@ import { RuntimeWarningsLogWatcher } from "./XcodeSideTreePanel/RuntimeWarningsL
 import { RuntimeWarningsDataProvider } from "./XcodeSideTreePanel/RuntimeWarningsDataProvider";
 import { LLDBDapDescriptorFactory } from "./Debug/LLDBDapDescriptorFactory";
 import { DebugAdapterTrackerFactory } from "./Debug/DebugAdapterTrackerFactory";
-import * as fs from 'fs';
+import * as fs from "fs";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { SwiftLSPClient } from "./LSP/SwiftLSPClient";
 import { TestTreeContext } from "./TestsProvider/TestTreeContext";
@@ -44,10 +53,14 @@ function shouldInjectXCBBuildService() {
     return true;
 }
 
-async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectManager, autocompleteWatcher: AutocompleteWatcher) {
-    if (await isActivated() === false) {
+async function initialize(
+    atomicCommand: AtomicCommand,
+    projectManager: ProjectManager,
+    autocompleteWatcher: AutocompleteWatcher
+) {
+    if ((await isActivated()) === false) {
         try {
-            await atomicCommand.userCommand(async (context) => {
+            await atomicCommand.userCommand(async context => {
                 if (await selectProjectFile(context, projectManager, true, true)) {
                     await enableXCBBuildService(shouldInjectXCBBuildService());
                     autocompleteWatcher.triggerIncrementalBuild();
@@ -60,11 +73,13 @@ async function initialize(atomicCommand: AtomicCommand, projectManager: ProjectM
     } else {
         emptyLog(".logs/debugger.launching");
         try {
-            if (await isBuildServerValid() === false) {
-                await atomicCommand.userCommand(async (context) => {
+            if ((await isBuildServerValid()) === false) {
+                await atomicCommand.userCommand(async context => {
                     try {
                         await generateXcodeServer(context, false);
-                    } catch { /* empty */ }
+                    } catch {
+                        /* empty */
+                    }
                 }, "Initialize");
             }
         } catch {
@@ -86,20 +101,18 @@ let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
 
 export function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-    fs.mkdir(getFilePathInWorkspace(".logs"), () => { });
+    fs.mkdir(getFilePathInWorkspace(".logs"), () => {});
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     const logChannel = vscode.window.createOutputChannel("VSCode-iOS");
-    context.subscriptions.push(
-        logChannel
-    );
+    context.subscriptions.push(logChannel);
     logChannel.appendLine("Activated");
     const sourceLsp = new SwiftLSPClient(getLSPWorkspacePath(), logChannel);
 
@@ -125,22 +138,25 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 
     const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
-    vscode.window.registerTreeDataProvider('RuntimeWarningsProvider', runtimeWarningsDataProvider);
+    vscode.window.registerTreeDataProvider("RuntimeWarningsProvider", runtimeWarningsDataProvider);
     const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
 
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterDescriptorFactory(
             "xcode-lldb",
-            new LLDBDapDescriptorFactory(),
+            new LLDBDapDescriptorFactory()
         )
     );
     const debugSessionEndEvent = new vscode.EventEmitter<string>();
-    const debugAdapterFactory = new DebugAdapterTrackerFactory(problemDiagnosticResolver, debugSessionEndEvent);
-    context.subscriptions.push(
-        vscode.debug.registerDebugAdapterTrackerFactory('xcode-lldb', debugAdapterFactory)
+    const debugAdapterFactory = new DebugAdapterTrackerFactory(
+        problemDiagnosticResolver,
+        debugSessionEndEvent
     );
     context.subscriptions.push(
-        vscode.debug.registerDebugAdapterTrackerFactory('lldb', debugAdapterFactory)
+        vscode.debug.registerDebugAdapterTrackerFactory("xcode-lldb", debugAdapterFactory)
+    );
+    context.subscriptions.push(
+        vscode.debug.registerDebugAdapterTrackerFactory("lldb", debugAdapterFactory)
     );
 
     debugConfiguration = new DebugConfigurationProvider(
@@ -149,33 +165,49 @@ export async function activate(context: vscode.ExtensionContext) {
         debugSessionEndEvent.event
     );
 
-    testProvider = new TestProvider(projectManager,
+    testProvider = new TestProvider(
+        projectManager,
         new TestTreeContext(new LSPTestsProvider(sourceLsp)),
         async (tests, isDebuggable, testRun) => {
             if (tests) {
-                return await debugConfiguration.startIOSTestsForCurrentFileDebugger(tests, isDebuggable, testRun);
+                return await debugConfiguration.startIOSTestsForCurrentFileDebugger(
+                    tests,
+                    isDebuggable,
+                    testRun
+                );
             } else {
                 return await debugConfiguration.startIOSTestsDebugger(isDebuggable, testRun);
             }
-        });
+        }
+    );
     if (await isActivated()) {
         testProvider.activateTests(context);
     }
 
-    context.subscriptions.push(projectManager.onProjectUpdate.event(() => {
-        autocompleteWatcher?.triggerIncrementalBuild();
-    }));
-
-    context.subscriptions.push(projectManager.onProjectLoaded.event(() => {
-        testProvider?.initialize();
-    }));
-
     context.subscriptions.push(
-        vscode.tasks.registerTaskProvider(BuildTaskProvider.BuildScriptType, new BuildTaskProvider(problemDiagnosticResolver, atomicCommand))
+        projectManager.onProjectUpdate.event(() => {
+            autocompleteWatcher?.triggerIncrementalBuild();
+        })
     );
 
     context.subscriptions.push(
-        vscode.debug.registerDebugConfigurationProvider(DebugConfigurationProvider.Type, debugConfiguration)
+        projectManager.onProjectLoaded.event(() => {
+            testProvider?.initialize();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.tasks.registerTaskProvider(
+            BuildTaskProvider.BuildScriptType,
+            new BuildTaskProvider(problemDiagnosticResolver, atomicCommand)
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.debug.registerDebugConfigurationProvider(
+            DebugConfigurationProvider.Type,
+            debugConfiguration
+        )
     );
 
     // The command has been defined in the package.json file
@@ -185,7 +217,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.project.select", async () => {
             try {
-                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+                await atomicCommand.userCommandWithoutThrowingException(async context => {
                     if (projectManager === undefined) {
                         throw Error("project manager is not initialised");
                     }
@@ -200,7 +232,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.install", async () => {
             await tools.resolveThirdPartyTools(true);
-            await vscode.window.showInformationMessage("All Dependencies are installed successfully!");
+            await vscode.window.showInformationMessage(
+                "All Dependencies are installed successfully!"
+            );
         })
     );
     context.subscriptions.push(
@@ -210,76 +244,73 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.ksdiff", async (name: string, path1: string, path2: string) => {
-            ksdiff(name, path1, path2);
+        vscode.commands.registerCommand(
+            "vscode-ios.ksdiff",
+            async (name: string, path1: string, path2: string) => {
+                ksdiff(name, path1, path2);
+            }
+        )
+    );
+
+    vscode.commands.registerCommand(
+        "vscode-ios.openFile",
+        async (filePath: string, line: string) => {
+            const lineNumber = Number(line) - 1;
+            openFile(filePath, lineNumber);
+        }
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            "vscode-ios.env.open.xcode",
+            async (contextSelection: vscode.Uri) => {
+                if (contextSelection) {
+                    openXCode(contextSelection.fsPath);
+                } else {
+                    openXCode(vscode.window.activeTextEditor?.document.uri.fsPath || "");
+                }
+            }
+        )
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.project.selectTarget", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await selectTarget(context);
+            }, "Select Target");
         })
     );
 
-    vscode.commands.registerCommand("vscode-ios.openFile", async (filePath: string, line: string) => {
-        const lineNumber = Number(line) - 1;
-        openFile(filePath, lineNumber);
-    });
-
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.env.open.xcode", async (contextSelection: vscode.Uri) => {
-            if (contextSelection) {
-                openXCode(contextSelection.fsPath);
-            } else {
-                openXCode(vscode.window.activeTextEditor?.document.uri.fsPath || "");
-            }
+        vscode.commands.registerCommand("vscode-ios.project.selectConfiguration", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await selectConfiguration(context);
+            }, "Select Configuration");
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.project.selectTarget",
-            async () => {
-                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
-                    await selectTarget(context);
-                }, "Select Target");
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.project.selectConfiguration",
-            async () => {
-                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
-                    await selectConfiguration(context);
-                }, "Select Configuration");
-            }
-        )
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.project.selectDevice",
-            async () => {
-                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
-                    await selectDevice(context);
-                }, "Select DEBUG Device");
-            }
-        )
+        vscode.commands.registerCommand("vscode-ios.project.selectDevice", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await selectDevice(context);
+            }, "Select DEBUG Device");
+        })
     );
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.check.workspace", async () => {
-            await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
                 await checkWorkspace(context);
             }, "Validate Workspace");
         })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.check.generateXcodeServer",
-            async () => {
-                await atomicCommand.userCommandWithoutThrowingException(async (context) => {
-                    await generateXcodeServer(context);
-                }, "Generate Xcode Build Server");
-            }
-        )
+        vscode.commands.registerCommand("vscode-ios.check.generateXcodeServer", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await generateXcodeServer(context);
+            }, "Generate Xcode Build Server");
+        })
     );
 
     context.subscriptions.push(
@@ -289,27 +320,21 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.build.selectedTarget",
-            async () => {
-                await executeTask("Build");
-            }
-        )
+        vscode.commands.registerCommand("vscode-ios.build.selectedTarget", async () => {
+            await executeTask("Build");
+        })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand(
-            "vscode-ios.build.tests",
-            async () => {
-                await executeTask("Build Tests");
-            }
-        )
+        vscode.commands.registerCommand("vscode-ios.build.tests", async () => {
+            await executeTask("Build Tests");
+        })
     );
 
     let multiDevicesSessionCounter = 1;
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {
-            await atomicCommand.userCommandWithoutThrowingException(async (context) => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
                 const id = getSessionId(`multiple_devices`) + `_${multiDevicesSessionCounter}`;
                 multiDevicesSessionCounter++;
                 await runAppOnMultipleDevices(context, id, problemDiagnosticResolver);
@@ -327,31 +352,42 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.project.file.add", async (contextSelection: vscode.Uri) => {
-            const files = await vscode.window.showOpenDialog({
-                defaultUri: contextSelection,
-                openLabel: "Add",
-                canSelectFiles: true,
-                canSelectFolders: true,
-                canSelectMany: true,
-                filters: {
-                    "All Files": ["*"]
-                }
-            });
-            projectManager?.addAFileToXcodeProject(files);
-        })
+        vscode.commands.registerCommand(
+            "vscode-ios.project.file.add",
+            async (contextSelection: vscode.Uri) => {
+                const files = await vscode.window.showOpenDialog({
+                    defaultUri: contextSelection,
+                    openLabel: "Add",
+                    canSelectFiles: true,
+                    canSelectFolders: true,
+                    canSelectMany: true,
+                    filters: {
+                        "All Files": ["*"],
+                    },
+                });
+                projectManager?.addAFileToXcodeProject(files);
+            }
+        )
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.project.delete.reference", async (contextSelection: vscode.Uri, allSelections: vscode.Uri[]) => {
-            projectManager?.deleteFileFromXcodeProject(allSelections);
-        })
+        vscode.commands.registerCommand(
+            "vscode-ios.project.delete.reference",
+            async (contextSelection: vscode.Uri, allSelections: vscode.Uri[]) => {
+                projectManager?.deleteFileFromXcodeProject(allSelections);
+            }
+        )
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.project.file.edit.targets", async (contextSelection: vscode.Uri) => {
-            projectManager?.editFileTargets(contextSelection || vscode.window.activeTextEditor?.document.uri);
-        })
+        vscode.commands.registerCommand(
+            "vscode-ios.project.file.edit.targets",
+            async (contextSelection: vscode.Uri) => {
+                projectManager?.editFileTargets(
+                    contextSelection || vscode.window.activeTextEditor?.document.uri
+                );
+            }
+        )
     );
 
     context.subscriptions.push(
@@ -371,7 +407,11 @@ export async function deactivate() {
     // await projectExecutor.terminateShell();
 }
 
-export async function handleValidationErrors<T>(commandContext: CommandContext, error: unknown, repeatOnChange: () => Promise<T>) {
+export async function handleValidationErrors<T>(
+    commandContext: CommandContext,
+    error: unknown,
+    repeatOnChange: () => Promise<T>
+) {
     if (error === ProjectFileMissedError) {
         if (!projectManager) {
             throw Error("ProjectManager is not valid");

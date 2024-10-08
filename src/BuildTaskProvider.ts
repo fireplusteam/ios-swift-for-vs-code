@@ -36,7 +36,7 @@ export async function executeTask(name: string) {
 }
 
 export class BuildTaskProvider implements vscode.TaskProvider {
-    static BuildScriptType = 'vscode-ios-tasks';
+    static BuildScriptType = "vscode-ios-tasks";
 
     private problemResolver: ProblemDiagnosticResolver;
     private atomicCommand: AtomicCommand;
@@ -48,14 +48,14 @@ export class BuildTaskProvider implements vscode.TaskProvider {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async provideTasks(token?: vscode.CancellationToken): Promise<vscode.Task[]> {
-        if (await isActivated() === false) {
+        if ((await isActivated()) === false) {
             return [];
         }
 
         const buildSelectedTargetTask = this.createBuildTask(
             "Build",
             vscode.TaskGroup.Build,
-            async (context) => {
+            async context => {
                 await buildSelectedTarget(context, this.problemResolver);
             }
         );
@@ -63,7 +63,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         const buildTestsTask = this.createBuildTask(
             "Build Tests",
             vscode.TaskGroup.Build,
-            async (context) => {
+            async context => {
                 await buildTests(context, this.problemResolver);
             }
         );
@@ -71,7 +71,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         const cleanTask = this.createBuildTask(
             "Clean Derived Data",
             vscode.TaskGroup.Clean,
-            async (context) => {
+            async context => {
                 await cleanDerivedData(context);
             }
         );
@@ -79,8 +79,15 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return [buildTestsTask, buildSelectedTargetTask, cleanTask];
     }
 
-    private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: (context: CommandContext) => Promise<void>) {
-        const def: BuildTaskDefinition = { type: BuildTaskProvider.BuildScriptType, taskBuild: title };
+    private createBuildTask(
+        title: string,
+        group: vscode.TaskGroup,
+        commandClosure: (context: CommandContext) => Promise<void>
+    ) {
+        const def: BuildTaskDefinition = {
+            type: BuildTaskProvider.BuildScriptType,
+            taskBuild: title,
+        };
         const buildTask = new vscode.Task(
             def,
             vscode.TaskScope.Workspace,
@@ -91,7 +98,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         buildTask.group = group;
         buildTask.presentationOptions = {
             reveal: vscode.TaskRevealKind.Never,
-            close: true
+            close: true,
         };
         if (group === vscode.TaskGroup.Build) {
             buildTask.problemMatchers = ["$xcode"];
@@ -112,9 +119,12 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return undefined;
     }
 
-    private customExecution(successMessage: string, commandClosure: (context: CommandContext) => Promise<void>) {
+    private customExecution(
+        successMessage: string,
+        commandClosure: (context: CommandContext) => Promise<void>
+    ) {
         return new vscode.CustomExecution(() => {
-            return new Promise((resolved) => {
+            return new Promise(resolved => {
                 const writeEmitter = new vscode.EventEmitter<string>();
                 const closeEmitter = new vscode.EventEmitter<number>();
                 let commandContext: CommandContext | undefined = undefined;
@@ -122,11 +132,13 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                     open: async () => {
                         closeEmitter.fire(0); // this's a workaround to hide a task terminal as soon as possible to let executor terminal to do the main job. That has a side effect if that task would be used in a chain of tasks, then it's finished before process actually finishes
                         try {
-                            await this.atomicCommand.userCommand(async (context) => {
+                            await this.atomicCommand.userCommand(async context => {
                                 commandContext = context;
                                 await commandClosure(context);
                             }, successMessage);
-                        } catch (err) { /* empty */ }
+                        } catch (err) {
+                            /* empty */
+                        }
                     },
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,

@@ -25,16 +25,21 @@ function shouldAskTerminateCurrentTask() {
 export class AtomicCommand {
     private _mutex = new Mutex();
     private _executingCommand: "user" | "autowatcher" | undefined = undefined;
-    private latestOperationID: { id: number, type: "user" | "autowatcher" | undefined } = { id: 0, type: undefined };
+    private latestOperationID: { id: number; type: "user" | "autowatcher" | undefined } = {
+        id: 0,
+        type: undefined,
+    };
     private _prevCommandContext?: CommandContext;
 
     private userTerminal = new TerminalShell("User");
     private watcherTerminal = new TerminalShell("Watch");
 
-    constructor() {
-    }
+    constructor() {}
 
-    async userCommandWithoutThrowingException(commandClosure: (commandContext: CommandContext) => Promise<void>, taskName: string | undefined) {
+    async userCommandWithoutThrowingException(
+        commandClosure: (commandContext: CommandContext) => Promise<void>,
+        taskName: string | undefined
+    ) {
         try {
             await this.userCommand(commandClosure, taskName);
         } catch (err) {
@@ -59,18 +64,19 @@ export class AtomicCommand {
                 }
             }
             release = await this._mutex.acquire();
-            if (currentOperationID !== this.latestOperationID)
-                throw E_CANCELED;
+            if (currentOperationID !== this.latestOperationID) throw E_CANCELED;
             this._executingCommand = "autowatcher";
-            const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this.watcherTerminal);
+            const commandContext = new CommandContext(
+                new vscode.CancellationTokenSource(),
+                this.watcherTerminal
+            );
             this._prevCommandContext = commandContext;
             this.watcherTerminal.terminalName = "Watcher";
             await this.withCancellation(async () => {
                 await commandClosure(commandContext);
             }, commandContext.cancellationToken);
             this.watcherTerminal.success();
-        }
-        catch (error) {
+        } catch (error) {
             if (error !== UserCommandIsExecuting) {
                 if (error === UserTerminatedError) {
                     this.watcherTerminal.cancel();
@@ -83,12 +89,14 @@ export class AtomicCommand {
         } finally {
             this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
-            if (release)
-                release();
+            if (release) release();
         }
     }
 
-    private async withCancellation<T>(closure: () => Promise<T>, cancellation: vscode.CancellationToken) {
+    private async withCancellation<T>(
+        closure: () => Promise<T>,
+        cancellation: vscode.CancellationToken
+    ) {
         let dis: vscode.Disposable;
         return new Promise<T>(async (resolve, reject) => {
             try {
@@ -103,7 +111,10 @@ export class AtomicCommand {
         });
     }
 
-    async userCommand<T>(commandClosure: (commandContext: CommandContext) => Promise<T>, taskName: string | undefined) {
+    async userCommand<T>(
+        commandClosure: (commandContext: CommandContext) => Promise<T>,
+        taskName: string | undefined
+    ) {
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
@@ -128,24 +139,23 @@ export class AtomicCommand {
                 }
             }
             releaser = await this._mutex.acquire();
-            if (currentOperationID !== this.latestOperationID)
-                throw E_CANCELED;
+            if (currentOperationID !== this.latestOperationID) throw E_CANCELED;
             this._executingCommand = "user";
-            const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this.userTerminal);
+            const commandContext = new CommandContext(
+                new vscode.CancellationTokenSource(),
+                this.userTerminal
+            );
             this._prevCommandContext = commandContext;
-            if (taskName)
-                this.userTerminal.terminalName = `User: ${taskName}`;
+            if (taskName) this.userTerminal.terminalName = `User: ${taskName}`;
             result = await this.withCancellation(async () => {
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
-            if (taskName)
-                this.userTerminal.success();
+            if (taskName) this.userTerminal.success();
 
             return result;
         } catch (err) {
             if (err !== UserCommandIsExecuting && taskName) {
-                if (err === UserTerminatedError)
-                    this.userTerminal.cancel();
+                if (err === UserTerminatedError) this.userTerminal.cancel();
                 else if (err !== UserTerminalCloseError) {
                     this.userTerminal.error();
                     this.userTerminal.write(`${err}\n`, TerminalMessageStyle.error);
@@ -155,12 +165,11 @@ export class AtomicCommand {
             if (err instanceof ExecutorTaskError) {
                 if (isShowErrorEnabled()) {
                     const error = err as ExecutorTaskError;
-                    vscode.window.showErrorMessage(error.message, "Show log")
-                        .then((option) => {
-                            if (option === "Show log") {
-                                error.terminal?.show();
-                            }
-                        });
+                    vscode.window.showErrorMessage(error.message, "Show log").then(option => {
+                        if (option === "Show log") {
+                            error.terminal?.show();
+                        }
+                    });
                 }
                 throw err;
             } else if (err instanceof ExecutorTerminated) {
@@ -178,8 +187,7 @@ export class AtomicCommand {
         } finally {
             this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
-            if (releaser)
-                releaser();
+            if (releaser) releaser();
         }
     }
 }

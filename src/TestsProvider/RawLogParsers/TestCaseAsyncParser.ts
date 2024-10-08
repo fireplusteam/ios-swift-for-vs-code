@@ -1,26 +1,32 @@
-import { ChildProcess, SpawnOptions, spawn } from 'child_process';
-import * as vscode from 'vscode';
+import { ChildProcess, SpawnOptions, spawn } from "child_process";
+import * as vscode from "vscode";
 
 // eslint-disable-next-line no-useless-escape
-const testCaseRe = /^(Test Case\s\'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)^((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm;
+const testCaseRe =
+    /^(Test Case\s'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)^((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm;
 
 export class TestCaseAsyncParser {
-
     disposable: vscode.Disposable[] = [];
 
     buildErrors = new Set<string>();
 
-    constructor() {
-    }
+    constructor() {}
 
     private watcherProc: ChildProcess | undefined;
 
     async parseAsyncLogs(
         workspacePath: string,
         filePath: string,
-        onMessage: (result: string, rawMessage: string, target: string, className: string, testName: string, duration: number
-        ) => void) {
-        return new Promise<void>((resolve) => {
+        onMessage: (
+            result: string,
+            rawMessage: string,
+            target: string,
+            className: string,
+            testName: string,
+            duration: number
+        ) => void
+    ) {
+        return new Promise<void>(resolve => {
             if (this.watcherProc !== undefined) {
                 this.watcherProc.kill();
             }
@@ -28,18 +34,14 @@ export class TestCaseAsyncParser {
             const options: SpawnOptions = {
                 cwd: workspacePath,
                 shell: true,
-                stdio: "pipe"
+                stdio: "pipe",
             };
-            const child = spawn(
-                `tail`,
-                ["-f", `"${filePath}"`],
-                options
-            );
+            const child = spawn(`tail`, ["-f", `"${filePath}"`], options);
 
             let stdout = "";
             const decoder = new TextDecoder("utf-8");
 
-            child.stdout?.on("data", async (data) => {
+            child.stdout?.on("data", async data => {
                 stdout += decoder.decode(data);
                 let lastErrorIndex = -1;
                 const matches = [...stdout.matchAll(testCaseRe)];

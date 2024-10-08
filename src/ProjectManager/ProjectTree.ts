@@ -2,7 +2,7 @@ import path from "path";
 
 type Node = {
     isVisible: boolean;
-    isLeaf: boolean,
+    isLeaf: boolean;
     edges: Map<string, [string, Node]> | null;
 };
 
@@ -32,8 +32,7 @@ export class ProjectTree {
     excludedFiles() {
         const list: string[] = [];
         function excludedFiles(node: Node | undefined, filePath: string) {
-            if (node === undefined)
-                return;
+            if (node === undefined) return;
             if (node.isLeaf && node.isVisible) {
                 return;
             }
@@ -56,15 +55,19 @@ export class ProjectTree {
         return list;
     }
 
-    private add(node: Node | undefined, components: string[], isVisible: boolean, index: number, includeSubfolders: boolean) {
-        if (node === undefined)
-            return;
+    private add(
+        node: Node | undefined,
+        components: string[],
+        isVisible: boolean,
+        index: number,
+        includeSubfolders: boolean
+    ) {
+        if (node === undefined) return;
         if (index >= components.length) {
             if (!isVisible) {
                 return;
             }
-            if (includeSubfolders)
-                node.isLeaf = true; // if it's visible, tells that's a leaf
+            if (includeSubfolders) node.isLeaf = true; // if it's visible, tells that's a leaf
             return;
         }
         if (isVisible) {
@@ -75,11 +78,14 @@ export class ProjectTree {
         }
         const edges = node.edges || new Map<string, [string, Node]>();
         if (!edges.has(components[index].toLowerCase())) {
-            edges.set(components[index].toLowerCase(), [components[index], {
-                isVisible: isVisible,
-                isLeaf: index === components.length - 1 && includeSubfolders ? true : false,
-                edges: null
-            }]);
+            edges.set(components[index].toLowerCase(), [
+                components[index],
+                {
+                    isVisible: isVisible,
+                    isLeaf: index === components.length - 1 && includeSubfolders ? true : false,
+                    edges: null,
+                },
+            ]);
         }
         node.edges = edges;
         const key = edges.get(components[index].toLowerCase());

@@ -13,10 +13,7 @@ export class RuntimeWarningStackNode extends vscode.TreeItem {
         this.command = {
             title: "Open location",
             command: "vscode-ios.openFile",
-            arguments: [
-                filePath,
-                line
-            ]
+            arguments: [filePath, line],
         };
     }
 }
@@ -27,12 +24,13 @@ export class RuntimeWarningMessageNode extends vscode.TreeItem {
 
     constructor(message: string, count: number, id: string) {
         let startIndex = message.lastIndexOf("] ");
-        if (startIndex === -1)
-            startIndex = 0;
-        else
-            startIndex += "] ".length;
+        if (startIndex === -1) startIndex = 0;
+        else startIndex += "] ".length;
 
-        super(`(${count})${message.substring(startIndex)}`, vscode.TreeItemCollapsibleState.Collapsed);
+        super(
+            `(${count})${message.substring(startIndex)}`,
+            vscode.TreeItemCollapsibleState.Collapsed
+        );
         this.description = message;
         this.id = id;
         this.count = count;
@@ -85,9 +83,7 @@ export class RuntimeWarningsDataProvider implements vscode.TreeDataProvider<vsco
             return Promise.resolve([]);
         } else {
             // return root elements
-            return Promise.resolve(
-                this.warnings
-            );
+            return Promise.resolve(this.warnings);
         }
     }
 }

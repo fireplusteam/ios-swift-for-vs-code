@@ -5,7 +5,7 @@ export enum TerminalMessageStyle {
     success,
     command,
     error,
-    warning
+    warning,
 }
 
 export class TerminalShell {

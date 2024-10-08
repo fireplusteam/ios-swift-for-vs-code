@@ -1,19 +1,27 @@
 import * as vscode from "vscode";
-import * as fs from 'fs';
-import { getBuildRootPath, getFilePathInWorkspace, getProjectFileName, getProjectFolderPath, getProjectPath, getWorkspaceId, getWorkspacePath, isActivated } from "../env";
-import * as parser from 'fast-xml-parser';
+import * as fs from "fs";
+import {
+    getBuildRootPath,
+    getFilePathInWorkspace,
+    getProjectFileName,
+    getProjectFolderPath,
+    getProjectPath,
+    getWorkspaceId,
+    getWorkspacePath,
+    isActivated,
+} from "../env";
+import * as parser from "fast-xml-parser";
 import { exec } from "child_process";
 import path from "path";
 import { fileNameFromPath, isFileMoved, isFolder } from "../utils";
 import { ProjectTree } from "./ProjectTree";
-import { glob } from 'glob';
+import { glob } from "glob";
 import { ProjectsCache } from "./ProjectsCache";
 import { error } from "console";
 import { QuickPickItem, showPicker } from "../inputPicker";
 import { XcodeProjectFileProxy } from "./XcodeProjectFileProxy";
 
 export class ProjectManager {
-
     private disposable: vscode.Disposable[] = [];
 
     private projectCache = new ProjectsCache();
@@ -23,23 +31,38 @@ export class ProjectManager {
     onUpdateDeps: (() => Promise<void>) | undefined;
 
     constructor() {
-        this.disposable.push(vscode.workspace.onDidCreateFiles(async e => {
-            this.addAFileToXcodeProject([...e.files]);
-            console.log("Create a new file");
-        }));
+        this.disposable.push(
+            vscode.workspace.onDidCreateFiles(async e => {
+                this.addAFileToXcodeProject([...e.files]);
+                console.log("Create a new file");
+            })
+        );
 
-        this.disposable.push(vscode.workspace.onDidRenameFiles(e => {
-            this.renameFile(e.files.map(f => { return f.oldUri; }), e.files.map(f => { return f.newUri; }));
-            console.log("Renamed");
-        }));
+        this.disposable.push(
+            vscode.workspace.onDidRenameFiles(e => {
+                this.renameFile(
+                    e.files.map(f => {
+                        return f.oldUri;
+                    }),
+                    e.files.map(f => {
+                        return f.newUri;
+                    })
+                );
+                console.log("Renamed");
+            })
+        );
 
-        this.disposable.push(vscode.workspace.onDidDeleteFiles(e => {
-            this.deleteFileFromXcodeProject([...e.files]);
-            console.log("Deleted");
-        }));
-        this.disposable.push(this.projectCache.onProjectChanged.event(() => {
-            this.touch();
-        }));
+        this.disposable.push(
+            vscode.workspace.onDidDeleteFiles(e => {
+                this.deleteFileFromXcodeProject([...e.files]);
+                console.log("Deleted");
+            })
+        );
+        this.disposable.push(
+            this.projectCache.onProjectChanged.event(() => {
+                this.touch();
+            })
+        );
 
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
     }
@@ -61,8 +84,11 @@ export class ProjectManager {
         const projects = project === undefined ? this.projectCache.getProjects() : [project];
         for (const project of projects) {
             if (this.projectCache.getList(project).has(file)) {
-                return (await listTargetsForFile(getFilePathInWorkspace(project), file))
-                    .filter(e => { return e.length > 0; });
+                return (await listTargetsForFile(getFilePathInWorkspace(project), file)).filter(
+                    e => {
+                        return e.length > 0;
+                    }
+                );
             }
         }
         return [];
@@ -91,23 +117,33 @@ export class ProjectManager {
         const projects = await getProjectFiles(await getProjectPath());
 
         const wasLoadedWithError = [] as string[];
-        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Loading Project" }, async (progress) => {
-            for (const [index, project] of projects.entries()) {
-                progress.report({ increment: 100 * index / (project.length + 1), message: fileNameFromPath(project) });
-                try {
-                    await this.projectCache.update(project);
-                    await this.readAllProjects(this.projectCache.getList(project));
-                } catch {
-                    console.log(error);
-                    wasLoadedWithError.push(fileNameFromPath(project));
+        await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: "Loading Project" },
+            async progress => {
+                for (const [index, project] of projects.entries()) {
+                    progress.report({
+                        increment: (100 * index) / (project.length + 1),
+                        message: fileNameFromPath(project),
+                    });
+                    try {
+                        await this.projectCache.update(project);
+                        await this.readAllProjects(this.projectCache.getList(project));
+                    } catch {
+                        console.log(error);
+                        wasLoadedWithError.push(fileNameFromPath(project));
+                    }
                 }
+                progress.report({ increment: 1, message: "Generating workspace..." });
+                await this.generateWorkspace();
             }
-            progress.report({ increment: 1, message: "Generating workspace..." });
-            await this.generateWorkspace();
-        });
+        );
 
         if (wasLoadedWithError.length > 0) {
-            const option = await vscode.window.showErrorMessage(`Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}. Update dependencies and retry?`, "Update Dependencies", "Cancel");
+            const option = await vscode.window.showErrorMessage(
+                `Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}. Update dependencies and retry?`,
+                "Update Dependencies",
+                "Cancel"
+            );
             if (option === "Update Dependencies" && this.onUpdateDeps !== undefined) {
                 await this.onUpdateDeps();
                 this.loadProjectFiles(shouldDropCache);
@@ -130,7 +166,10 @@ export class ProjectManager {
         const projectTree = new ProjectTree();
 
         // add all project first as they are visible
-        for (const file of [...this.projectCache.files(), ...await this.getAdditionalIncludedFiles()]) {
+        for (const file of [
+            ...this.projectCache.files(),
+            ...(await this.getAdditionalIncludedFiles()),
+        ]) {
             projectTree.addIncluded(file);
         }
         for (const folder of [...this.projectCache.files(true)]) {
@@ -140,9 +179,13 @@ export class ProjectManager {
         projectTree.addIncluded(getFilePathInWorkspace(".logs"));
         projectTree.addIncluded(getFilePathInWorkspace((await this.getProjects()).at(0) || ""));
 
-        // now try to go over all subfolder and exclude every single file which is not in the project files 
+        // now try to go over all subfolder and exclude every single file which is not in the project files
         const visitedFolders = new Set<string>();
-        for (const file of [getWorkspacePath(), ...this.projectCache.files(), ...this.projectCache.files(true)]) {
+        for (const file of [
+            getWorkspacePath(),
+            ...this.projectCache.files(),
+            ...this.projectCache.files(true),
+        ]) {
             const relative = path.relative(getWorkspacePath(), file);
             if (relative.startsWith("..")) {
                 continue;
@@ -154,16 +197,13 @@ export class ProjectManager {
                 if (!visitedFolders.has(compPath)) {
                     visitedFolders.add(compPath);
                     try {
-                        const files = await glob(
-                            "*",
-                            {
-                                absolute: true,
-                                cwd: path.join(getWorkspacePath(), compPath),
-                                dot: true,
-                                nodir: false,
-                                ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}"
-                            }
-                        );
+                        const files = await glob("*", {
+                            absolute: true,
+                            cwd: path.join(getWorkspacePath(), compPath),
+                            dot: true,
+                            nodir: false,
+                            ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
+                        });
                         for (const file of files) {
                             projectTree.addExcluded(file);
                         }
@@ -182,24 +222,23 @@ export class ProjectManager {
             excludedFilesDict[relative] = true;
         }
         const workspaceName = `${getWorkspacePath().split(path.sep).at(-1)}/${getProjectFileName()}`;
-        const xCodeWorkspace =
-        {
+        const xCodeWorkspace = {
             folders: [
                 {
                     name: workspaceName,
-                    path: "../.."
-                }
+                    path: "../..",
+                },
             ],
             settings: {
                 "files.exclude": excludedFilesDict,
-                "search.exclude": excludedFilesDict
-            }
+                "search.exclude": excludedFilesDict,
+            },
         };
         const buildRootPath = getBuildRootPath();
         if (buildRootPath !== undefined) {
             xCodeWorkspace.folders.push({
                 name: "Dependencies",
-                path: path.join(buildRootPath, "SourcePackages", "checkouts")
+                path: path.join(buildRootPath, "SourcePackages", "checkouts"),
             });
         }
 
@@ -212,8 +251,8 @@ export class ProjectManager {
             const json = fs.readFileSync(
                 path.join(
                     getWorkspacePath(),
-                    `${(await getProjectFileName()).split(".").slice(0, -1).join(".")}.files.json`)
-                ,
+                    `${(await getProjectFileName()).split(".").slice(0, -1).join(".")}.files.json`
+                ),
                 "utf-8"
             );
 
@@ -221,19 +260,18 @@ export class ProjectManager {
             const resFiles = new Set<string>();
 
             for (const pattern of obj.files) {
-                const cwd = path.join(getFilePathInWorkspace(await getProjectFolderPath()), pattern.search.cwd);
-                const files = await glob(
-                    pattern.search.include,
-                    {
-                        absolute: true,
-                        cwd: cwd,
-                        dot: pattern.search.dot,
-                        nodir: pattern.search.nodir,
-                        ignore: pattern.search.ignore
-                    }
+                const cwd = path.join(
+                    getFilePathInWorkspace(await getProjectFolderPath()),
+                    pattern.search.cwd
                 );
-                for (const file of files)
-                    resFiles.add(file);
+                const files = await glob(pattern.search.include, {
+                    absolute: true,
+                    cwd: cwd,
+                    dot: pattern.search.dot,
+                    nodir: pattern.search.nodir,
+                    ignore: pattern.search.ignore,
+                });
+                for (const file of files) resFiles.add(file);
             }
 
             return resFiles;
@@ -250,7 +288,10 @@ export class ProjectManager {
                 console.log(e);
                 try {
                     if (e === null) {
-                        if (vscode.workspace.workspaceFile?.fsPath !== await this.xCodeWorkspacePath()) {
+                        if (
+                            vscode.workspace.workspaceFile?.fsPath !==
+                            (await this.xCodeWorkspacePath())
+                        ) {
                             await this.openXCodeWorkspace(await this.xCodeWorkspacePath());
                             reject(new Error("Opening in Workspace")); // xcode workspace is reloading, reject further execution
                             return;
@@ -273,22 +314,26 @@ export class ProjectManager {
     }
 
     private async xCodeCachePath() {
-        return getFilePathInWorkspace(path.join(this.cachePath(), `${await getWorkspaceId()}_projects.json`));
+        return getFilePathInWorkspace(
+            path.join(this.cachePath(), `${await getWorkspaceId()}_projects.json`)
+        );
     }
 
     private async xCodeWorkspacePath() {
-        return getFilePathInWorkspace(path.join(this.cachePath(), `${await getWorkspaceId()}.code-workspace`));
+        return getFilePathInWorkspace(
+            path.join(this.cachePath(), `${await getWorkspaceId()}.code-workspace`)
+        );
     }
 
     private async openXCodeWorkspace(file: string) {
-        await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(file));
+        await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(file));
     }
 
     private async isAllowed() {
-        if (await isActivated() === false) {
+        if ((await isActivated()) === false) {
             return false;
         }
-        if (await getProjectFileName() === "Package.swift") {
+        if ((await getProjectFileName()) === "Package.swift") {
             return false;
         }
         return true;
@@ -317,14 +362,30 @@ export class ProjectManager {
                         if (isFolder(file.fsPath)) {
                             // rename folder
                             if (isFileMoved(oldFile.fsPath, file.fsPath))
-                                await moveFolderToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                                await moveFolderToProject(
+                                    getFilePathInWorkspace(project),
+                                    oldFile.fsPath,
+                                    file.fsPath
+                                );
                             else
-                                await renameFolderToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                                await renameFolderToProject(
+                                    getFilePathInWorkspace(project),
+                                    oldFile.fsPath,
+                                    file.fsPath
+                                );
                         } else {
                             if (isFileMoved(oldFile.fsPath, file.fsPath))
-                                await moveFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                                await moveFileToProject(
+                                    getFilePathInWorkspace(project),
+                                    oldFile.fsPath,
+                                    file.fsPath
+                                );
                             else
-                                await renameFileToProject(getFilePathInWorkspace(project), oldFile.fsPath, file.fsPath);
+                                await renameFileToProject(
+                                    getFilePathInWorkspace(project),
+                                    oldFile.fsPath,
+                                    file.fsPath
+                                );
                         }
                     } catch (err) {
                         console.log(err);
@@ -361,9 +422,16 @@ export class ProjectManager {
                     try {
                         const list = this.projectCache.getList(project);
                         if (list.has(file.fsPath)) {
-                            await deleteFileFromProject(getFilePathInWorkspace(project), file.fsPath);
-                        } else { // folder
-                            await deleteFolderFromProject(getFilePathInWorkspace(project), file.fsPath);
+                            await deleteFileFromProject(
+                                getFilePathInWorkspace(project),
+                                file.fsPath
+                            );
+                        } else {
+                            // folder
+                            await deleteFolderFromProject(
+                                getFilePathInWorkspace(project),
+                                file.fsPath
+                            );
                         }
                     } catch (err) {
                         console.log(err);
@@ -410,24 +478,35 @@ export class ProjectManager {
         if (!this.isAllowed()) {
             return;
         }
-        if (!file)
-            return;
+        if (!file) return;
         const projectFiles = this.projectCache.getProjects();
         const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
-        if (selectedProject.length !== 1)
-            return;
+        if (selectedProject.length !== 1) return;
 
-        const fileTargets = await listTargetsForFile(getFilePathInWorkspace(selectedProject[0]), file.fsPath);
+        const fileTargets = await listTargetsForFile(
+            getFilePathInWorkspace(selectedProject[0]),
+            file.fsPath
+        );
         const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject[0]));
         const items: QuickPickItem[] = sortTargets(targets, fileTargets);
-        let selectedTargets = await showPicker(items, "Edit targets of a file", "", true, false, false);
+        let selectedTargets = await showPicker(
+            items,
+            "Edit targets of a file",
+            "",
+            true,
+            false,
+            false
+        );
 
-        if (selectedTargets === undefined)
-            return;
+        if (selectedTargets === undefined) return;
 
         selectedTargets = selectedTargets.join(",");
 
-        await updateFileToProject(getFilePathInWorkspace(selectedProject[0]), selectedTargets, file.fsPath);
+        await updateFileToProject(
+            getFilePathInWorkspace(selectedProject[0]),
+            selectedTargets,
+            file.fsPath
+        );
         await saveProject(getFilePathInWorkspace(selectedProject[0]));
     }
 
@@ -445,15 +524,17 @@ export class ProjectManager {
         let fileList: vscode.Uri[] = [];
         if (files instanceof vscode.Uri) {
             fileList = [files as vscode.Uri];
-        }
-        else {
+        } else {
             fileList = files as vscode.Uri[];
-            if (fileList.length === 0)
-                return;
+            if (fileList.length === 0) return;
         }
 
         const projectFiles = this.projectCache.getProjects();
-        const selectedProject: string | undefined = await this.selectBestFitProject("Select A Project File to Add a new Files", fileList[0], projectFiles);
+        const selectedProject: string | undefined = await this.selectBestFitProject(
+            "Select A Project File to Add a new Files",
+            fileList[0],
+            projectFiles
+        );
         if (selectedProject === undefined) {
             return;
         }
@@ -465,16 +546,13 @@ export class ProjectManager {
         for (const path of paths) {
             if (path.isFolder) {
                 // add all files in subfolders
-                const files = await glob.glob(
-                    "**",
-                    {
-                        absolute: true,
-                        cwd: path.path.fsPath,
-                        dot: true,
-                        nodir: false,
-                        ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}"
-                    }
-                );
+                const files = await glob.glob("**", {
+                    absolute: true,
+                    cwd: path.path.fsPath,
+                    dot: true,
+                    nodir: false,
+                    ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
+                });
                 for (const file of files) {
                     if (file !== path.path.fsPath)
                         paths.push({ path: vscode.Uri.file(file), isFolder: isFolder(file) });
@@ -487,7 +565,10 @@ export class ProjectManager {
         const allFilesInProject = this.projectCache.getList(selectedProject, false);
         for (const filePath of paths) {
             if (!filePath.isFolder) {
-                const localFolder = filePath.path.fsPath.split(path.sep).slice(0, -1).join(path.sep);
+                const localFolder = filePath.path.fsPath
+                    .split(path.sep)
+                    .slice(0, -1)
+                    .join(path.sep);
                 if (!allFilesInProject.has(localFolder)) {
                     foldersToAdd.add(localFolder);
                 }
@@ -497,15 +578,24 @@ export class ProjectManager {
                 foldersToAdd.add(filePath.path.fsPath);
             }
         }
-        if (filesToAdd.size === 0 && foldersToAdd.size === 0)
-            return;
+        if (filesToAdd.size === 0 && foldersToAdd.size === 0) return;
 
         let selectedTargets: string | undefined;
         if (filesToAdd.size > 0) {
-            const proposedTargets = await this.determineTargetForFile([...filesToAdd][0], selectedProject);
+            const proposedTargets = await this.determineTargetForFile(
+                [...filesToAdd][0],
+                selectedProject
+            );
             const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
             const items = sortTargets(targets, proposedTargets);
-            const selectedTargetsArray = await showPicker(items, "Select Targets for The Files", "", true, true, false);
+            const selectedTargetsArray = await showPicker(
+                items,
+                "Select Targets for The Files",
+                "",
+                true,
+                true,
+                false
+            );
             if (selectedTargetsArray === undefined) {
                 return;
             }
@@ -531,13 +621,19 @@ export class ProjectManager {
         const bestFitProject = await this.determineProjectFile(file.fsPath, projectFiles);
         let selectedProject: string | undefined;
         if (bestFitProject.length === 0) {
-            selectedProject = await vscode.window.showQuickPick(projectFiles, { title: title, canPickMany: false, ignoreFocusOut: true });
+            selectedProject = await vscode.window.showQuickPick(projectFiles, {
+                title: title,
+                canPickMany: false,
+                ignoreFocusOut: true,
+            });
         } else {
             if (bestFitProject.length > 1)
-                selectedProject = await vscode.window.showQuickPick(bestFitProject, { title: title, canPickMany: false, ignoreFocusOut: true });
-
-            else
-                selectedProject = bestFitProject[0];
+                selectedProject = await vscode.window.showQuickPick(bestFitProject, {
+                    title: title,
+                    canPickMany: false,
+                    ignoreFocusOut: true,
+                });
+            else selectedProject = bestFitProject[0];
         }
         return selectedProject;
     }
@@ -549,12 +645,14 @@ export class ProjectManager {
             const neighborFiles = await vscode.workspace.findFiles({
                 baseUri: vscode.Uri.file(fileSubpath),
                 base: fileSubpath,
-                pattern: "*"
+                pattern: "*",
             });
             for (const file of neighborFiles) {
-                if (file.fsPath === filePath)
-                    continue;
-                const targets = await listTargetsForFile(getFilePathInWorkspace(project), file.fsPath);
+                if (file.fsPath === filePath) continue;
+                const targets = await listTargetsForFile(
+                    getFilePathInWorkspace(project),
+                    file.fsPath
+                );
                 if (targets.length > 0) {
                     return targets;
                 }
@@ -573,7 +671,12 @@ export class ProjectManager {
             const files = this.projectCache.getList(project, false);
             for (const file of files) {
                 const fileComponent = file.split(path.sep);
-                for (let i = 0; i < Math.min(fileComponent.length, filePathComponent.length) && fileComponent[i] === filePathComponent[i]; ++i) {
+                for (
+                    let i = 0;
+                    i < Math.min(fileComponent.length, filePathComponent.length) &&
+                    fileComponent[i] === filePathComponent[i];
+                    ++i
+                ) {
                     if (i > largestCommonPrefix) {
                         largestCommonPrefix = i;
                         bestFitProject.clear();
@@ -584,8 +687,7 @@ export class ProjectManager {
                             bestFitProject.clear();
                             relativeFileLength = file.length;
                             bestFitProject.add(project);
-                        } else if (file.length === relativeFileLength)
-                            bestFitProject.add(project);
+                        } else if (file.length === relativeFileLength) bestFitProject.add(project);
                     }
                 }
             }
@@ -595,23 +697,30 @@ export class ProjectManager {
 }
 
 function sortTargets(targets: string[], fileTargets: string[]): QuickPickItem[] {
-    return targets.map((target, index) => {
-        return { label: target, value: target, picked: fileTargets.includes(target), index: index };
-    }).sort((a, b) => {
-        if (a.picked !== b.picked) {
-            return Number(b.picked) - Number(a.picked);
-        }
-        return a.index - b.index;
-    });
+    return targets
+        .map((target, index) => {
+            return {
+                label: target,
+                value: target,
+                picked: fileTargets.includes(target),
+                index: index,
+            };
+        })
+        .sort((a, b) => {
+            if (a.picked !== b.picked) {
+                return Number(b.picked) - Number(a.picked);
+            }
+            return a.index - b.index;
+        });
 }
 
 export async function getProjectFiles(project: string) {
     if (project.indexOf(".xcworkspace") !== -1) {
-        const xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), 'utf-8');
+        const xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), "utf-8");
 
         const options = {
             ignoreAttributes: false,
-            attributeNamePrefix: ''
+            attributeNamePrefix: "",
         };
         const xml = new parser.XMLParser(options);
         const jsonObj = xml.parse(xmlData);
@@ -630,14 +739,14 @@ export async function getProjectFiles(project: string) {
                     const fileRefs = Array.isArray(node.FileRef) ? node.FileRef : [node.FileRef];
                     for (const ref of fileRefs) {
                         let location_ = ref.location;
-                        location_ = location_.substring('group:'.length);
-                        if (location_.includes('.xcodeproj')) {
+                        location_ = location_.substring("group:".length);
+                        if (location_.includes(".xcodeproj")) {
                             project_files.push(path.join(locationPath, location_));
                         }
                     }
                 }
                 for (const prop in node) {
-                    if (node[prop] !== null && typeof (node[prop]) === 'object') {
+                    if (node[prop] !== null && typeof node[prop] === "object") {
                         let locationPath = location;
                         if (node.location) {
                             const localPath = getLocalPath(node);
@@ -676,9 +785,8 @@ const xcodeProjects = new Map<string, XcodeProjectFileProxy>();
 
 async function executeRuby(projectPath: string, command: string): Promise<string[]> {
     if (!xcodeProjects.has(projectPath))
-        xcodeProjects.set(projectPath,
-            new XcodeProjectFileProxy(projectPath));
-    return await xcodeProjects.get(projectPath)?.request(command) || [];
+        xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath));
+    return (await xcodeProjects.get(projectPath)?.request(command)) || [];
 }
 
 async function getProjectTargets(projectFile: string) {
@@ -758,7 +866,7 @@ async function getTargets(projectFile: string, cwd: string) {
     }
 
     return new Promise<string[]>((resolve, reject) => {
-        exec(command.join(' '), { encoding: "utf-8", cwd: cwd }, (error, stdout) => {
+        exec(command.join(" "), { encoding: "utf-8", cwd: cwd }, (error, stdout) => {
             if (error !== null) {
                 reject(error);
                 return;
@@ -766,12 +874,10 @@ async function getTargets(projectFile: string, cwd: string) {
             const schemes: string[] = [];
             let isTail = false;
 
-            for (const x of stdout.split('\n')) {
-                if (isTail && x.trim().length > 0)
-                    schemes.push(x.trim());
+            for (const x of stdout.split("\n")) {
+                if (isTail && x.trim().length > 0) schemes.push(x.trim());
 
-                if (x.includes("Schemes:"))
-                    isTail = true;
+                if (x.includes("Schemes:")) isTail = true;
             }
             resolve(schemes);
         });
