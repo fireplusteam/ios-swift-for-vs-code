@@ -1,0 +1,6 @@
+.*
+!.gitignore
+!.github
+tags
+vscode-test
+*.vsix
