@@ -395,12 +395,10 @@
         ]
     },
     "extensionDependencies": [
-        "vadimcn.vscode-lldb",
-        "sswg.swift-lang"
+        "vadimcn.vscode-lldb"
     ],
     "extensionPack": [
-        "vadimcn.vscode-lldb",
-        "sswg.swift-lang"
+        "vadimcn.vscode-lldb"
     ],
     "scripts": {
         "vscode:prepublish": "npm run compile",

@@ -181,7 +181,7 @@ export function getWorkspaceFolder() {
 
 export function getLSPWorkspacePath() {
     /// At the moment we use fake sourcekit-lsp client to fetch location of tests, so it's pointing out to .vscode to disallow buildServer.json usage which can lead to
-    return vscode.Uri.file(path.join(getWorkspacePath(), ".vscode"));
+    return vscode.Uri.file(path.join(getWorkspacePath()));
 }
 
 export function getWorkspacePath() {

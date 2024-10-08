@@ -44,6 +44,7 @@ import { CommandContext } from "./CommandManagement/CommandContext";
 import { SwiftLSPClient } from "./LSP/SwiftLSPClient";
 import { TestTreeContext } from "./TestsProvider/TestTreeContext";
 import { LSPTestsProvider } from "./LSP/LSPTestsProvider";
+import { WorkspaceContextImp } from "./LSP/WorkspaceContext";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -114,7 +115,8 @@ export async function activate(context: vscode.ExtensionContext) {
     const logChannel = vscode.window.createOutputChannel("VSCode-iOS");
     context.subscriptions.push(logChannel);
     logChannel.appendLine("Activated");
-    const sourceLsp = new SwiftLSPClient(getLSPWorkspacePath(), logChannel);
+    const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
+    const sourceLsp = new SwiftLSPClient(getLSPWorkspacePath(), logChannel, workspaceContext);
 
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
@@ -134,6 +136,7 @@ export async function activate(context: vscode.ExtensionContext) {
     setContext(context);
 
     await initialize(atomicCommand, projectManager, autocompleteWatcher);
+    sourceLsp.start();
 
     vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 

@@ -3,7 +3,21 @@ import * as fs from "fs";
 import path from "path";
 import * as vscode from "vscode";
 
-export class ProblemDiagnosticResolver {
+export type SourcePredicate = (source: string) => boolean;
+
+export interface HandleProblemDiagnosticResolver {
+    handleDiagnostics: (
+        uri: vscode.Uri,
+        isSourceKit: SourcePredicate,
+        newDiagnostics: vscode.Diagnostic[]
+    ) => void;
+}
+
+export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolver {
+    static xcodebuild = "xcodebuild";
+    static isSourcekit: SourcePredicate = source => this.xcodebuild !== source;
+    static isXcodebuild: SourcePredicate = source => this.xcodebuild === source;
+
     disposable: vscode.Disposable[] = [];
     diagnosticBuildCollection: vscode.DiagnosticCollection;
 
@@ -11,7 +25,7 @@ export class ProblemDiagnosticResolver {
     buildLogFile: string | undefined;
 
     constructor() {
-        this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("xcodebuild");
+        this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("Xcode");
 
         this.disposable.push(
             vscode.workspace.onDidChangeTextDocument(e => {
@@ -20,9 +34,27 @@ export class ProblemDiagnosticResolver {
                     return;
                 }
                 if (fileUrl.fsPath.endsWith(".log")) return;
-                this.diagnosticBuildCollection.set(fileUrl, []);
+                const notBuildProblems =
+                    this.diagnosticBuildCollection
+                        .get(fileUrl)
+                        ?.filter(e => !ProblemDiagnosticResolver.isXcodebuild(e.source || "")) ||
+                    [];
+                this.diagnosticBuildCollection.set(fileUrl, notBuildProblems);
             })
         );
+    }
+
+    handleDiagnostics(
+        uri: vscode.Uri,
+        isSourceKit: SourcePredicate,
+        newDiagnostics: vscode.Diagnostic[]
+    ): void {
+        console.log(uri, isSourceKit(""), newDiagnostics);
+        const allOthers =
+            this.diagnosticBuildCollection.get(uri)?.filter(e => !isSourceKit(e.source || "")) ||
+            [];
+
+        this.diagnosticBuildCollection.set(uri, this.uniqueProblems(newDiagnostics, allOthers));
     }
 
     private watcherProc: ChildProcess | undefined;
@@ -85,23 +117,23 @@ export class ProblemDiagnosticResolver {
         return res;
     }
 
-    private globalProblems(file: vscode.Uri) {
-        return vscode.languages.getDiagnostics(file).filter(e => {
-            return e.source !== "xcodebuild" && e.source !== "xcodebuild-tests";
-        });
-    }
-
     private storeProblems(files: { [key: string]: vscode.Diagnostic[] }) {
         for (const file in files) {
             const fileUri = vscode.Uri.file(file);
             if (this.buildErrors.delete(file)) {
                 this.diagnosticBuildCollection.delete(fileUri);
             }
-            const list = [...(this.diagnosticBuildCollection.get(fileUri) || []), ...files[file]];
-            this.diagnosticBuildCollection.set(
-                fileUri,
-                this.uniqueProblems(list, this.globalProblems(fileUri))
-            );
+            const allOthers =
+                this.diagnosticBuildCollection
+                    .get(fileUri)
+                    ?.filter(e => !ProblemDiagnosticResolver.isXcodebuild(e.source || "")) || [];
+            const list = [
+                ...(this.diagnosticBuildCollection
+                    .get(fileUri)
+                    ?.filter(e => ProblemDiagnosticResolver.isXcodebuild(e.source || "")) || []),
+                ...files[file],
+            ];
+            this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, allOthers));
         }
     }
 
@@ -259,7 +291,7 @@ export class ProblemDiagnosticResolver {
                     message,
                     errorSeverity
                 );
-                diagnostic.source = "xcodebuild";
+                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
                 const value = files[file] || [];
                 value.push(diagnostic);
                 if (fs.existsSync(file)) files[file] = value;
@@ -282,7 +314,7 @@ export class ProblemDiagnosticResolver {
                     message,
                     errorSeverity
                 );
-                diagnostic.source = "xcodebuild";
+                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
                 const value = files[file] || [];
                 value.push(diagnostic);
                 files[file] = value;
@@ -305,7 +337,7 @@ export class ProblemDiagnosticResolver {
                     message,
                     errorSeverity
                 );
-                diagnostic.source = "xcodebuild";
+                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
                 const value = files[file] || [];
                 value.push(diagnostic);
                 files[file] = value;

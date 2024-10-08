@@ -4,6 +4,8 @@ import { SourceKitLSPErrorHandler } from "./SourceKitLSPErrorHandler";
 import path from "path";
 import { uriConverters } from "./uriConverters";
 import { XCRunHelper } from "../Tools/XCRunHelper";
+import { WorkspaceContext } from "./WorkspaceContext";
+import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 
 export class SwiftLSPClient {
     private languageClient: langclient.LanguageClient | null | undefined;
@@ -22,8 +24,13 @@ export class SwiftLSPClient {
 
     constructor(
         private readonly workspaceFolder: vscode.Uri,
-        private readonly logs: vscode.OutputChannel
+        private readonly logs: vscode.OutputChannel,
+        private readonly workspaceContext: WorkspaceContext
     ) {}
+
+    public start() {
+        this.client();
+    }
 
     private async setupLanguageClient(folder?: vscode.Uri) {
         const { client, errorHandler } = await this.createLSPClient(folder);
@@ -41,7 +48,7 @@ export class SwiftLSPClient {
             options: {
                 env: {
                     ...process.env,
-                    // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
+                    SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
                     SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
             },
@@ -57,73 +64,75 @@ export class SwiftLSPClient {
         const clientOptions: langclient.LanguageClientOptions = {
             // at the moment it's empty, as it's should not be active, only used for tests parsing at the moment
             documentSelector: [
-                // { scheme: "sourcekit-lsp", language: "swift" },
-                // { scheme: "file", language: "swift" },
-                // { scheme: "untitled", language: "swift" },
-                // { scheme: "file", language: "objective-c" },
-                // { scheme: "untitled", language: "objective-c" },
-                // { scheme: "file", language: "objective-cpp" },
-                // { scheme: "untitled", language: "objective-cpp" },
+                { scheme: "sourcekit-lsp", language: "swift" },
+                { scheme: "file", language: "swift" },
+                { scheme: "untitled", language: "swift" },
+                { scheme: "file", language: "objective-c" },
+                { scheme: "untitled", language: "objective-c" },
+                { scheme: "file", language: "objective-cpp" },
+                { scheme: "untitled", language: "objective-cpp" },
             ],
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
             outputChannel: this.logs,
-            // middleware: {
-            //     provideDocumentSymbols: async (document, token, next) => {
-            //         return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser at the moment
-            //         // const result = await next(document, token);
-            //         // const documentSymbols = result as vscode.DocumentSymbol[];
-            //         // return result;
-            //     },
-            //     provideDefinition: async (document, position, token, next) => {
-            //         return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-            //         // const result = await next(document, position, token);
-            //         // const definitions = result as vscode.Location[];
-            //         // if (
-            //         //     definitions &&
-            //         //     path.extname(definitions[0].uri.path) === ".swiftinterface"
-            //         // ) {
-            //         //     const uri = definitions[0].uri.with({ scheme: "readonly" });
-            //         //     return new vscode.Location(uri, definitions[0].range);
-            //         // }
-            //         // return result;
-            //     },
-            //     // temporarily remove text edit from Inlay hints while SourceKit-LSP
-            //     // returns invalid replacement text
-            //     provideInlayHints: async (document, position, token, next) => {
-            //         return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-            //         // const result = await next(document, position, token);
-            //         // return result;
-            //     },
-            //     provideDiagnostics: async (uri, previousResultId, token, next) => {
-            //         return undefined; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-            //         // const result = await next(uri, previousResultId, token);
-            //         // if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
-            //         //     return undefined;
-            //         // }
-            //         // const document = uri as vscode.TextDocument;
-            //         // return undefined;
-            //     },
-            //     handleDiagnostics: (uri, diagnostics) => {
-            //         return () => {
-            //         }
-            //     },
-            //     handleWorkDoneProgress: (() => {
-            //         return () => {
-            //             return;
-            //         }
-            //         // let lastPrompted = new Date(0).getTime();
-            //         // return async (token, params, next) => {
-            //         //     const result = await next(token, params);
-            //         //     return result;
-            //         // };
-            //     })(),
-            // },
+            middleware: {
+                provideDocumentSymbols: async (document, token, next) => {
+                    const result = await next(document, token);
+                    // const documentSymbols = result as vscode.DocumentSymbol[];
+                    return result;
+                },
+                provideDefinition: async (document, position, token, next) => {
+                    const result = await next(document, position, token);
+                    const definitions = result as vscode.Location[];
+                    if (
+                        definitions &&
+                        path.extname(definitions[0].uri.path) === ".swiftinterface"
+                    ) {
+                        const uri = definitions[0].uri.with({ scheme: "readonly" });
+                        return new vscode.Location(uri, definitions[0].range);
+                    }
+                    return result;
+                },
+                // temporarily remove text edit from Inlay hints while SourceKit-LSP
+                // returns invalid replacement text
+                provideInlayHints: async (document, position, token, next) => {
+                    const result = await next(document, position, token);
+                    return result;
+                },
+                provideDiagnostics: async (uri, previousResultId, token, next) => {
+                    const result = await next(uri, previousResultId, token);
+                    if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
+                        return undefined;
+                    }
+                    const document = uri as vscode.TextDocument;
+                    this.workspaceContext.problemDiagnosticResolver.handleDiagnostics(
+                        document.uri ?? uri,
+                        ProblemDiagnosticResolver.isSourcekit,
+                        result?.items ?? []
+                    );
+                    return undefined;
+                },
+                handleDiagnostics: (uri, diagnostics) => {
+                    this.workspaceContext.problemDiagnosticResolver.handleDiagnostics(
+                        uri,
+                        ProblemDiagnosticResolver.isSourcekit,
+                        diagnostics
+                    );
+                },
+                handleWorkDoneProgress: (() => {
+                    // const lastPrompted = new Date(0).getTime();
+                    return async (token, params, next) => {
+                        const result = await next(token, params);
+                        return result;
+                    };
+                })(),
+            },
             uriConverters: uriConverters,
             errorHandler: errorHandler,
             // Avoid attempting to reinitialize multiple times. If we fail to initialize
             // we aren't doing anything different the second time and so will fail again.
             initializationFailedHandler: () => false,
+            initializationOptions: this.initializationOptions(),
         };
 
         return {
@@ -162,5 +171,28 @@ export class SwiftLSPClient {
         this.languageClient = client;
 
         return this.clientReadyPromise;
+    }
+
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    private initializationOptions(): any {
+        const options: any = {
+            "workspace/peekDocuments": true, // workaround for client capability to handle `PeekDocumentsRequest`
+            "workspace/getReferenceDocument": true, // the client can handle URIs with scheme `sourcekit-lsp:`
+            "textDocument/codeLens": {
+                supportedCommands: {
+                    "swift.run": "swift.run",
+                    "swift.debug": "swift.debug",
+                },
+            },
+        };
+
+        // if (configuration.backgroundIndexing) {
+        //     options = {
+        //         ...options,
+        //         backgroundIndexing: configuration.backgroundIndexing,
+        //         backgroundPreparationMode: "enabled",
+        //     };
+        // }
+        return options;
     }
 }
