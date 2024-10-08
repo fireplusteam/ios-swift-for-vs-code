@@ -45,12 +45,12 @@ export class TestResultProvider {
         const testPlans = testResult.testNodes;
 
         for (const testPlan of testPlans) {
-            for (let target of testPlan.children) {
+            for (const target of testPlan.children) {
                 const testCases = this.getAllTestItems(target);
 
                 for (const testCase of testCases) {
                     const key = `${target.name}/${testCase.nodeIdentifier}`;
-                    if (testCase.result == "Passed") {
+                    if (testCase.result === "Passed") {
                         onTest(key, "passed", "", [], this.convertDuration(testCase.duration));
                     } else { // failed
                         const rawMessage = this.getRawMessage(testCase.children);
@@ -64,20 +64,20 @@ export class TestResultProvider {
     }
 
     private getRawMessage(messages: TestCaseResultNode[] | undefined, intend = "") {
-        if (messages == undefined)
+        if (messages === undefined)
             return "";
 
         const result = messages.map((e): string => {
-            if (e.nodeType == "Failure Message") {
+            if (e.nodeType === "Failure Message") {
                 return intend + e.name.split("\n").join(`${intend}\n`);
             }
 
             const inMessages = this.getRawMessage(e.children, intend + "\t");
-            const argument = e.nodeType == "Arguments" ? `Arguments:` : "";
+            const argument = e.nodeType === "Arguments" ? `Arguments:` : "";
 
             const message = `${intend}${argument}${e.name} -> ${e.result}`;
             if (inMessages.length > 0)
-                return `${message}\n${inMessages}`
+                return `${message}\n${inMessages}`;
             else {
                 return message;
             }
@@ -87,14 +87,14 @@ export class TestResultProvider {
 
     private getMessagesFromNode(key: string, node: TestCaseResultNode, parent: TestCaseResultNode | undefined, fileUrl: (key: string) => string): vscode.TestMessage[] {
         const result: vscode.TestMessage[] = [];
-        if (node.nodeType == "Failure Message") {
+        if (node.nodeType === "Failure Message") {
             const locationPattern = /(.*?):(\d+): ([\s\S]*)/gm;
             const matches = [...node.name.matchAll(locationPattern)];
             for (const match of matches) {
                 const file = fileUrl(key);
                 const fullMessage = match[3];
                 const line = Number(match[2]) - 1;
-                const attributes = parent && parent.nodeType == "Arguments" ? parent.name : undefined;
+                const attributes = parent && parent.nodeType === "Arguments" ? parent.name : undefined;
                 const diagnostic = this.parseExpectationFailed(fullMessage, attributes) || new vscode.TestMessage(fullMessage);
                 const range = new vscode.Position(line, 0);
                 diagnostic.location = new vscode.Location(vscode.Uri.file(file), range);
@@ -116,37 +116,36 @@ export class TestResultProvider {
                 const varName1 = matches[0][4];
                 const varName2 = matches[0][9];
                 let value1 = matches[0][5];
-                if (value1 == undefined || value1.length == 0) {
+                if (value1 === undefined || value1.length === 0) {
                     value1 = matches[0][6];
                 }
                 let value2 = matches[0][10];
-                if (value2 == undefined || value2.length == 0) {
+                if (value2 === undefined || value2.length === 0) {
                     value2 = matches[0][11];
                 }
 
-                if (value1 == undefined || value2 == undefined)
+                if (value1 === undefined || value2 === undefined)
                     return undefined;
 
                 let message = matches[0][12] || rawMessage;
-                if (message.length == 0) {
+                if (message.length === 0) {
                     message = rawMessage;
                 }
 
                 if (attributes) {
-                    message = `Attributes: ${attributes}\n, Failed: ${message}`
+                    message = `Attributes: ${attributes}\n, Failed: ${message}`;
                 }
 
-                if (varName1 == undefined || varName1.length == 0)
+                if (varName1 === undefined || varName1.length === 0)
                     return vscode.TestMessage.diff(message, value1, value2);
-                if (varName2 == undefined || varName2.length == 0)
+                if (varName2 === undefined || varName2.length === 0)
                     return vscode.TestMessage.diff(message, value2, value1);
             }
-        } catch {
-        }
+        } catch { /* empty */ }
     }
 
     private getMessages(key: string, parent: TestCaseResultNode | undefined, messages: TestCaseResultNode[] | undefined, fileUrl: (key: string) => string): vscode.TestMessage[] {
-        if (messages == undefined)
+        if (messages === undefined)
             return [];
 
         const result: vscode.TestMessage[] = [];

@@ -9,7 +9,7 @@ import { ExecutorMode, ExecutorTaskError } from '../Executor';
 export class RunManager {
     private sessionID: string;
     private isDebuggable: boolean;
-    private env: ProjectEnv
+    private env: ProjectEnv;
 
 
     constructor(sessionID: string, isDebuggable: boolean, env: ProjectEnv) {
@@ -19,7 +19,7 @@ export class RunManager {
     }
 
     async runOnDebugDevice(context: CommandContext) {
-        if (await this.env.platform == Platform.macOS) {
+        if (await this.env.platform === Platform.macOS) {
             return await this.runOnMac(context);
         }
 
@@ -27,7 +27,7 @@ export class RunManager {
     }
 
     async runOnMultipleDevices(context: CommandContext) {
-        if (await this.env.platform == Platform.macOS) {
+        if (await this.env.platform === Platform.macOS) {
             throw Error("MacOS Platform doesn't support running on Multiple Devices!");
         }
         if (this.isDebuggable) {
@@ -35,7 +35,7 @@ export class RunManager {
         }
 
         const devices = (await this.env.multipleDeviceID).split(" |").map(deviceId => deviceId.substring("id=".length));
-        if (devices == undefined || devices.length == 0)
+        if (devices === undefined || devices.length === 0)
             throw Error("Can not run on empty device");
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
         try {
@@ -56,9 +56,7 @@ export class RunManager {
                 scriptOrCommand: { command: "xcrun" },
                 args: ["simctl", "boot", deviceId]
             });
-        } catch {
-
-        }
+        } catch { /* empty */ }
 
         try {
             await context.execShellWithOptions({
@@ -69,6 +67,7 @@ export class RunManager {
             console.log("Simulator loaded");
         }
 
+        // eslint-disable-next-line no-constant-condition
         while (true) {
             const result = await context.execShellWithOptions({
                 scriptOrCommand: { command: `xcrun`, labelInTerminal: "Check if simulator opened" },
@@ -81,7 +80,7 @@ export class RunManager {
                 const value = json.devices[key];
                 for (const device of value)
                     if (device.udid === deviceId) {
-                        if (device.state == "Booted") {
+                        if (device.state === "Booted") {
                             booted = true;
                             break;
                         }
@@ -89,7 +88,7 @@ export class RunManager {
                 if (booted) break;
             }
             if (booted) break;
-            sleep(1)
+            sleep(1);
         }
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcrun" },
@@ -115,7 +114,7 @@ export class RunManager {
             if (error instanceof ExecutorTaskError) {
                 if (error.code === 3) { //simulator is not responding
                     await this.shutdownSimulator(context, deviceId);
-                    if (context.cancellationToken.isCancellationRequested == false) {
+                    if (context.cancellationToken.isCancellationRequested === false) {
                         isHandled = true;
                         this.runOnSimulator(context, deviceId, waitDebugger);
                     }
@@ -168,7 +167,7 @@ export class RunManager {
                 );
             });
         } catch (err) {
-            if (err == TimeoutError) {
+            if (err === TimeoutError) {
                 // we should cancel it in a new executor as it can not be executed 
                 await this.shutdownSimulator(commandContext, deviceId);
             }

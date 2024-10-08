@@ -17,17 +17,17 @@ export class RuntimeWarningStackNode extends vscode.TreeItem {
                 filePath,
                 line
             ]
-        }
+        };
     }
 }
 
 export class RuntimeWarningMessageNode extends vscode.TreeItem {
-    count: number
+    count: number;
     stack: RuntimeWarningStackNode[] = [];
 
     constructor(message: string, count: number, id: string) {
         let startIndex = message.lastIndexOf("] ");
-        if (startIndex == -1)
+        if (startIndex === -1)
             startIndex = 0;
         else
             startIndex += "] ".length;

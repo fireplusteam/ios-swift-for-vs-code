@@ -72,10 +72,12 @@ export class XcodeProjectFileProxy {
                     reject(new Error("Process is killed"));
                 }
                 dis = this.onEndRead.event(e => {
+                    dis?.dispose();
                     this.commandQueue = undefined;
                     resolve(e);
                 });
                 disError = this.onEndReadWithError.event(e => {
+                    disError?.dispose();
                     this.commandQueue = undefined;
                     reject(e);
                 });

@@ -26,7 +26,7 @@ export class AutocompleteWatcher {
 
     private state: State = State.ModuleNotChanged;
     private moduleChangedName: string[] | undefined;
-    private terminatingExtension: boolean = false
+    private terminatingExtension: boolean = false;
 
     private buildId = 0;
 
@@ -46,7 +46,7 @@ export class AutocompleteWatcher {
             }
 
             switch (this.state) {
-                case State.ModuleNotChanged:
+                case State.ModuleNotChanged: {
                     const filePath = this.selectedDocument?.uri.fsPath;
                     if (!filePath || !this.isValidFile(filePath)) {
                         break;
@@ -63,8 +63,9 @@ export class AutocompleteWatcher {
                     } else {
                         break;
                     }
+                }
                 // fallthrough and check the current module
-                case State.ModuleChanged:
+                case State.ModuleChanged: {
                     const pickedNextFilePath = e.document?.uri.fsPath;
                     if (!this.isValidFile(pickedNextFilePath)) {
                         break;
@@ -77,6 +78,7 @@ export class AutocompleteWatcher {
                         this.triggerIncrementalBuild()
                             .catch(() => { });
                     }
+                }
             }
             this.textOfSelectedDocument = e.document.getText();
             this.selectedDocument = e.document;
@@ -97,7 +99,7 @@ export class AutocompleteWatcher {
     }
 
     private async isWatcherEnabled() {
-        if (await isActivated() == false) {
+        if (await isActivated() === false) {
             return false;
         }
         const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher.whole");
@@ -108,7 +110,7 @@ export class AutocompleteWatcher {
     }
 
     private async isWatcherEnabledAnyFile() {
-        if (await isActivated() == false) {
+        if (await isActivated() === false) {
             return false;
         }
         const isWatcherEnabled = vscode.workspace.getConfiguration("vscode-ios").get("watcher.singleModule");
@@ -145,9 +147,9 @@ export class AutocompleteWatcher {
                 );
             });
         } catch (err) {
-            if (err == UserCommandIsExecuting) {
+            if (err === UserCommandIsExecuting) {
                 await sleep(1000);
-                if (buildId == this.buildId) // still valid
+                if (buildId === this.buildId) // still valid
                     this.incrementalBuild(buildId)
                         .catch(() => { }); // do nothing
             } else {

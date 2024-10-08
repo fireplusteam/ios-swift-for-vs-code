@@ -4,7 +4,7 @@ type Node = {
     isVisible: boolean;
     isLeaf: boolean,
     edges: Map<string, [string, Node]> | null;
-}
+};
 
 export class ProjectTree {
     private root: Node;
@@ -47,7 +47,7 @@ export class ProjectTree {
                 list.push(filePath);
                 return;
             }
-            for (let [key, value] of node.edges) {
+            for (const [, value] of node.edges) {
                 excludedFiles(value[1], path.join(filePath, value[0]));
             }
         }
@@ -77,7 +77,7 @@ export class ProjectTree {
         if (!edges.has(components[index].toLowerCase())) {
             edges.set(components[index].toLowerCase(), [components[index], {
                 isVisible: isVisible,
-                isLeaf: index == components.length - 1 && includeSubfolders ? true : false,
+                isLeaf: index === components.length - 1 && includeSubfolders ? true : false,
                 edges: null
             }]);
         }

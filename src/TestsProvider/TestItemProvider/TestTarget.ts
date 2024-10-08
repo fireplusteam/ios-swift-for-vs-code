@@ -5,7 +5,7 @@ import { TestContainer } from './TestContainer';
 
 export class TestTarget implements TestContainer {
     public didResolve = false;
-    public context: TestTreeContext
+    public context: TestTreeContext;
 
     public filesForTargetProvider: () => Promise<string[]>;
 

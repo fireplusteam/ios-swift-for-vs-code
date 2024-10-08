@@ -17,6 +17,7 @@ export async function executeTask(name: string) {
             await new Promise(async (resolve, reject) => {
                 disposable = vscode.tasks.onDidEndTaskProcess(e => {
                     if (e.execution.task.name === name) {
+                        disposable.dispose();
                         if (e.exitCode !== 0) {
                             reject(new Error(`Task ${name} failed with ${e.exitCode}`));
                             return;
@@ -27,7 +28,7 @@ export async function executeTask(name: string) {
                 try {
                     await vscode.tasks.executeTask(task);
                 } catch (err) {
-                    reject(err)
+                    reject(err);
                 }
             });
         }
@@ -45,12 +46,13 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         this.atomicCommand = atomicCommand;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async provideTasks(token?: vscode.CancellationToken): Promise<vscode.Task[]> {
         if (await isActivated() === false) {
             return [];
         }
 
-        let buildSelectedTargetTask = this.createBuildTask(
+        const buildSelectedTargetTask = this.createBuildTask(
             "Build",
             vscode.TaskGroup.Build,
             async (context) => {
@@ -58,7 +60,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             }
         );
 
-        let buildTestsTask = this.createBuildTask(
+        const buildTestsTask = this.createBuildTask(
             "Build Tests",
             vscode.TaskGroup.Build,
             async (context) => {
@@ -66,7 +68,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             }
         );
 
-        let cleanTask = this.createBuildTask(
+        const cleanTask = this.createBuildTask(
             "Clean Derived Data",
             vscode.TaskGroup.Clean,
             async (context) => {
@@ -79,7 +81,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
 
     private createBuildTask(title: string, group: vscode.TaskGroup, commandClosure: (context: CommandContext) => Promise<void>) {
         const def: BuildTaskDefinition = { type: BuildTaskProvider.BuildScriptType, taskBuild: title };
-        let buildTask = new vscode.Task(
+        const buildTask = new vscode.Task(
             def,
             vscode.TaskScope.Workspace,
             title,
@@ -124,8 +126,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                                 commandContext = context;
                                 await commandClosure(context);
                             }, successMessage);
-                        } catch (err) {
-                        }
+                        } catch (err) { /* empty */ }
                     },
                     onDidWrite: writeEmitter.event,
                     onDidClose: closeEmitter.event,

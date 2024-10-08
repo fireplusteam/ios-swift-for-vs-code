@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { XCRunHelper } from "../Tools/XCRunHelper";
-import { getFilePathInWorkspace } from "../env";
 
 function useLLDB_DAP() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("debug.lldb-dap");
@@ -22,7 +21,7 @@ export class LLDBDapDescriptorFactory
 
     static async isValidDebugAdapterPath(
         pathUri: vscode.Uri,
-    ): Promise<Boolean> {
+    ): Promise<boolean> {
         try {
             const fileStats = await vscode.workspace.fs.stat(pathUri);
             if (!(fileStats.type & vscode.FileType.File)) {
@@ -43,13 +42,13 @@ export class LLDBDapDescriptorFactory
             return new vscode.DebugAdapterExecutable("", []);
         }
         const path = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
-        if (path == null) {
+        if (path === null) {
             LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage();
             return undefined;
         }
 
         const log_path = session.configuration.logPath + ".lldb";
-        let env: { [key: string]: string } = {};
+        const env: { [key: string]: string } = {};
         if (log_path) {
             // Uncomment it for Debug purposes
             // env["LLDBDAP_LOG"] = getFilePathInWorkspace(log_path);

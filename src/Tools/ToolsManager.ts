@@ -1,14 +1,13 @@
 import { exec } from "child_process";
-import fs from "fs"
+import fs from "fs";
 import * as vscode from "vscode";
 import { InteractiveTerminal } from "./InteractiveTerminal";
 import { getScriptPath } from "../env";
 import { XCRunHelper } from "./XCRunHelper";
-import { error } from "console";
 
 export class ToolsManager {
     private log: vscode.OutputChannel;
-    private terminal: InteractiveTerminal
+    private terminal: InteractiveTerminal;
 
     constructor(log: vscode.OutputChannel) {
         this.log = log;
@@ -131,7 +130,7 @@ export class ToolsManager {
         try {
             await XCRunHelper.checkIfXCodeInstalled();
         } catch (error) {
-            throw new Error(`Xcode is not installed. Please install it: ${error}`)
+            throw new Error(`Xcode is not installed. Please install it: ${error}`);
         }
 
         try {
@@ -150,7 +149,7 @@ export class ToolsManager {
             let option: string | undefined = "Yes";
             if (!askUserToInstallDeps)
                 option = await vscode.window.showWarningMessage("Required tools are not installed. Without them extension would not work properly. Do you want to Install Them automatically?", "Yes", "No");
-            if (option == "Yes") {
+            if (option === "Yes") {
                 try {
                     // install extensions
                     await this.installTools();
@@ -160,7 +159,7 @@ export class ToolsManager {
                     throw new Error(`Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`);
                 }
             } else {
-                this.log.appendLine("Dependencies are not installed. This extensions would not be working as expected!")
+                this.log.appendLine("Dependencies are not installed. This extensions would not be working as expected!");
                 throw new Error("Dependencies are not installed. Extension would not be working properly");
             }
         } else {

@@ -72,7 +72,7 @@ export class TestProject implements TestContainer {
         this.fsWatcher?.close();
         this.fsWatcher = undefined;
         this.fsWatcher = watch(filePath);
-        this.fsWatcher.on("change", e => {
+        this.fsWatcher.on("change", () => {
             const content = fs.readFileSync(filePath);
             if (this.projectContent?.toString() === content.toString()) {
                 this.watchFile(filePath, controller, item, content);

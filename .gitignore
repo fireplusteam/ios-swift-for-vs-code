@@ -4,3 +4,8 @@
 tags
 vscode-test
 *.vsix
+!.eslintrc.json
+!.prettierignore
+!.prettierrc.json
+!.vscode-test.mjs
+!.vscode-test.js

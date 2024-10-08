@@ -1,5 +1,5 @@
-import * as langclient from "vscode-languageclient/node"
-import * as vscode from "vscode"
+import * as langclient from "vscode-languageclient/node";
+import * as vscode from "vscode";
 import { SourceKitLSPErrorHandler } from "./SourceKitLSPErrorHandler";
 import path from "path";
 import { uriConverters } from "./uriConverters";
@@ -12,7 +12,7 @@ export class SwiftLSPClient {
     private clientReadyPromise?: Promise<void> = undefined;
 
     public async client(): Promise<langclient.LanguageClient> {
-        if (this.languageClient == undefined) {
+        if (this.languageClient === undefined) {
             if (this.clientReadyPromise === undefined) {
                 await this.setupLanguageClient(this.workspaceFolder);
             }
@@ -67,57 +67,57 @@ export class SwiftLSPClient {
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
             outputChannel: this.logs,
-            middleware: {
-                provideDocumentSymbols: async (document, token, next) => {
-                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser at the moment
-                    // const result = await next(document, token);
-                    // const documentSymbols = result as vscode.DocumentSymbol[];
-                    // return result;
-                },
-                provideDefinition: async (document, position, token, next) => {
-                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    // const result = await next(document, position, token);
-                    // const definitions = result as vscode.Location[];
-                    // if (
-                    //     definitions &&
-                    //     path.extname(definitions[0].uri.path) === ".swiftinterface"
-                    // ) {
-                    //     const uri = definitions[0].uri.with({ scheme: "readonly" });
-                    //     return new vscode.Location(uri, definitions[0].range);
-                    // }
-                    // return result;
-                },
-                // temporarily remove text edit from Inlay hints while SourceKit-LSP
-                // returns invalid replacement text
-                provideInlayHints: async (document, position, token, next) => {
-                    return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    // const result = await next(document, position, token);
-                    // return result;
-                },
-                provideDiagnostics: async (uri, previousResultId, token, next) => {
-                    return undefined; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
-                    // const result = await next(uri, previousResultId, token);
-                    // if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
-                    //     return undefined;
-                    // }
-                    // const document = uri as vscode.TextDocument;
-                    // return undefined;
-                },
-                handleDiagnostics: (uri, diagnostics) => {
-                    return () => {
-                    }
-                },
-                handleWorkDoneProgress: (() => {
-                    return () => {
-                        return;
-                    }
-                    // let lastPrompted = new Date(0).getTime();
-                    // return async (token, params, next) => {
-                    //     const result = await next(token, params);
-                    //     return result;
-                    // };
-                })(),
-            },
+            // middleware: {
+            //     provideDocumentSymbols: async (document, token, next) => {
+            //         return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser at the moment
+            //         // const result = await next(document, token);
+            //         // const documentSymbols = result as vscode.DocumentSymbol[];
+            //         // return result;
+            //     },
+            //     provideDefinition: async (document, position, token, next) => {
+            //         return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
+            //         // const result = await next(document, position, token);
+            //         // const definitions = result as vscode.Location[];
+            //         // if (
+            //         //     definitions &&
+            //         //     path.extname(definitions[0].uri.path) === ".swiftinterface"
+            //         // ) {
+            //         //     const uri = definitions[0].uri.with({ scheme: "readonly" });
+            //         //     return new vscode.Location(uri, definitions[0].range);
+            //         // }
+            //         // return result;
+            //     },
+            //     // temporarily remove text edit from Inlay hints while SourceKit-LSP
+            //     // returns invalid replacement text
+            //     provideInlayHints: async (document, position, token, next) => {
+            //         return []; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
+            //         // const result = await next(document, position, token);
+            //         // return result;
+            //     },
+            //     provideDiagnostics: async (uri, previousResultId, token, next) => {
+            //         return undefined; // TODO: if you want to get rid of Swift extension, but we need it only for tests parser
+            //         // const result = await next(uri, previousResultId, token);
+            //         // if (result?.kind === langclient.vsdiag.DocumentDiagnosticReportKind.unChanged) {
+            //         //     return undefined;
+            //         // }
+            //         // const document = uri as vscode.TextDocument;
+            //         // return undefined;
+            //     },
+            //     handleDiagnostics: (uri, diagnostics) => {
+            //         return () => {
+            //         }
+            //     },
+            //     handleWorkDoneProgress: (() => {
+            //         return () => {
+            //             return;
+            //         }
+            //         // let lastPrompted = new Date(0).getTime();
+            //         // return async (token, params, next) => {
+            //         //     const result = await next(token, params);
+            //         //     return result;
+            //         // };
+            //     })(),
+            // },
             uriConverters: uriConverters,
             errorHandler: errorHandler,
             // Avoid attempting to reinitialize multiple times. If we fail to initialize
@@ -140,7 +140,7 @@ export class SwiftLSPClient {
         client: langclient.LanguageClient,
         errorHandler: SourceKitLSPErrorHandler
     ) {
-        client.onDidChangeState(e => {
+        client.onDidChangeState(() => {
             // TODO: for nuw on is empty
         });
 

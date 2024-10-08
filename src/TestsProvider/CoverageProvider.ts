@@ -1,9 +1,9 @@
-import { Executor, ExecutorMode } from "../Executor";
+import { Executor } from "../Executor";
 import { getFilePathInWorkspace } from "../env";
 import * as vscode from 'vscode';
 
 class XCFileCoverage extends vscode.FileCoverage {
-    lineCoverage: vscode.StatementCoverage[] | undefined
+    lineCoverage: vscode.StatementCoverage[] | undefined;
 }
 
 export class CoverageProvider {
@@ -20,7 +20,7 @@ export class CoverageProvider {
 
         for (const target of tree.targets) {
             for (const file of target.files) {
-                let fileCoverage = new XCFileCoverage(vscode.Uri.file(file.path), new vscode.TestCoverageCount(file.coveredLines, file.executableLines));
+                const fileCoverage = new XCFileCoverage(vscode.Uri.file(file.path), new vscode.TestCoverageCount(file.coveredLines, file.executableLines));
                 allCoverages.push(fileCoverage);
             }
         }
@@ -57,7 +57,7 @@ export class CoverageProvider {
 
     private async getCoverageData() {
         const shell = new Executor();
-        const command = `xcrun xccov view --report --json '${this.xcresultPath}'`
+        const command = `xcrun xccov view --report --json '${this.xcresultPath}'`;
         const coverageJsonStr = (await shell.execShell({
             scriptOrCommand: { command: command }
         }));

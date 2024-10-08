@@ -11,7 +11,7 @@ export class XCRunHelper {
                 } else {
                     resolve(stdout.trim());
                 }
-            })
+            });
         });
     }
 
@@ -38,7 +38,7 @@ export class XCRunHelper {
 
     private static lldbDapPath?: string;
     public static async getLLDBDapPath(): Promise<string> {
-        if (this.lldbDapPath == undefined)
+        if (this.lldbDapPath === undefined)
             this.lldbDapPath = await this.getStdOut("xcrun -find lldb-dap");
         return this.lldbDapPath;
     }

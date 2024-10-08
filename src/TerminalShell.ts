@@ -68,13 +68,13 @@ export class TerminalShell {
                 this.writeEmitter?.fire(`\x1b[100m${toPrint}\x1b[0m`);
                 break;
             case TerminalMessageStyle.error:
-                this.writeEmitter?.fire(`\x1b[41m${toPrint}\x1b[0m`) // BgRed
+                this.writeEmitter?.fire(`\x1b[41m${toPrint}\x1b[0m`); // BgRed
                 break;
             case TerminalMessageStyle.warning:
-                this.writeEmitter?.fire(`\x1b[43m${toPrint}\x1b[0m`) // BgYellow
+                this.writeEmitter?.fire(`\x1b[43m${toPrint}\x1b[0m`); // BgYellow
                 break;
             case TerminalMessageStyle.success:
-                this.writeEmitter?.fire(`\x1b[42m${toPrint}\x1b[0m`) // BgGreen
+                this.writeEmitter?.fire(`\x1b[42m${toPrint}\x1b[0m`); // BgGreen
                 break;
         }
     }

@@ -11,7 +11,7 @@ let generationCounter = 0;
 export class TestFile implements TestContainer {
     public didResolve = false;
     context: TestTreeContext;
-    private target: string
+    private target: string;
 
     constructor(context: TestTreeContext, target: string) {
         this.context = context;
@@ -25,7 +25,7 @@ export class TestFile implements TestContainer {
             new vscode.Position(lspTest.location.range.start.line, lspTest.location.range.start.character),
             new vscode.Position(lspTest.location.range.end.line, lspTest.location.range.end.character)
         );
-        if (lspTest.children.length != 0) {
+        if (lspTest.children.length !== 0) {
             const test = new TestHeading(suiteGeneration);
             this.context.testData.set(testItem, test);
         } else {

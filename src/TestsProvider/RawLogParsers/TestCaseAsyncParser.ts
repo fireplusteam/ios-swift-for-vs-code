@@ -1,7 +1,8 @@
 import { ChildProcess, SpawnOptions, spawn } from 'child_process';
 import * as vscode from 'vscode';
 
-const testCaseRe = /^(Test Case\s\'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)^((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm
+// eslint-disable-next-line no-useless-escape
+const testCaseRe = /^(Test Case\s\'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)^((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm;
 
 export class TestCaseAsyncParser {
 
@@ -18,7 +19,7 @@ export class TestCaseAsyncParser {
         workspacePath: string,
         filePath: string,
         onMessage: (result: string, rawMessage: string, target: string, className: string, testName: string, duration: number
-        ) => any) {
+        ) => void) {
         return new Promise<void>((resolve) => {
             if (this.watcherProc !== undefined) {
                 this.watcherProc.kill();
@@ -28,15 +29,15 @@ export class TestCaseAsyncParser {
                 cwd: workspacePath,
                 shell: true,
                 stdio: "pipe"
-            }
+            };
             const child = spawn(
                 `tail`,
                 ["-f", `"${filePath}"`],
                 options
             );
 
-            var stdout = "";
-            let decoder = new TextDecoder("utf-8");
+            let stdout = "";
+            const decoder = new TextDecoder("utf-8");
 
             child.stdout?.on("data", async (data) => {
                 stdout += decoder.decode(data);
@@ -48,7 +49,6 @@ export class TestCaseAsyncParser {
                     const target = match[2];
                     const className = match[3];
                     const testName = match[4];
-                    const diffName = `Diff: ${testName}`;
 
                     const duration = Number(match[13]);
 
@@ -71,6 +71,6 @@ export class TestCaseAsyncParser {
                 }
             });
             this.watcherProc = child;
-        })
+        });
     }
 }

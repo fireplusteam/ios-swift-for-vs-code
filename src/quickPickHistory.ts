@@ -31,12 +31,12 @@ async function quickPickWithHistoryImp(
     const key = `${keyStorage}${getWorkspacePath()}`;
     let cache = context.globalState.get<QuickPickHistory[]>(key)?.filter((e: any) => { return e.title !== undefined; });
 
-    if (cache === undefined || cache.map((e) => { return e.title; }).sort().toString() !== items.map(v => { return v.value }).sort().toString()) {
+    if (cache === undefined || cache.map((e) => { return e.title; }).sort().toString() !== items.map(v => { return v.value; }).sort().toString()) {
         const oldCache = cache;
         cache = [];
         let i = 0;
         const date = Date.now();
-        for (let item of items) {
+        for (const item of items) {
             const foundIndex = oldCache?.map(e => { return e.title; }).indexOf(item.value) || -1;
             cache.push({
                 title: item.value,
@@ -53,25 +53,25 @@ async function quickPickWithHistoryImp(
             return a.order - b.order;
         });
     }
-    const indexedCache = cache.map(e => { return e.title });
+    const indexedCache = cache.map(e => { return e.title; });
     const sortedItems = items.sort((a, b) => {
         return (indexedCache?.indexOf(a.value) || -1) - (indexedCache?.indexOf(b.value) || -1);
     });
 
-    let option = await showPickClosure(sortedItems);
+    const option = await showPickClosure(sortedItems);
     if (option === undefined) {
         return undefined;
     }
     if (Array.isArray(option)) {
-        for (let opt of option) {
-            for (let item of cache) {
+        for (const opt of option) {
+            for (const item of cache) {
                 if (item.title === opt.value) {
                     item.date = Date.now();
                 }
             }
         }
     } else {
-        for (let item of cache) {
+        for (const item of cache) {
             if (item.title === option.value) {
                 item.date = Date.now();
             }

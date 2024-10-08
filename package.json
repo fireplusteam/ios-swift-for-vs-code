@@ -406,21 +406,25 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "pretest": "npm run compile && npm run lint",
-        "lint": "eslint src --ext ts",
-        "test": "vscode-test"
+        "pretest": "npm run compile",
+        "test": "vscode-test",
+        "lint": "eslint ./ --ext ts && tsc --noEmit",
+        "lint:fix": "eslint --fix ./ --ext .ts",
+        "format": "prettier --check *.json src test"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.6",
-        "@types/node": "18.x",
+        "@types/node": "^20",
         "@types/vscode": "^1.88.0",
-        "@typescript-eslint/eslint-plugin": "^7.14.0",
-        "@typescript-eslint/parser": "^7.14.0",
+        "@typescript-eslint/eslint-plugin": "^7.16.0",
+        "@typescript-eslint/parser": "^7.16.0",
         "@vscode/dts": "^0.4.0",
-        "@vscode/test-cli": "^0.0.4",
-        "@vscode/test-electron": "^2.3.9",
+        "@vscode/test-cli": "^0.0.10",
+        "@vscode/test-electron": "^2.4.1",
         "eslint": "^8.57.0",
-        "typescript": "^5.3.3"
+        "eslint-config-prettier": "^9.1.0",
+        "prettier": "3.3.3",
+        "typescript": "^5.6.2"
     },
     "dependencies": {
         "@types/find-process": "^1.1.0",

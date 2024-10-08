@@ -26,7 +26,7 @@ export class ProblemDiagnosticResolver {
 
     private clear() {
         this.buildErrors.clear();
-        this.diagnosticBuildCollection.forEach((uri, _) => {
+        this.diagnosticBuildCollection.forEach((uri,) => {
             this.buildErrors.add(uri.fsPath);
         });
     }
@@ -57,9 +57,9 @@ export class ProblemDiagnosticResolver {
             return 0;
         }
         list.sort(comp);
-        let res: vscode.Diagnostic[] = [];
+        const res: vscode.Diagnostic[] = [];
         for (let i = 0; i < list.length; ++i) {
-            if (res.length == 0 || comp(list[i], res[res.length - 1]) !== 0) {
+            if (res.length === 0 || comp(list[i], res[res.length - 1]) !== 0) {
                 if (sourcekitList.find((v) => {
                     return comp(v, list[i], (a, b) => {
                         if (a.start.line !== b.start.line)
@@ -83,12 +83,12 @@ export class ProblemDiagnosticResolver {
     }
 
     private storeProblems(files: { [key: string]: vscode.Diagnostic[] }) {
-        for (let file in files) {
+        for (const file in files) {
             const fileUri = vscode.Uri.file(file);
             if (this.buildErrors.delete(file)) {
                 this.diagnosticBuildCollection.delete(fileUri);
             }
-            let list = [
+            const list = [
                 ...this.diagnosticBuildCollection.get(fileUri) || [],
                 ...files[file]
             ];
@@ -107,7 +107,7 @@ export class ProblemDiagnosticResolver {
                 cwd: workspacePath,
                 shell: true,
                 stdio: "pipe"
-            }
+            };
             const child = spawn(
                 `tail`,
                 ["-f", `"${filePath}"`],
@@ -115,10 +115,10 @@ export class ProblemDiagnosticResolver {
             );
 
             this.clear();
-            var firstIndex = 0;
-            var stdout = "";
+            let firstIndex = 0;
+            let stdout = "";
             let triggerCharacter = "^";
-            let decoder = new TextDecoder("utf-8");
+            const decoder = new TextDecoder("utf-8");
             let isError = false;
             let numberOfLines = 0;
 
@@ -142,21 +142,21 @@ export class ProblemDiagnosticResolver {
                 if (lastErrorIndex !== -1) {
                     triggerCharacter = "^";
                     const problems = this.parseBuildLog(stdout.substring(0, lastErrorIndex + 1), numberOfLines);
-                    for (let problem in problems) {
+                    for (const problem in problems) {
                         isError = isError || problems[problem].filter(e => {
                             return e.severity === vscode.DiagnosticSeverity.Error;
-                        }).length > 0
+                        }).length > 0;
                     }
                     this.storeProblems(problems);
                     for (let i = 0; i < lastErrorIndex + 1; ++i)
-                        numberOfLines += (stdout[i] == '\n') ? 1 : 0;
+                        numberOfLines += (stdout[i] === '\n') ? 1 : 0;
                     stdout = stdout.substring(lastErrorIndex + 1);
                     firstIndex = 0;
                 } else {
                     firstIndex = stdout.length;
                 }
                 if (shouldEnd) {
-                    for (let file of this.buildErrors) {
+                    for (const file of this.buildErrors) {
                         this.diagnosticBuildCollection.delete(vscode.Uri.file(file));
                     }
                     this.buildErrors.clear();
@@ -175,7 +175,7 @@ export class ProblemDiagnosticResolver {
                 }
             });
             this.watcherProc = child;
-        })
+        });
     }
 
     private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
@@ -184,7 +184,7 @@ export class ProblemDiagnosticResolver {
 
     private column(output: string, messageEnd: number) {
         let newLineCounter = 0;
-        let str = ""
+        let str = "";
         let shouldBreak = false;
         for (let i = messageEnd; i < output.length; ++i) {
             if (output[i] === '\n') {
@@ -259,11 +259,11 @@ export class ProblemDiagnosticResolver {
 
                 let line = numberOfLines;
                 for (let i = 0; i < (match.index || 0); ++i) {
-                    line += (output[i] == '\n') ? 1 : 0;
+                    line += (output[i] === '\n') ? 1 : 0;
                 }
 
                 const message = match[3];
-                let errorSeverity = vscode.DiagnosticSeverity.Error;
+                const errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 const diagnostic = new vscode.Diagnostic(
                     new vscode.Range(
@@ -284,11 +284,11 @@ export class ProblemDiagnosticResolver {
 
                 let line = numberOfLines;
                 for (let i = 0; i < (match.index || 0); ++i) {
-                    line += (output[i] == '\n') ? 1 : 0;
+                    line += (output[i] === '\n') ? 1 : 0;
                 }
 
                 const message = match[2];
-                let errorSeverity = vscode.DiagnosticSeverity.Error;
+                const errorSeverity = vscode.DiagnosticSeverity.Error;
 
                 const diagnostic = new vscode.Diagnostic(
                     new vscode.Range(

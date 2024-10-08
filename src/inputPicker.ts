@@ -34,7 +34,7 @@ export async function showPicker(
     ignoreFocusOut = false,
     useHistory = false
 ) {
-    let items: QuickPickItem[]
+    let items: QuickPickItem[];
     if (typeof json === 'string' || json instanceof String) {
         items = JSON.parse(json as string);
     } else {
@@ -51,7 +51,7 @@ export async function showPicker(
                 canPickMany: canPickMany
             }
         );
-    }
+    };
     let selection: vscode.QuickPickItem | undefined;
     if (useHistory) {
         selection = await quickPickWithHistory(items, extContext, title, selectionClosure);

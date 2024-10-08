@@ -6,7 +6,7 @@ import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
 import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
-import * as fs from 'fs'
+import * as fs from 'fs';
 import { getFilePathInWorkspace } from "../env";
 import { SimulatorFocus } from "./SimulatorFocus";
 import { killSpawnLaunchedProcesses } from "../utils";
@@ -52,13 +52,14 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillStartSession() {
         this.simulatorInteractor.init();
         console.log('Session is starting');
-        vscode.debug.activeDebugSession
+        vscode.debug.activeDebugSession;
         this.debugConsoleOutput = this.context.commandContext.debugConsoleEvent((std) => {
             this._stream.write(std);
         });
         this.build(this.debugSession.configuration);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
         // console.log('Sent:', message);
         if (message.command === "continue") {
@@ -68,11 +69,12 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     private refreshBreakpoints = false;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
         // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
-        if (message.command === "continue" && this.refreshBreakpoints == false) {
+        if (message.command === "continue" && this.refreshBreakpoints === false) {
             this.refreshBreakpoints = true;
-            if (this.debugSession.configuration.type == "xcode-lldb") {
+            if (this.debugSession.configuration.type === "xcode-lldb") {
                 const breakpoints = vscode.debug.breakpoints;
                 vscode.debug.removeBreakpoints(breakpoints);
                 vscode.debug.addBreakpoints(breakpoints);
@@ -96,7 +98,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     private async terminateCurrentSession(isCancelled: boolean) {
         if (this.isTerminated)
-            return
+            return;
         try {
             this.debugConsoleOutput?.dispose();
             this._stream.close();
@@ -108,7 +110,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 if (isCancelled)
                     this.context.commandContext.cancel();
                 await vscode.debug.stopDebugging(this.debugSession);
-            } catch { }
+            } catch { /* empty */ }
             this.debugTestSessionEvent.fire(this.debugSession.configuration.appSessionId || this.sessionID);
         }
     }

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorTaskError, ExecutorTerminated } from "../Executor";
+import { ExecutorTaskError, ExecutorTerminated } from "../Executor";
 import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
 import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./CommandContext";
 import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
@@ -26,7 +26,7 @@ export class AtomicCommand {
     private _mutex = new Mutex();
     private _executingCommand: "user" | "autowatcher" | undefined = undefined;
     private latestOperationID: { id: number, type: "user" | "autowatcher" | undefined } = { id: 0, type: undefined };
-    private _prevCommandContext?: CommandContext
+    private _prevCommandContext?: CommandContext;
 
     private userTerminal = new TerminalShell("User");
     private watcherTerminal = new TerminalShell("Watch");
@@ -43,7 +43,7 @@ export class AtomicCommand {
     }
 
     async autoWatchCommand(commandClosure: (commandContext: CommandContext) => Promise<void>) {
-        if (this.latestOperationID.type == "user") {
+        if (this.latestOperationID.type === "user") {
             throw UserCommandIsExecuting;
         }
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "autowatcher" };
@@ -51,7 +51,7 @@ export class AtomicCommand {
         let release: MutexInterface.Releaser | undefined = undefined;
         try {
             if (this._mutex.isLocked()) {
-                if (this._executingCommand == "autowatcher") {
+                if (this._executingCommand === "autowatcher") {
                     this._prevCommandContext?.cancel();
                     this._mutex.cancel();
                 } else {
@@ -92,10 +92,10 @@ export class AtomicCommand {
         let dis: vscode.Disposable;
         return new Promise<T>(async (resolve, reject) => {
             try {
-                dis = cancellation.onCancellationRequested(e => {
+                dis = cancellation.onCancellationRequested(() => {
                     dis.dispose();
                     reject(UserTerminatedError);
-                })
+                });
                 resolve(await closure());
             } catch (err) {
                 reject(err);
@@ -134,7 +134,7 @@ export class AtomicCommand {
             const commandContext = new CommandContext(new vscode.CancellationTokenSource(), this.userTerminal);
             this._prevCommandContext = commandContext;
             if (taskName)
-                this.userTerminal.terminalName = `User: ${taskName}`
+                this.userTerminal.terminalName = `User: ${taskName}`;
             result = await this.withCancellation(async () => {
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
@@ -165,9 +165,9 @@ export class AtomicCommand {
                 throw err;
             } else if (err instanceof ExecutorTerminated) {
                 throw err; // no need to notify as this's one is terminated by user
-            } else if (err == E_CANCELED) {
+            } else if (err === E_CANCELED) {
                 // lock was cancelled: do nothing
-            } else if (err == UserTerminatedError) {
+            } else if (err === UserTerminatedError) {
                 throw err;
             } else {
                 if ((err as Error).message) {
@@ -179,7 +179,7 @@ export class AtomicCommand {
             this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
             if (releaser)
-                releaser()
+                releaser();
         }
     }
 }

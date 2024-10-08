@@ -55,7 +55,7 @@ export class TestTreeContext {
 
     private get(key: string, items: vscode.TestItemCollection) {
         for (const [id, item] of items) {
-            if (id == key) {
+            if (id === key) {
                 return item;
             }
             const value = this.getImp(key, item);
@@ -69,7 +69,7 @@ export class TestTreeContext {
         if (item.id === key)
             return item;
 
-        for (const [id, child] of item.children) {
+        for (const [, child] of item.children) {
             const value = this.getImp(key, child);
             if (value !== undefined) {
                 return value;
@@ -83,7 +83,7 @@ export class TestTreeContext {
         this.ctrl.items.forEach(childItem => {
             if (res) return;
             res = res || this.addItemImp(item, childItem, shouldAdd);
-        })
+        });
         return res;
     }
 
@@ -104,7 +104,7 @@ export class TestTreeContext {
 
     deleteItem(id: string | vscode.TestItem) {
         let tree: vscode.TestItem | undefined;
-        if (typeof id == "string") {
+        if (typeof id === "string") {
             tree = this.get(id, this.ctrl.items);
         } else {
             tree = id;
@@ -119,11 +119,11 @@ export class TestTreeContext {
     }
 
     public replaceItemsChildren(item: vscode.TestItem, itemsChildren: vscode.TestItem[]) {
-        const childs: vscode.TestItem[] = [];
+        const children: vscode.TestItem[] = [];
         for (const child of item.children) {
-            childs.push(child[1]);
+            children.push(child[1]);
         }
-        for (const child of childs) {
+        for (const child of children) {
             this.deleteItem(child);
         }
         item.children.replace(itemsChildren);
@@ -141,7 +141,7 @@ export class TestTreeContext {
         list.push(root);
         root.children.forEach(item => {
             this.allTestItemsImp(list, item);
-        })
+        });
     }
 }
 

@@ -6,26 +6,25 @@ import { ProjectManager } from '../ProjectManager/ProjectManager';
 import { TestTarget } from './TestItemProvider/TestTarget';
 import { emptyTestsLog } from '../utils';
 import { TestCaseAsyncParser } from './RawLogParsers/TestCaseAsyncParser';
-import { getWorkspacePath } from '../env';
 import { TestTreeContext } from './TestTreeContext';
 import { TestCaseProblemParser } from './RawLogParsers/TestCaseProblemParser';
-import { error } from 'console';
+import { getWorkspacePath } from '../env';
 
 enum TestProviderLoadingState {
-    nonInitialised,
+    nonInitialized,
     loading,
     loaded,
     error
 }
 
 export class TestProvider {
-    projectManager: ProjectManager
+    projectManager: ProjectManager;
     executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>;
     context: TestTreeContext;
-    asyncParser = new TestCaseAsyncParser()
+    asyncParser = new TestCaseAsyncParser();
     asyncTestCaseParser = new TestCaseProblemParser();
 
-    private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialised;
+    private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialized;
     private initialFilesLoadingPromise = Promise.resolve();
 
     constructor(projectManager: ProjectManager, context: TestTreeContext, executeTests: (tests: string[] | undefined, isDebuggable: boolean, testRun: vscode.TestRun) => Promise<boolean>) {
@@ -38,7 +37,7 @@ export class TestProvider {
         const ctrl = this.context.ctrl;
         context.subscriptions.push(ctrl);
 
-        const runHandler = (request: vscode.TestRunRequest, cancellation: vscode.CancellationToken) => {
+        const runHandler = (request: vscode.TestRunRequest) => {
             if (!request.continuous) {
                 return startTestRun(request);
             }
@@ -108,7 +107,7 @@ export class TestProvider {
                                 run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
                                 if (result === "passed") {
                                     run.passed(item, duration);
-                                } else if (result == "failed") {
+                                } else if (result === "failed") {
                                     const messages = await this.asyncTestCaseParser.parseAsyncLogs(rawMessage, item);
                                     run.failed(item, messages, duration);
                                 }
@@ -118,6 +117,9 @@ export class TestProvider {
                         });
                     try {
                         await this.executeTests(request.include === undefined ? undefined : xcodebuildTestsIds, request.profile?.kind === vscode.TestRunProfileKind.Debug, run);
+                    } catch (error) {
+                        console.log("error");
+                        throw error;
                     } finally {
                         await this.context.testResult.enumerateTestsResults((key) => {
                             const item = mapTests.get(key)?.test;
@@ -128,7 +130,7 @@ export class TestProvider {
                                 run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
                                 if (result === "passed") {
                                     run.passed(item, duration);
-                                } else if (result == "failed") {
+                                } else if (result === "failed") {
                                     run.failed(item, messages, duration);
                                 }
                                 mapTests.delete(key);
@@ -141,8 +143,9 @@ export class TestProvider {
                 } finally {
                     try {
                         const convergedFiles = await this.context.coverage.getCoverageFiles();
-                        for (const file of convergedFiles)
+                        for (const file of convergedFiles) {
                             run.addCoverage(file);
+                        }
                     } catch (error) {
                         console.error(`Coverage data can not be obtained: ${error}`);
                     }
@@ -156,7 +159,7 @@ export class TestProvider {
         };
 
         ctrl.refreshHandler = async () => {
-            await this.findInitialFiles(ctrl)
+            await this.findInitialFiles(ctrl);
         };
 
         ctrl.createRunProfile('Run Tests', vscode.TestRunProfileKind.Run, runHandler, true, undefined, false);
@@ -180,25 +183,25 @@ export class TestProvider {
         };
 
         for (const document of vscode.workspace.textDocuments) {
-            this.updateNodeForDocument(document, ctrl);
+            this.updateNodeForDocument(document);
         }
 
         context.subscriptions.push(
-            vscode.workspace.onDidOpenTextDocument(e => { this.updateNodeForDocument(e, ctrl) }),
-            vscode.workspace.onDidChangeTextDocument(e => this.updateNodeForDocument(e.document, ctrl)),
+            vscode.workspace.onDidOpenTextDocument(e => { this.updateNodeForDocument(e); }),
+            vscode.workspace.onDidChangeTextDocument(e => this.updateNodeForDocument(e.document)),
         );
     }
 
     supportedFileExtensions(file: string) {
         // sourcekit-lsp supports only swift file at the moment, we need to use workaround like legacy code parsing code for swift
-        return (file.endsWith('.swift'))// || file.endsWith(".m") || file.endsWith(".mm"));
+        return (file.endsWith('.swift'));// || file.endsWith(".m") || file.endsWith(".mm"));
     }
 
     isTestTarget(target: string) {
         return target.includes("Tests");
     }
 
-    async updateNodeForDocument(e: vscode.TextDocument, ctrl: vscode.TestController) {
+    async updateNodeForDocument(e: vscode.TextDocument) {
         if (e.uri.scheme !== 'file') {
             return;
         }
@@ -209,19 +212,20 @@ export class TestProvider {
 
         const project = (await this.projectManager.getProjects()).at(0) || "";
         const target = (await this.projectManager.listTargetsForFile(e.uri.fsPath, project)).at(0);
-        if (target == undefined || !this.isTestTarget(target)) {
+        if (target === undefined || !this.isTestTarget(target)) {
             return;
         }
 
-        if (this.loadingState != TestProviderLoadingState.loaded)
+        if (this.loadingState !== TestProviderLoadingState.loaded) {
             await this.findInitialFiles(this.context.ctrl);
+        }
 
         const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
             return new TestFile(this.context, target);
         });
         const testFile = data as TestFile;
         await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
-        if ([...file.children].length == 0) {
+        if ([...file.children].length === 0) {
             this.context.deleteItem(file.id);
         }
         else {
@@ -238,12 +242,13 @@ export class TestProvider {
     }
 
     initialize() {
-        if (this.context.ctrl)
+        if (this.context.ctrl) {
             this.findInitialFiles(this.context.ctrl);
+        }
     }
 
     async findInitialFiles(controller: vscode.TestController) {
-        if (this.loadingState == TestProviderLoadingState.loading) {
+        if (this.loadingState === TestProviderLoadingState.loading) {
             return this.initialFilesLoadingPromise;
         }
         try {
@@ -267,10 +272,10 @@ export class TestProvider {
                     return new TestProject(this.context,
                         async () => {
                             const targets = await this.projectManager.getProjectTargets();
-                            return targets.filter(e => { return this.isTestTarget(e) });
+                            return targets.filter(e => { return this.isTestTarget(e); });
                         }, async (targetName) => {
                             const files = await this.projectManager.getFilesForTarget(targetName);
-                            return files.filter(e => { return this.supportedFileExtensions(e) });
+                            return files.filter(e => { return this.supportedFileExtensions(e); });
                         });
                 }
             );

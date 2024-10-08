@@ -8,7 +8,7 @@ import * as vscode from "vscode";
 type ProjFilePath = {
     path: string,
     isFolder: boolean
-}
+};
 
 function isProjFilePath(obj: any): obj is ProjFilePath {
     return obj && typeof obj.path === "string" && typeof obj.isFolder === "boolean";
@@ -41,7 +41,7 @@ function mapReviver(key: any, value: any) {
         if (value.dataType === "Set") {
             const parsed = new Set(value.value);
             if (parsed.size > 0)
-                for (let v of parsed) {
+                for (const v of parsed) {
                     if (!isProjFilePath(v)) {
                         throw Error("Generated Format of file is wrong");
                     }
@@ -116,8 +116,8 @@ export class ProjectsCache {
     }
 
     getProjects() {
-        let projects: string[] = [];
-        for (let proj of this.cache) {
+        const projects: string[] = [];
+        for (const proj of this.cache) {
             projects.push(proj[0]);
         }
         return projects;
@@ -125,9 +125,9 @@ export class ProjectsCache {
 
     files(isFolder = false) {
         const files: string[] = [];
-        for (let [key, value] of this.cache) {
-            for (let file of value.list) {
-                if (file.isFolder == isFolder)
+        for (const [, value] of this.cache) {
+            for (const file of value.list) {
+                if (file.isFolder === isFolder)
                     files.push(file.path);
             }
         }
@@ -136,7 +136,7 @@ export class ProjectsCache {
 
     async parseProjectList(files: string[]) {
         const resPaths = new Set<{ path: string, isFolder: boolean }>();
-        for (let file of files) {
+        for (const file of files) {
             if (file.startsWith("group:/")) {
                 resPaths.add({ path: file.substring("group:".length), isFolder: true });
             } else if (file.startsWith("file:/")) {
@@ -161,7 +161,7 @@ export class ProjectsCache {
         if (!this.watcher.has(projectPath)) {
             const fullProjectPath = path.join(getFilePathInWorkspace(projectPath), "project.pbxproj");
             const fileWatch = watch(fullProjectPath, null);
-            fileWatch.on("change", async e => {
+            fileWatch.on("change", async () => {
                 const contentFile = fs.readFileSync(fullProjectPath);
 
                 if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
@@ -179,7 +179,7 @@ export class ProjectsCache {
                 await this.update(projectPath);
                 this.onProjectChanged.fire();
             });
-            const contentProjectFile = contentFile == undefined ? fs.readFileSync(fullProjectPath) : contentFile;
+            const contentProjectFile = contentFile === undefined ? fs.readFileSync(fullProjectPath) : contentFile;
             this.watcher.set(
                 projectPath,
                 { watcher: fileWatch, content: contentProjectFile }

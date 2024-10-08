@@ -23,7 +23,7 @@ function preCalcLineNumbers(text: string) {
     let currentNumber = 0;
     for (let i = 0; i < text.length; ++i) {
         line.push(currentNumber);
-        currentNumber += text[i] == '\n' ? 1 : 0;
+        currentNumber += text[i] === '\n' ? 1 : 0;
     }
     return line;
 }
@@ -41,8 +41,8 @@ function preCalcCommentedCode(text: string) {
         switch (commented) {
             case Commented.notCommented:
                 if (text[i] === '/' && text[i + 1] === '/') {
-                    commented = Commented.singleCommented
-                } else if (text[i] == '/' && text[i + 1] == '*') {
+                    commented = Commented.singleCommented;
+                } else if (text[i] === '/' && text[i + 1] === '*') {
                     commented = Commented.multiCommented;
                 }
                 break;
@@ -52,7 +52,7 @@ function preCalcCommentedCode(text: string) {
                 }
                 break;
             case Commented.multiCommented:
-                if (text[i] == '*' && text[i + 1] == '/') {
+                if (text[i] === '*' && text[i + 1] === '/') {
                     commented = Commented.notCommented;
                 }
                 break;

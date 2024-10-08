@@ -23,7 +23,8 @@ export class SimulatorFocus {
             return;
 
         try {
-            if (this.platform == Platform.macOS) {
+            if (this.platform === Platform.macOS) {
+                // eslint-disable-next-line no-useless-escape
                 execSync(`osascript -e \"tell application \\"${this.productName}\\" to activate\"`);
             } else {
                 execSync(`open -a Simulator --args -CurrentDeviceUDID ${this.deviceID}`);

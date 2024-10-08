@@ -86,16 +86,16 @@ export class CommandContext {
     }
 
     public waitToCancel() {
-        let disLocalCancel: vscode.Disposable[] = [];
+        const disLocalCancel: vscode.Disposable[] = [];
         const finishToken = new vscode.EventEmitter<void>();
-        const rejectToken = new vscode.EventEmitter<any>();
+        const rejectToken = new vscode.EventEmitter<unknown>();
         return {
             wait: new Promise<void>((resolve, reject) => {
                 if (this.cancellationToken.isCancellationRequested) {
                     resolve();
                     return;
                 }
-                disLocalCancel.push(this.cancellationToken.onCancellationRequested(e => {
+                disLocalCancel.push(this.cancellationToken.onCancellationRequested(() => {
                     disLocalCancel.forEach(e => e.dispose());
                     resolve();
                 }));

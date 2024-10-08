@@ -45,12 +45,12 @@ export class ProjectManager {
     }
 
     async listTargetsForFile(file: string, project: string | undefined = undefined) {
-        let schemeType = getProjectType(await getProjectFileName());
+        const schemeType = getProjectType(await getProjectFileName());
         if (schemeType === "-package") {
             return await new Promise<string[]>(resolve => {
-                let pathParts = file.split(path.sep);
+                const pathParts = file.split(path.sep);
                 for (let i = pathParts.length - 1; i >= 0; --i) {
-                    if (pathParts[i] == "Sources" || pathParts[i] == "Tests") {
+                    if (pathParts[i] === "Sources" || pathParts[i] === "Tests") {
                         resolve([pathParts[i + 1]]);
                         return;
                     }
@@ -58,8 +58,8 @@ export class ProjectManager {
                 resolve([]);
             });
         }
-        const projects = project == undefined ? this.projectCache.getProjects() : [project];
-        for (let project of projects) {
+        const projects = project === undefined ? this.projectCache.getProjects() : [project];
+        for (const project of projects) {
             if (this.projectCache.getList(project).has(file)) {
                 return (await listTargetsForFile(getFilePathInWorkspace(project), file))
                     .filter(e => { return e.length > 0; });
@@ -74,7 +74,7 @@ export class ProjectManager {
                 setTimeout(() => {
                     this.onProjectLoaded.fire();
                 }, 100);
-                return
+                return;
             }
             return;
         }
@@ -90,9 +90,9 @@ export class ProjectManager {
 
         const projects = await getProjectFiles(await getProjectPath());
 
-        let wasLoadedWithError = [] as string[];
-        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Loading Project" }, async (progress, token) => {
-            for (let [index, project] of projects.entries()) {
+        const wasLoadedWithError = [] as string[];
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Loading Project" }, async (progress) => {
+            for (const [index, project] of projects.entries()) {
                 progress.report({ increment: 100 * index / (project.length + 1), message: fileNameFromPath(project) });
                 try {
                     await this.projectCache.update(project);
@@ -108,7 +108,7 @@ export class ProjectManager {
 
         if (wasLoadedWithError.length > 0) {
             const option = await vscode.window.showErrorMessage(`Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}. Update dependencies and retry?`, "Update Dependencies", "Cancel");
-            if (option == "Update Dependencies" && this.onUpdateDeps != undefined) {
+            if (option === "Update Dependencies" && this.onUpdateDeps !== undefined) {
                 await this.onUpdateDeps();
                 this.loadProjectFiles(shouldDropCache);
             }
@@ -116,7 +116,7 @@ export class ProjectManager {
     }
 
     private async readAllProjects(files: Set<string>) {
-        for (let file of files) {
+        for (const file of files) {
             if (file.endsWith(".xcodeproj")) {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
                 if (await this.projectCache.update(relativeProjectPath)) {
@@ -130,19 +130,19 @@ export class ProjectManager {
         const projectTree = new ProjectTree();
 
         // add all project first as they are visible
-        for (let file of [...this.projectCache.files(), ...await this.getAdditionalIncludedFiles()]) {
+        for (const file of [...this.projectCache.files(), ...await this.getAdditionalIncludedFiles()]) {
             projectTree.addIncluded(file);
         }
-        for (let folder of [...this.projectCache.files(true)]) {
+        for (const folder of [...this.projectCache.files(true)]) {
             projectTree.addIncluded(folder, false);
         }
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getFilePathInWorkspace(".logs"));
-        projectTree.addIncluded(getFilePathInWorkspace((await this.getProjects()).at(0) || ""))
+        projectTree.addIncluded(getFilePathInWorkspace((await this.getProjects()).at(0) || ""));
 
         // now try to go over all subfolder and exclude every single file which is not in the project files 
         const visitedFolders = new Set<string>();
-        for (let file of [getWorkspacePath(), ...this.projectCache.files(), ...this.projectCache.files(true)]) {
+        for (const file of [getWorkspacePath(), ...this.projectCache.files(), ...this.projectCache.files(true)]) {
             const relative = path.relative(getWorkspacePath(), file);
             if (relative.startsWith("..")) {
                 continue;
@@ -164,7 +164,7 @@ export class ProjectManager {
                                 ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}"
                             }
                         );
-                        for (let file of files) {
+                        for (const file of files) {
                             projectTree.addExcluded(file);
                         }
                     } catch (err) {
@@ -176,8 +176,8 @@ export class ProjectManager {
 
         // Generate json and dump to files
         const excludedFiles = projectTree.excludedFiles();
-        let excludedFilesDict: { [key: string]: boolean } = {};
-        for (let file of excludedFiles) {
+        const excludedFilesDict: { [key: string]: boolean } = {};
+        for (const file of excludedFiles) {
             const relative = path.relative(getWorkspacePath(), file);
             excludedFilesDict[relative] = true;
         }
@@ -194,7 +194,7 @@ export class ProjectManager {
                 "files.exclude": excludedFilesDict,
                 "search.exclude": excludedFilesDict
             }
-        }
+        };
         const buildRootPath = getBuildRootPath();
         if (buildRootPath !== undefined) {
             xCodeWorkspace.folders.push({
@@ -218,9 +218,9 @@ export class ProjectManager {
             );
 
             const obj = JSON.parse(json);
-            let resFiles = new Set<string>();
+            const resFiles = new Set<string>();
 
-            for (let pattern of obj.files) {
+            for (const pattern of obj.files) {
                 const cwd = path.join(getFilePathInWorkspace(await getProjectFolderPath()), pattern.search.cwd);
                 const files = await glob(
                     pattern.search.include,
@@ -232,7 +232,7 @@ export class ProjectManager {
                         ignore: pattern.search.ignore
                     }
                 );
-                for (let file of files)
+                for (const file of files)
                     resFiles.add(file);
             }
 
@@ -243,7 +243,7 @@ export class ProjectManager {
         }
     }
 
-    private async saveWorkspace(workspace: any) {
+    private async saveWorkspace(workspace: unknown) {
         const json = JSON.stringify(workspace, null, 4);
         return new Promise<void>(async (resolve, reject) => {
             fs.writeFile(await this.xCodeWorkspacePath(), json, async e => {
@@ -288,7 +288,7 @@ export class ProjectManager {
         if (await isActivated() === false) {
             return false;
         }
-        if (await getProjectFileName() == "Package.swift") {
+        if (await getProjectFileName() === "Package.swift") {
             return false;
         }
         return true;
@@ -298,7 +298,7 @@ export class ProjectManager {
         if (!this.isAllowed()) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
-                return
+                return;
             }
             return;
         }
@@ -309,9 +309,9 @@ export class ProjectManager {
             for (let i = 0; i < oldFiles.length; ++i) {
                 const file = files[i];
                 const oldFile = oldFiles[i];
-                let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+                const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
 
-                for (let project of selectedProject) {
+                for (const project of selectedProject) {
                     try {
                         modifiedProjects.add(project);
                         if (isFolder(file.fsPath)) {
@@ -346,7 +346,7 @@ export class ProjectManager {
         if (!this.isAllowed()) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
-                return
+                return;
             }
             return;
         }
@@ -354,9 +354,9 @@ export class ProjectManager {
         const modifiedProjects = new Set<string>();
         try {
             for (const file of files) {
-                let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+                const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
 
-                for (let project of selectedProject) {
+                for (const project of selectedProject) {
                     modifiedProjects.add(project);
                     try {
                         const list = this.projectCache.getList(project);
@@ -381,7 +381,7 @@ export class ProjectManager {
     }
 
     async getProjectTargets() {
-        let schemeType = getProjectType(await getProjectFileName());
+        const schemeType = getProjectType(await getProjectFileName());
         if (schemeType === "-package")
             return await getTargets(await getProjectFileName(), getWorkspacePath());
         else {
@@ -393,9 +393,9 @@ export class ProjectManager {
     }
 
     async getFilesForTarget(targetName: string) {
-        let schemeType = getProjectType(await getProjectFileName());
+        const schemeType = getProjectType(await getProjectFileName());
         if (schemeType === "-package") {
-            let path = targetName.endsWith("Tests") ? "Tests" : `Sources`;
+            const path = targetName.endsWith("Tests") ? "Tests" : `Sources`;
             return (await vscode.workspace.findFiles(`${path}/${targetName}/**/*.swift`)).map(e => {
                 return e.fsPath;
             });
@@ -413,7 +413,7 @@ export class ProjectManager {
         if (!file)
             return;
         const projectFiles = this.projectCache.getProjects();
-        let selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+        const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
         if (selectedProject.length !== 1)
             return;
 
@@ -435,7 +435,7 @@ export class ProjectManager {
         if (!this.isAllowed()) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
-                return
+                return;
             }
             return;
         }
@@ -448,12 +448,12 @@ export class ProjectManager {
         }
         else {
             fileList = files as vscode.Uri[];
-            if (fileList.length == 0)
+            if (fileList.length === 0)
                 return;
         }
 
         const projectFiles = this.projectCache.getProjects();
-        let selectedProject: string | undefined = await this.selectBestFitProject("Select A Project File to Add a new Files", fileList[0], projectFiles);
+        const selectedProject: string | undefined = await this.selectBestFitProject("Select A Project File to Add a new Files", fileList[0], projectFiles);
         if (selectedProject === undefined) {
             return;
         }
@@ -497,7 +497,7 @@ export class ProjectManager {
                 foldersToAdd.add(filePath.path.fsPath);
             }
         }
-        if (filesToAdd.size == 0 && foldersToAdd.size == 0)
+        if (filesToAdd.size === 0 && foldersToAdd.size === 0)
             return;
 
         let selectedTargets: string | undefined;
@@ -530,7 +530,7 @@ export class ProjectManager {
     private async selectBestFitProject(title: string, file: vscode.Uri, projectFiles: string[]) {
         const bestFitProject = await this.determineProjectFile(file.fsPath, projectFiles);
         let selectedProject: string | undefined;
-        if (bestFitProject.length == 0) {
+        if (bestFitProject.length === 0) {
             selectedProject = await vscode.window.showQuickPick(projectFiles, { title: title, canPickMany: false, ignoreFocusOut: true });
         } else {
             if (bestFitProject.length > 1)
@@ -564,7 +564,7 @@ export class ProjectManager {
     }
 
     private async determineProjectFile(filePath: string, projects: string[]) {
-        let bestFitProject = new Set<string>();
+        const bestFitProject = new Set<string>();
         let largestCommonPrefix = -1;
         let relativeFileLength = Number.MAX_SAFE_INTEGER;
         const filePathComponent = filePath.split(path.sep);
@@ -579,12 +579,12 @@ export class ProjectManager {
                         bestFitProject.clear();
                         bestFitProject.add(project);
                         relativeFileLength = file.length;
-                    } else if (i == largestCommonPrefix) {
+                    } else if (i === largestCommonPrefix) {
                         if (file.length < relativeFileLength) {
                             bestFitProject.clear();
                             relativeFileLength = file.length;
                             bestFitProject.add(project);
-                        } else if (file.length == relativeFileLength)
+                        } else if (file.length === relativeFileLength)
                             bestFitProject.add(project);
                     }
                 }
@@ -607,17 +607,18 @@ function sortTargets(targets: string[], fileTargets: string[]): QuickPickItem[] 
 
 export async function getProjectFiles(project: string) {
     if (project.indexOf(".xcworkspace") !== -1) {
-        let xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), 'utf-8');
+        const xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), 'utf-8');
 
         const options = {
             ignoreAttributes: false,
             attributeNamePrefix: ''
         };
         const xml = new parser.XMLParser(options);
-        let jsonObj = xml.parse(xmlData);
+        const jsonObj = xml.parse(xmlData);
         console.log(jsonObj);
-        let project_files: string[] = [];
+        const project_files: string[] = [];
 
+        // eslint-disable-next-line no-inner-declarations, @typescript-eslint/no-explicit-any
         function findFileRefNodes(node: any, location: string) {
             if (node) {
                 if (node.FileRef) {
@@ -626,8 +627,8 @@ export async function getProjectFiles(project: string) {
                         const localPath = getLocalPath(node);
                         locationPath = path.join(location, localPath);
                     }
-                    let fileRefs = Array.isArray(node.FileRef) ? node.FileRef : [node.FileRef];
-                    for (let ref of fileRefs) {
+                    const fileRefs = Array.isArray(node.FileRef) ? node.FileRef : [node.FileRef];
+                    for (const ref of fileRefs) {
                         let location_ = ref.location;
                         location_ = location_.substring('group:'.length);
                         if (location_.includes('.xcodeproj')) {
@@ -635,7 +636,7 @@ export async function getProjectFiles(project: string) {
                         }
                     }
                 }
-                for (let prop in node) {
+                for (const prop in node) {
                     if (node[prop] !== null && typeof (node[prop]) === 'object') {
                         let locationPath = location;
                         if (node.location) {
@@ -647,11 +648,12 @@ export async function getProjectFiles(project: string) {
                 }
             }
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             function getLocalPath(node: any) {
                 let localPath = node.location;
-                if (node.location == "container:") {
+                if (node.location === "container:") {
                     localPath = node.location.substring("container:".length);
-                } else if (node.location.substring(0, "group:".length) == "group:") {
+                } else if (node.location.substring(0, "group:".length) === "group:") {
                     localPath = node.location.substring("group:".length);
                 }
                 return localPath;
@@ -684,11 +686,11 @@ async function getProjectTargets(projectFile: string) {
 }
 
 async function addFileToProject(projectFile: string, target: string, file: string) {
-    return await executeRuby(projectFile, `add_file|^|^|${target}|^|^|${file}`)
+    return await executeRuby(projectFile, `add_file|^|^|${target}|^|^|${file}`);
 }
 
 async function addFolderToProject(projectFile: string, folder: string) {
-    return await executeRuby(projectFile, `add_group|^|^|${folder}`)
+    return await executeRuby(projectFile, `add_group|^|^|${folder}`);
 }
 
 async function updateFileToProject(projectFile: string, target: string, file: string) {
@@ -715,7 +717,7 @@ export async function listFilesFromProject(projectFile: string) {
     return await executeRuby(projectFile, `list_files|^|^|`);
 }
 
-export async function listFilesFromTarget(projectFile: string, targetName: String) {
+export async function listFilesFromTarget(projectFile: string, targetName: string) {
     return await executeRuby(projectFile, `list_files_for_target|^|^|${targetName}`);
 }
 
@@ -748,9 +750,9 @@ function getProjectType(projectFile: string): string {
 }
 
 async function getTargets(projectFile: string, cwd: string) {
-    let command = ["xcodebuild", "-list"];
-    let schemeType = getProjectType(projectFile);
-    if (schemeType != "-package") {
+    const command = ["xcodebuild", "-list"];
+    const schemeType = getProjectType(projectFile);
+    if (schemeType !== "-package") {
         command.push(schemeType);
         command.push(projectFile);
     }
@@ -761,10 +763,10 @@ async function getTargets(projectFile: string, cwd: string) {
                 reject(error);
                 return;
             }
-            let schemes: string[] = [];
+            const schemes: string[] = [];
             let isTail = false;
 
-            for (let x of stdout.split('\n')) {
+            for (const x of stdout.split('\n')) {
                 if (isTail && x.trim().length > 0)
                     schemes.push(x.trim());
 

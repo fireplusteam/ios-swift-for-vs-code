@@ -26,12 +26,19 @@
     "cSpell.words": [
         "appletvsimulator",
         "autowatcher",
+        "disasm",
         "isysroot",
         "langclient",
         "LLDBDAP",
+        "Parens",
+        "showdestinations",
+        "sswg",
+        "swiftinterface",
         "visionos",
+        "vsdiag",
         "waitfor",
         "watchos",
+        "xcresulttool",
         "xrsimulator"
     ]
 }

@@ -6,7 +6,7 @@ import { ProblemDiagnosticResolver } from './ProblemDiagnosticResolver';
 import { ProjectManager } from './ProjectManager/ProjectManager';
 import { buildSelectedTarget } from "./buildCommands";
 import { currentPlatform, getProjectPath, getScriptPath, getWorkspacePath, getXCBBuildServicePath, getXCodeBuildServerPath, isBuildServerValid, Platform, updateProject } from "./env";
-import { Executor, ExecutorMode } from "./Executor";
+import { Executor } from "./Executor";
 import { handleValidationErrors, sleep } from './extension';
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, isFolder } from "./utils";
@@ -16,21 +16,21 @@ import { RunManager } from './Services/RunManager';
 function filterDevices(devices: { [name: string]: string }[], isSelected: (device: { [name: string]: string }) => boolean) {
     const items = devices.map<QuickPickItem | undefined>(device => {
         let formattedKey = "";
-        if (device.hasOwnProperty("name") && device.hasOwnProperty("OS"))
+        if (Object.prototype.hasOwnProperty.call(device, "name") && Object.prototype.hasOwnProperty.call(device, "OS"))
             formattedKey = `${device["name"]} - OS ${device["OS"]} `;
-        else if (device.hasOwnProperty("name"))
+        else if (Object.prototype.hasOwnProperty.call(device, "name"))
             formattedKey = device["name"];
-        else if (device.hasOwnProperty("platform"))
+        else if (Object.prototype.hasOwnProperty.call(device, "platform"))
             formattedKey = device["platform"];
         else return undefined;
-        if (device.hasOwnProperty("variant")) {
+        if (Object.prototype.hasOwnProperty.call(device, "variant")) {
             formattedKey += " " + device["variant"];
         }
 
         if (isSelected(device)) {
             return { label: "$(notebook-state-success) " + formattedKey, picked: true, value: device };
         } else {
-            return { label: formattedKey, value: device }
+            return { label: formattedKey, value: device };
         }
     }).filter((item): item is QuickPickItem => item !== undefined);
     return items;
@@ -39,7 +39,7 @@ function filterDevices(devices: { [name: string]: string }[], isSelected: (devic
 export async function selectProjectFile(commandContext: CommandContext, projectManager: ProjectManager, showProposalMessage = false, ignoreFocusOut = false) {
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
     const projectEnd = ".xcodeproj/project.pbxproj";
-    const excludeEnd = ".xcodeproj/project.xcworkspace"
+    const excludeEnd = ".xcodeproj/project.xcworkspace";
     const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
     const files = await glob(
         include,
@@ -53,9 +53,9 @@ export async function selectProjectFile(commandContext: CommandContext, projectM
     const options = files
         .filter(file => {
             if (file.endsWith(projectEnd)) {
-                for (let checkFile of files) {
+                for (const checkFile of files) {
                     if (checkFile.endsWith(workspaceEnd) &&
-                        checkFile.slice(0, -workspaceEnd.length) == file.slice(0, -projectEnd.length))
+                        checkFile.slice(0, -workspaceEnd.length) === file.slice(0, -projectEnd.length))
                         return false;
                 }
             }
@@ -63,7 +63,7 @@ export async function selectProjectFile(commandContext: CommandContext, projectM
         })
         .map((file) => {
             if (file.endsWith("Package.swift")) {
-                const relativeProjectPath = path.relative(getWorkspacePath(), file)
+                const relativeProjectPath = path.relative(getWorkspacePath(), file);
                 return { label: relativeProjectPath, value: file };
             }
             const relativeProjectPath = path.relative(getWorkspacePath(), file)
@@ -77,8 +77,8 @@ export async function selectProjectFile(commandContext: CommandContext, projectM
                 return false;
             return true;
         });
-    if (options.length == 0) {
-        if (showProposalMessage == false) {
+    if (options.length === 0) {
+        if (showProposalMessage === false) {
             vscode.window.showErrorMessage("Workspace doesn't have any iOS project or workspace file");
         }
         return false;
@@ -115,12 +115,12 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
             currentScheme = "";
         }
         const json = schemes.map<QuickPickItem>(scheme => {
-            if (currentScheme == scheme)
+            if (currentScheme === scheme)
                 return { label: "$(notebook-state-success) " + scheme, value: scheme };
             else return { label: scheme, value: scheme };
         });
 
-        let option = await showPicker(json,
+        const option = await showPicker(json,
             "Target",
             "Please select Target",
             false,
@@ -149,12 +149,12 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
             currentConfiguration = "";
         }
         const json = configurations.map<QuickPickItem>(configuration => {
-            if (currentConfiguration == configuration)
+            if (currentConfiguration === configuration)
                 return { label: "$(notebook-state-success) " + configuration, value: configuration };
             else return { label: configuration, value: configuration };
         });
 
-        let option = await showPicker(json,
+        const option = await showPicker(json,
             "Configuration",
             "Please Select Build Configuration",
             false,
@@ -183,14 +183,14 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
         } catch {
             selectedDeviceID = "";
         }
-        const items = filterDevices(devices, device => selectedDeviceID == device["id"]);
+        const items = filterDevices(devices, device => selectedDeviceID === device["id"]);
 
-        if (items.length == 0) {
+        if (items.length === 0) {
             vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
             return false;
         }
 
-        let option = await showPicker(
+        const option = await showPicker(
             items,
             "Device",
             "Please select Device for DEBUG",
@@ -202,9 +202,10 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
         if (option === undefined) {
             return false;
         }
-        if (typeof option == "object") {
+        if (typeof option === "object") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const obj = option as { [key: string]: any };
-            await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj.id)
+            await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj.id);
             await commandContext.projectSettingsProvider.projectEnv.setPlatform(obj.platform);
         }
     } catch (error) {
@@ -225,38 +226,36 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             validProjectScheme = !(await commandContext.projectSettingsProvider.projectEnv.projectScheme === "");
         } catch {
             validProjectScheme = false;
-        } finally {
-            if (validProjectScheme == false && await selectTarget(commandContext, ignoreFocusOut) === false)
-                return false;
         }
+        if (validProjectScheme === false && await selectTarget(commandContext, ignoreFocusOut) === false)
+            return false;
 
         let validProjectConfiguration = false;
         try {
-            validProjectConfiguration = !(await commandContext.projectSettingsProvider.projectEnv.projectConfiguration == "");
+            validProjectConfiguration = !(await commandContext.projectSettingsProvider.projectEnv.projectConfiguration === "");
         } catch {
             validProjectConfiguration = false;
-        } finally {
-            if (validProjectConfiguration == false && await selectConfiguration(commandContext, ignoreFocusOut) === false)
-                return false;
         }
+        if (validProjectConfiguration === false && await selectConfiguration(commandContext, ignoreFocusOut) === false)
+            return false;
 
         let validDebugDeviceID = false;
         try {
-            validDebugDeviceID = !(await commandContext.projectSettingsProvider.projectEnv.debugDeviceID == "");
+            validDebugDeviceID = !(await commandContext.projectSettingsProvider.projectEnv.debugDeviceID === "");
             validDebugDeviceID &&= !(await commandContext.projectSettingsProvider.projectEnv.platform);
         } catch {
             validDebugDeviceID = false;
-            if (validDebugDeviceID == false && await selectDevice(commandContext, ignoreFocusOut) === false)
+            if (validDebugDeviceID === false && await selectDevice(commandContext, ignoreFocusOut) === false)
                 return false;
         }
 
-        if (await isBuildServerValid() == false) {
+        if (await isBuildServerValid() === false) {
             await generateXcodeServer(commandContext, false);
         }
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {
             return await checkWorkspace(commandContext, ignoreFocusOut);
-        })
+        });
     }
 }
 
@@ -300,7 +299,7 @@ export async function runApp(commandContext: CommandContext, sessionID: string, 
 
 export async function runAppOnMultipleDevices(commandContext: CommandContext, sessionID: string, problemResolver: ProblemDiagnosticResolver) {
     try {
-        if (await currentPlatform() == Platform.macOS) {
+        if (await currentPlatform() === Platform.macOS) {
             vscode.window.showErrorMessage("MacOS Platform doesn't support running on Multiple Devices");
             return;
         }
@@ -312,9 +311,9 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
         } catch {
             selectedDeviceID = [];
         }
-        const items = filterDevices(devices, device => selectedDeviceID.find(id => device["id"] == id) !== undefined);
+        const items = filterDevices(devices, device => selectedDeviceID.find(id => device["id"] === id) !== undefined);
 
-        if (items.length == 0) {
+        if (items.length === 0) {
             vscode.window.showErrorMessage("There're no available devices to select for given scheme/project configuration. Likely, need to install simulators first!");
             return false;
         }
@@ -343,7 +342,7 @@ export async function runAppOnMultipleDevices(commandContext: CommandContext, se
 
         await buildSelectedTarget(commandContext, problemResolver);
 
-        for (let device of deviceIds) {
+        for (const device of deviceIds) {
             emptyAppLog(device);
         }
         const runApp = new RunManager(
@@ -385,8 +384,8 @@ export async function enableXCBBuildService(enabled: boolean) {
     const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
 
     return new Promise<void>((resolve) => {
-        exec(checkIfInjectedCommand, async (error, stdout, stderr) => {
-            if (enabled && error === null || !enabled && error != null) {
+        exec(checkIfInjectedCommand, async (error) => {
+            if (enabled && error === null || !enabled && error !== null) {
                 resolve();
                 return;
             }
@@ -396,9 +395,9 @@ export async function enableXCBBuildService(enabled: boolean) {
                 resolve();
                 return;
             }
-            const install = enabled ? "-install" : "-uninstall"
+            const install = enabled ? "-install" : "-uninstall";
             const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
-            exec(command, (error, stdout, stderr) => {
+            exec(command, (error) => {
                 if (error) {
                     if (enabled)
                         vscode.window.showErrorMessage(`Failed to install XCBBuildService`);
@@ -408,7 +407,7 @@ export async function enableXCBBuildService(enabled: boolean) {
                     if (enabled)
                         vscode.window.showInformationMessage("XCBBuildService proxy setup successfully");
                     else
-                        vscode.window.showInformationMessage("XCBBuildService Proxy was uninstall successfully")
+                        vscode.window.showInformationMessage("XCBBuildService Proxy was uninstall successfully");
                 }
                 resolve();
             });

@@ -25,7 +25,7 @@ export const ProductNameMissedError = new Error("ProductNameMissedError");
 
 export interface ProjectEnvInterface {
     platform: Promise<Platform>
-    platformString: Promise<String>
+    platformString: Promise<string>
     projectFile: Promise<string>
     projectScheme: Promise<string>
     projectConfiguration: Promise<string>
@@ -69,7 +69,7 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         return currentPlatform();
     }
 
-    get platformString(): Promise<String> {
+    get platformString(): Promise<string> {
         return getProjectPlatform();
     }
 
@@ -207,7 +207,7 @@ export async function getEnv() {
     try {
         xcodeSdk = await sdk();
     } catch {
-        xcodeSdk = ""
+        xcodeSdk = "";
     }
     return {
         VS_IOS_PROJECT_ENV_FILE: getEnvFilePath(),
@@ -295,15 +295,15 @@ export function getXCodeBuildServerPath() {
 }
 
 export function getXCBBuildServicePath() {
-    return path.join(__dirname, "..", "src", "XCBBuildServiceProxy", "dist", "XCBBuildService")
+    return path.join(__dirname, "..", "src", "XCBBuildServiceProxy", "dist", "XCBBuildService");
 }
 
 function readEnvFileToDict() {
-    let dict: { [key: string]: string } = {};
+    const dict: { [key: string]: string } = {};
     if (fs.existsSync(getEnvFilePath()) === false) {
         return dict;
     }
-    let lines = fs.readFileSync(getEnvFilePath(), "utf-8");
+    const lines = fs.readFileSync(getEnvFilePath(), "utf-8");
     const list = lines.split("\n");
     for (let i = 0; i < list.length; ++i) {
         const line = list[i];
@@ -325,7 +325,7 @@ export function saveKeyToEnvList(key: string, value: string) {
     for (const [key, val] of Object.entries(dict)) {
         if (key === "" || val === "")
             continue;
-        json += `${key}=${val}\n`
+        json += `${key}=${val}\n`;
     }
 
     fs.writeFileSync(getEnvFilePath(), json, "utf-8");
@@ -333,10 +333,10 @@ export function saveKeyToEnvList(key: string, value: string) {
 
 export async function isActivated() {
     const env = getEnvList();
-    if (!env.hasOwnProperty("PROJECT_FILE")) {
+    if (!Object.prototype.hasOwnProperty.call(env, "PROJECT_FILE")) {
         return false;
     }
-    if ((await getProjectFileName()).length == 0) {
+    if ((await getProjectFileName()).length === 0) {
         return false;
     }
     return true;
@@ -351,7 +351,7 @@ export function getBuildRootPath() {
         const json = JSON.parse(fs.readFileSync(getFilePathInWorkspace("buildServer.json"), "utf-8"));
         return json.build_root;
     } catch (error) {
-        console.log(`Building folder is not set : ${error}`)
+        console.log(`Building folder is not set : ${error}`);
         return undefined;
     }
 }
@@ -359,7 +359,7 @@ export function getBuildRootPath() {
 export async function isBuildServerValid() {
     try {
         const buildServer = getBuildServerJson();
-        if (buildServer.workspace.indexOf(getFilePathInWorkspace(await getProjectFileName())) == -1) {
+        if (buildServer.workspace.indexOf(getFilePathInWorkspace(await getProjectFileName())) === -1) {
             return false;
         }
         if (await getProjectScheme() !== buildServer.scheme) {
@@ -398,15 +398,15 @@ export async function getTargetExecutable(product_name: string, build_configurat
         const build_path = getBuildRootPath();
         switch (await currentPlatform()) {
             case Platform.macOS:
-                return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`
+                return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`;
             case Platform.watchOSSimulator:
-                return `${build_path}/Build/Products/${build_configuration}-watchsimulator/${product_name}.app`
+                return `${build_path}/Build/Products/${build_configuration}-watchsimulator/${product_name}.app`;
             case Platform.visionOSSimulator:
-                return `${build_path}/Build/Products/${build_configuration}-xrsimulator/${product_name}.app`
+                return `${build_path}/Build/Products/${build_configuration}-xrsimulator/${product_name}.app`;
             case Platform.tvOSSimulator:
-                return `${build_path}/Build/Products/${build_configuration}-appletvsimulator/${product_name}.app`
+                return `${build_path}/Build/Products/${build_configuration}-appletvsimulator/${product_name}.app`;
             case Platform.iOSSimulator:
-                return `${build_path}/Build/Products/${build_configuration}-iphonesimulator/${product_name}.app`
+                return `${build_path}/Build/Products/${build_configuration}-iphonesimulator/${product_name}.app`;
         }
     }
     catch {

@@ -14,7 +14,8 @@ export class TestCaseProblemParser {
         return [];
     }
 
-    private column(output: string, messageEnd: number) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private column(_output: string, _messageEnd: number) {
         return [0, 10000];
     }
 
@@ -37,7 +38,7 @@ export class TestCaseProblemParser {
                 const column = this.column(output, (match?.index || 0) + match[0].length);
 
                 let message = match[5];
-                let end = message.lastIndexOf("\n");
+                const end = message.lastIndexOf("\n");
                 if (end !== -1)
                     message = message.substring(0, end);
 
@@ -46,7 +47,7 @@ export class TestCaseProblemParser {
 
 
                 const diffName = `Diff: ${testName}`;
-                let diagnostic: vscode.TestMessage
+                let diagnostic: vscode.TestMessage;
                 if (expectedActualMatch) {
                     diagnostic = vscode.TestMessage.diff(fullErrorMessage, expectedActualMatch.expected, expectedActualMatch.actual);
                 } else {
@@ -78,7 +79,7 @@ export class TestCaseProblemParser {
 
     private errorMessage(message: string) {
         const index = message.indexOf(" failed: ");
-        if (index == -1) {
+        if (index === -1) {
             const indexDelimiter = message.indexOf(" : ");
             if (indexDelimiter !== -1) {
                 return message.substring(indexDelimiter + " : ".length).trim();
@@ -87,14 +88,14 @@ export class TestCaseProblemParser {
         }
 
         for (let i = index; i >= 0; --i)
-            if (message[i] == ':') {
+            if (message[i] === ':') {
                 return message.substring(i + 1).trim();
             }
         return message.substring(index).trim();
     }
 
     private markDown(message: string, name: string) {
-        let mdString = new vscode.MarkdownString("");
+        const mdString = new vscode.MarkdownString("");
         mdString.isTrusted = true;
         // replace file links to be opened
         message = message.replaceAll(/^(.*?):(\d+):/gm, (str, p1, p2) => {
@@ -104,9 +105,9 @@ export class TestCaseProblemParser {
             const list = message.split(/^To configure[\s\S]*?SnapshotTesting.diffTool.*"$/gm);
 
             for (const pattern of list) {
-                const files = [...pattern.matchAll(/^\@[\s\S]*?"(file:.*?)\"$/gm)];
+                const files = [...pattern.matchAll(/^@[\s\S]*?"(file:.*?)"$/gm)];
                 mdString.appendMarkdown("\n" + pattern);
-                if (files.length == 2) {
+                if (files.length === 2) {
                     mdString.appendMarkdown(`\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, files[0][1], files[1][1]]))})`);
                 }
             }
