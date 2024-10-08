@@ -61,8 +61,13 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
 
     private clear() {
         this.buildErrors.clear();
-        this.diagnosticBuildCollection.forEach(uri => {
-            this.buildErrors.add(uri.fsPath);
+        this.diagnosticBuildCollection.forEach((uri, diagnostics) => {
+            const newDiagnostics = diagnostics.filter(e =>
+                ProblemDiagnosticResolver.isXcodebuild(e.source || "")
+            );
+            if (newDiagnostics.length > 0) {
+                this.buildErrors.add(uri.fsPath);
+            }
         });
     }
 
@@ -120,17 +125,21 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     private storeProblems(files: { [key: string]: vscode.Diagnostic[] }) {
         for (const file in files) {
             const fileUri = vscode.Uri.file(file);
+            let shouldDelete = false;
             if (this.buildErrors.delete(file)) {
-                this.diagnosticBuildCollection.delete(fileUri);
+                shouldDelete = true;
             }
             const allOthers =
                 this.diagnosticBuildCollection
                     .get(fileUri)
                     ?.filter(e => !ProblemDiagnosticResolver.isXcodebuild(e.source || "")) || [];
             const list = [
-                ...(this.diagnosticBuildCollection
-                    .get(fileUri)
-                    ?.filter(e => ProblemDiagnosticResolver.isXcodebuild(e.source || "")) || []),
+                ...(shouldDelete === true
+                    ? []
+                    : this.diagnosticBuildCollection
+                          .get(fileUri)
+                          ?.filter(e => ProblemDiagnosticResolver.isXcodebuild(e.source || "")) ||
+                      []),
                 ...files[file],
             ];
             this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, allOthers));
@@ -199,7 +208,13 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 }
                 if (shouldEnd) {
                     for (const file of this.buildErrors) {
-                        this.diagnosticBuildCollection.delete(vscode.Uri.file(file));
+                        const newDiagnostics =
+                            this.diagnosticBuildCollection
+                                .get(vscode.Uri.file(file))
+                                ?.filter(
+                                    e => !ProblemDiagnosticResolver.isXcodebuild(e.source || "")
+                                ) || [];
+                        this.diagnosticBuildCollection.set(vscode.Uri.file(file), newDiagnostics);
                     }
                     this.buildErrors.clear();
                     child.kill();
