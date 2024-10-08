@@ -143,8 +143,8 @@ export class TestProvider {
                         const convergedFiles = await this.context.coverage.getCoverageFiles();
                         for (const file of convergedFiles)
                             run.addCoverage(file);
-                    } catch {
-                        console.error(`Coverage data can not be obtained: ${error.toString()}`);
+                    } catch (error) {
+                        console.error(`Coverage data can not be obtained: ${error}`);
                     }
 
                     run.end();
