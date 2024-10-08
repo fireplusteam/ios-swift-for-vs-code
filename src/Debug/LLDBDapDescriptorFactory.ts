@@ -51,7 +51,8 @@ export class LLDBDapDescriptorFactory
         const log_path = session.configuration.logPath + ".lldb";
         let env: { [key: string]: string } = {};
         if (log_path) {
-            env["LLDBDAP_LOG"] = getFilePathInWorkspace(log_path);
+            // Uncomment it for Debug purposes
+            // env["LLDBDAP_LOG"] = getFilePathInWorkspace(log_path);
         }
 
         // const configEnvironment = config.get<{ [key: string]: string }>("lldb.environment") || {};

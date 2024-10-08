@@ -37,7 +37,8 @@ export class AutocompleteWatcher {
                 return;
             }
 
-            this.triggerIncrementalBuild();
+            this.triggerIncrementalBuild()
+                .catch(() => { });
         }));
         this.disposable.push(vscode.window.onDidChangeActiveTextEditor(async (e) => {
             if (!e || await this.isWatcherEnabled() === false) {
@@ -73,7 +74,8 @@ export class AutocompleteWatcher {
                         this.state = State.ModuleNotChanged;
                         this.moduleChangedName = moduleName;
 
-                        this.triggerIncrementalBuild();
+                        this.triggerIncrementalBuild()
+                            .catch(() => { });
                     }
             }
             this.textOfSelectedDocument = e.document.getText();
@@ -87,7 +89,7 @@ export class AutocompleteWatcher {
         if (await this.isWatcherEnabled() === false)
             return;
         this.buildId++;
-        this.incrementalBuild(this.buildId);
+        await this.incrementalBuild(this.buildId);
     }
 
     terminate() {
@@ -146,7 +148,8 @@ export class AutocompleteWatcher {
             if (err == UserCommandIsExecuting) {
                 await sleep(1000);
                 if (buildId == this.buildId) // still valid
-                    this.incrementalBuild(buildId);
+                    this.incrementalBuild(buildId)
+                        .catch(() => { }); // do nothing
             } else {
                 throw err;
             }
