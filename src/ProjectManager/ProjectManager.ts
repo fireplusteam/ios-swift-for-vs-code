@@ -44,7 +44,7 @@ export class ProjectManager {
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
     }
 
-    async listTargetsForFile(file: string) {
+    async listTargetsForFile(file: string, project: string | undefined = undefined) {
         let schemeType = getProjectType(await getProjectFileName());
         if (schemeType === "-package") {
             return await new Promise<string[]>(resolve => {
@@ -58,7 +58,7 @@ export class ProjectManager {
                 resolve([]);
             });
         }
-        const projects = this.projectCache.getProjects();
+        const projects = project == undefined ? this.projectCache.getProjects() : [project];
         for (let project of projects) {
             if (this.projectCache.getList(project).has(file)) {
                 return (await listTargetsForFile(getFilePathInWorkspace(project), file))
@@ -505,7 +505,7 @@ export class ProjectManager {
             const proposedTargets = await this.determineTargetForFile([...filesToAdd][0], selectedProject);
             const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
             const items = sortTargets(targets, proposedTargets);
-            const selectedTargetsArray = await showPicker(items, "Select Targets for The Files", "", true, false, false);
+            const selectedTargetsArray = await showPicker(items, "Select Targets for The Files", "", true, true, false);
             if (selectedTargetsArray === undefined) {
                 return;
             }

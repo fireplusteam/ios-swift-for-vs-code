@@ -131,8 +131,8 @@
                 },
                 "vscode-ios.watcher.singleModule": {
                     "type": "boolean",
-                    "default": false,
-                    "title": "Changes Watcher (Experimental)",
+                    "default": true,
+                    "title": "Changes Watcher",
                     "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes while editing"
                 },
                 "vscode-ios.debug.lldb-dap": {

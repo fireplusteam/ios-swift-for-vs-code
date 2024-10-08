@@ -194,6 +194,10 @@ export class TestProvider {
         return (file.endsWith('.swift'))// || file.endsWith(".m") || file.endsWith(".mm"));
     }
 
+    isTestTarget(target: string) {
+        return target.includes("Tests");
+    }
+
     async updateNodeForDocument(e: vscode.TextDocument, ctrl: vscode.TestController) {
         if (e.uri.scheme !== 'file') {
             return;
@@ -203,12 +207,17 @@ export class TestProvider {
             return;
         }
 
+        const project = (await this.projectManager.getProjects()).at(0) || "";
+        const target = (await this.projectManager.listTargetsForFile(e.uri.fsPath, project)).at(0);
+        if (target == undefined || !this.isTestTarget(target)) {
+            return;
+        }
+
         if (this.loadingState != TestProviderLoadingState.loaded)
             await this.findInitialFiles(this.context.ctrl);
 
-        const targets = await this.projectManager.listTargetsForFile(e.uri.fsPath);
         const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
-            return new TestFile(this.context, targets[0]);
+            return new TestFile(this.context, target);
         });
         const testFile = data as TestFile;
         await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
@@ -216,9 +225,8 @@ export class TestProvider {
             this.context.deleteItem(file.id);
         }
         else {
-            const project = (await this.projectManager.getProjects()).at(0) || "";
             this.context.addItem(file, root => {
-                return root.id === TestTreeContext.TestID("target://", TestTreeContext.getTargetFilePath(vscode.Uri.file(project), targets[0]));
+                return root.id === TestTreeContext.TestID("target://", TestTreeContext.getTargetFilePath(vscode.Uri.file(project), target));
             });
         }
     }
@@ -259,7 +267,7 @@ export class TestProvider {
                     return new TestProject(this.context,
                         async () => {
                             const targets = await this.projectManager.getProjectTargets();
-                            return targets.filter(e => { return e.includes("Tests") });
+                            return targets.filter(e => { return this.isTestTarget(e) });
                         }, async (targetName) => {
                             const files = await this.projectManager.getFilesForTarget(targetName);
                             return files.filter(e => { return this.supportedFileExtensions(e) });
