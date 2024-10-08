@@ -60,7 +60,7 @@
         "workspaceContains:**/*.xcodeproj/project.pbxproj",
         "onDebugResolve:xcode-lldb"
     ],
-    "main": "./out/extension.js",
+    "main": "./out/src/extension.js",
     "repository": {
         "url": "https://github.com/fireplusteam/ios_vs_code.git"
     },
