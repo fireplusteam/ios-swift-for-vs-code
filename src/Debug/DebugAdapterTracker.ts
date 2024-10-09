@@ -116,9 +116,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             } catch {
                 /* empty */
             }
-            this.debugTestSessionEvent.fire(
-                this.debugSession.configuration.appSessionId || this.sessionID
-            );
+            this.debugTestSessionEvent.fire(this.sessionID);
         }
     }
 

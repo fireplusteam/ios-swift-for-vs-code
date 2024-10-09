@@ -67,20 +67,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSDebugger(isDebuggable: boolean) {
-        const appSessionId = getSessionId(`App_${isDebuggable}${this.counterID}`);
+        const sessionId = getSessionId(`App_${isDebuggable}${this.counterID}`);
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: Run App & Debug",
             request: "launch",
             target: "app",
             isDebuggable: isDebuggable,
-            appSessionId: appSessionId,
+            sessionId: sessionId,
         };
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
             dis = this.debugTestSessionEvent(e => {
-                if (e === appSessionId) {
+                if (e === sessionId) {
                     dis?.dispose();
                     resolve(true);
                 }
@@ -90,20 +90,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSTestsDebugger(isDebuggable: boolean, testRun: vscode.TestRun) {
-        const appSessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
+        const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: Run Tests & Debug",
             request: "launch",
             target: "tests",
             isDebuggable: isDebuggable,
-            appSessionId: appSessionId,
+            sessionId: sessionId,
         };
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
             dis = this.debugTestSessionEvent(e => {
-                if (e === appSessionId) {
+                if (e === sessionId) {
                     dis?.dispose();
                     resolve(true);
                 }
@@ -117,21 +117,21 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         isDebuggable: boolean,
         testRun: vscode.TestRun
     ) {
-        const appSessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
+        const sessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
             name: "iOS: Run Tests & Debug: Current File",
             request: "launch",
             target: "testsForCurrentFile",
             isDebuggable: isDebuggable,
-            appSessionId: appSessionId,
+            sessionId: sessionId,
             testsToRun: tests,
         };
 
         let dis: vscode.Disposable | undefined;
         return await new Promise<boolean>(resolve => {
             dis = this.debugTestSessionEvent(e => {
-                if (e === appSessionId) {
+                if (e === sessionId) {
                     dis?.dispose();
                     resolve(true);
                 }
@@ -154,7 +154,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const isDebuggable =
             dbgConfig.noDebug === true ? false : (dbgConfig.isDebuggable as boolean);
 
-        const sessionID = getSessionId(`debugger`) + this.counterID;
+        const sessionID =
+            dbgConfig.sessionId === undefined
+                ? getSessionId(`debugger`) + this.counterID
+                : dbgConfig.sessionId;
 
         const context = await new Promise<CommandContext>((resolve, reject) => {
             this.atomicCommand.userCommand(async (context: CommandContext) => {
@@ -272,7 +275,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 cwd: getWorkspacePath(),
                 debuggerRoot: getWorkspacePath(),
                 stopOnEntry: false,
-                appSessionId: dbgConfig.appSessionId,
                 sessionId: sessionID,
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
@@ -314,7 +316,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "continue",
                 ],
                 exitCommands: [],
-                appSessionId: dbgConfig.appSessionId,
                 sessionId: sessionID,
                 noDebug: !isDebuggable,
                 target: dbgConfig.target,
