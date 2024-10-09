@@ -4,8 +4,9 @@
 
 ### Added
 
-- Support Swift Testing framework starting xCode 16.
+-   Support Swift Testing framework starting xCode 16.
+-   Own lsp client support
 
 ### Fixed
 
-- Test debug session were treated as user cancelled on error
+-   Test debug session were treated as user cancelled on error

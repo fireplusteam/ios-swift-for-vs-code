@@ -1,12 +1,17 @@
-import { HandleProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
+import { getLSPWorkspacePath } from "../env";
+import { HandleProblemDiagnosticResolver } from "./lspExtension";
+import * as vscode from "vscode";
 
 export interface WorkspaceContext {
-    problemDiagnosticResolver: HandleProblemDiagnosticResolver;
+    readonly workspaceFolder: vscode.Uri;
+    readonly problemDiagnosticResolver: HandleProblemDiagnosticResolver;
 }
 
 export class WorkspaceContextImp implements WorkspaceContext {
-    problemDiagnosticResolver: HandleProblemDiagnosticResolver;
+    readonly workspaceFolder: vscode.Uri;
+    readonly problemDiagnosticResolver: HandleProblemDiagnosticResolver;
     constructor(problemDiagnosticResolver: HandleProblemDiagnosticResolver) {
+        this.workspaceFolder = getLSPWorkspacePath();
         this.problemDiagnosticResolver = problemDiagnosticResolver;
     }
 }

@@ -221,7 +221,7 @@ export class ProjectManager {
             const relative = path.relative(getWorkspacePath(), file);
             excludedFilesDict[relative] = true;
         }
-        const workspaceName = `${getWorkspacePath().split(path.sep).at(-1)}/${getProjectFileName()}`;
+        const workspaceName = `${getWorkspacePath().split(path.sep).at(-1)}/${await getProjectFileName()}`;
         const xCodeWorkspace = {
             folders: [
                 {
@@ -232,6 +232,14 @@ export class ProjectManager {
             settings: {
                 "files.exclude": excludedFilesDict,
                 "search.exclude": excludedFilesDict,
+                // we use own lsp client, so we don't need to interfere with it
+                "swift.autoGenerateLaunchConfigurations": false,
+                "swift.disableAutoResolve": true,
+                "swift.sourcekit-lsp.disable": true,
+            },
+            extensions: {
+                // tell vs code not to recommend it as it interfere with this extension
+                unwantedRecommendations: ["sswg.swift-lang"],
             },
         };
         const buildRootPath = getBuildRootPath();

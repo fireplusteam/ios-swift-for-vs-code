@@ -2,16 +2,7 @@ import { ChildProcess, SpawnOptions, spawn } from "child_process";
 import * as fs from "fs";
 import path from "path";
 import * as vscode from "vscode";
-
-export type SourcePredicate = (source: string) => boolean;
-
-export interface HandleProblemDiagnosticResolver {
-    handleDiagnostics: (
-        uri: vscode.Uri,
-        isSourceKit: SourcePredicate,
-        newDiagnostics: vscode.Diagnostic[]
-    ) => void;
-}
+import { HandleProblemDiagnosticResolver, SourcePredicate } from "./LSP/lspExtension";
 
 export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolver {
     static xcodebuild = "xcodebuild";

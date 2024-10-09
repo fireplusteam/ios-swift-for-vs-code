@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } from "../Executor";
 import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
 import { TerminalShell } from "../TerminalShell";
+import { LSPClientContext } from "../LSP/lspExtension";
 
 export const UserTerminatedError: Error = new Error("User Terminated");
 export const UserTerminalCloseError: Error = new Error("User Terminal Close");
@@ -23,6 +24,8 @@ export class CommandContext {
         return this._debugConsoleEmitter.event;
     }
 
+    readonly lspClient: LSPClientContext;
+
     private _terminal?: TerminalShell;
     public get terminal(): TerminalShell | undefined {
         return this._terminal;
@@ -35,11 +38,13 @@ export class CommandContext {
 
     constructor(
         cancellationToken: vscode.CancellationTokenSource,
-        terminal: TerminalShell | undefined
+        terminal: TerminalShell | undefined,
+        lspClient: LSPClientContext
     ) {
         this._cancellationTokenSource = cancellationToken;
         this._projectSettingsProvider = new ProjectSettingsProvider(this);
         this._terminal = terminal;
+        this.lspClient = lspClient;
     }
 
     public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {

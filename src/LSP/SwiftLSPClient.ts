@@ -6,16 +6,20 @@ import { uriConverters } from "./uriConverters";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { WorkspaceContext } from "./WorkspaceContext";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
+import { activatePeekDocuments } from "./peekDocuments";
+import { activateGetReferenceDocument } from "./getReferenceDocument";
 
 export class SwiftLSPClient {
     private languageClient: langclient.LanguageClient | null | undefined;
 
     private clientReadyPromise?: Promise<void> = undefined;
+    private peekDocuments?: vscode.Disposable;
+    private getReferenceDocument?: vscode.Disposable;
 
     public async client(): Promise<langclient.LanguageClient> {
         if (this.languageClient === undefined) {
             if (this.clientReadyPromise === undefined) {
-                await this.setupLanguageClient(this.workspaceFolder);
+                await this.setupLanguageClient(this.workspaceContext.workspaceFolder);
             }
             await this.clientReadyPromise;
         }
@@ -23,13 +27,33 @@ export class SwiftLSPClient {
     }
 
     constructor(
-        private readonly workspaceFolder: vscode.Uri,
-        private readonly logs: vscode.OutputChannel,
-        private readonly workspaceContext: WorkspaceContext
+        private readonly workspaceContext: WorkspaceContext,
+        private readonly logs: vscode.OutputChannel
     ) {}
 
-    public start() {
-        this.client();
+    public async start() {
+        await this.client();
+    }
+
+    public async restart() {
+        this.peekDocuments?.dispose();
+        this.peekDocuments = undefined;
+        this.getReferenceDocument?.dispose();
+        this.getReferenceDocument = undefined;
+        const client = await this.client();
+        this.clientReadyPromise = undefined;
+        this.languageClient = undefined;
+        try {
+            client.stop();
+            client.dispose();
+            // start it again
+            await this.start();
+        } catch (error) {
+            this.logs.appendLine(`${error}`);
+            if (error instanceof Error && error.message === "Stopping the server timed out") {
+                await this.start(); // start a new one
+            }
+        }
     }
 
     private async setupLanguageClient(folder?: vscode.Uri) {
@@ -48,12 +72,12 @@ export class SwiftLSPClient {
             options: {
                 env: {
                     ...process.env,
-                    SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
+                    XXX_BUILD_SERVER_KIT: "/SERVE",
+                    // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
                     SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
             },
         };
-
         const serverOptions: langclient.ServerOptions = sourcekit;
         let workspaceFolder = undefined;
         if (folder) {
@@ -71,15 +95,24 @@ export class SwiftLSPClient {
                 { scheme: "untitled", language: "objective-c" },
                 { scheme: "file", language: "objective-cpp" },
                 { scheme: "untitled", language: "objective-cpp" },
+                // C family
+                { scheme: "file", language: "c" },
+                { scheme: "untitled", language: "c" },
+                { scheme: "file", language: "cpp" },
+                { scheme: "untitled", language: "cpp" },
             ],
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
             outputChannel: this.logs,
             middleware: {
                 provideDocumentSymbols: async (document, token, next) => {
-                    const result = await next(document, token);
-                    // const documentSymbols = result as vscode.DocumentSymbol[];
-                    return result;
+                    try {
+                        const result = await next(document, token);
+                        // const documentSymbols = result as vscode.DocumentSymbol[];
+                        return result;
+                    } catch (error) {
+                        return [];
+                    }
                 },
                 provideDefinition: async (document, position, token, next) => {
                     const result = await next(document, position, token);
@@ -161,8 +194,12 @@ export class SwiftLSPClient {
                 // Now that we've started up correctly, start the error handler to auto-restart
                 // if sourcekit-lsp crashes during normal operation.
                 errorHandler.enable();
+
+                this.peekDocuments = activatePeekDocuments(client);
+                this.getReferenceDocument = activateGetReferenceDocument(client);
             })
             .catch(reason => {
+                this.logs.appendLine(`${reason}`);
                 this.languageClient?.stop();
                 this.languageClient = undefined;
                 throw reason;

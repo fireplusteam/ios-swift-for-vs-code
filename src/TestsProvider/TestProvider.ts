@@ -132,43 +132,23 @@ export class TestProvider {
                             console.log("log");
                         }
                     );
-                    try {
-                        await this.executeTests(
-                            request.include === undefined ? undefined : xcodebuildTestsIds,
-                            request.profile?.kind === vscode.TestRunProfileKind.Debug,
-                            run
-                        );
-                    } catch (error) {
-                        console.log("error");
-                        throw error;
-                    } finally {
-                        await this.context.testResult.enumerateTestsResults(
-                            key => {
-                                const item = mapTests.get(key)?.test;
-                                return item?.uri?.fsPath || key;
-                            },
-                            (key, result, rawMessage, messages, duration) => {
-                                const item = mapTests.get(key)?.test;
-                                if (item) {
-                                    run.appendOutput(
-                                        rawMessage.replaceAll("\n", "\n\r"),
-                                        undefined,
-                                        item
-                                    );
-                                    if (result === "passed") {
-                                        run.passed(item, duration);
-                                    } else if (result === "failed") {
-                                        run.failed(item, messages, duration);
-                                    }
-                                    mapTests.delete(key);
-                                }
-                            }
-                        );
-                    }
+                    await this.executeTests(
+                        request.include === undefined ? undefined : xcodebuildTestsIds,
+                        request.profile?.kind === vscode.TestRunProfileKind.Debug,
+                        run
+                    );
                 } catch (err) {
                     console.log(`Run with error: ${err}`);
                 } finally {
                     try {
+                        // read testing results
+                        await this.extractTestingResults(mapTests, run);
+                    } catch (error) {
+                        console.log(`Error parsing test result logs: ${error}`);
+                    }
+
+                    try {
+                        // read coverage results
                         const convergedFiles = await this.context.coverage.getCoverageFiles();
                         for (const file of convergedFiles) {
                             run.addCoverage(file);
@@ -241,6 +221,30 @@ export class TestProvider {
                 this.updateNodeForDocument(e);
             }),
             vscode.workspace.onDidChangeTextDocument(e => this.updateNodeForDocument(e.document))
+        );
+    }
+
+    private async extractTestingResults(
+        mapTests: Map<string, { test: vscode.TestItem; data: TestCase }>,
+        run: vscode.TestRun
+    ) {
+        await this.context.testResult.enumerateTestsResults(
+            key => {
+                const item = mapTests.get(key)?.test;
+                return item?.uri?.fsPath || key;
+            },
+            (key, result, rawMessage, messages, duration) => {
+                const item = mapTests.get(key)?.test;
+                if (item) {
+                    run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
+                    if (result === "passed") {
+                        run.passed(item, duration);
+                    } else if (result === "failed") {
+                        run.failed(item, messages, duration);
+                    }
+                    mapTests.delete(key);
+                }
+            }
         );
     }
 

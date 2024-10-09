@@ -24,24 +24,24 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Features
 
-- Supports iOS/MacOS/WatchOS/VisionOS/TvOS
-- Swift/Objective-C/C++ autocompletion
-- Compatibility with CodeLLDB
-- Debug/Run iOS app
-- Debug/Run unit/snapshot tests. Support running single/multiple tests for a class/target/set of classes
-- Support code coverage
-- Run an application on multiple simulator with a single command
-- Support project/workspace
-- Support launch configuration for app
-- Support diff snapshots testing
-- Add/Delete/Rename/Move files/folders inside vscode
-- VS Code workspace generation based on Xcode project/workspace
-- Parsing build/test logs and display in Problems panel in real time
+-   Supports iOS/MacOS/WatchOS/VisionOS/TvOS
+-   Swift/Objective-C/C++ autocompletion
+-   Compatibility with CodeLLDB
+-   Debug/Run iOS app
+-   Debug/Run unit/snapshot tests. Support running single/multiple tests for a class/target/set of classes
+-   Support code coverage
+-   Run an application on multiple simulator with a single command
+-   Support project/workspace
+-   Support launch configuration for app
+-   Support diff snapshots testing
+-   Add/Delete/Rename/Move files/folders inside vscode
+-   VS Code workspace generation based on Xcode project/workspace
+-   Parsing build/test logs and display in Problems panel in real time
 
 Instead of xCode preview you can use hot reloading [InjectionIII](https://github.com/johnno1962/InjectionIII) which works great with this extension:
 
-- HotReloading & Injection with [HotReloading](https://github.com/johnno1962/HotReloading)
-- SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
+-   HotReloading & Injection with [HotReloading](https://github.com/johnno1962/HotReloading)
+-   SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
 ## Dependencies
 
@@ -50,23 +50,23 @@ Use the following guide to install them manually if any it doesn't work for you:
 
 **Required Dependencies**:
 
-- [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
-- [Swift](https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang)
-- [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) - needed to run the app not in the debug mode
-- **Xcode**
+-   [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
+-   [Swift](https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang)
+-   [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) - needed to run the app not in the debug mode
+-   **Xcode**
 
-- **xcbeautify** tool to prettify the building log output and :
+-   **xcbeautify** tool to prettify the building log output and :
 
-  ```bash
-  brew install xcbeautify
-  ```
+    ```bash
+    brew install xcbeautify
+    ```
 
-- **xcodeproj** gem library to make possible to add/delete/rename files in your Xcode project directly from vs code.
+-   **xcodeproj** gem library to make possible to add/delete/rename files in your Xcode project directly from vs code.
 
-  ```bash
-  brew install ruby
-  gem install xcodeproj
-  ```
+    ```bash
+    brew install ruby
+    gem install xcodeproj
+    ```
 
 **Note:**
 As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **XCBBuildService** automatically when an extension is activated.
@@ -74,9 +74,9 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 ## How to use
 
-- Once you installed all the dependencies, you can open a folder which contains the iOS project, it project or workspace is located in the local folder then an extension will ask you if you want to configure it otherwise you need to perform command "iOS: Select Project/Workspace" and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
+-   Once you installed all the dependencies, you can open a folder which contains the iOS project, it project or workspace is located in the local folder then an extension will ask you if you want to configure it otherwise you need to perform command "iOS: Select Project/Workspace" and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
 
-- There's ios launch configuration that can be added to launch.json file to run and debug ios project (there's also "iOS: Run App & Debug" snippet)
+-   There's ios launch configuration that can be added to launch.json file to run and debug ios project (there's also "iOS: Run App & Debug" snippet)
 
 ```json
 "configurations": [
@@ -91,28 +91,28 @@ This's just needed to override the **continueBuildingAfterError** property when 
 ]
 ```
 
-- Also there're automatically added build tasks which can be used by pressing standard "**Cmd+Shift+B**" shortcut.
+-   Also there're automatically added build tasks which can be used by pressing standard "**Cmd+Shift+B**" shortcut.
 
-- To make autocompletion to work you may need to clean the project and build it entirely for the first time.
+-   To make autocompletion to work you may need to clean the project and build it entirely for the first time.
 
 ## Extension Settings
 
 This extension contributes the following settings:
 
-- `vscode-ios.watcher`: Enable/disable the autocomplete watch build to update indexes whenever a new file added/renamed/moved/deleted or modify a file and switch to another module.
-- `vscode-ios.watcher.singleModule`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file (experimental).
-- `vscode-ios.xcb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
+-   `vscode-ios.watcher`: Enable/disable the autocomplete watch build to update indexes whenever a new file added/renamed/moved/deleted or modify a file and switch to another module.
+-   `vscode-ios.watcher.singleModule`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file (experimental).
+-   `vscode-ios.xcb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 
 ## Known Issues
 
-- You still need Xcode to use SwiftUI preview or edit storyboard/assets/project settings.
-- [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) use indexing while build. if you find definition or references is not work correctly, just build it to update index or restart Swift LSP in VS Code.
-- When running for the first time, **you need to ensure that the log is complete**, otherwise some files cannot obtain the correct flags.
-- If Generating of project is not working as expected or generates some kind of errors if Xcode opens the same project file, you simply need to update **xcodeproj** lib and ruby library to the latest
+-   You still need Xcode to use SwiftUI preview or edit storyboard/assets/project settings.
+-   [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) use indexing while build. if you find definition or references is not work correctly, just build it to update index or restart Swift LSP in VS Code.
+-   When running for the first time, **you need to ensure that the log is complete**, otherwise some files cannot obtain the correct flags.
+-   If Generating of project is not working as expected or generates some kind of errors if Xcode opens the same project file, you simply need to update **xcodeproj** lib and ruby library to the latest
 
-  ```bash
-  gem install xcodeproj
-  ```
+    ```bash
+    gem install xcodeproj
+    ```
 
 ## Release Notes
 

@@ -3,6 +3,7 @@ import { ExecutorTaskError, ExecutorTerminated } from "../Executor";
 import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
 import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./CommandContext";
 import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
+import { LSPClientContext } from "../LSP/lspExtension";
 
 export const UserCommandIsExecuting: Error = new Error("User task is currently executing");
 
@@ -34,7 +35,7 @@ export class AtomicCommand {
     private userTerminal = new TerminalShell("User");
     private watcherTerminal = new TerminalShell("Watch");
 
-    constructor() {}
+    constructor(private readonly lspClient: LSPClientContext) {}
 
     async userCommandWithoutThrowingException(
         commandClosure: (commandContext: CommandContext) => Promise<void>,
@@ -68,7 +69,8 @@ export class AtomicCommand {
             this._executingCommand = "autowatcher";
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
-                this.watcherTerminal
+                this.watcherTerminal,
+                this.lspClient
             );
             this._prevCommandContext = commandContext;
             this.watcherTerminal.terminalName = "Watcher";
@@ -143,7 +145,8 @@ export class AtomicCommand {
             this._executingCommand = "user";
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
-                this.userTerminal
+                this.userTerminal,
+                this.lspClient
             );
             this._prevCommandContext = commandContext;
             if (taskName) this.userTerminal.terminalName = `User: ${taskName}`;

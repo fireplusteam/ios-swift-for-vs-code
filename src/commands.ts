@@ -67,7 +67,9 @@ export async function selectProjectFile(
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
     const projectEnd = ".xcodeproj/project.pbxproj";
     const excludeEnd = ".xcodeproj/project.xcworkspace";
-    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
+    // const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
+    // at the moment doesn't support Package.swift as this one can be used via official swift extension
+    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd}}`;
     const files = await glob(include, {
         absolute: true,
         cwd: getWorkspacePath(),
@@ -259,10 +261,6 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
     }
 }
 
-export async function restartLSP() {
-    await vscode.commands.executeCommand("swift.restartLSPServer");
-}
-
 export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         let validProjectScheme: boolean = false;
@@ -341,6 +339,8 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         .catch(error => {
             console.log(`Git exclude was not updated. Error: ${error}`);
         });
+
+    await commandContext.lspClient.restart();
 }
 
 export async function openXCode(activeFile: string) {

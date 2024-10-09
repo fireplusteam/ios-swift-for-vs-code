@@ -343,12 +343,32 @@ export function saveKeyToEnvList(key: string, value: string) {
     fs.writeFileSync(getEnvFilePath(), json, "utf-8");
 }
 
+export async function isWorkspaceOpened() {
+    try {
+        const projectName = await getProjectFileName();
+        if (projectName.length === 0) {
+            return false;
+        }
+
+        const workspaceFile = vscode.workspace.workspaceFile?.fsPath;
+        if (workspaceFile === undefined) {
+            return false;
+        }
+        if (!workspaceFile.includes(`.vscode/xcode/${projectName}`)) {
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export async function isActivated() {
     const env = getEnvList();
     if (!Object.prototype.hasOwnProperty.call(env, "PROJECT_FILE")) {
         return false;
     }
-    if ((await getProjectFileName()).length === 0) {
+    if (!isWorkspaceOpened()) {
         return false;
     }
     return true;

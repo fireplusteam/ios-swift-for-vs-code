@@ -1,8 +1,24 @@
 import * as ls from "vscode-languageserver-protocol";
 import * as langclient from "vscode-languageclient/node";
+import * as vscode from "vscode";
 
 // Test styles where test-target represents a test target that contains tests
 export type TestStyle = "XCTest" | "swift-testing" | "test-target";
+
+export interface LSPClientContext {
+    start: () => void;
+    restart: () => void;
+}
+
+export type SourcePredicate = (source: string) => boolean;
+
+export interface HandleProblemDiagnosticResolver {
+    handleDiagnostics: (
+        uri: vscode.Uri,
+        isSourceKit: SourcePredicate,
+        newDiagnostics: vscode.Diagnostic[]
+    ) => void;
+}
 
 export interface LSPTestItem {
     /**
@@ -54,6 +70,71 @@ export interface LSPTestItem {
      */
     tags: { id: string }[];
 }
+
+// Definitions for non-standard requests used by sourcekit-lsp
+
+// Peek Documents
+export interface PeekDocumentsParams {
+    /**
+     * The `DocumentUri` of the text document in which to show the "peeked" editor
+     */
+    uri: langclient.DocumentUri;
+
+    /**
+     * The `Position` in the given text document in which to show the "peeked editor"
+     */
+    position: vscode.Position;
+
+    /**
+     * An array `DocumentUri` of the documents to appear inside the "peeked" editor
+     */
+    locations: langclient.DocumentUri[];
+}
+
+/**
+ * Response to indicate the `success` of the `PeekDocumentsRequest`
+ */
+export interface PeekDocumentsResult {
+    success: boolean;
+}
+
+/**
+ * Request from the server to the client to show the given documents in a "peeked" editor.
+ *
+ * This request is handled by the client to show the given documents in a "peeked" editor (i.e. inline with / inside the editor canvas).
+ *
+ * It requires the experimental client capability `"workspace/peekDocuments"` to use.
+ */
+export const PeekDocumentsRequest = new langclient.RequestType<
+    PeekDocumentsParams,
+    PeekDocumentsResult,
+    unknown
+>("workspace/peekDocuments");
+
+// Get Reference Document
+export interface GetReferenceDocumentParams {
+    /**
+     * The `DocumentUri` of the custom scheme url for which content is required
+     */
+    uri: langclient.DocumentUri;
+}
+
+/**
+ * Response containing `content` of `GetReferenceDocumentRequest`
+ */
+export interface GetReferenceDocumentResult {
+    content: string;
+}
+
+/**
+ * Request from the client to the server asking for contents of a URI having a custom scheme
+ * For example: "sourcekit-lsp:"
+ */
+export const GetReferenceDocumentRequest = new langclient.RequestType<
+    GetReferenceDocumentParams,
+    GetReferenceDocumentResult,
+    unknown
+>("workspace/getReferenceDocument");
 
 interface DocumentTestsParams {
     textDocument: {

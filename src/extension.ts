@@ -4,9 +4,9 @@ import * as vscode from "vscode";
 import {
     DebugDeviceIDMissedError,
     getFilePathInWorkspace,
-    getLSPWorkspacePath,
     isActivated,
     isBuildServerValid,
+    isWorkspaceOpened,
     ProjectConfigurationMissedError,
     ProjectFileMissedError,
     ProjectSchemeMissedError,
@@ -18,7 +18,6 @@ import {
     ksdiff,
     openFile,
     openXCode,
-    restartLSP,
     runAppOnMultipleDevices,
     selectConfiguration,
     selectDevice,
@@ -45,6 +44,7 @@ import { SwiftLSPClient } from "./LSP/SwiftLSPClient";
 import { TestTreeContext } from "./TestsProvider/TestTreeContext";
 import { LSPTestsProvider } from "./LSP/LSPTestsProvider";
 import { WorkspaceContextImp } from "./LSP/WorkspaceContext";
+import { activateNotActiveExtension } from "./nonActiveExtension";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -57,44 +57,49 @@ function shouldInjectXCBBuildService() {
 async function initialize(
     atomicCommand: AtomicCommand,
     projectManager: ProjectManager,
-    autocompleteWatcher: AutocompleteWatcher
+    autocompleteWatcher: AutocompleteWatcher,
+    lsp: SwiftLSPClient
 ) {
     if ((await isActivated()) === false) {
         try {
-            await atomicCommand.userCommand(async context => {
-                if (await selectProjectFile(context, projectManager, true, true)) {
-                    await enableXCBBuildService(shouldInjectXCBBuildService());
-                    autocompleteWatcher.triggerIncrementalBuild();
-                }
-            }, undefined);
-        } catch {
-            vscode.window.showErrorMessage("Project was not loaded due to error");
-        }
-        emptyLog(".logs/debugger.launching");
-    } else {
-        emptyLog(".logs/debugger.launching");
-        try {
-            if ((await isBuildServerValid()) === false) {
+            if ((await isWorkspaceOpened()) === false) {
                 await atomicCommand.userCommand(async context => {
-                    try {
-                        await generateXcodeServer(context, false);
-                    } catch {
-                        /* empty */
-                    }
-                }, "Initialize");
+                    await selectProjectFile(context, projectManager, true, true);
+                }, undefined);
+                return false;
             }
-        } catch {
-            // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
+        } catch (error) {
+            vscode.window.showErrorMessage("Project was not loaded due to error");
+            return false;
         }
-        restartLSP();
-        await enableXCBBuildService(shouldInjectXCBBuildService());
-        await projectManager.loadProjectFiles();
-        autocompleteWatcher.triggerIncrementalBuild();
     }
+
+    emptyLog(".logs/debugger.launching");
+    try {
+        if ((await isBuildServerValid()) === false) {
+            await atomicCommand.userCommand(async context => {
+                try {
+                    await generateXcodeServer(context, false);
+                } catch {
+                    /* empty */
+                }
+            }, "Initialize");
+        }
+    } catch {
+        // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
+    }
+    lsp.start();
+    await enableXCBBuildService(shouldInjectXCBBuildService());
+    await projectManager.loadProjectFiles();
+    autocompleteWatcher.triggerIncrementalBuild();
+    return true;
 }
 
-const atomicCommand = new AtomicCommand();
+const logChannel = vscode.window.createOutputChannel("VSCode-iOS");
 const problemDiagnosticResolver = new ProblemDiagnosticResolver();
+const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
+const sourceLsp = new SwiftLSPClient(workspaceContext, logChannel);
+const atomicCommand = new AtomicCommand(sourceLsp);
 
 let debugConfiguration: DebugConfigurationProvider;
 let projectManager: ProjectManager | undefined;
@@ -112,11 +117,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
-    const logChannel = vscode.window.createOutputChannel("VSCode-iOS");
     context.subscriptions.push(logChannel);
     logChannel.appendLine("Activated");
-    const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
-    const sourceLsp = new SwiftLSPClient(getLSPWorkspacePath(), logChannel, workspaceContext);
 
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
@@ -135,8 +137,30 @@ export async function activate(context: vscode.ExtensionContext) {
 
     setContext(context);
 
-    await initialize(atomicCommand, projectManager, autocompleteWatcher);
-    sourceLsp.start();
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.project.select", async () => {
+            try {
+                await atomicCommand.userCommandWithoutThrowingException(async context => {
+                    if (projectManager === undefined) {
+                        throw Error("Project Manager is not initialized");
+                    }
+                    await selectProjectFile(context, projectManager);
+                    autocompleteWatcher?.triggerIncrementalBuild();
+                }, "Select Project");
+            } catch {
+                vscode.window.showErrorMessage("Project was not loaded due to error");
+            }
+        })
+    );
+
+    if (
+        (await initialize(atomicCommand, projectManager, autocompleteWatcher, sourceLsp)) === false
+    ) {
+        vscode.commands.executeCommand("setContext", "vscode-ios.activated", false);
+        // only available task to activate extension
+        activateNotActiveExtension(context);
+        return;
+    }
 
     vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 
@@ -218,21 +242,6 @@ export async function activate(context: vscode.ExtensionContext) {
     // The commandId parameter must match the command field in package.json
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.project.select", async () => {
-            try {
-                await atomicCommand.userCommandWithoutThrowingException(async context => {
-                    if (projectManager === undefined) {
-                        throw Error("project manager is not initialised");
-                    }
-                    await selectProjectFile(context, projectManager);
-                    autocompleteWatcher?.triggerIncrementalBuild();
-                }, "Select Project");
-            } catch {
-                vscode.window.showErrorMessage("Project was not loaded due to error");
-            }
-        })
-    );
-    context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.install", async () => {
             await tools.resolveThirdPartyTools(true);
             await vscode.window.showInformationMessage(
@@ -243,6 +252,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.update", async () => {
             await tools.updateThirdPartyTools();
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.lsp.restart", async () => {
+            await sourceLsp.restart();
         })
     );
 
