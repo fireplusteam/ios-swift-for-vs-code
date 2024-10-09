@@ -24,7 +24,9 @@ export async function askIfBuild() {
         false,
         true
     );
-    if (option === undefined) throw UserTerminatedError;
+    if (option === undefined) {
+        throw UserTerminatedError;
+    }
     return option === "Yes";
 }
 

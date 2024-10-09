@@ -32,19 +32,25 @@ export class TestCaseProblemParser {
             while (startIndex < stdout.length) {
                 while (startIndex > 0) {
                     // find the start of line for the next pattern search
-                    if (stdout[startIndex] === "\n") break;
+                    if (stdout[startIndex] === "\n") {
+                        break;
+                    }
                     --startIndex;
                 }
 
                 const output = stdout.slice(startIndex);
                 const match = output.match(problemPattern);
-                if (!match) return;
+                if (!match) {
+                    return;
+                }
                 const line = Number(match[2]) - 1;
                 const column = this.column(output, (match?.index || 0) + match[0].length);
 
                 let message = match[5];
                 const end = message.lastIndexOf("\n");
-                if (end !== -1) message = message.substring(0, end);
+                if (end !== -1) {
+                    message = message.substring(0, end);
+                }
 
                 const expectedActualMatch = this.expectedActualValues(message);
                 const fullErrorMessage = this.errorMessage(message);
@@ -80,8 +86,9 @@ export class TestCaseProblemParser {
 
     private expectedActualValues(message: string) {
         const expectedActualMatch = message.match(diffPattern);
-        if (expectedActualMatch)
+        if (expectedActualMatch) {
             return { expected: expectedActualMatch[3], actual: expectedActualMatch[2] };
+        }
     }
 
     private errorMessage(message: string) {
@@ -94,10 +101,11 @@ export class TestCaseProblemParser {
             return message;
         }
 
-        for (let i = index; i >= 0; --i)
+        for (let i = index; i >= 0; --i) {
             if (message[i] === ":") {
                 return message.substring(i + 1).trim();
             }
+        }
         return message.substring(index).trim();
     }
 

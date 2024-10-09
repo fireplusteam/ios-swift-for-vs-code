@@ -40,12 +40,13 @@ function mapReviver(key: any, value: any) {
         }
         if (value.dataType === "Set") {
             const parsed = new Set(value.value);
-            if (parsed.size > 0)
+            if (parsed.size > 0) {
                 for (const v of parsed) {
                     if (!isProjFilePath(v)) {
                         throw Error("Generated Format of file is wrong");
                     }
                 }
+            }
             return parsed;
         }
     }
@@ -90,8 +91,9 @@ export class ProjectsCache {
         return new Promise((resolve, reject) => {
             const proj = JSON.stringify(this.cache, mapReplacer, 4);
             fs.writeFile(filePath, proj, e => {
-                if (e === null) resolve();
-                else {
+                if (e === null) {
+                    resolve();
+                } else {
                     reject(e);
                 }
             });
@@ -105,8 +107,14 @@ export class ProjectsCache {
     getList(project: string, onlyFiles = true) {
         const res = new Set<string>();
         const projectList = this.cache.get(project)?.list;
-        if (!projectList) return res;
-        for (const file of projectList) if (!file.isFolder || !onlyFiles) res.add(file.path);
+        if (!projectList) {
+            return res;
+        }
+        for (const file of projectList) {
+            if (!file.isFolder || !onlyFiles) {
+                res.add(file.path);
+            }
+        }
         return res;
     }
 
@@ -122,7 +130,9 @@ export class ProjectsCache {
         const files: string[] = [];
         for (const [, value] of this.cache) {
             for (const file of value.list) {
-                if (file.isFolder === isFolder) files.push(file.path);
+                if (file.isFolder === isFolder) {
+                    files.push(file.path);
+                }
             }
         }
         return files;

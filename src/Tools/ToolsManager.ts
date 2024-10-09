@@ -137,8 +137,9 @@ export class ToolsManager {
         try {
             await this.compileLLDStubExe();
         } catch {
-            if (!this.isLLDBStubExeCompiled())
+            if (!this.isLLDBStubExeCompiled()) {
                 throw new Error("Xcode is not installed. Please install it and restart VS Code");
+            }
         }
 
         if (
@@ -149,12 +150,13 @@ export class ToolsManager {
             !(await this.isLLDBStubExeCompiled())
         ) {
             let option: string | undefined = "Yes";
-            if (!askUserToInstallDeps)
+            if (!askUserToInstallDeps) {
                 option = await vscode.window.showWarningMessage(
                     "Required tools are not installed. Without them extension would not work properly. Do you want to Install Them automatically?",
                     "Yes",
                     "No"
                 );
+            }
             if (option === "Yes") {
                 try {
                     // install extensions

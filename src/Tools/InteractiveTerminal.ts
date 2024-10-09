@@ -13,7 +13,9 @@ export class InteractiveTerminal {
             }
             let disposal: vscode.Disposable | undefined = undefined;
             disposal = vscode.window.onDidChangeTerminalShellIntegration(eventShellCreated => {
-                if (eventShellCreated.terminal !== this.terminal) return;
+                if (eventShellCreated.terminal !== this.terminal) {
+                    return;
+                }
                 resolve(eventShellCreated.shellIntegration);
                 disposal?.dispose();
                 disposal = undefined;

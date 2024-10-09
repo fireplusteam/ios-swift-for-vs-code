@@ -336,7 +336,9 @@ export function saveKeyToEnvList(key: string, value: string) {
 
     let json = "";
     for (const [key, val] of Object.entries(dict)) {
-        if (key === "" || val === "") continue;
+        if (key === "" || val === "") {
+            continue;
+        }
         json += `${key}=${val}\n`;
     }
 

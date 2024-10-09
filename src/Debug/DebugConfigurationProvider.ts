@@ -175,9 +175,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     if (
                         runtimeWarningsConfigStatus() !== "off" &&
                         (await currentPlatform()) !== Platform.macOS
-                    )
+                    ) {
                         // mac OS doesn't support that feature at the moment
                         this.runtimeWarningsWatcher.startWatcher();
+                    }
 
                     resolve(context);
                     try {
@@ -220,7 +221,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
         const lldbCommands = dbgConfig.lldbCommands || [];
         const command = runtimeWarningBreakPointCommand();
-        if (command && isDebuggable) lldbCommands.push(command);
+        if (command && isDebuggable) {
+            lldbCommands.push(command);
+        }
         if (dbgConfig.target !== "app") {
             // for running tests, we don't need to listen to those process handler as it's redundant
             lldbCommands.push("process handle SIGKILL -n true -p true -s false");

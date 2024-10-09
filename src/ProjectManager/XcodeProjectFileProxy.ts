@@ -38,11 +38,12 @@ export class XcodeProjectFileProxy {
     private async read() {
         const process = this.process;
         try {
-            if (this.process?.stdout)
+            if (this.process?.stdout) {
                 this.rl = createInterface({
                     input: this.process.stdout, //or fileStream
                     terminal: false,
                 });
+            }
             let result = [] as string[];
             for await (const line of this.rl) {
                 if (line === "EOF_REQUEST") {

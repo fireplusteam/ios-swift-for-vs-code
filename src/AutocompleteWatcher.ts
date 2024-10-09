@@ -99,7 +99,9 @@ export class AutocompleteWatcher {
     }
 
     async triggerIncrementalBuild() {
-        if ((await this.isWatcherEnabled()) === false) return;
+        if ((await this.isWatcherEnabled()) === false) {
+            return;
+        }
         this.buildId++;
         await this.incrementalBuild(this.buildId);
     }
@@ -147,7 +149,9 @@ export class AutocompleteWatcher {
     private async incrementalBuild(buildId: number): Promise<any> {
         try {
             await this.atomicCommand.autoWatchCommand(async context => {
-                if (this.buildId !== buildId || (await this.isWatcherEnabled()) === false) return;
+                if (this.buildId !== buildId || (await this.isWatcherEnabled()) === false) {
+                    return;
+                }
                 const scheme = await getProjectScheme();
                 emptyAutobuildLog();
                 this.problemResolver.parseAsyncLogs(
@@ -165,9 +169,10 @@ export class AutocompleteWatcher {
         } catch (err) {
             if (err === UserCommandIsExecuting) {
                 await sleep(1000);
-                if (buildId === this.buildId)
+                if (buildId === this.buildId) {
                     // still valid
-                    this.incrementalBuild(buildId).catch(() => {}); // do nothing
+                    this.incrementalBuild(buildId).catch(() => {});
+                } // do nothing
             } else {
                 throw err;
             }

@@ -42,7 +42,9 @@ export class CoverageProvider {
         const coverage = JSON.parse(outFileCoverageStr.stdout);
 
         if (fileCoverage instanceof XCFileCoverage) {
-            if (fileCoverage.lineCoverage) return fileCoverage.lineCoverage;
+            if (fileCoverage.lineCoverage) {
+                return fileCoverage.lineCoverage;
+            }
             const linesCoverage = [] as vscode.StatementCoverage[];
             const lines = coverage[fileCoverage.uri.fsPath];
             for (const line of lines) {

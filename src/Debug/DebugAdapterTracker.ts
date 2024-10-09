@@ -90,7 +90,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStopSession() {
         console.log("Session will stop");
-        if (this.debugSession.configuration.target === "app") this.terminateCurrentSession(true);
+        if (this.debugSession.configuration.target === "app") {
+            this.terminateCurrentSession(true);
+        }
     }
 
     onError(error: Error) {
@@ -102,7 +104,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async terminateCurrentSession(isCancelled: boolean) {
-        if (this.isTerminated) return;
+        if (this.isTerminated) {
+            return;
+        }
         try {
             this.debugConsoleOutput?.dispose();
             this._stream.close();
@@ -111,7 +115,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         } finally {
             try {
                 killSpawnLaunchedProcesses(this.deviceID);
-                if (isCancelled) this.context.commandContext.cancel();
+                if (isCancelled) {
+                    this.context.commandContext.cancel();
+                }
                 await vscode.debug.stopDebugging(this.debugSession);
             } catch {
                 /* empty */

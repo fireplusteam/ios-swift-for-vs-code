@@ -75,7 +75,9 @@ export class RuntimeWarningsLogWatcher {
     }
 
     private updateTree(content: string) {
-        if (content === this.cachedContent) return;
+        if (content === this.cachedContent) {
+            return;
+        }
         //  convert to html
         const elements: RuntimeWarningMessageNode[] = [];
         try {

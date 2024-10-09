@@ -56,8 +56,11 @@ export class TestProject implements TestContainer {
             if (!data.didResolve) {
                 await data.updateFromDisk(controller, file);
             }
-            if ([...file.children].length > 0) parent.children.push(file);
-            else this.context.deleteItem(file.id);
+            if ([...file.children].length > 0) {
+                parent.children.push(file);
+            } else {
+                this.context.deleteItem(file.id);
+            }
         }
 
         // watch to changes for a file, if it's changed, refresh unit tests
@@ -95,7 +98,10 @@ export class TestProject implements TestContainer {
                 weakRef.deref()?.updateFromDisk(controller, item);
             }, 1000);
         });
-        if (contentFile === undefined) this.projectContent = fs.readFileSync(filePath);
-        else this.projectContent = contentFile;
+        if (contentFile === undefined) {
+            this.projectContent = fs.readFileSync(filePath);
+        } else {
+            this.projectContent = contentFile;
+        }
     }
 }

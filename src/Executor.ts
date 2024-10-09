@@ -132,7 +132,9 @@ export class Executor {
                 terminal?.write(str);
             }
             stdout += str;
-            if (shell.stdoutCallback) shell.stdoutCallback(str);
+            if (shell.stdoutCallback) {
+                shell.stdoutCallback(str);
+            }
         });
         let stderr = "";
         proc.stderr?.on("data", data => {
@@ -145,7 +147,9 @@ export class Executor {
                 userCancel?.dispose();
                 terminalClose?.dispose();
                 reject(UserTerminatedError);
-                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) return;
+                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
+                    return;
+                }
 
                 killAll(proc.pid, "SIGKILL");
             });
@@ -153,7 +157,9 @@ export class Executor {
                 userCancel?.dispose();
                 terminalClose?.dispose();
                 reject(UserTerminalCloseError);
-                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) return;
+                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
+                    return;
+                }
 
                 killAll(proc.pid, "SIGKILL");
             });

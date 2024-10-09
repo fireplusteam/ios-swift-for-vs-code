@@ -24,7 +24,9 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 if (fileUrl === undefined) {
                     return;
                 }
-                if (fileUrl.fsPath.endsWith(".log")) return;
+                if (fileUrl.fsPath.endsWith(".log")) {
+                    return;
+                }
                 const notBuildProblems =
                     this.diagnosticBuildCollection
                         .get(fileUrl)
@@ -64,13 +66,18 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
 
     private uniqueProblems(list: vscode.Diagnostic[], sourcekitList: vscode.Diagnostic[]) {
         function compareRanges(range1: vscode.Range, range2: vscode.Range): number {
-            if (range1.start.line !== range2.start.line)
+            if (range1.start.line !== range2.start.line) {
                 return range1.start.line - range2.start.line;
-            if (range1.start.character !== range2.start.character)
+            }
+            if (range1.start.character !== range2.start.character) {
                 return range1.start.character - range2.start.character;
-            if (range1.end.line !== range2.end.line) return range1.end.line - range2.end.line;
-            if (range1.end.character !== range2.end.character)
+            }
+            if (range1.end.line !== range2.end.line) {
+                return range1.end.line - range2.end.line;
+            }
+            if (range1.end.character !== range2.end.character) {
                 return range1.end.character - range2.end.character;
+            }
             return 0;
         }
 
@@ -98,9 +105,12 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                     sourcekitList.find(v => {
                         return (
                             comp(v, list[i], (a, b) => {
-                                if (a.start.line !== b.start.line)
+                                if (a.start.line !== b.start.line) {
                                     return a.start.line - b.start.line;
-                                if (a.end.line !== b.end.line) return a.end.line - b.end.line;
+                                }
+                                if (a.end.line !== b.end.line) {
+                                    return a.end.line - b.end.line;
+                                }
                                 return 0;
                             }) === 0
                         );
@@ -190,8 +200,9 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                             }).length > 0;
                     }
                     this.storeProblems(problems);
-                    for (let i = 0; i < lastErrorIndex + 1; ++i)
+                    for (let i = 0; i < lastErrorIndex + 1; ++i) {
                         numberOfLines += stdout[i] === "\n" ? 1 : 0;
+                    }
                     stdout = stdout.substring(lastErrorIndex + 1);
                     firstIndex = 0;
                 } else {
@@ -300,7 +311,9 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
                 const value = files[file] || [];
                 value.push(diagnostic);
-                if (fs.existsSync(file)) files[file] = value;
+                if (fs.existsSync(file)) {
+                    files[file] = value;
+                }
             }
             // parsing linker errors
             matches = [...output.matchAll(this.problemLinkerPattern)];

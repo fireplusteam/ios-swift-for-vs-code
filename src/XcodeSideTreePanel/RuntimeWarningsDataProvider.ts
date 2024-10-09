@@ -24,8 +24,11 @@ export class RuntimeWarningMessageNode extends vscode.TreeItem {
 
     constructor(message: string, count: number, id: string) {
         let startIndex = message.lastIndexOf("] ");
-        if (startIndex === -1) startIndex = 0;
-        else startIndex += "] ".length;
+        if (startIndex === -1) {
+            startIndex = 0;
+        } else {
+            startIndex += "] ".length;
+        }
 
         super(
             `(${count})${message.substring(startIndex)}`,

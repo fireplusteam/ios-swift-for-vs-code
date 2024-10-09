@@ -32,7 +32,9 @@ export class ProjectTree {
     excludedFiles() {
         const list: string[] = [];
         function excludedFiles(node: Node | undefined, filePath: string) {
-            if (node === undefined) return;
+            if (node === undefined) {
+                return;
+            }
             if (node.isLeaf && node.isVisible) {
                 return;
             }
@@ -62,12 +64,16 @@ export class ProjectTree {
         index: number,
         includeSubfolders: boolean
     ) {
-        if (node === undefined) return;
+        if (node === undefined) {
+            return;
+        }
         if (index >= components.length) {
             if (!isVisible) {
                 return;
             }
-            if (includeSubfolders) node.isLeaf = true; // if it's visible, tells that's a leaf
+            if (includeSubfolders) {
+                node.isLeaf = true;
+            } // if it's visible, tells that's a leaf
             return;
         }
         if (isVisible) {

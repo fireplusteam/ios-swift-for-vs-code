@@ -36,8 +36,9 @@ export class RunManager {
         const devices = (await this.env.multipleDeviceID)
             .split(" |")
             .map(deviceId => deviceId.substring("id=".length));
-        if (devices === undefined || devices.length === 0)
+        if (devices === undefined || devices.length === 0) {
             throw Error("Can not run on empty device");
+        }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
         try {
             for (const device of devices) {
@@ -85,16 +86,21 @@ export class RunManager {
             let booted = false;
             for (const key in json.devices) {
                 const value = json.devices[key];
-                for (const device of value)
+                for (const device of value) {
                     if (device.udid === deviceId) {
                         if (device.state === "Booted") {
                             booted = true;
                             break;
                         }
                     }
-                if (booted) break;
+                }
+                if (booted) {
+                    break;
+                }
             }
-            if (booted) break;
+            if (booted) {
+                break;
+            }
             sleep(1);
         }
         await context.execShellWithOptions({
@@ -102,11 +108,17 @@ export class RunManager {
             args: ["simctl", "install", deviceId, await this.env.appExecutablePath],
         });
 
-        if (context.terminal) context.terminal.terminalName = "Waiting Debugger";
+        if (context.terminal) {
+            context.terminal.terminalName = "Waiting Debugger";
+        }
 
-        if (waitDebugger) await this.waitDebugger(context);
+        if (waitDebugger) {
+            await this.waitDebugger(context);
+        }
 
-        if (context.terminal) context.terminal.terminalName = "App Running";
+        if (context.terminal) {
+            context.terminal.terminalName = "App Running";
+        }
 
         context
             .execShellParallel({
@@ -144,11 +156,15 @@ export class RunManager {
         const exePath = await this.env.appExecutablePath;
         const productName = await this.env.productName;
 
-        if (context.terminal) context.terminal.terminalName = "Waiting Debugger";
+        if (context.terminal) {
+            context.terminal.terminalName = "Waiting Debugger";
+        }
 
         await this.waitDebugger(context);
 
-        if (context.terminal) context.terminal.terminalName = "App Running";
+        if (context.terminal) {
+            context.terminal.terminalName = "App Running";
+        }
 
         context
             .execShellParallel({

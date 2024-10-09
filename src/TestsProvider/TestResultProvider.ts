@@ -89,7 +89,9 @@ export class TestResultProvider {
     }
 
     private getRawMessage(messages: TestCaseResultNode[] | undefined, intend = "") {
-        if (messages === undefined) return "";
+        if (messages === undefined) {
+            return "";
+        }
 
         const result = messages.map((e): string => {
             if (e.nodeType === "Failure Message") {
@@ -100,8 +102,9 @@ export class TestResultProvider {
             const argument = e.nodeType === "Arguments" ? `Arguments:` : "";
 
             const message = `${intend}${argument}${e.name} -> ${e.result}`;
-            if (inMessages.length > 0) return `${message}\n${inMessages}`;
-            else {
+            if (inMessages.length > 0) {
+                return `${message}\n${inMessages}`;
+            } else {
                 return message;
             }
         });
@@ -156,7 +159,9 @@ export class TestResultProvider {
                     value2 = matches[0][11];
                 }
 
-                if (value1 === undefined || value2 === undefined) return undefined;
+                if (value1 === undefined || value2 === undefined) {
+                    return undefined;
+                }
 
                 let message = matches[0][12] || rawMessage;
                 if (message.length === 0) {
@@ -167,10 +172,12 @@ export class TestResultProvider {
                     message = `Attributes: ${attributes}\n, Failed: ${message}`;
                 }
 
-                if (varName1 === undefined || varName1.length === 0)
+                if (varName1 === undefined || varName1.length === 0) {
                     return vscode.TestMessage.diff(message, value1, value2);
-                if (varName2 === undefined || varName2.length === 0)
+                }
+                if (varName2 === undefined || varName2.length === 0) {
                     return vscode.TestMessage.diff(message, value2, value1);
+                }
             }
         } catch {
             /* empty */
@@ -183,7 +190,9 @@ export class TestResultProvider {
         messages: TestCaseResultNode[] | undefined,
         fileUrl: (key: string) => string
     ): vscode.TestMessage[] {
-        if (messages === undefined) return [];
+        if (messages === undefined) {
+            return [];
+        }
 
         const result: vscode.TestMessage[] = [];
         for (const message of messages) {

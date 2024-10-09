@@ -33,13 +33,15 @@ function filterDevices(
             if (
                 Object.prototype.hasOwnProperty.call(device, "name") &&
                 Object.prototype.hasOwnProperty.call(device, "OS")
-            )
+            ) {
                 formattedKey = `${device["name"]} - OS ${device["OS"]} `;
-            else if (Object.prototype.hasOwnProperty.call(device, "name"))
+            } else if (Object.prototype.hasOwnProperty.call(device, "name")) {
                 formattedKey = device["name"];
-            else if (Object.prototype.hasOwnProperty.call(device, "platform"))
+            } else if (Object.prototype.hasOwnProperty.call(device, "platform")) {
                 formattedKey = device["platform"];
-            else return undefined;
+            } else {
+                return undefined;
+            }
             if (Object.prototype.hasOwnProperty.call(device, "variant")) {
                 formattedKey += " " + device["variant"];
             }
@@ -84,8 +86,9 @@ export async function selectProjectFile(
                         checkFile.endsWith(workspaceEnd) &&
                         checkFile.slice(0, -workspaceEnd.length) ===
                             file.slice(0, -projectEnd.length)
-                    )
+                    ) {
                         return false;
+                    }
                 }
             }
             return true;
@@ -106,7 +109,9 @@ export async function selectProjectFile(
             };
         })
         .filter(file => {
-            if (file.value.endsWith(excludeEnd)) return false;
+            if (file.value.endsWith(excludeEnd)) {
+                return false;
+            }
             return true;
         });
     if (options.length === 0) {
@@ -122,7 +127,9 @@ export async function selectProjectFile(
             "Yes",
             "No"
         );
-        if (isAllowedToConfigure !== "Yes") return false;
+        if (isAllowedToConfigure !== "Yes") {
+            return false;
+        }
     }
 
     const selection = await showPicker(
@@ -152,9 +159,11 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
             currentScheme = "";
         }
         const json = schemes.map<QuickPickItem>(scheme => {
-            if (currentScheme === scheme)
+            if (currentScheme === scheme) {
                 return { label: "$(notebook-state-success) " + scheme, value: scheme };
-            else return { label: scheme, value: scheme };
+            } else {
+                return { label: scheme, value: scheme };
+            }
         });
 
         const option = await showPicker(
@@ -188,12 +197,14 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
             currentConfiguration = "";
         }
         const json = configurations.map<QuickPickItem>(configuration => {
-            if (currentConfiguration === configuration)
+            if (currentConfiguration === configuration) {
                 return {
                     label: "$(notebook-state-success) " + configuration,
                     value: configuration,
                 };
-            else return { label: configuration, value: configuration };
+            } else {
+                return { label: configuration, value: configuration };
+            }
         });
 
         const option = await showPicker(
@@ -274,8 +285,9 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if (
             validProjectScheme === false &&
             (await selectTarget(commandContext, ignoreFocusOut)) === false
-        )
+        ) {
             return false;
+        }
 
         let validProjectConfiguration = false;
         try {
@@ -289,8 +301,9 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if (
             validProjectConfiguration === false &&
             (await selectConfiguration(commandContext, ignoreFocusOut)) === false
-        )
+        ) {
             return false;
+        }
 
         let validDebugDeviceID = false;
         try {
@@ -304,8 +317,9 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             if (
                 validDebugDeviceID === false &&
                 (await selectDevice(commandContext, ignoreFocusOut)) === false
-            )
+            ) {
                 return false;
+            }
         }
 
         if ((await isBuildServerValid()) === false) {
@@ -319,7 +333,9 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
 }
 
 export async function generateXcodeServer(commandContext: CommandContext, check = true) {
-    if (check) await checkWorkspace(commandContext);
+    if (check) {
+        await checkWorkspace(commandContext);
+    }
     const env = commandContext.projectSettingsProvider.projectEnv;
     await commandContext.execShellWithOptions({
         scriptOrCommand: { command: getXCodeBuildServerPath() },
@@ -422,7 +438,9 @@ export async function runAppOnMultipleDevices(
 
         const deviceIds: string[] = [];
         if (Array.isArray(option)) {
-            for (const device of option) deviceIds.push(device.id);
+            for (const device of option) {
+                deviceIds.push(device.id);
+            }
             commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(
                 deviceIds.map(device => `id=${device}`).join(" |")
             );
@@ -503,18 +521,21 @@ export async function enableXCBBuildService(enabled: boolean) {
             const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
             exec(command, error => {
                 if (error) {
-                    if (enabled)
+                    if (enabled) {
                         vscode.window.showErrorMessage(`Failed to install XCBBuildService`);
-                    else vscode.window.showErrorMessage(`Failed to uninstall XCBBuildService`);
+                    } else {
+                        vscode.window.showErrorMessage(`Failed to uninstall XCBBuildService`);
+                    }
                 } else {
-                    if (enabled)
+                    if (enabled) {
                         vscode.window.showInformationMessage(
                             "XCBBuildService proxy setup successfully"
                         );
-                    else
+                    } else {
                         vscode.window.showInformationMessage(
                             "XCBBuildService Proxy was uninstall successfully"
                         );
+                    }
                 }
                 resolve();
             });
@@ -542,8 +563,12 @@ export async function openFile(
 // diff
 export async function ksdiff(name: string, path1: string, path2: string) {
     const filePrefix = "file://";
-    if (path1.startsWith(filePrefix)) path1 = path1.slice(filePrefix.length);
-    if (path2.startsWith(filePrefix)) path2 = path2.slice(filePrefix.length);
+    if (path1.startsWith(filePrefix)) {
+        path1 = path1.slice(filePrefix.length);
+    }
+    if (path2.startsWith(filePrefix)) {
+        path2 = path2.slice(filePrefix.length);
+    }
     vscode.commands.executeCommand(
         "vscode.diff",
         vscode.Uri.file(path1),

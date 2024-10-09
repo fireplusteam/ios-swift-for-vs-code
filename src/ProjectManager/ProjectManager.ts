@@ -279,7 +279,9 @@ export class ProjectManager {
                     nodir: pattern.search.nodir,
                     ignore: pattern.search.ignore,
                 });
-                for (const file of files) resFiles.add(file);
+                for (const file of files) {
+                    resFiles.add(file);
+                }
             }
 
             return resFiles;
@@ -369,31 +371,33 @@ export class ProjectManager {
                         modifiedProjects.add(project);
                         if (isFolder(file.fsPath)) {
                             // rename folder
-                            if (isFileMoved(oldFile.fsPath, file.fsPath))
+                            if (isFileMoved(oldFile.fsPath, file.fsPath)) {
                                 await moveFolderToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
                                 );
-                            else
+                            } else {
                                 await renameFolderToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
                                 );
+                            }
                         } else {
-                            if (isFileMoved(oldFile.fsPath, file.fsPath))
+                            if (isFileMoved(oldFile.fsPath, file.fsPath)) {
                                 await moveFileToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
                                 );
-                            else
+                            } else {
                                 await renameFileToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
                                 );
+                            }
                         }
                     } catch (err) {
                         console.log(err);
@@ -401,8 +405,9 @@ export class ProjectManager {
                 }
             }
         } finally {
-            for (const project of modifiedProjects)
+            for (const project of modifiedProjects) {
                 await saveProject(getFilePathInWorkspace(project));
+            }
         }
     }
 
@@ -447,8 +452,9 @@ export class ProjectManager {
                 }
             }
         } finally {
-            for (const project of modifiedProjects)
+            for (const project of modifiedProjects) {
                 await saveProject(getFilePathInWorkspace(project));
+            }
         }
     }
 
@@ -458,9 +464,9 @@ export class ProjectManager {
 
     async getProjectTargets() {
         const schemeType = getProjectType(await getProjectFileName());
-        if (schemeType === "-package")
+        if (schemeType === "-package") {
             return await getTargets(await getProjectFileName(), getWorkspacePath());
-        else {
+        } else {
             for (const proj of await this.getProjects()) {
                 return await getProjectTargets(getFilePathInWorkspace(proj));
             }
@@ -486,10 +492,14 @@ export class ProjectManager {
         if (!this.isAllowed()) {
             return;
         }
-        if (!file) return;
+        if (!file) {
+            return;
+        }
         const projectFiles = this.projectCache.getProjects();
         const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
-        if (selectedProject.length !== 1) return;
+        if (selectedProject.length !== 1) {
+            return;
+        }
 
         const fileTargets = await listTargetsForFile(
             getFilePathInWorkspace(selectedProject[0]),
@@ -506,7 +516,9 @@ export class ProjectManager {
             false
         );
 
-        if (selectedTargets === undefined) return;
+        if (selectedTargets === undefined) {
+            return;
+        }
 
         selectedTargets = selectedTargets.join(",");
 
@@ -534,7 +546,9 @@ export class ProjectManager {
             fileList = [files as vscode.Uri];
         } else {
             fileList = files as vscode.Uri[];
-            if (fileList.length === 0) return;
+            if (fileList.length === 0) {
+                return;
+            }
         }
 
         const projectFiles = this.projectCache.getProjects();
@@ -562,8 +576,9 @@ export class ProjectManager {
                     ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
                 });
                 for (const file of files) {
-                    if (file !== path.path.fsPath)
+                    if (file !== path.path.fsPath) {
                         paths.push({ path: vscode.Uri.file(file), isFolder: isFolder(file) });
+                    }
                 }
             }
         }
@@ -580,13 +595,16 @@ export class ProjectManager {
                 if (!allFilesInProject.has(localFolder)) {
                     foldersToAdd.add(localFolder);
                 }
-                if (!allFilesInProject.has(filePath.path.fsPath))
+                if (!allFilesInProject.has(filePath.path.fsPath)) {
                     filesToAdd.add(filePath.path.fsPath);
+                }
             } else if (!allFilesInProject.has(filePath.path.fsPath)) {
                 foldersToAdd.add(filePath.path.fsPath);
             }
         }
-        if (filesToAdd.size === 0 && foldersToAdd.size === 0) return;
+        if (filesToAdd.size === 0 && foldersToAdd.size === 0) {
+            return;
+        }
 
         let selectedTargets: string | undefined;
         if (filesToAdd.size > 0) {
@@ -635,13 +653,15 @@ export class ProjectManager {
                 ignoreFocusOut: true,
             });
         } else {
-            if (bestFitProject.length > 1)
+            if (bestFitProject.length > 1) {
                 selectedProject = await vscode.window.showQuickPick(bestFitProject, {
                     title: title,
                     canPickMany: false,
                     ignoreFocusOut: true,
                 });
-            else selectedProject = bestFitProject[0];
+            } else {
+                selectedProject = bestFitProject[0];
+            }
         }
         return selectedProject;
     }
@@ -656,7 +676,9 @@ export class ProjectManager {
                 pattern: "*",
             });
             for (const file of neighborFiles) {
-                if (file.fsPath === filePath) continue;
+                if (file.fsPath === filePath) {
+                    continue;
+                }
                 const targets = await listTargetsForFile(
                     getFilePathInWorkspace(project),
                     file.fsPath
@@ -695,7 +717,9 @@ export class ProjectManager {
                             bestFitProject.clear();
                             relativeFileLength = file.length;
                             bestFitProject.add(project);
-                        } else if (file.length === relativeFileLength) bestFitProject.add(project);
+                        } else if (file.length === relativeFileLength) {
+                            bestFitProject.add(project);
+                        }
                     }
                 }
             }
@@ -792,8 +816,9 @@ export async function getProjectFiles(project: string) {
 const xcodeProjects = new Map<string, XcodeProjectFileProxy>();
 
 async function executeRuby(projectPath: string, command: string): Promise<string[]> {
-    if (!xcodeProjects.has(projectPath))
+    if (!xcodeProjects.has(projectPath)) {
         xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath));
+    }
     return (await xcodeProjects.get(projectPath)?.request(command)) || [];
 }
 
@@ -883,9 +908,13 @@ async function getTargets(projectFile: string, cwd: string) {
             let isTail = false;
 
             for (const x of stdout.split("\n")) {
-                if (isTail && x.trim().length > 0) schemes.push(x.trim());
+                if (isTail && x.trim().length > 0) {
+                    schemes.push(x.trim());
+                }
 
-                if (x.includes("Schemes:")) isTail = true;
+                if (x.includes("Schemes:")) {
+                    isTail = true;
+                }
             }
             resolve(schemes);
         });

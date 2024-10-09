@@ -65,7 +65,9 @@ export class AtomicCommand {
                 }
             }
             release = await this._mutex.acquire();
-            if (currentOperationID !== this.latestOperationID) throw E_CANCELED;
+            if (currentOperationID !== this.latestOperationID) {
+                throw E_CANCELED;
+            }
             this._executingCommand = "autowatcher";
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
@@ -91,7 +93,9 @@ export class AtomicCommand {
         } finally {
             this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
-            if (release) release();
+            if (release) {
+                release();
+            }
         }
     }
 
@@ -141,7 +145,9 @@ export class AtomicCommand {
                 }
             }
             releaser = await this._mutex.acquire();
-            if (currentOperationID !== this.latestOperationID) throw E_CANCELED;
+            if (currentOperationID !== this.latestOperationID) {
+                throw E_CANCELED;
+            }
             this._executingCommand = "user";
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
@@ -149,17 +155,22 @@ export class AtomicCommand {
                 this.lspClient
             );
             this._prevCommandContext = commandContext;
-            if (taskName) this.userTerminal.terminalName = `User: ${taskName}`;
+            if (taskName) {
+                this.userTerminal.terminalName = `User: ${taskName}`;
+            }
             result = await this.withCancellation(async () => {
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
-            if (taskName) this.userTerminal.success();
+            if (taskName) {
+                this.userTerminal.success();
+            }
 
             return result;
         } catch (err) {
             if (err !== UserCommandIsExecuting && taskName) {
-                if (err === UserTerminatedError) this.userTerminal.cancel();
-                else if (err !== UserTerminalCloseError) {
+                if (err === UserTerminatedError) {
+                    this.userTerminal.cancel();
+                } else if (err !== UserTerminalCloseError) {
                     this.userTerminal.error();
                     this.userTerminal.write(`${err}\n`, TerminalMessageStyle.error);
                 }
@@ -190,7 +201,9 @@ export class AtomicCommand {
         } finally {
             this.latestOperationID.type = undefined;
             this._executingCommand = undefined;
-            if (releaser) releaser();
+            if (releaser) {
+                releaser();
+            }
         }
     }
 }

@@ -82,7 +82,9 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     formattedKey[key] = value;
                 }
             }
-            if (isValid) json.push(formattedKey);
+            if (isValid) {
+                json.push(formattedKey);
+            }
         }
 
         return json;

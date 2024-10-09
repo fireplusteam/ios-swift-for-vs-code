@@ -39,8 +39,11 @@ export class TestTarget implements TestContainer {
                 if (!data.didResolve) {
                     await data.updateFromDisk(controller, file);
                 }
-                if ([...file.children].length > 0) parent.children.push(file);
-                else this.context.deleteItem(file.id);
+                if ([...file.children].length > 0) {
+                    parent.children.push(file);
+                } else {
+                    this.context.deleteItem(file.id);
+                }
             } catch (err) {
                 console.log(`Tests for a file ${url} can not be updated: ${err}`);
                 this.context.deleteItem(file.id);

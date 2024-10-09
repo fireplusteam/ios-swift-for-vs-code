@@ -23,8 +23,9 @@ export class SimulatorFocus {
             this.productName === undefined ||
             this.platform === undefined ||
             this.deviceID === undefined
-        )
+        ) {
             return;
+        }
 
         try {
             if (this.platform === Platform.macOS) {

@@ -9,7 +9,7 @@
         "@typescript-eslint"
     ],
     "rules": {
-        // "curly": "error",
+        "curly": "error",
         "@typescript-eslint/no-explicit-any": "off",
         "no-async-promise-executor": "off",
         "eqeqeq": "warn",

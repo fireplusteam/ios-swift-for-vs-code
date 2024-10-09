@@ -6,12 +6,16 @@ const headingRe = /(class)([\s]+)([\S]*)([\s]*:\s*)(XCTest)/gm;
 function getScope(text: string, start: number, commented: boolean[]) {
     const stack = [] as string[];
     for (let i = start; i < text.length; ++i) {
-        if (commented[i]) continue;
+        if (commented[i]) {
+            continue;
+        }
         if (text[i] === "{") {
             stack.push(text[i]);
         } else if (text[i] === "}") {
             stack.pop();
-            if (stack.length === 0) return i;
+            if (stack.length === 0) {
+                return i;
+            }
         }
     }
 }
@@ -61,7 +65,11 @@ function preCalcCommentedCode(text: string) {
 }
 
 function isCommented(commented: boolean[], start: number, end: number) {
-    for (let i = start; i < end; ++i) if (commented[i]) return true;
+    for (let i = start; i < end; ++i) {
+        if (commented[i]) {
+            return true;
+        }
+    }
     return false;
 }
 
@@ -79,7 +87,9 @@ export const parseSwiftSource = (
     for (const classRef of classes) {
         const classStartInd = classRef.index || 0;
         const classEndInd = classStartInd + classRef[0].length;
-        if (isCommented(commented, classStartInd, classEndInd)) continue;
+        if (isCommented(commented, classStartInd, classEndInd)) {
+            continue;
+        }
 
         const [, , , name] = classRef;
         const endScope = getScope(text, classStartInd, commented) || classEndInd;
@@ -94,7 +104,9 @@ export const parseSwiftSource = (
         for (const test of tests) {
             const testStartInd = (test.index || 0) + classStartInd;
             const testEndInd = testStartInd + test[0].length;
-            if (isCommented(commented, testStartInd, testEndInd)) continue;
+            if (isCommented(commented, testStartInd, testEndInd)) {
+                continue;
+            }
 
             const [, , , testName] = test;
             const endTestScope = getScope(text, testStartInd, commented) || testEndInd;
