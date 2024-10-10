@@ -50,10 +50,13 @@ Use the following guide to install them manually if any it doesn't work for you:
 
 **Required Dependencies**:
 
--   [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
--   [Swift](https://marketplace.visualstudio.com/items?itemName=sswg.swift-lang)
--   [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) - needed to run the app not in the debug mode
--   **Xcode**
+-   **Xcode** and simulators. Make sure that your Xcode is installed in `/Application/Xcode/` folder
+
+-   **homebrew**:
+
+    ```bash
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
 
 -   **xcbeautify** tool to prettify the building log output and :
 
@@ -115,6 +118,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.0.13
+### 0.4.0
 
 It's still under development, so you can face some bugs
