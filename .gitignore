@@ -9,3 +9,4 @@ vscode-test
 !.prettierrc.json
 !.vscode-test.mjs
 !.vscode-test.js
+!.vscodeignore

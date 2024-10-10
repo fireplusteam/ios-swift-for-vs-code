@@ -1,0 +1,5 @@
+.*
+.ruby-lsp
+.vscode
+build
+**/__pycache__
