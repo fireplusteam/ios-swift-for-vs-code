@@ -300,7 +300,7 @@ export function getXCodeBuildServerPath() {
 }
 
 export function getXCBBuildServicePath() {
-    return path.join(__dirname, "..", "..", "src", "dist", "XCBBuildService");
+    return path.join(__dirname, "..", "..", "dist", "XCBBuildService");
 }
 
 function readEnvFileToDict() {
