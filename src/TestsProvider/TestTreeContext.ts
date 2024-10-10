@@ -6,6 +6,7 @@ import { TestHeading } from "./TestItemProvider/TestHeading";
 import { CoverageProvider } from "./CoverageProvider";
 import { LSPTestsProvider } from "../LSP/LSPTestsProvider";
 import { TestResultProvider } from "./TestResultProvider";
+import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 
 const textDecoder = new TextDecoder("utf-8");
 
@@ -14,17 +15,19 @@ export type MarkdownTestData = TestHeading | TestCase | TestContainer;
 type TestNodeId = "file://" | "target://" | "project://";
 
 export class TestTreeContext {
-    testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
-    ctrl: vscode.TestController = vscode.tests.createTestController(
+    readonly testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
+    readonly ctrl: vscode.TestController = vscode.tests.createTestController(
         "iOSTestController",
         "iOS Tests"
     );
-    coverage: CoverageProvider = new CoverageProvider(".vscode/.bundle.xcresult");
-    testResult: TestResultProvider = new TestResultProvider(".vscode/.bundle.xcresult");
-    lspTestProvider: LSPTestsProvider;
+    readonly coverage: CoverageProvider = new CoverageProvider(".vscode/.bundle.xcresult");
+    readonly testResult: TestResultProvider = new TestResultProvider(".vscode/.bundle.xcresult");
+    readonly lspTestProvider: LSPTestsProvider;
+    readonly atomicCommand: AtomicCommand;
 
-    constructor(lspTestProvider: LSPTestsProvider) {
+    constructor(lspTestProvider: LSPTestsProvider, atomicCommand: AtomicCommand) {
         this.lspTestProvider = lspTestProvider;
+        this.atomicCommand = atomicCommand;
     }
 
     static TestID(id: TestNodeId, uri: vscode.Uri) {

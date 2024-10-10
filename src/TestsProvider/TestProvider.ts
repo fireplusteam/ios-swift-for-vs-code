@@ -4,11 +4,12 @@ import { TestCase } from "./TestItemProvider/TestCase";
 import { TestProject } from "./TestItemProvider/TestProject";
 import { ProjectManager } from "../ProjectManager/ProjectManager";
 import { TestTarget } from "./TestItemProvider/TestTarget";
-import { emptyTestsLog } from "../utils";
+import { deleteFile, emptyTestsLog } from "../utils";
 import { TestCaseAsyncParser } from "./RawLogParsers/TestCaseAsyncParser";
 import { TestTreeContext } from "./TestTreeContext";
 import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
-import { getWorkspacePath } from "../env";
+import { getFilePathInWorkspace, getWorkspacePath } from "../env";
+import { CommandContext, UserTerminalCloseError } from "../CommandManagement/CommandContext";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -22,7 +23,8 @@ export class TestProvider {
     executeTests: (
         tests: string[] | undefined,
         isDebuggable: boolean,
-        testRun: vscode.TestRun
+        testRun: vscode.TestRun,
+        context: CommandContext
     ) => Promise<boolean>;
     context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser();
@@ -37,7 +39,8 @@ export class TestProvider {
         executeTests: (
             tests: string[] | undefined,
             isDebuggable: boolean,
-            testRun: vscode.TestRun
+            testRun: vscode.TestRun,
+            context: CommandContext
         ) => Promise<boolean>
     ) {
         this.projectManager = projectManager;
@@ -49,13 +52,16 @@ export class TestProvider {
         const ctrl = this.context.ctrl;
         context.subscriptions.push(ctrl);
 
-        const runHandler = (request: vscode.TestRunRequest) => {
+        const runHandler = (request: vscode.TestRunRequest, token: vscode.CancellationToken) => {
             if (!request.continuous) {
-                return startTestRun(request);
+                return startTestRun(request, token);
             }
         };
 
-        const startTestRun = async (request: vscode.TestRunRequest) => {
+        const startTestRun = async (
+            request: vscode.TestRunRequest,
+            token: vscode.CancellationToken
+        ) => {
             const queue: { test: vscode.TestItem; data: TestCase }[] = [];
             const run = ctrl.createTestRun(request, "iOS Tests", true);
 
@@ -83,7 +89,7 @@ export class TestProvider {
                 }
             };
 
-            const runTestQueue = async () => {
+            const runTestQueue = async (context: CommandContext) => {
                 const mapTests = new Map<string, { test: vscode.TestItem; data: TestCase }>();
                 const xcodebuildTestsIds: string[] = [];
                 for (const { test, data } of queue) {
@@ -104,6 +110,7 @@ export class TestProvider {
                     }
                 }
 
+                let wasTerminalClosed = false;
                 try {
                     emptyTestsLog();
                     this.asyncParser.parseAsyncLogs(
@@ -132,19 +139,34 @@ export class TestProvider {
                             console.log("log");
                         }
                     );
+                    // TODO: once build_app.sh and test_app.sh refactored, we need to get rid of it by providing unique name to build/test sessions
+                    deleteFile(getFilePathInWorkspace(".vscode/.bundle.xcresult"));
                     await this.executeTests(
                         request.include === undefined ? undefined : xcodebuildTestsIds,
                         request.profile?.kind === vscode.TestRunProfileKind.Debug,
-                        run
+                        run,
+                        context
                     );
-                } catch (err) {
-                    console.log(`Run with error: ${err}`);
+                } catch (error: any) {
+                    wasTerminalClosed = UserTerminalCloseError.isEqual(error);
+                    throw error;
                 } finally {
                     try {
                         // read testing results
-                        await this.extractTestingResults(mapTests, run);
+                        if (
+                            !context.cancellationToken.isCancellationRequested &&
+                            !wasTerminalClosed
+                        ) {
+                            await this.extractTestingResults(mapTests, run);
+                        }
                     } catch (error) {
                         console.log(`Error parsing test result logs: ${error}`);
+                    } finally {
+                        // all others are skipped
+                        mapTests.forEach(item => {
+                            run.skipped(item.test);
+                        });
+                        mapTests.clear();
                     }
 
                     try {
@@ -162,9 +184,22 @@ export class TestProvider {
             };
             // resolve all tree before start testing
             await this.findInitialFiles(this.context.ctrl);
-            await discoverTests(request.include ?? this.gatherTestItems(ctrl.items)).then(
-                runTestQueue
-            );
+            await discoverTests(request.include ?? this.gatherTestItems(ctrl.items));
+            this.context.atomicCommand.userCommand(async context => {
+                if (token.isCancellationRequested) {
+                    context.cancel();
+                }
+                const dis = token.onCancellationRequested(() => {
+                    dis.dispose();
+                    context.cancel();
+                });
+                try {
+                    await runTestQueue(context);
+                } catch (error) {
+                    console.log(`${error}`);
+                    throw error;
+                }
+            }, "Start Testing");
         };
 
         ctrl.refreshHandler = async () => {

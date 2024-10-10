@@ -1,7 +1,7 @@
 import path from "path";
 import * as vscode from "vscode";
 import fs from "fs";
-import { emptyLog } from "./utils";
+import { CustomError, emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
 
 export enum Platform {
@@ -12,22 +12,22 @@ export enum Platform {
     tvOSSimulator,
 }
 
-export const ProjectFileMissedError = new Error(
+export const ProjectFileMissedError = new CustomError(
     "Project File is not set in .vscode/.env file. Please select project or workspace Xcode file"
 );
-export const ProjectSchemeMissedError = new Error(
+export const ProjectSchemeMissedError = new CustomError(
     "Project scheme is not set in .vscode/.env file. Please run the command to select it!"
 );
-export const ProjectConfigurationMissedError = new Error(
+export const ProjectConfigurationMissedError = new CustomError(
     "Project configuration is not set in .vscode/.env. Please run the command to select it"
 );
-export const DebugDeviceIDMissedError = new Error("DebugDeviceIDMissedError");
-export const MultipleDeviceMissedError = new Error("MultipleDeviceMissedError");
-export const BundleAppNameMissedError = new Error("BundleAppNameMissedError");
-export const AppExecutablePathMissedError = new Error("AppExecutablePathMissedError");
-export const PlatformMissedError = new Error("PlatformMissedError");
-export const AppTargetExecutableMissedError = new Error("AppTargetExecutableMissedError");
-export const ProductNameMissedError = new Error("ProductNameMissedError");
+export const DebugDeviceIDMissedError = new CustomError("DebugDeviceIDMissedError");
+export const MultipleDeviceMissedError = new CustomError("MultipleDeviceMissedError");
+export const BundleAppNameMissedError = new CustomError("BundleAppNameMissedError");
+export const AppExecutablePathMissedError = new CustomError("AppExecutablePathMissedError");
+export const PlatformMissedError = new CustomError("PlatformMissedError");
+export const AppTargetExecutableMissedError = new CustomError("AppTargetExecutableMissedError");
+export const ProductNameMissedError = new CustomError("ProductNameMissedError");
 
 export interface ProjectEnvInterface {
     platform: Promise<Platform>;
@@ -300,15 +300,7 @@ export function getXCodeBuildServerPath() {
 }
 
 export function getXCBBuildServicePath() {
-    return path.join(
-        __dirname,
-        "..",
-        "..",
-        "src",
-        "XCBBuildServiceProxy",
-        "dist",
-        "XCBBuildService"
-    );
+    return path.join(__dirname, "..", "..", "src", "dist", "XCBBuildService");
 }
 
 function readEnvFileToDict() {

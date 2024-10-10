@@ -19,7 +19,7 @@ export async function executeTask(name: string) {
                     if (e.execution.task.name === name) {
                         disposable.dispose();
                         if (e.exitCode !== 0) {
-                            reject(new Error(`Task ${name} failed with ${e.exitCode}`));
+                            reject(Error(`Task ${name} failed with ${e.exitCode}`));
                             return;
                         }
                         resolve(true);

@@ -99,8 +99,7 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 This extension contributes the following settings:
 
--   `vscode-ios.watcher`: Enable/disable the autocomplete watch build to update indexes whenever a new file added/renamed/moved/deleted or modify a file and switch to another module.
--   `vscode-ios.watcher.singleModule`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file (experimental).
+-   `vscode-ios.watcher.singleModule`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file.
 -   `vscode-ios.xcb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 
 ## Known Issues

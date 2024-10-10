@@ -131,14 +131,14 @@ export class ToolsManager {
         try {
             await XCRunHelper.checkIfXCodeInstalled();
         } catch (error) {
-            throw new Error(`Xcode is not installed. Please install it: ${error}`);
+            throw Error(`Xcode is not installed. Please install it: ${error}`);
         }
 
         try {
             await this.compileLLDStubExe();
         } catch {
             if (!this.isLLDBStubExeCompiled()) {
-                throw new Error("Xcode is not installed. Please install it and restart VS Code");
+                throw Error("Xcode is not installed. Please install it and restart VS Code");
             }
         }
 
@@ -166,7 +166,7 @@ export class ToolsManager {
                     this.log.appendLine(
                         `Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`
                     );
-                    throw new Error(
+                    throw Error(
                         `Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`
                     );
                 }
@@ -174,7 +174,7 @@ export class ToolsManager {
                 this.log.appendLine(
                     "Dependencies are not installed. This extensions would not be working as expected!"
                 );
-                throw new Error(
+                throw Error(
                     "Dependencies are not installed. Extension would not be working properly"
                 );
             }

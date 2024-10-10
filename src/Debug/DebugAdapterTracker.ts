@@ -14,7 +14,6 @@ import { killSpawnLaunchedProcesses } from "../utils";
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
     private problemResolver: ProblemDiagnosticResolver;
-    private debugTestSessionEvent: vscode.EventEmitter<string>;
     private isTerminated = false;
     private debugConsoleOutput?: vscode.Disposable;
     private simulatorInteractor: SimulatorFocus;
@@ -39,14 +38,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
     private _stream: fs.WriteStream;
 
-    constructor(
-        debugSession: vscode.DebugSession,
-        problemResolver: ProblemDiagnosticResolver,
-        debugTestSessionEvent: vscode.EventEmitter<string>
-    ) {
+    constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver) {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
-        this.debugTestSessionEvent = debugTestSessionEvent;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
         this.simulatorInteractor = new SimulatorFocus(this.context.commandContext);
     }
@@ -122,7 +116,6 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             } catch {
                 /* empty */
             }
-            this.debugTestSessionEvent.fire(this.sessionID);
         }
     }
 

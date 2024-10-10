@@ -50,7 +50,7 @@ export class XCRunHelper {
         if (version) {
             return [version[1], version[2], version[3]];
         } else {
-            throw new Error("swift lang is not determined");
+            throw Error("swift lang is not determined");
         }
     }
 }

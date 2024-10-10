@@ -6,7 +6,21 @@ import treeKill from "tree-kill";
 import psTree from "ps-tree";
 import { lock, unlock } from "lockfile";
 
-export const TimeoutError = new Error("Timed out");
+export class CustomError implements Error {
+    name: string = "Cancel";
+    message: string;
+    stack?: string | undefined;
+    cause?: unknown;
+    constructor(message: string) {
+        this.message = message;
+    }
+
+    isEqual(error: any) {
+        return error.message === this.message && error.name === this.name;
+    }
+}
+
+export const TimeoutError = new CustomError("Timed out");
 export function promiseWithTimeout<T>(ms: number, promise: () => Promise<T>): Promise<T> {
     // Create a timeout promise that rejects after "ms" milliseconds
     const timeout = new Promise<T>((_, reject) => {
@@ -105,11 +119,15 @@ export function getLockFilePath(filePath: string) {
     return filePath + ".lock";
 }
 
+export function deleteFile(filePath: string) {
+    if (fs.existsSync(filePath)) {
+        fs.rmSync(filePath, { force: true, recursive: true, maxRetries: 10 });
+    }
+}
+
 export function deleteLockFile(filePath: string, fileName: string) {
     const lockFilePath = path.join(filePath, fileName + ".lock");
-    if (fs.existsSync(lockFilePath)) {
-        fs.rmSync(lockFilePath, { force: true, maxRetries: 10 });
-    }
+    deleteFile(lockFilePath);
 }
 
 export function emptyBuildLog() {

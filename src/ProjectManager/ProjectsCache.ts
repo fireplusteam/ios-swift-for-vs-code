@@ -73,7 +73,7 @@ export class ProjectsCache {
                         if (val instanceof Map) {
                             this.cache = val;
                         } else {
-                            reject(new Error("Json format is wrong"));
+                            reject(Error("Json format is wrong"));
                         }
                         resolve();
                     } catch (err) {

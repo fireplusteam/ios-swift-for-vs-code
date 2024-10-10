@@ -1,6 +1,7 @@
 import { TestStyle } from "../../LSP/lspExtension";
+import { CustomError } from "../../utils";
 
-const InvalidTestCase = new Error("Invalid Test Case");
+const InvalidTestCase = new CustomError("Invalid Test Case");
 
 export class TestCase {
     constructor(

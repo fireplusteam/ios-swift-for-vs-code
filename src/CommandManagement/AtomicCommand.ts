@@ -4,8 +4,9 @@ import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
 import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./CommandContext";
 import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
+import { CustomError } from "../utils";
 
-export const UserCommandIsExecuting: Error = new Error("User task is currently executing");
+export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
 function isShowErrorEnabled() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("show.log");
@@ -82,9 +83,9 @@ export class AtomicCommand {
             this.watcherTerminal.success();
         } catch (error) {
             if (error !== UserCommandIsExecuting) {
-                if (error === UserTerminatedError) {
+                if (UserTerminatedError.isEqual(error)) {
                     this.watcherTerminal.cancel();
-                } else if (error !== UserTerminalCloseError) {
+                } else if (UserTerminalCloseError.isEqual(error) === false) {
                     this.watcherTerminal.error();
                 }
                 this.watcherTerminal.write(`${error}\n`, TerminalMessageStyle.error);
@@ -168,9 +169,9 @@ export class AtomicCommand {
             return result;
         } catch (err) {
             if (err !== UserCommandIsExecuting && taskName) {
-                if (err === UserTerminatedError) {
+                if (UserTerminatedError.isEqual(err)) {
                     this.userTerminal.cancel();
-                } else if (err !== UserTerminalCloseError) {
+                } else if (UserTerminalCloseError.isEqual(err) === false) {
                     this.userTerminal.error();
                     this.userTerminal.write(`${err}\n`, TerminalMessageStyle.error);
                 }

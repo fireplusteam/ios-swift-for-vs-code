@@ -66,7 +66,7 @@ export class InteractiveTerminal {
                         this.log.appendLine(`Terminal is Closed`);
                         closeDisposal?.dispose();
                         closeDisposal = undefined;
-                        reject(new Error("Terminal is closed"));
+                        reject(Error("Terminal is closed"));
                     }
                 });
             } catch (err) {

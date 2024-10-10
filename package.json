@@ -141,12 +141,6 @@
                     "title": "LLDB-DAP for debug",
                     "description": "Use lldb-dap for debugging. Starting Xcode 16, it's included in swift toolchain and if enabled, extension will use it. Disable it if you want to use Code-lldb extension instead or experience any issue with it. On swift 5 it always uses Code-lldb disregard of this setting"
                 },
-                "vscode-ios.watcher.whole": {
-                    "type": "boolean",
-                    "default": true,
-                    "title": "Changes Between Modules Watcher",
-                    "description": "Xcodebuild Watch. Build automatically while editing project files in multiple module. Needed for updating indexes"
-                },
                 "vscode-ios.show.log": {
                     "type": "boolean",
                     "default": true,

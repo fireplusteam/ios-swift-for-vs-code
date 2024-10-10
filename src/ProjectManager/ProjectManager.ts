@@ -303,7 +303,7 @@ export class ProjectManager {
                             (await this.xCodeWorkspacePath())
                         ) {
                             await this.openXCodeWorkspace(await this.xCodeWorkspacePath());
-                            reject(new Error("Opening in Workspace")); // xcode workspace is reloading, reject further execution
+                            reject(Error("Opening in Workspace")); // xcode workspace is reloading, reject further execution
                             return;
                         } else {
                             this.onProjectLoaded.fire();

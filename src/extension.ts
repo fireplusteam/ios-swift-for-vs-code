@@ -174,11 +174,7 @@ export async function activate(context: vscode.ExtensionContext) {
             new LLDBDapDescriptorFactory()
         )
     );
-    const debugSessionEndEvent = new vscode.EventEmitter<string>();
-    const debugAdapterFactory = new DebugAdapterTrackerFactory(
-        problemDiagnosticResolver,
-        debugSessionEndEvent
-    );
+    const debugAdapterFactory = new DebugAdapterTrackerFactory(problemDiagnosticResolver);
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterTrackerFactory("xcode-lldb", debugAdapterFactory)
     );
@@ -186,24 +182,25 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.debug.registerDebugAdapterTrackerFactory("lldb", debugAdapterFactory)
     );
 
-    debugConfiguration = new DebugConfigurationProvider(
-        runtimeWarningLogWatcher,
-        atomicCommand,
-        debugSessionEndEvent.event
-    );
+    debugConfiguration = new DebugConfigurationProvider(runtimeWarningLogWatcher, atomicCommand);
 
     testProvider = new TestProvider(
         projectManager,
-        new TestTreeContext(new LSPTestsProvider(sourceLsp)),
-        async (tests, isDebuggable, testRun) => {
+        new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
+        async (tests, isDebuggable, testRun, context) => {
             if (tests) {
                 return await debugConfiguration.startIOSTestsForCurrentFileDebugger(
                     tests,
                     isDebuggable,
-                    testRun
+                    testRun,
+                    context
                 );
             } else {
-                return await debugConfiguration.startIOSTestsDebugger(isDebuggable, testRun);
+                return await debugConfiguration.startIOSTestsDebugger(
+                    isDebuggable,
+                    testRun,
+                    context
+                );
             }
         }
     );
@@ -364,7 +361,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.run.app.debug", async () => {
             const isDebuggable = await askIfDebuggable();
-            await debugConfiguration.startIOSDebugger(isDebuggable);
+            atomicCommand.userCommand(async context => {
+                await debugConfiguration.startIOSDebugger(isDebuggable, context);
+            }, "Start Debug");
             return true;
         })
     );

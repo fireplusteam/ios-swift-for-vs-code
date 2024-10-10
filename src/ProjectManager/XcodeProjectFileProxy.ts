@@ -27,7 +27,7 @@ export class XcodeProjectFileProxy {
         this.process.on("exit", (code, signal) => {
             this.rl = undefined;
             console.log(`Return code: ${code}, signal: ${signal}, error: ${stderr}`);
-            this.onEndReadWithError.fire(new Error(`${projectPath} file failed: ${stderr}`));
+            this.onEndReadWithError.fire(Error(`${projectPath} file failed: ${stderr}`));
             if (fs.existsSync(projectPath)) {
                 this.runProcess(projectPath);
             }
@@ -66,7 +66,7 @@ export class XcodeProjectFileProxy {
             let disError: vscode.Disposable | undefined;
             this.commandQueue = new Promise<string[]>((resolve, reject) => {
                 if (this.rl === undefined) {
-                    reject(new Error("Process is killed"));
+                    reject(Error("Process is killed"));
                 }
                 dis = this.onEndRead.event(e => {
                     dis?.dispose();

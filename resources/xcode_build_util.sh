@@ -4,7 +4,7 @@ source '.vscode/.env'
 DESTINATION="id=$DEVICE_ID"
 
 if [ "$VS_IOS_XCODE_SDK" != "" ]; then
-    XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -sdk \"$VS_IOS_XCODE_SDK\" -destination \"$DESTINATION,platform=$PLATFORM\" -resultBundlePath .vscode/.bundle -skipMacroValidation -showBuildTimingSummary"
+    XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -destination \"$DESTINATION,platform=$PLATFORM\" -resultBundlePath .vscode/.bundle -skipMacroValidation -showBuildTimingSummary"
 else
     XCODECMD="-configuration \"$PROJECT_CONFIGURATION\" -destination \"$DESTINATION,platform=$PLATFORM\" -resultBundlePath .vscode/.bundle -skipMacroValidation -showBuildTimingSummary"
 fi

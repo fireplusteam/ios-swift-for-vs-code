@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import {
-    currentPlatform,
     getScriptPath,
     getWorkspacePath,
     isActivated,
@@ -41,7 +40,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
     private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
 
-    private debugTestSessionEvent: vscode.Event<string>;
     private atomicCommand: AtomicCommand;
 
     private static contextBinder = new Map<
@@ -56,17 +54,25 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return this.contextBinder.get(session);
     }
 
-    constructor(
-        runtimeWarningsWatcher: RuntimeWarningsLogWatcher,
-        atomicCommand: AtomicCommand,
-        debugTestSessionEvent: vscode.Event<string>
-    ) {
+    constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, atomicCommand: AtomicCommand) {
         this.runtimeWarningsWatcher = runtimeWarningsWatcher;
-        this.debugTestSessionEvent = debugTestSessionEvent;
         this.atomicCommand = atomicCommand;
     }
 
-    async startIOSDebugger(isDebuggable: boolean) {
+    private waitForDebugSession(context: CommandContext, sessionID: string): Promise<void> {
+        const operation = context.waitToCancel();
+        DebugConfigurationProvider.contextBinder.set(sessionID, {
+            commandContext: context,
+            token: operation.token,
+            rejectToken: operation.rejectToken,
+        });
+        return operation.wait.finally(() => {
+            DebugConfigurationProvider.contextBinder.delete(sessionID);
+            DebugAdapterTracker.updateStatus(sessionID, "stopped");
+        });
+    }
+
+    async startIOSDebugger(isDebuggable: boolean, context: CommandContext) {
         const sessionId = getSessionId(`App_${isDebuggable}${this.counterID}`);
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
@@ -77,19 +83,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             sessionId: sessionId,
         };
 
-        let dis: vscode.Disposable | undefined;
-        return await new Promise<boolean>(resolve => {
-            dis = this.debugTestSessionEvent(e => {
-                if (e === sessionId) {
-                    dis?.dispose();
-                    resolve(true);
-                }
-            });
-            vscode.debug.startDebugging(undefined, debugSession);
-        });
+        const waiter = this.waitForDebugSession(context, sessionId);
+        if ((await vscode.debug.startDebugging(undefined, debugSession)) === false) {
+            context.cancel();
+            return false;
+        }
+        await waiter;
+        return true;
     }
 
-    async startIOSTestsDebugger(isDebuggable: boolean, testRun: vscode.TestRun) {
+    async startIOSTestsDebugger(
+        isDebuggable: boolean,
+        testRun: vscode.TestRun,
+        context: CommandContext
+    ) {
         const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
@@ -100,22 +107,23 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             sessionId: sessionId,
         };
 
-        let dis: vscode.Disposable | undefined;
-        return await new Promise<boolean>(resolve => {
-            dis = this.debugTestSessionEvent(e => {
-                if (e === sessionId) {
-                    dis?.dispose();
-                    resolve(true);
-                }
-            });
-            vscode.debug.startDebugging(undefined, debugSession, { testRun: testRun });
-        });
+        const waiter = this.waitForDebugSession(context, sessionId);
+        if (
+            (await vscode.debug.startDebugging(undefined, debugSession, { testRun: testRun })) ===
+            false
+        ) {
+            context.cancel();
+            return false;
+        }
+        await waiter;
+        return true;
     }
 
     async startIOSTestsForCurrentFileDebugger(
         tests: string[],
         isDebuggable: boolean,
-        testRun: vscode.TestRun
+        testRun: vscode.TestRun,
+        context: CommandContext
     ) {
         const sessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
         const debugSession: vscode.DebugConfiguration = {
@@ -128,16 +136,17 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             testsToRun: tests,
         };
 
-        let dis: vscode.Disposable | undefined;
-        return await new Promise<boolean>(resolve => {
-            dis = this.debugTestSessionEvent(e => {
-                if (e === sessionId) {
-                    dis?.dispose();
-                    resolve(true);
-                }
-            });
-            vscode.debug.startDebugging(undefined, debugSession, { testRun: testRun });
-        });
+        const waiter = this.waitForDebugSession(context, sessionId);
+        if (
+            (await vscode.debug.startDebugging(undefined, debugSession, {
+                testRun: testRun,
+            })) === false
+        ) {
+            context.cancel();
+            return false;
+        }
+        await waiter;
+        return true;
     }
 
     async resolveDebugConfiguration(
@@ -159,45 +168,42 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 ? getSessionId(`debugger`) + this.counterID
                 : dbgConfig.sessionId;
 
-        const context = await new Promise<CommandContext>((resolve, reject) => {
-            this.atomicCommand.userCommand(async (context: CommandContext) => {
-                try {
-                    if (token.isCancellationRequested) {
-                        throw UserTerminatedError;
-                    }
-                    const disposableDebug = token.onCancellationRequested(() => {
-                        disposableDebug.dispose();
-                        context.cancel();
-                    });
-                    await checkWorkspace(context);
-                    await DebugAdapterTracker.updateStatus(sessionID, "configuring");
+        let context = DebugConfigurationProvider.getContextForSession(sessionID)?.commandContext;
+        if (context === undefined) {
+            context = await new Promise<CommandContext>((resolve, reject) => {
+                this.atomicCommand
+                    .userCommand(async commandContext => {
+                        const waiter = this.waitForDebugSession(commandContext, sessionID);
+                        resolve(commandContext);
+                        await waiter;
+                    }, "Start Debug")
+                    .catch(reason => reject(reason));
+            });
+        }
 
-                    if (
-                        runtimeWarningsConfigStatus() !== "off" &&
-                        (await currentPlatform()) !== Platform.macOS
-                    ) {
-                        // mac OS doesn't support that feature at the moment
-                        this.runtimeWarningsWatcher.startWatcher();
-                    }
-
-                    resolve(context);
-                    try {
-                        const operation = context.waitToCancel();
-                        DebugConfigurationProvider.contextBinder.set(sessionID, {
-                            commandContext: context,
-                            token: operation.token,
-                            rejectToken: operation.rejectToken,
-                        });
-                        await operation.wait;
-                    } finally {
-                        DebugConfigurationProvider.contextBinder.delete(sessionID);
-                    }
-                } catch (error) {
-                    reject(error);
-                    throw error;
-                }
-            }, "Start Debug");
+        const disposableDebug = token.onCancellationRequested(() => {
+            disposableDebug.dispose();
+            context.cancel();
         });
+
+        try {
+            if (token.isCancellationRequested) {
+                throw UserTerminatedError;
+            }
+            await checkWorkspace(context);
+            await DebugAdapterTracker.updateStatus(sessionID, "configuring");
+
+            if (
+                runtimeWarningsConfigStatus() !== "off" &&
+                (await context.projectSettingsProvider.projectEnv.platform) !== Platform.macOS
+            ) {
+                // mac OS doesn't support that feature at the moment
+                this.runtimeWarningsWatcher.startWatcher();
+            }
+        } catch (error) {
+            context.cancel();
+            return null;
+        }
 
         return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
     }

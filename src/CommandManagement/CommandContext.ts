@@ -3,9 +3,10 @@ import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } fr
 import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
 import { TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
+import { CustomError } from "../utils";
 
-export const UserTerminatedError: Error = new Error("User Terminated");
-export const UserTerminalCloseError: Error = new Error("User Terminal Close");
+export const UserTerminatedError = new CustomError("User Terminated");
+export const UserTerminalCloseError = new CustomError("User Closed Terminal");
 
 interface CommandOptions {
     scriptOrCommand: ShellCommand | ShellFileScript;
