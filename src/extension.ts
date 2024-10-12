@@ -45,6 +45,7 @@ import { TestTreeContext } from "./TestsProvider/TestTreeContext";
 import { LSPTestsProvider } from "./LSP/LSPTestsProvider";
 import { WorkspaceContextImp } from "./LSP/WorkspaceContext";
 import { activateNotActiveExtension } from "./nonActiveExtension";
+import { getReadOnlyDocumentProvider } from "./LSP/ReadOnlyDocumentProvider";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -161,6 +162,8 @@ export async function activate(context: vscode.ExtensionContext) {
         activateNotActiveExtension(context);
         return;
     }
+
+    context.subscriptions.push(getReadOnlyDocumentProvider());
 
     vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 

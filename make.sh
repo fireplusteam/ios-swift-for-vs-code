@@ -15,4 +15,4 @@ pyinstaller --onefile src/XCBBuildServiceProxy/XCBBuildService.py
 npm run compile
 vsce package
 
-code --install-extension vscode-ios-0.3.0.vsix
+code --install-extension vscode-ios-0.3.3.vsix
