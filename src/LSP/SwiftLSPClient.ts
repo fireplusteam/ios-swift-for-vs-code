@@ -19,7 +19,7 @@ export class SwiftLSPClient {
     public async client(): Promise<langclient.LanguageClient> {
         if (this.languageClient === undefined) {
             if (this.clientReadyPromise === undefined) {
-                await this.setupLanguageClient(this.workspaceContext.workspaceFolder);
+                await this.setupLanguageClient(await this.workspaceContext.workspaceFolder);
             }
             await this.clientReadyPromise;
         }

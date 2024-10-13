@@ -13,7 +13,7 @@ export function getFileNameLog() {
 export async function cleanDerivedData(context: CommandContext) {
     await context.execShellWithOptions({
         scriptOrCommand: { command: "rm" },
-        args: ["-rf", getBuildRootPath()],
+        args: ["-rf", await getBuildRootPath()],
     });
 }
 

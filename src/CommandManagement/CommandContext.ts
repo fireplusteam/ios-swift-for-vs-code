@@ -10,6 +10,7 @@ export const UserTerminalCloseError = new CustomError("User Closed Terminal");
 
 interface CommandOptions {
     scriptOrCommand: ShellCommand | ShellFileScript;
+    cwd?: string;
     args?: string[];
     mode?: ExecutorMode;
     pipeToDebugConsole?: boolean;

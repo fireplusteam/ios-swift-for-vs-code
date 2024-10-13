@@ -7,6 +7,8 @@ import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { buildSelectedTarget } from "./buildCommands";
 import {
     currentPlatform,
+    getFilePathInWorkspace,
+    getLSPWorkspacePath,
     getProjectPath,
     getScriptPath,
     getWorkspacePath,
@@ -337,14 +339,20 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         await checkWorkspace(commandContext);
     }
     const env = commandContext.projectSettingsProvider.projectEnv;
+    const lspFolder = await getLSPWorkspacePath();
+    const relativeProjectPath = path.relative(
+        lspFolder.fsPath,
+        getFilePathInWorkspace(await env.projectFile)
+    );
     await commandContext.execShellWithOptions({
         scriptOrCommand: { command: getXCodeBuildServerPath() },
+        cwd: lspFolder.fsPath,
         args: [
             "config",
             "-scheme",
             await env.projectScheme,
             await env.projectType,
-            await env.projectFile,
+            relativeProjectPath,
         ],
     });
 

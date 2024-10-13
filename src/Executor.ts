@@ -51,6 +51,7 @@ export interface ShellFileScript {
 export interface ShellExec {
     cancellationToken?: vscode.CancellationToken;
     scriptOrCommand: ShellCommand | ShellFileScript;
+    cwd?: string;
     args?: string[];
     mode?: ExecutorMode;
     stdoutCallback?: (out: string) => void;
@@ -101,7 +102,7 @@ export class Executor {
         }
 
         const proc = this.execShellImp(script, args, {
-            cwd: getWorkspacePath(),
+            cwd: shell.cwd || getWorkspacePath(),
             shell: true,
             env: envOptions,
             stdio: "pipe",

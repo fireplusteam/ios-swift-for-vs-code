@@ -179,9 +179,10 @@ export function getWorkspaceFolder() {
     return workspace;
 }
 
-export function getLSPWorkspacePath() {
-    /// At the moment we use fake sourcekit-lsp client to fetch location of tests, so it's pointing out to .vscode to disallow buildServer.json usage which can lead to
-    return vscode.Uri.file(path.join(getWorkspacePath()));
+export async function getLSPWorkspacePath() {
+    // used to have the same folder as for project or workspace
+    const lspFolder = getFilePathInWorkspace(await getProjectFolderPath());
+    return vscode.Uri.file(path.join(lspFolder));
 }
 
 export function getWorkspacePath() {
@@ -368,15 +369,17 @@ export async function isActivated() {
     return true;
 }
 
-function getBuildServerJson() {
-    return JSON.parse(fs.readFileSync(getFilePathInWorkspace("buildServer.json"), "utf-8"));
+async function getBuildServerJsonPath() {
+    return path.join((await getLSPWorkspacePath()).fsPath, "buildServer.json");
 }
 
-export function getBuildRootPath() {
+async function getBuildServerJson() {
+    return JSON.parse(fs.readFileSync(await getBuildServerJsonPath(), "utf-8").toString());
+}
+
+export async function getBuildRootPath() {
     try {
-        const json = JSON.parse(
-            fs.readFileSync(getFilePathInWorkspace("buildServer.json"), "utf-8")
-        );
+        const json = await getBuildServerJson();
         return json.build_root;
     } catch (error) {
         console.log(`Building folder is not set : ${error}`);
@@ -386,7 +389,7 @@ export function getBuildRootPath() {
 
 export async function isBuildServerValid() {
     try {
-        const buildServer = getBuildServerJson();
+        const buildServer = await getBuildServerJson();
         if (
             buildServer.workspace.indexOf(getFilePathInWorkspace(await getProjectFileName())) === -1
         ) {
@@ -425,7 +428,7 @@ export async function getTargetExecutable(product_name: string, build_configurat
     try {
         // if get_project_type(list["PROJECT_FILE"]) == "-package":
         //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
-        const build_path = getBuildRootPath();
+        const build_path = await getBuildRootPath();
         switch (await currentPlatform()) {
             case Platform.macOS:
                 return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`;

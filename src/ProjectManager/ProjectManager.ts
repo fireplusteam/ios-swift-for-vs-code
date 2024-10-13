@@ -242,7 +242,7 @@ export class ProjectManager {
                 unwantedRecommendations: ["sswg.swift-lang"],
             },
         };
-        const buildRootPath = getBuildRootPath();
+        const buildRootPath = await getBuildRootPath();
         if (buildRootPath !== undefined) {
             xCodeWorkspace.folders.push({
                 name: "Dependencies",
