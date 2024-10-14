@@ -1,7 +1,7 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { getFilePathInWorkspace, ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
-import { deleteFile, emptyBuildLog } from "../utils";
+import { deleteFile } from "../utils";
 
 export class BuildManager {
     static BundlePath = ".vscode/.bundle";
@@ -26,7 +26,6 @@ export class BuildManager {
 
     async build(context: CommandContext, logFilePath: string) {
         deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-        emptyBuildLog(logFilePath);
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -35,7 +34,7 @@ export class BuildManager {
             mode: ExecutorMode.silently,
             pipe: {
                 scriptOrCommand: { command: "tee" },
-                args: ["-a", logFilePath],
+                args: [logFilePath],
                 mode: ExecutorMode.silently,
                 pipe: {
                     scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
@@ -47,7 +46,6 @@ export class BuildManager {
 
     async buildAutocomplete(context: CommandContext, logFilePath: string) {
         deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-        emptyBuildLog(logFilePath);
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -64,42 +62,14 @@ export class BuildManager {
             mode: ExecutorMode.onlyCommandNameAndResult,
             pipe: {
                 scriptOrCommand: { command: "tee" },
-                args: ["-a", logFilePath],
+                args: [logFilePath],
                 mode: ExecutorMode.silently,
-            },
-        });
-    }
-
-    async buildForTesting(context: CommandContext, logFilePath: string) {
-        deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-        emptyBuildLog(logFilePath);
-
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToBuildConsole: true,
-            args: [
-                "build-for-testing",
-                ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
-            ],
-            mode: ExecutorMode.silently,
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: ["-a", logFilePath],
-                mode: ExecutorMode.silently,
-                pipe: {
-                    scriptOrCommand: {
-                        command: "xcbeautify",
-                        labelInTerminal: "Build For Testing",
-                    },
-                    mode: ExecutorMode.verbose,
-                },
             },
         });
     }
 
     async buildForTestingWithTests(context: CommandContext, logFilePath: string, tests: string[]) {
         deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-        emptyBuildLog(logFilePath);
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -114,7 +84,7 @@ export class BuildManager {
             mode: ExecutorMode.silently,
             pipe: {
                 scriptOrCommand: { command: "tee" },
-                args: ["-a", logFilePath],
+                args: [logFilePath],
                 mode: ExecutorMode.silently,
                 pipe: {
                     scriptOrCommand: {

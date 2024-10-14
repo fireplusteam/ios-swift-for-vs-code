@@ -478,11 +478,12 @@ export async function runAndDebugTests(
     isDebuggable: boolean
 ) {
     await checkWorkspace(commandContext, false);
-    await commandContext.execShell("Run Tests", { file: "test_app.sh" }, [
+    const runManager = new RunManager(
         sessionID,
-        isDebuggable ? "DEBUG_LLDB" : "RUNNING",
-        "-ALL",
-    ]);
+        isDebuggable,
+        commandContext.projectSettingsProvider.projectEnv
+    );
+    await runManager.runTests(commandContext, []);
 }
 
 export async function runAndDebugTestsForCurrentFile(
@@ -492,17 +493,12 @@ export async function runAndDebugTestsForCurrentFile(
     tests: string[]
 ) {
     await checkWorkspace(commandContext, false);
-    const option = tests
-        .map(e => {
-            return `'-only-testing:${e}'`;
-        })
-        .join(" ");
-    await commandContext.execShell("Run Tests For Current File", { file: "test_app.sh" }, [
+    const runManager = new RunManager(
         sessionID,
-        isDebuggable ? "DEBUG_LLDB" : "RUNNING",
-        "-SELECTED",
-        option,
-    ]);
+        isDebuggable,
+        commandContext.projectSettingsProvider.projectEnv
+    );
+    await runManager.runTests(commandContext, tests);
 }
 
 export async function enableXCBBuildService(enabled: boolean) {

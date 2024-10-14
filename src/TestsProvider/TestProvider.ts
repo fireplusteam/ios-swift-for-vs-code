@@ -4,11 +4,10 @@ import { TestCase } from "./TestItemProvider/TestCase";
 import { TestProject } from "./TestItemProvider/TestProject";
 import { ProjectManager } from "../ProjectManager/ProjectManager";
 import { TestTarget } from "./TestItemProvider/TestTarget";
-import { deleteFile, emptyTestsLog } from "../utils";
+import { emptyTestsLog } from "../utils";
 import { TestCaseAsyncParser } from "./RawLogParsers/TestCaseAsyncParser";
 import { TestTreeContext } from "./TestTreeContext";
 import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
-import { getFilePathInWorkspace, getWorkspacePath } from "../env";
 import { CommandContext, UserTerminalCloseError } from "../CommandManagement/CommandContext";
 
 enum TestProviderLoadingState {
@@ -113,9 +112,8 @@ export class TestProvider {
                 let wasTerminalClosed = false;
                 try {
                     emptyTestsLog();
-                    this.asyncParser.parseAsyncLogs(
-                        getWorkspacePath(),
-                        ".logs/tests.log",
+                    const rawParser = this.asyncParser.parseAsyncLogs(
+                        context.debugConsoleEvent,
                         async (result, rawMessage, target, className, testName, duration) => {
                             const key = `${target}/${className}/${testName}()`;
                             const item = mapTests.get(key)?.test;
@@ -136,17 +134,18 @@ export class TestProvider {
                                 }
                                 mapTests.delete(key);
                             }
-                            console.log("log");
                         }
                     );
-                    // TODO: once build_app.sh and test_app.sh refactored, we need to get rid of it by providing unique name to build/test sessions
-                    deleteFile(getFilePathInWorkspace(".vscode/.bundle.xcresult"));
-                    await this.executeTests(
-                        request.include === undefined ? undefined : xcodebuildTestsIds,
-                        request.profile?.kind === vscode.TestRunProfileKind.Debug,
-                        run,
-                        context
-                    );
+                    try {
+                        await this.executeTests(
+                            request.include === undefined ? undefined : xcodebuildTestsIds,
+                            request.profile?.kind === vscode.TestRunProfileKind.Debug,
+                            run,
+                            context
+                        );
+                    } finally {
+                        this.asyncParser.end(rawParser);
+                    }
                 } catch (error: any) {
                     wasTerminalClosed = UserTerminalCloseError.isEqual(error);
                     throw error;

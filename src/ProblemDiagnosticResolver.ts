@@ -10,6 +10,8 @@ export class RawBuildParser {
     numberOfLines = 0;
     stdout = "";
     buildLogFile: string;
+    watcherDisposal?: vscode.Disposable;
+
     constructor(buildLogFile: string) {
         this.buildLogFile = buildLogFile;
     }
@@ -59,8 +61,6 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
 
         this.diagnosticBuildCollection.set(uri, this.uniqueProblems(newDiagnostics, allOthers));
     }
-
-    private watcherDisposal: vscode.Disposable | undefined;
 
     private clear() {
         this.buildErrors.clear();
@@ -158,13 +158,11 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     }
 
     parseAsyncLogs(filePath: string, buildPipeEvent: vscode.Event<string>) {
-        this.watcherDisposal?.dispose();
-        this.watcherDisposal = undefined;
         const buildLogFile = getFilePathInWorkspace(filePath);
 
         this.clear();
         const rawParser = new RawBuildParser(buildLogFile);
-        this.watcherDisposal = buildPipeEvent(data => {
+        rawParser.watcherDisposal = buildPipeEvent(data => {
             rawParser.stdout += data;
             this.parseStdout(rawParser, false);
         });
@@ -172,14 +170,12 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     }
 
     public end(rawParser: RawBuildParser, showProblemPanelOnError = true) {
-        if (this.watcherDisposal) {
-            this.parseStdout(rawParser, true);
-            if (showProblemPanelOnError && rawParser.isError) {
-                vscode.commands.executeCommand("workbench.action.problems.focus");
-            }
+        rawParser.watcherDisposal?.dispose();
+        rawParser.watcherDisposal = undefined;
+        this.parseStdout(rawParser, true);
+        if (showProblemPanelOnError && rawParser.isError) {
+            vscode.commands.executeCommand("workbench.action.problems.focus");
         }
-        this.watcherDisposal?.dispose();
-        this.watcherDisposal = undefined;
     }
 
     private parseStdout(rawParser: RawBuildParser, shouldEnd: boolean) {

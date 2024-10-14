@@ -43,7 +43,7 @@ export async function buildTests(
     const filePath = getFileNameLog();
     const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
     try {
-        await buildManager.buildForTesting(context, filePath);
+        await buildManager.buildForTestingWithTests(context, filePath, []);
     } finally {
         problemResolver.end(rawParser);
     }

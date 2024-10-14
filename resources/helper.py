@@ -24,26 +24,6 @@ class FileLock:
         os.remove(self.lock_file)
 
 
-def get_project_type(project_file):
-    if ".xcodeproj" in project_file:
-        return "-project"
-    if "Package.swift" in project_file:
-        return "-package"
-    return "-workspace"
-
-
-def get_project_config():
-    file_path = 'buildServer.json'
-    with open(file_path, 'r') as file:
-       config = json.load(file)
-    return config
-
-
-def get_derived_data_path():
-    config = get_project_config()
-    return config["build_root"]
-
-
 def get_list_of_pids(process_name):
     proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
 

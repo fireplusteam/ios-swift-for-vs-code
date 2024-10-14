@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { Platform, ProjectEnv } from "../env";
+import { getFilePathInWorkspace, Platform, ProjectEnv } from "../env";
 import { sleep } from "../extension";
-import { promiseWithTimeout, TimeoutError } from "../utils";
+import { deleteFile, promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
 import { ExecutorMode, ExecutorTaskError } from "../Executor";
+import { BuildManager } from "./BuildManager";
 
 export class RunManager {
     private sessionID: string;
@@ -43,6 +44,41 @@ export class RunManager {
         for (const device of devices) {
             await this.runOnSimulator(context, device, false);
         }
+    }
+
+    async runTests(context: CommandContext, tests: string[]) {
+        deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
+        deleteFile(getFilePathInWorkspace(`${BuildManager.BundlePath}.xcresult`));
+        const logFilePath = ".logs/tests.log";
+
+        await this.waitDebugger(context);
+
+        await context.execShellWithOptions({
+            scriptOrCommand: { command: "xcodebuild" },
+            pipeToDebugConsole: true,
+            args: [
+                "test-without-building",
+                ...tests.map(test => {
+                    return `-only-testing:${test}`;
+                }),
+                ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
+                "-parallel-testing-enabled",
+                "NO",
+            ],
+            mode: ExecutorMode.silently,
+            pipe: {
+                scriptOrCommand: { command: "tee" },
+                args: [logFilePath],
+                mode: ExecutorMode.silently,
+                pipe: {
+                    scriptOrCommand: {
+                        command: "xcbeautify",
+                        labelInTerminal: "Run Tests",
+                    },
+                    mode: ExecutorMode.verbose,
+                },
+            },
+        });
     }
 
     private async runOnSimulator(context: CommandContext, deviceId: string, waitDebugger: boolean) {
