@@ -18,6 +18,10 @@ export class CustomError implements Error {
     isEqual(error: any) {
         return error.message === this.message && error.name === this.name;
     }
+
+    toString() {
+        return this.message;
+    }
 }
 
 export const TimeoutError = new CustomError("Timed out");

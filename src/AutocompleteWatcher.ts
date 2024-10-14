@@ -17,6 +17,7 @@ export class AutocompleteWatcher {
     private projectManager: ProjectManager;
 
     private terminatingExtension: boolean = false;
+    private changedFiles = new Map<string, string>();
 
     private buildId = 0;
 
@@ -27,11 +28,32 @@ export class AutocompleteWatcher {
     ) {
         this.atomicCommand = atomicCommand;
         this.disposable.push(
-            vscode.workspace.onDidSaveTextDocument(e => {
-                if (!e || !this.isWatcherEnabledAnyFile()) {
+            vscode.workspace.onDidOpenTextDocument(doc => {
+                if (!doc || !this.isWatcherEnabledAnyFile()) {
+                    return;
+                }
+                if (this.isValidFile(doc.uri.fsPath) === false) {
+                    return;
+                }
+                this.changedFiles.set(doc.uri.fsPath, doc.getText());
+            })
+        );
+        this.disposable.push(
+            vscode.workspace.onDidSaveTextDocument(doc => {
+                if (!doc || !this.isWatcherEnabledAnyFile()) {
+                    return;
+                }
+                if (this.isValidFile(doc.uri.fsPath) === false) {
                     return;
                 }
 
+                const val = this.changedFiles.get(doc.uri.fsPath);
+                if (val) {
+                    if (val === doc.getText()) {
+                        return;
+                    }
+                }
+                this.changedFiles.set(doc.uri.fsPath, doc.getText());
                 this.triggerIncrementalBuild().catch(() => {});
             })
         );
@@ -67,7 +89,13 @@ export class AutocompleteWatcher {
     private isValidFile(filePath: string | undefined) {
         if (
             filePath &&
-            (filePath.endsWith(".swift") || filePath.endsWith(".m") || filePath.endsWith(".mm"))
+            (filePath.endsWith(".swift") ||
+                filePath.endsWith(".m") ||
+                filePath.endsWith(".mm") ||
+                filePath.endsWith(".cpp") ||
+                filePath.endsWith(".c") ||
+                filePath.endsWith(".h") ||
+                filePath.endsWith(".hpp"))
         ) {
             return true;
         }
@@ -82,10 +110,7 @@ export class AutocompleteWatcher {
                 }
                 emptyAutobuildLog();
                 const fileLog = ".logs/autocomplete.log";
-                const rawParser = this.problemResolver.parseAsyncLogs(
-                    fileLog,
-                    context.buildConsoleEvent
-                );
+                const rawParser = this.problemResolver.parseAsyncLogs(fileLog, context.buildEvent);
                 try {
                     const buildManager = new BuildManager();
                     await buildManager.buildAutocomplete(context, fileLog);

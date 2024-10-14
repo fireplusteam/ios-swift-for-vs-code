@@ -24,7 +24,7 @@ export async function buildSelectedTarget(
     await checkWorkspace(context);
     const buildManager = new BuildManager();
     const filePath = getFileNameLog();
-    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
     try {
         await buildManager.build(context, filePath);
     } finally {
@@ -41,7 +41,7 @@ export async function buildTests(
     await checkWorkspace(context);
     const buildManager = new BuildManager();
     const filePath = getFileNameLog();
-    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
     try {
         await buildManager.buildForTestingWithTests(context, filePath, []);
     } finally {
@@ -57,7 +57,7 @@ export async function buildTestsForCurrentFile(
     await checkWorkspace(context);
     const buildManager = new BuildManager();
     const filePath = getFileNameLog();
-    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
     try {
         await buildManager.buildForTestingWithTests(context, filePath, tests);
     } finally {

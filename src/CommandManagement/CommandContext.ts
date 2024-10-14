@@ -22,7 +22,7 @@ interface CommandOptions {
     env?: { [name: string]: string };
     mode?: ExecutorMode;
     pipeToDebugConsole?: boolean;
-    pipeToBuildConsole?: boolean;
+    pipeToParseBuildErrors?: boolean;
     pipe?: CommandOptions;
 }
 
@@ -36,9 +36,9 @@ export class CommandContext {
         return this._debugConsoleEmitter.event;
     }
 
-    private _buildConsoleEmitter = new vscode.EventEmitter<string>();
-    get buildConsoleEvent(): vscode.Event<string> {
-        return this._buildConsoleEmitter.event;
+    private _buildEmitter = new vscode.EventEmitter<string>();
+    get buildEvent(): vscode.Event<string> {
+        return this._buildEmitter.event;
     }
 
     readonly lspClient: LSPClientContext;
@@ -68,13 +68,13 @@ export class CommandContext {
         const shellExe = shell as ShellExec;
         shellExe.cancellationToken = this._cancellationTokenSource.token;
         const stdoutCallback =
-            shell.pipeToDebugConsole === true || shell.pipeToBuildConsole === true
+            shell.pipeToDebugConsole === true || shell.pipeToParseBuildErrors === true
                 ? (out: string) => {
                       if (shell.pipeToDebugConsole === true) {
                           this._debugConsoleEmitter.fire(out);
                       }
-                      if (shell.pipeToBuildConsole === true) {
-                          this._buildConsoleEmitter.fire(out);
+                      if (shell.pipeToParseBuildErrors === true) {
+                          this._buildEmitter.fire(out);
                       }
                   }
                 : undefined;

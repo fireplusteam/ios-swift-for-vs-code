@@ -29,7 +29,7 @@ export class BuildManager {
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            pipeToBuildConsole: true,
+            pipeToParseBuildErrors: true,
             args: await BuildManager.args(context.projectSettingsProvider.projectEnv),
             mode: ExecutorMode.silently,
             pipe: {
@@ -49,7 +49,7 @@ export class BuildManager {
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            pipeToBuildConsole: true,
+            pipeToParseBuildErrors: true,
             args: [
                 "build-for-testing",
                 ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
@@ -73,7 +73,7 @@ export class BuildManager {
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            pipeToBuildConsole: true,
+            pipeToParseBuildErrors: true,
             args: [
                 "build-for-testing",
                 ...tests.map(test => {
