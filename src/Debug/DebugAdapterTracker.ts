@@ -207,7 +207,6 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 );
             }
         } catch (error) {
-            console.log(error);
             this.context.rejectToken.fire(error);
             await this.terminateCurrentSession(false);
         } finally {

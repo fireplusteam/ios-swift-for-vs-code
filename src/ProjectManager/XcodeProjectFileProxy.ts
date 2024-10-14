@@ -1,13 +1,13 @@
 import fs from "fs";
 import { ChildProcess, spawn } from "child_process";
 import { getScriptPath } from "../env";
-import { createInterface } from "readline";
+import { createInterface, Interface } from "readline";
 import * as vscode from "vscode";
 
 export class XcodeProjectFileProxy {
     private process: ChildProcess | undefined;
     private commandQueue: Promise<string[]> | undefined;
-    private rl: any | undefined;
+    private rl: Interface | undefined;
     private onEndRead = new vscode.EventEmitter<string[]>();
     private onEndReadWithError = new vscode.EventEmitter<any>();
 
@@ -45,6 +45,9 @@ export class XcodeProjectFileProxy {
                 });
             }
             let result = [] as string[];
+            if (this.rl === undefined) {
+                throw Error("Stream is undefined");
+            }
             for await (const line of this.rl) {
                 if (line === "EOF_REQUEST") {
                     this.onEndRead.fire(result);

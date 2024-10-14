@@ -51,7 +51,7 @@ export async function killSpawnLaunchedProcesses(deviceID: string) {
             });
         }
     } catch (err) {
-        console.log(err);
+        console.log(`Kill Spawn Processes error: ${err}`);
     }
 }
 
@@ -63,7 +63,7 @@ export function killAll(pid: number | undefined, signal: string) {
     psTree(pid, function (_, children) {
         treeKill(pid, signal, err => {
             if (err !== undefined) {
-                console.log(err);
+                console.log(`Kill All Processes error: ${err}`);
             }
             if (children === null || children === undefined) {
                 return;
@@ -72,7 +72,7 @@ export function killAll(pid: number | undefined, signal: string) {
                 const pid: number = Number(item.PID);
                 treeKill(pid, signal, err => {
                     if (err !== undefined) {
-                        console.log(err);
+                        console.log(`Kill All Processes error: ${err}`);
                     }
                 });
             }
@@ -130,8 +130,7 @@ export function deleteLockFile(filePath: string, fileName: string) {
     deleteFile(lockFilePath);
 }
 
-export function emptyBuildLog() {
-    const fileName = ".logs/build.log";
+export function emptyBuildLog(fileName: string) {
     emptyFile(getWorkspacePath(), fileName);
     deleteLockFile(getWorkspacePath(), fileName);
 }

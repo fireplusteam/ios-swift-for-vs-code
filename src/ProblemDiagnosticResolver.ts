@@ -1,8 +1,19 @@
-import { ChildProcess, SpawnOptions, spawn } from "child_process";
 import * as fs from "fs";
-import path from "path";
 import * as vscode from "vscode";
 import { HandleProblemDiagnosticResolver, SourcePredicate } from "./LSP/lspExtension";
+import { getFilePathInWorkspace } from "./env";
+
+export class RawBuildParser {
+    firstIndex = 0;
+    triggerCharacter = "^";
+    isError = false;
+    numberOfLines = 0;
+    stdout = "";
+    buildLogFile: string;
+    constructor(buildLogFile: string) {
+        this.buildLogFile = buildLogFile;
+    }
+}
 
 export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolver {
     static xcodebuild = "xcodebuild";
@@ -13,7 +24,6 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     diagnosticBuildCollection: vscode.DiagnosticCollection;
 
     buildErrors = new Set<string>();
-    buildLogFile: string | undefined;
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("Xcode");
@@ -50,7 +60,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         this.diagnosticBuildCollection.set(uri, this.uniqueProblems(newDiagnostics, allOthers));
     }
 
-    private watcherProc: ChildProcess | undefined;
+    private watcherDisposal: vscode.Disposable | undefined;
 
     private clear() {
         this.buildErrors.clear();
@@ -147,94 +157,80 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         }
     }
 
-    async parseAsyncLogs(workspacePath: string, filePath: string, showProblemPanelOnError = true) {
-        return new Promise<void>((resolve, reject) => {
-            if (this.watcherProc !== undefined) {
-                this.watcherProc.kill();
-            }
+    parseAsyncLogs(filePath: string, buildPipeEvent: vscode.Event<string>) {
+        this.watcherDisposal?.dispose();
+        this.watcherDisposal = undefined;
+        const buildLogFile = getFilePathInWorkspace(filePath);
 
-            this.buildLogFile = path.join(workspacePath, filePath);
-            const options: SpawnOptions = {
-                cwd: workspacePath,
-                shell: true,
-                stdio: "pipe",
-            };
-            const child = spawn(`tail`, ["-f", `"${filePath}"`], options);
-
-            this.clear();
-            let firstIndex = 0;
-            let stdout = "";
-            let triggerCharacter = "^";
-            const decoder = new TextDecoder("utf-8");
-            let isError = false;
-            let numberOfLines = 0;
-
-            child.stdout?.on("data", async data => {
-                stdout += decoder.decode(data);
-                let lastErrorIndex = -1;
-                for (let i = firstIndex; i < stdout.length; ++i) {
-                    if (stdout[i] === triggerCharacter) {
-                        lastErrorIndex = i;
-                        if (triggerCharacter === "^") {
-                            triggerCharacter = "\n";
-                            lastErrorIndex = -1;
-                        }
-                    }
-                }
-
-                const shouldEnd = stdout.indexOf("■") !== -1;
-                if (shouldEnd) {
-                    lastErrorIndex = stdout.length - 1;
-                }
-                if (lastErrorIndex !== -1) {
-                    triggerCharacter = "^";
-                    const problems = this.parseBuildLog(
-                        stdout.substring(0, lastErrorIndex + 1),
-                        numberOfLines
-                    );
-                    for (const problem in problems) {
-                        isError =
-                            isError ||
-                            problems[problem].filter(e => {
-                                return e.severity === vscode.DiagnosticSeverity.Error;
-                            }).length > 0;
-                    }
-                    this.storeProblems(problems);
-                    for (let i = 0; i < lastErrorIndex + 1; ++i) {
-                        numberOfLines += stdout[i] === "\n" ? 1 : 0;
-                    }
-                    stdout = stdout.substring(lastErrorIndex + 1);
-                    firstIndex = 0;
-                } else {
-                    firstIndex = stdout.length;
-                }
-                if (shouldEnd) {
-                    for (const file of this.buildErrors) {
-                        const newDiagnostics =
-                            this.diagnosticBuildCollection
-                                .get(vscode.Uri.file(file))
-                                ?.filter(
-                                    e => !ProblemDiagnosticResolver.isXcodebuild(e.source || "")
-                                ) || [];
-                        this.diagnosticBuildCollection.set(vscode.Uri.file(file), newDiagnostics);
-                    }
-                    this.buildErrors.clear();
-                    child.kill();
-                }
-            });
-            child.on("exit", () => {
-                if (child === this.watcherProc) {
-                    this.watcherProc = undefined;
-                    if (showProblemPanelOnError && isError) {
-                        vscode.commands.executeCommand("workbench.action.problems.focus");
-                        reject();
-                    } else {
-                        resolve();
-                    }
-                }
-            });
-            this.watcherProc = child;
+        this.clear();
+        const rawParser = new RawBuildParser(buildLogFile);
+        this.watcherDisposal = buildPipeEvent(data => {
+            rawParser.stdout += data;
+            this.parseStdout(rawParser, false);
         });
+        return rawParser;
+    }
+
+    public end(rawParser: RawBuildParser, showProblemPanelOnError = true) {
+        if (this.watcherDisposal) {
+            this.parseStdout(rawParser, true);
+            if (showProblemPanelOnError && rawParser.isError) {
+                vscode.commands.executeCommand("workbench.action.problems.focus");
+            }
+        }
+        this.watcherDisposal?.dispose();
+        this.watcherDisposal = undefined;
+    }
+
+    private parseStdout(rawParser: RawBuildParser, shouldEnd: boolean) {
+        let lastErrorIndex = -1;
+        for (let i = rawParser.firstIndex; i < rawParser.stdout.length; ++i) {
+            if (rawParser.stdout[i] === rawParser.triggerCharacter) {
+                lastErrorIndex = i;
+                if (rawParser.triggerCharacter === "^") {
+                    rawParser.triggerCharacter = "\n";
+                    lastErrorIndex = -1;
+                }
+            }
+        }
+
+        if (shouldEnd) {
+            lastErrorIndex = rawParser.stdout.length - 1;
+        }
+        if (lastErrorIndex !== -1) {
+            rawParser.triggerCharacter = "^";
+            const problems = this.parseBuildLog(
+                rawParser.buildLogFile,
+                rawParser.stdout.substring(0, lastErrorIndex + 1),
+                rawParser.numberOfLines
+            );
+            for (const problem in problems) {
+                rawParser.isError =
+                    rawParser.isError ||
+                    problems[problem].filter(e => {
+                        return e.severity === vscode.DiagnosticSeverity.Error;
+                    }).length > 0;
+            }
+            this.storeProblems(problems);
+            for (let i = 0; i < lastErrorIndex + 1; ++i) {
+                rawParser.numberOfLines += rawParser.stdout[i] === "\n" ? 1 : 0;
+            }
+            rawParser.stdout = rawParser.stdout.substring(lastErrorIndex + 1);
+            rawParser.firstIndex = 0;
+        } else {
+            rawParser.firstIndex = rawParser.stdout.length;
+        }
+        if (shouldEnd) {
+            for (const file of this.buildErrors) {
+                const newDiagnostics =
+                    this.diagnosticBuildCollection
+                        .get(vscode.Uri.file(file))
+                        ?.filter(e => !ProblemDiagnosticResolver.isXcodebuild(e.source || "")) ||
+                    [];
+                this.diagnosticBuildCollection.set(vscode.Uri.file(file), newDiagnostics);
+            }
+            this.buildErrors.clear();
+        }
     }
 
     private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
@@ -276,7 +272,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         return [start, end];
     }
 
-    private parseBuildLog(output: string, numberOfLines: number) {
+    private parseBuildLog(buildLogFile: string, output: string, numberOfLines: number) {
         const files: { [key: string]: vscode.Diagnostic[] } = {};
         try {
             let matches = [...output.matchAll(this.problemPattern)];
@@ -318,7 +314,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
             // parsing linker errors
             matches = [...output.matchAll(this.problemLinkerPattern)];
             for (const match of matches) {
-                const file = this.buildLogFile || match[1];
+                const file = buildLogFile;
 
                 let line = numberOfLines;
                 for (let i = 0; i < (match.index || 0); ++i) {
@@ -341,7 +337,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
             // parsing framework errors
             matches = [...output.matchAll(this.frameworkErrorPattern)];
             for (const match of matches) {
-                const file = this.buildLogFile || "";
+                const file = buildLogFile;
 
                 let line = numberOfLines;
                 for (let i = 0; i < (match.index || 0); ++i) {
@@ -362,7 +358,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 files[file] = value;
             }
         } catch (err) {
-            console.log(err);
+            console.log(`Error parsing build logs: ${err}`);
         }
         return files;
     }

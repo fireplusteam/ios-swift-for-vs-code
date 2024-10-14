@@ -1,9 +1,9 @@
 import { checkWorkspace } from "./commands";
-import { emptyBuildLog } from "./utils";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { getBuildRootPath, getWorkspacePath } from "./env";
+import { getBuildRootPath } from "./env";
 import path from "path";
 import { CommandContext } from "./CommandManagement/CommandContext";
+import { BuildManager } from "./Services/BuildManager";
 
 export function getFileNameLog() {
     const fileName = path.join(".logs", "build.log");
@@ -22,10 +22,14 @@ export async function buildSelectedTarget(
     problemResolver: ProblemDiagnosticResolver
 ) {
     await checkWorkspace(context);
-    emptyBuildLog();
+    const buildManager = new BuildManager();
     const filePath = getFileNameLog();
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath);
-    await context.execShell("Build", { file: "build_app.sh" }, ["-TARGET"]);
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
+    try {
+        await buildManager.build(context, filePath);
+    } finally {
+        problemResolver.end(rawParser);
+    }
 }
 
 // TESTS
@@ -35,10 +39,14 @@ export async function buildTests(
     problemResolver: ProblemDiagnosticResolver
 ) {
     await checkWorkspace(context);
-    emptyBuildLog();
+    const buildManager = new BuildManager();
     const filePath = getFileNameLog();
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath);
-    await context.execShell("Build Tests", { file: "build_app.sh" }, ["-TESTING"]);
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
+    try {
+        await buildManager.buildForTesting(context, filePath);
+    } finally {
+        problemResolver.end(rawParser);
+    }
 }
 
 export async function buildTestsForCurrentFile(
@@ -47,16 +55,12 @@ export async function buildTestsForCurrentFile(
     tests: string[]
 ) {
     await checkWorkspace(context);
-    const option = tests
-        .map(e => {
-            return `'-only-testing:${e}'`;
-        })
-        .join(" ");
-    emptyBuildLog();
+    const buildManager = new BuildManager();
     const filePath = getFileNameLog();
-    problemResolver.parseAsyncLogs(getWorkspacePath(), filePath);
-    await context.execShell("Build Tests", { file: "build_app.sh" }, [
-        "-TESTING_ONLY_TESTS",
-        option,
-    ]);
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildConsoleEvent);
+    try {
+        await buildManager.buildForTestingWithTests(context, filePath, tests);
+    } finally {
+        problemResolver.end(rawParser);
+    }
 }

@@ -1,5 +1,12 @@
 import * as vscode from "vscode";
-import { Executor, ExecutorMode, ShellCommand, ShellFileScript, ShellResult } from "../Executor";
+import {
+    Executor,
+    ExecutorMode,
+    ShellCommand,
+    ShellExec,
+    ShellFileScript,
+    ShellResult,
+} from "../Executor";
 import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
 import { TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
@@ -12,8 +19,11 @@ interface CommandOptions {
     scriptOrCommand: ShellCommand | ShellFileScript;
     cwd?: string;
     args?: string[];
+    env?: { [name: string]: string };
     mode?: ExecutorMode;
     pipeToDebugConsole?: boolean;
+    pipeToBuildConsole?: boolean;
+    pipe?: CommandOptions;
 }
 
 export class CommandContext {
@@ -24,6 +34,11 @@ export class CommandContext {
     private _debugConsoleEmitter = new vscode.EventEmitter<string>();
     get debugConsoleEvent(): vscode.Event<string> {
         return this._debugConsoleEmitter.event;
+    }
+
+    private _buildConsoleEmitter = new vscode.EventEmitter<string>();
+    get buildConsoleEvent(): vscode.Event<string> {
+        return this._buildConsoleEmitter.event;
     }
 
     readonly lspClient: LSPClientContext;
@@ -49,19 +64,32 @@ export class CommandContext {
         this.lspClient = lspClient;
     }
 
-    public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {
-        const stdoutCallback = shell.pipeToDebugConsole
-            ? (out: string) => {
-                  this._debugConsoleEmitter.fire(out);
-              }
-            : undefined;
+    private convertToExeParams(shell: CommandOptions, attachTerminal: boolean) {
+        const shellExe = shell as ShellExec;
+        shellExe.cancellationToken = this._cancellationTokenSource.token;
+        const stdoutCallback =
+            shell.pipeToDebugConsole === true || shell.pipeToBuildConsole === true
+                ? (out: string) => {
+                      if (shell.pipeToDebugConsole === true) {
+                          this._debugConsoleEmitter.fire(out);
+                      }
+                      if (shell.pipeToBuildConsole === true) {
+                          this._buildConsoleEmitter.fire(out);
+                      }
+                  }
+                : undefined;
+        shellExe.stdoutCallback = stdoutCallback;
+        shellExe.terminal = this.terminal;
 
-        return await new Executor().execShell({
-            cancellationToken: this._cancellationTokenSource.token,
-            ...shell,
-            terminal: this._terminal,
-            stdoutCallback: stdoutCallback,
-        });
+        if (shell.pipe) {
+            shellExe.pipe = this.convertToExeParams(shell.pipe, attachTerminal);
+        }
+        return shell;
+    }
+
+    public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {
+        const shellExe = this.convertToExeParams(shell, true);
+        return await new Executor().execShell(shellExe);
     }
 
     public async execShell(
@@ -80,17 +108,8 @@ export class CommandContext {
     }
 
     public async execShellParallel(shell: CommandOptions): Promise<ShellResult> {
-        const stdoutCallback = shell.pipeToDebugConsole
-            ? (out: string) => {
-                  this._debugConsoleEmitter.fire(out);
-              }
-            : undefined;
-
-        return await new Executor().execShell({
-            cancellationToken: this._cancellationTokenSource.token,
-            ...shell,
-            stdoutCallback: stdoutCallback,
-        });
+        const shellExe = this.convertToExeParams(shell, false);
+        return new Executor().execShell(shellExe);
     }
 
     public waitToCancel() {

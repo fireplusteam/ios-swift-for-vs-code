@@ -160,16 +160,11 @@ class STDFeeder:
                         if not self.is_fed:
                             # manipulate message
                             # there can be multiple occurrence of C5 byte, so we need to get the last one
-                            json_start = -1
-                            message_len = len(self.msg_reader.buffer)
-                            # json_start = self.msg_reader.buffer.rfind(b'\xc5')
-                            for index, byte in enumerate(self.msg_reader.buffer):
-                                if byte == b'\xc5' and index + 3 < message_len:
-                                    json_start_byte = self.msg_reader.buffer[index + 3]
-                                    if json_start_byte == b'{' or json_start_byte == b'[':
-                                        json_start = index
+                            json_start = self.msg_reader.buffer[13:].find(b'\xc5')
+                            log(f"CLIENT: JSON_INDEX: {json_start}")
                             
                             if json_start != -1:
+                                json_start += 13
                                 json_len = int.from_bytes(self.msg_reader.buffer[json_start + 1:json_start + 3], "big")
                                 new_content, is_fed = modify_json_content(self.msg_reader.buffer[json_start:json_start + 3 + json_len], json_len)
                                 self.msg_reader.modify_body(new_content, json_start, json_start + 3 + json_len)
@@ -177,7 +172,7 @@ class STDFeeder:
                                     self.is_fed = True
                             
                         await self.write_stdin_bytes(stdin, self.msg_reader.buffer)
-                        log(f"CLIENT: {str(self.msg_reader.buffer[13: 150])}")
+                        log(f"CLIENT: {str(self.msg_reader.buffer[13:])}")
                         self.msg_reader.reset()
             
 

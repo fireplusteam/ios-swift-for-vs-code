@@ -77,7 +77,7 @@ export class ProjectsCache {
                         }
                         resolve();
                     } catch (err) {
-                        console.log(err);
+                        console.log(`Preload Cache from file error: ${err}`);
                         reject(err);
                     }
                 } else {

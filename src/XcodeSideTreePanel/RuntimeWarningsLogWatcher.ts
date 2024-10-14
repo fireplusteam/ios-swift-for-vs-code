@@ -85,7 +85,6 @@ export class RuntimeWarningsLogWatcher {
 
             for (const element in root) {
                 const value = root[element];
-                console.log(element);
                 const warning = new RuntimeWarningMessageNode(value.message, value.count, element);
                 const stacks = value.data;
                 for (const frame of stacks) {

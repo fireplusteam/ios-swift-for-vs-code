@@ -165,15 +165,6 @@ export async function currentPlatform() {
     return Platform.iOSSimulator;
 }
 
-async function sdk() {
-    switch (await currentPlatform()) {
-        case Platform.iOSSimulator:
-            return "iphonesimulator";
-        default: // not needed
-            return "";
-    }
-}
-
 export function getWorkspaceFolder() {
     const workspace = vscode.workspace.workspaceFolders?.at(0)?.uri;
     return workspace;
@@ -204,23 +195,16 @@ export async function updateProject(projectEvn: ProjectEnv, projectPath: string)
     await projectEvn.setProjectFile(relative);
 }
 
-export async function getEnv() {
+export function getEnv() {
     if (!fs.existsSync(getEnvFilePath())) {
         fs.mkdirSync(getVSCodePath(), { recursive: true });
         const defaultContent = 'PROJECT_FILE=""';
         fs.writeFileSync(getEnvFilePath(), defaultContent, "utf-8");
     }
-    let xcodeSdk: string;
-    try {
-        xcodeSdk = await sdk();
-    } catch {
-        xcodeSdk = "";
-    }
     return {
         VS_IOS_PROJECT_ENV_FILE: getEnvFilePath(),
         VS_IOS_WORKSPACE_PATH: getWorkspacePath(),
         VS_IOS_SCRIPT_PATH: getScriptPath(),
-        VS_IOS_XCODE_SDK: xcodeSdk,
     }; // empty
 }
 

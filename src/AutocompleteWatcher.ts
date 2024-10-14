@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import { ExecutorMode } from "./Executor";
-import { getWorkspacePath, getProjectScheme, isActivated } from "./env";
+import { isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
+import { BuildManager } from "./Services/BuildManager";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -80,19 +80,18 @@ export class AutocompleteWatcher {
                 if (this.buildId !== buildId || (await this.isWatcherEnabledAnyFile()) === false) {
                     return;
                 }
-                const scheme = await getProjectScheme();
                 emptyAutobuildLog();
-                this.problemResolver.parseAsyncLogs(
-                    getWorkspacePath(),
-                    ".logs/autocomplete.log",
-                    false
+                const fileLog = ".logs/autocomplete.log";
+                const rawParser = this.problemResolver.parseAsyncLogs(
+                    fileLog,
+                    context.buildConsoleEvent
                 );
-                await context.execShell(
-                    AutocompleteWatcher.AutocompleteCommandName,
-                    { file: "compile_module.sh" },
-                    [scheme],
-                    ExecutorMode.onlyCommandNameAndResult
-                );
+                try {
+                    const buildManager = new BuildManager();
+                    await buildManager.buildAutocomplete(context, fileLog);
+                } finally {
+                    this.problemResolver.end(rawParser, false);
+                }
             });
         } catch (err) {
             if (err === UserCommandIsExecuting) {

@@ -1,4 +1,4 @@
-import { spawn, SpawnOptions } from "child_process";
+import { ChildProcess, spawn, SpawnOptions } from "child_process";
 import { getEnv, getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
@@ -53,9 +53,11 @@ export interface ShellExec {
     scriptOrCommand: ShellCommand | ShellFileScript;
     cwd?: string;
     args?: string[];
+    env?: { [name: string]: string };
     mode?: ExecutorMode;
     stdoutCallback?: (out: string) => void;
     terminal?: TerminalShell;
+    pipe?: ShellExec;
 }
 
 export interface ShellResult {
@@ -72,8 +74,14 @@ export class Executor {
         });
         return spawn(file, quotedArgs, options);
     }
-
     public async execShell(shell: ShellExec): Promise<ShellResult> {
+        return this.execShellByGettingProc(shell).result;
+    }
+
+    private execShellByGettingProc(shell: ShellExec): {
+        proc: ChildProcess;
+        result: Promise<ShellResult>;
+    } {
         const cancellationToken = shell.cancellationToken;
         const scriptOrCommand = shell.scriptOrCommand;
         const args = shell.args || [];
@@ -82,10 +90,11 @@ export class Executor {
         if (cancellationToken && cancellationToken.isCancellationRequested) {
             throw Promise.reject(UserTerminatedError);
         }
-        const env = await getEnv();
+        const env = getEnv();
         const envOptions = {
             ...process.env,
             ...env,
+            ...shell.env,
         };
         let script: string = "";
         let displayCommandName: string = "";
@@ -107,6 +116,15 @@ export class Executor {
             env: envOptions,
             stdio: "pipe",
         });
+
+        let pipeProc: ChildProcess | undefined;
+        if (shell.pipe) {
+            pipeProc = this.execShellByGettingProc(shell.pipe).proc;
+            if (pipeProc.stdin) {
+                proc.stdout?.pipe(pipeProc.stdin);
+                proc.stderr?.pipe(pipeProc.stdin);
+            }
+        }
 
         const terminal = shell.terminal;
 
@@ -130,7 +148,9 @@ export class Executor {
         proc.stdout?.on("data", data => {
             const str = data.toString();
             if (mode === ExecutorMode.verbose) {
-                terminal?.write(str);
+                if (terminal) {
+                    terminal?.write(str);
+                }
             }
             stdout += str;
             if (shell.stdoutCallback) {
@@ -143,80 +163,84 @@ export class Executor {
             stderr += str;
         });
 
-        return new Promise((resolve, reject) => {
-            const userCancel = cancellationToken?.onCancellationRequested(() => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-                reject(UserTerminatedError);
-                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
-                    return;
-                }
-
-                killAll(proc.pid, "SIGKILL");
-            });
-            const terminalClose = terminal?.onExitEvent(() => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-                reject(UserTerminalCloseError);
-                if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
-                    return;
-                }
-
-                killAll(proc.pid, "SIGKILL");
-            });
-            if (cancellationToken?.isCancellationRequested) {
-                reject(UserTerminatedError);
-                return;
-            }
-
-            proc.once("error", err => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-                reject(err);
-            });
-
-            proc.once("exit", (code, signal) => {
-                userCancel?.dispose();
-                terminalClose?.dispose();
-
-                if (signal !== null) {
-                    if (mode !== ExecutorMode.silently && stderr.length > 0) {
-                        terminal?.write(stderr, TerminalMessageStyle.warning);
+        return {
+            proc: proc,
+            result: new Promise((resolve, reject) => {
+                const userCancel = cancellationToken?.onCancellationRequested(() => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    reject(UserTerminatedError);
+                    if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
+                        return;
                     }
-                    reject(
-                        new ExecutorTerminated(
-                            `${displayCommandName} is terminated with SIGNAL : ${error}`
-                        )
-                    );
+
+                    killAll(proc.pid, "SIGKILL");
+                });
+                const terminalClose = terminal?.onExitEvent(() => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    reject(UserTerminalCloseError);
+                    if (proc.killed || proc.exitCode !== null || proc.signalCode !== null) {
+                        return;
+                    }
+
+                    killAll(proc.pid, "SIGKILL");
+                });
+                if (cancellationToken?.isCancellationRequested) {
+                    reject(UserTerminatedError);
                     return;
                 }
 
-                if (mode !== ExecutorMode.silently) {
-                    terminal?.write(
-                        `Exits with status code: ${code}\x1b\n`,
-                        code !== 0 ? TerminalMessageStyle.error : TerminalMessageStyle.success
-                    );
-                }
-                if (code !== 0) {
+                proc.once("error", err => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    reject(err);
+                });
+
+                proc.once("exit", (code, signal) => {
+                    userCancel?.dispose();
+                    terminalClose?.dispose();
+                    pipeProc?.stdin?.end();
+
+                    if (signal !== null) {
+                        if (mode !== ExecutorMode.silently && stderr.length > 0) {
+                            terminal?.write(stderr, TerminalMessageStyle.warning);
+                        }
+                        reject(
+                            new ExecutorTerminated(
+                                `${displayCommandName} is terminated with SIGNAL : ${error}`
+                            )
+                        );
+                        return;
+                    }
+
                     if (mode !== ExecutorMode.silently) {
-                        terminal?.write(stderr, TerminalMessageStyle.warning);
+                        terminal?.write(
+                            `Exits with status code: ${code}\x1b\n`,
+                            code !== 0 ? TerminalMessageStyle.error : TerminalMessageStyle.success
+                        );
                     }
-                    reject(
-                        new ExecutorTaskError(
-                            `Task: ${displayCommandName} exits with ${code}`,
-                            code,
-                            signal,
-                            stderr,
-                            terminal
-                        )
-                    );
-                } else {
-                    if (mode !== ExecutorMode.silently) {
-                        terminal?.write(stderr, TerminalMessageStyle.warning);
+                    if (code !== 0) {
+                        if (mode !== ExecutorMode.silently) {
+                            terminal?.write(stderr, TerminalMessageStyle.warning);
+                        }
+                        reject(
+                            new ExecutorTaskError(
+                                `Task: ${displayCommandName} exits with ${code}`,
+                                code,
+                                signal,
+                                stderr,
+                                terminal
+                            )
+                        );
+                    } else {
+                        if (mode !== ExecutorMode.silently) {
+                            terminal?.write(stderr, TerminalMessageStyle.warning);
+                        }
+                        resolve({ stdout: stdout, stderr: stderr });
                     }
-                    resolve({ stdout: stdout, stderr: stderr });
-                }
-            });
-        });
+                });
+            }),
+        };
     }
 }

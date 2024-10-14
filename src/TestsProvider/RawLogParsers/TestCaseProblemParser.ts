@@ -79,7 +79,7 @@ export class TestCaseProblemParser {
                 startIndex += (match.index || 0) + match[0].length;
             }
         } catch (err) {
-            console.log(err);
+            console.log(`TestCase parser error: ${err}`);
         }
         return files;
     }

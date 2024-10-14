@@ -40,13 +40,8 @@ export class RunManager {
             throw Error("Can not run on empty device");
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-        try {
-            for (const device of devices) {
-                await this.runOnSimulator(context, device, false);
-            }
-        } catch (error) {
-            console.log(error);
-            throw error;
+        for (const device of devices) {
+            await this.runOnSimulator(context, device, false);
         }
     }
 
