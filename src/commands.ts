@@ -387,11 +387,7 @@ export async function runApp(
     isDebuggable: boolean
 ) {
     await checkWorkspace(commandContext, false);
-    const runManager = new RunManager(
-        sessionID,
-        isDebuggable,
-        commandContext.projectSettingsProvider.projectEnv
-    );
+    const runManager = new RunManager(sessionID, isDebuggable);
     await runManager.runOnDebugDevice(commandContext);
 }
 
@@ -459,11 +455,7 @@ export async function runAppOnMultipleDevices(
         for (const device of deviceIds) {
             emptyAppLog(device);
         }
-        const runApp = new RunManager(
-            sessionID,
-            false,
-            commandContext.projectSettingsProvider.projectEnv
-        );
+        const runApp = new RunManager(sessionID, false);
         await runApp.runOnMultipleDevices(commandContext);
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {
@@ -478,11 +470,7 @@ export async function runAndDebugTests(
     isDebuggable: boolean
 ) {
     await checkWorkspace(commandContext, false);
-    const runManager = new RunManager(
-        sessionID,
-        isDebuggable,
-        commandContext.projectSettingsProvider.projectEnv
-    );
+    const runManager = new RunManager(sessionID, isDebuggable);
     await runManager.runTests(commandContext, []);
 }
 
@@ -493,11 +481,7 @@ export async function runAndDebugTestsForCurrentFile(
     tests: string[]
 ) {
     await checkWorkspace(commandContext, false);
-    const runManager = new RunManager(
-        sessionID,
-        isDebuggable,
-        commandContext.projectSettingsProvider.projectEnv
-    );
+    const runManager = new RunManager(sessionID, isDebuggable);
     await runManager.runTests(commandContext, tests);
 }
 

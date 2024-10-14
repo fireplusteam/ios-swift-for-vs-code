@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getFilePathInWorkspace, Platform, ProjectEnv } from "../env";
+import { getFilePathInWorkspace, Platform } from "../env";
 import { sleep } from "../extension";
 import { deleteFile, promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
@@ -10,31 +10,33 @@ import { BuildManager } from "./BuildManager";
 export class RunManager {
     private sessionID: string;
     private isDebuggable: boolean;
-    private env: ProjectEnv;
 
-    constructor(sessionID: string, isDebuggable: boolean, env: ProjectEnv) {
+    constructor(sessionID: string, isDebuggable: boolean) {
         this.sessionID = sessionID;
         this.isDebuggable = isDebuggable;
-        this.env = env;
     }
 
     async runOnDebugDevice(context: CommandContext) {
-        if ((await this.env.platform) === Platform.macOS) {
+        if ((await context.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
             return await this.runOnMac(context);
         }
 
-        return await this.runOnSimulator(context, await this.env.debugDeviceID, true);
+        return await this.runOnSimulator(
+            context,
+            await context.projectSettingsProvider.projectEnv.debugDeviceID,
+            true
+        );
     }
 
     async runOnMultipleDevices(context: CommandContext) {
-        if ((await this.env.platform) === Platform.macOS) {
+        if ((await context.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
             throw Error("MacOS Platform doesn't support running on Multiple Devices!");
         }
         if (this.isDebuggable) {
             throw Error("Debug mode is not supported in run on multiple devices");
         }
 
-        const devices = (await this.env.multipleDeviceID)
+        const devices = (await context.projectSettingsProvider.projectEnv.multipleDeviceID)
             .split(" |")
             .map(deviceId => deviceId.substring("id=".length));
         if (devices === undefined || devices.length === 0) {
@@ -136,7 +138,12 @@ export class RunManager {
         }
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcrun" },
-            args: ["simctl", "install", deviceId, await this.env.appExecutablePath],
+            args: [
+                "simctl",
+                "install",
+                deviceId,
+                await context.projectSettingsProvider.projectEnv.appExecutablePath,
+            ],
         });
 
         if (context.terminal) {
@@ -159,7 +166,7 @@ export class RunManager {
                     "launch",
                     "--console-pty",
                     deviceId,
-                    await this.env.bundleAppName,
+                    await context.projectSettingsProvider.projectEnv.bundleAppName,
                     "--wait-for-debugger",
                 ],
                 pipeToDebugConsole: true,
@@ -184,8 +191,8 @@ export class RunManager {
     }
 
     private async runOnMac(context: CommandContext) {
-        const exePath = await this.env.appExecutablePath;
-        const productName = await this.env.productName;
+        const exePath = await context.projectSettingsProvider.projectEnv.appExecutablePath;
+        const productName = await context.projectSettingsProvider.projectEnv.productName;
 
         if (context.terminal) {
             context.terminal.terminalName = "Waiting Debugger";
@@ -221,7 +228,7 @@ export class RunManager {
         sessionID: string,
         deviceId: string
     ) {
-        const bundleAppName = await this.env.bundleAppName;
+        const bundleAppName = await commandContext.projectSettingsProvider.projectEnv.bundleAppName;
         try {
             // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
             await promiseWithTimeout(10000, async () => {
