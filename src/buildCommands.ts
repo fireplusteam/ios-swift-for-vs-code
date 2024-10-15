@@ -4,6 +4,7 @@ import { getBuildRootPath } from "./env";
 import path from "path";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { BuildManager } from "./Services/BuildManager";
+import { ExecutorMode } from "./Executor";
 
 export function getFileNameLog() {
     const fileName = path.join(".logs", "build.log");
@@ -14,6 +15,7 @@ export async function cleanDerivedData(context: CommandContext) {
     await context.execShellWithOptions({
         scriptOrCommand: { command: "rm" },
         args: ["-rf", await getBuildRootPath()],
+        mode: ExecutorMode.onlyCommandNameAndResult,
     });
 }
 
