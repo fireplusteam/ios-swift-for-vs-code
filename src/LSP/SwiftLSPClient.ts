@@ -19,7 +19,9 @@ export class SwiftLSPClient {
     public async client(): Promise<langclient.LanguageClient> {
         if (this.languageClient === undefined) {
             if (this.clientReadyPromise === undefined) {
-                await this.setupLanguageClient(await this.workspaceContext.workspaceFolder);
+                this.clientReadyPromise = this.setupLanguageClient(
+                    await this.workspaceContext.workspaceFolder
+                );
             }
             await this.clientReadyPromise;
         }
@@ -187,23 +189,21 @@ export class SwiftLSPClient {
             // TODO: for nuw on is empty
         });
 
-        // start client
-        this.clientReadyPromise = client
-            .start()
-            .then(() => {
-                // Now that we've started up correctly, start the error handler to auto-restart
-                // if sourcekit-lsp crashes during normal operation.
-                errorHandler.enable();
+        try {
+            // start client
+            await client.start();
+            // Now that we've started up correctly, start the error handler to auto-restart
+            // if sourcekit-lsp crashes during normal operation.
+            errorHandler.enable();
 
-                this.peekDocuments = activatePeekDocuments(client);
-                this.getReferenceDocument = activateGetReferenceDocument(client);
-            })
-            .catch(reason => {
-                this.logs.appendLine(`${reason}`);
-                this.languageClient?.stop();
-                this.languageClient = undefined;
-                throw reason;
-            });
+            this.peekDocuments = activatePeekDocuments(client);
+            this.getReferenceDocument = activateGetReferenceDocument(client);
+        } catch (reason) {
+            this.logs.appendLine(`${reason}`);
+            this.languageClient?.stop();
+            this.languageClient = undefined;
+            throw reason;
+        }
 
         this.languageClient = client;
 
