@@ -6,7 +6,6 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { buildSelectedTarget } from "./buildCommands";
 import {
-    currentPlatform,
     getFilePathInWorkspace,
     getLSPWorkspacePath,
     getProjectPath,
@@ -397,7 +396,7 @@ export async function runAppOnMultipleDevices(
     problemResolver: ProblemDiagnosticResolver
 ) {
     try {
-        if ((await currentPlatform()) === Platform.macOS) {
+        if ((await commandContext.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
             vscode.window.showErrorMessage(
                 "MacOS Platform doesn't support running on Multiple Devices"
             );

@@ -1,5 +1,5 @@
 import { ChildProcess, spawn, SpawnOptions } from "child_process";
-import { getEnv, getScriptPath, getWorkspacePath } from "./env";
+import { getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
 import { UserTerminalCloseError, UserTerminatedError } from "./CommandManagement/CommandContext";
@@ -90,10 +90,8 @@ export class Executor {
         if (cancellationToken && cancellationToken.isCancellationRequested) {
             throw Promise.reject(UserTerminatedError);
         }
-        const env = getEnv();
         const envOptions = {
             ...process.env,
-            ...env,
             ...shell.env,
         };
         let script: string = "";

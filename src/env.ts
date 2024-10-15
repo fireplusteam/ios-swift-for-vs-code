@@ -13,13 +13,13 @@ export enum Platform {
 }
 
 export const ProjectFileMissedError = new CustomError(
-    "Project File is not set in .vscode/.env file. Please select project or workspace Xcode file"
+    "Project File is not set in .vscode/xcode/projectConfiguration.json file. Please select project or workspace Xcode file"
 );
 export const ProjectSchemeMissedError = new CustomError(
-    "Project scheme is not set in .vscode/.env file. Please run the command to select it!"
+    "Project scheme is not set in .vscode/xcode/projectConfiguration.json file. Please run the command to select it!"
 );
 export const ProjectConfigurationMissedError = new CustomError(
-    "Project configuration is not set in .vscode/.env. Please run the command to select it"
+    "Project configuration is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
 );
 export const DebugDeviceIDMissedError = new CustomError("DebugDeviceIDMissedError");
 export const MultipleDeviceMissedError = new CustomError("MultipleDeviceMissedError");
@@ -28,6 +28,10 @@ export const AppExecutablePathMissedError = new CustomError("AppExecutablePathMi
 export const PlatformMissedError = new CustomError("PlatformMissedError");
 export const AppTargetExecutableMissedError = new CustomError("AppTargetExecutableMissedError");
 export const ProductNameMissedError = new CustomError("ProductNameMissedError");
+
+export const ConfigurationProjectError = new CustomError(
+    "Project configuration was changed by another operation. Can not be modified by this one"
+);
 
 export interface ProjectEnvInterface {
     platform: Promise<Platform>;
@@ -52,13 +56,13 @@ export interface SetProjectEnvInterface {
     setPlatform(platform: string): Promise<void>;
 }
 
-export const ProjectEnvFilePath = ".vscode/.env";
-
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
+    private configuration: { [key: string]: string };
 
     constructor(settings: XCodeSettings) {
         this.settingsProvider = settings;
+        this.configuration = getEnvList();
     }
 
     get productName(): Promise<string> {
@@ -72,34 +76,34 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
 
     get platform(): Promise<Platform> {
-        return currentPlatform();
+        return Promise.resolve(currentPlatform(this.configuration));
     }
 
     get platformString(): Promise<string> {
-        return getProjectPlatform();
+        return Promise.resolve(getProjectPlatform(this.configuration));
     }
 
     get projectFile(): Promise<string> {
         return getProjectFileName().then(projectFile => {
             if (!fs.existsSync(getFilePathInWorkspace(projectFile))) {
                 this.emptySessions();
-                return Promise.reject(ProjectFileMissedError);
+                throw ProjectFileMissedError;
             }
             return projectFile;
         });
     }
 
     get projectScheme(): Promise<string> {
-        return getProjectScheme();
+        return Promise.resolve(getProjectScheme(this.configuration));
     }
     get projectConfiguration(): Promise<string> {
-        return getProjectConfiguration();
+        return Promise.resolve(getProjectConfiguration(this.configuration));
     }
     get debugDeviceID(): Promise<string> {
-        return getDeviceId();
+        return Promise.resolve(getDeviceId(this.configuration));
     }
     get multipleDeviceID(): Promise<string> {
-        return getMultiDeviceIds();
+        return Promise.resolve(getMultiDeviceIds(this.configuration));
     }
     get bundleAppName(): Promise<string> {
         return this.settingsProvider.settings.then((projectSettings: any) => {
@@ -113,7 +117,11 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     get appExecutablePath(): Promise<string> {
         return this.productName.then(productName => {
             return this.projectConfiguration.then(configuration => {
-                return getTargetExecutable(productName, configuration);
+                return getTargetExecutable(
+                    currentPlatform(this.configuration),
+                    productName,
+                    configuration
+                );
             });
         });
     }
@@ -125,31 +133,31 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
 
     async setProjectFile(file: string): Promise<void> {
-        saveKeyToEnvList("PROJECT_FILE", file);
+        saveKeyToEnvList(this.configuration, "PROJECT_FILE", file);
     }
     async setProjectScheme(scheme: string): Promise<void> {
-        saveKeyToEnvList("PROJECT_SCHEME", scheme);
+        saveKeyToEnvList(this.configuration, "PROJECT_SCHEME", scheme);
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
-        saveKeyToEnvList("PROJECT_CONFIGURATION", configuration);
+        saveKeyToEnvList(this.configuration, "PROJECT_CONFIGURATION", configuration);
     }
     async setDebugDeviceID(deviceID: string): Promise<void> {
-        saveKeyToEnvList("DEVICE_ID", deviceID);
+        saveKeyToEnvList(this.configuration, "DEVICE_ID", deviceID);
     }
     async setMultipleDeviceID(multiId: string): Promise<void> {
-        saveKeyToEnvList("MULTIPLE_DEVICE_ID", multiId);
+        saveKeyToEnvList(this.configuration, "MULTIPLE_DEVICE_ID", multiId);
     }
     async setPlatform(platform: string): Promise<void> {
-        saveKeyToEnvList("PLATFORM", platform);
+        saveKeyToEnvList(this.configuration, "PLATFORM", platform);
     }
 
     async emptySessions() {
-        emptyLog(ProjectEnvFilePath);
+        emptyLog(getEnvFilePath());
     }
 }
 
-export async function currentPlatform() {
-    const platform = await getProjectPlatform();
+function currentPlatform(configuration: { [key: string]: string }) {
+    const platform = getProjectPlatform(configuration);
     switch (platform) {
         case "macOS":
             return Platform.macOS;
@@ -181,31 +189,18 @@ export function getWorkspacePath() {
     return workspace;
 }
 
-export function getVSCodePath() {
+function getVSCodePath() {
     return path.join(getWorkspacePath(), ".vscode");
 }
 
-export function getEnvFilePath() {
-    return path.join(getVSCodePath(), ".env");
+function getEnvFilePath() {
+    return path.join(getVSCodePath(), "xcode", "projectConfiguration.json");
 }
 
 export async function updateProject(projectEvn: ProjectEnv, projectPath: string) {
     const relative = path.relative(getWorkspacePath(), projectPath);
     fs.mkdirSync(getVSCodePath(), { recursive: true });
     await projectEvn.setProjectFile(relative);
-}
-
-export function getEnv() {
-    if (!fs.existsSync(getEnvFilePath())) {
-        fs.mkdirSync(getVSCodePath(), { recursive: true });
-        const defaultContent = 'PROJECT_FILE=""';
-        fs.writeFileSync(getEnvFilePath(), defaultContent, "utf-8");
-    }
-    return {
-        VS_IOS_PROJECT_ENV_FILE: getEnvFilePath(),
-        VS_IOS_WORKSPACE_PATH: getWorkspacePath(),
-        VS_IOS_SCRIPT_PATH: getScriptPath(),
-    }; // empty
 }
 
 export function getScriptPath(script: string | undefined = undefined) {
@@ -220,51 +215,52 @@ export function getFilePathInWorkspace(fileName: string) {
 }
 
 export async function getProjectFileName() {
-    try {
-        return getEnvList()["PROJECT_FILE"].replace(/^"|"$/g, "");
-    } catch {
+    const configuration = getEnvList();
+    const val = configuration.PROJECT_FILE;
+    if (val === undefined) {
         throw ProjectFileMissedError;
     }
+    return val;
 }
 
-export async function getProjectScheme() {
-    try {
-        return getEnvList()["PROJECT_SCHEME"].replace(/^"|"$/g, "");
-    } catch {
+function getProjectScheme(configuration: { [key: string]: string }) {
+    const val = configuration["PROJECT_SCHEME"];
+    if (val === undefined) {
         throw ProjectSchemeMissedError;
     }
+    return val;
 }
 
-export async function getProjectPlatform() {
-    try {
-        return getEnvList()["PLATFORM"].replace(/^"|"$/g, "");
-    } catch {
+function getProjectPlatform(configuration: { [key: string]: string }) {
+    const val = configuration["PLATFORM"];
+    if (val === undefined) {
         throw PlatformMissedError;
     }
+    return val;
 }
 
-export async function getProjectConfiguration() {
-    try {
-        return getEnvList()["PROJECT_CONFIGURATION"].replace(/^"|"$/g, "");
-    } catch {
+function getProjectConfiguration(configuration: { [key: string]: string }) {
+    const val = configuration["PROJECT_CONFIGURATION"];
+    if (val === undefined) {
         throw ProjectConfigurationMissedError;
     }
+    return val;
 }
 
-export async function getDeviceId() {
-    try {
-        return getEnvList()["DEVICE_ID"].replace(/^"|"$/g, "");
-    } catch {
+function getDeviceId(configuration: { [key: string]: string }) {
+    const val = configuration["DEVICE_ID"];
+    if (val === undefined) {
         throw DebugDeviceIDMissedError;
     }
+    return val;
 }
 
-export async function getMultiDeviceIds() {
-    try {
-        return getEnvList()["MULTIPLE_DEVICE_ID"].replace(/^"|"$/g, "");
-    } catch {
+function getMultiDeviceIds(configuration: { [key: string]: string }) {
+    const val = configuration["MULTIPLE_DEVICE_ID"];
+    if (val === undefined) {
         throw MultipleDeviceMissedError;
     }
+    return val;
 }
 
 export async function getProjectPath() {
@@ -289,36 +285,27 @@ export function getXCBBuildServicePath() {
 }
 
 function readEnvFileToDict() {
-    const dict: { [key: string]: string } = {};
     if (fs.existsSync(getEnvFilePath()) === false) {
-        return dict;
+        return {};
     }
     const lines = fs.readFileSync(getEnvFilePath(), "utf-8");
-    const list = lines.split("\n");
-    for (let i = 0; i < list.length; ++i) {
-        const line = list[i];
-        const pos = line.trim().indexOf("=");
-        dict[line.trim().substring(0, pos)] = line.trim().substring(pos + 1);
-    }
-    return dict;
+    const json = JSON.parse(lines) as { [name: string]: string };
+    return json;
 }
 
-export function getEnvList() {
+function getEnvList() {
     return readEnvFileToDict();
 }
 
-export function saveKeyToEnvList(key: string, value: string) {
+function saveKeyToEnvList(configuration: { [key: string]: string }, key: string, value: string) {
     const dict = readEnvFileToDict();
-    dict[key] = `"${value}"`;
-
-    let json = "";
-    for (const [key, val] of Object.entries(dict)) {
-        if (key === "" || val === "") {
-            continue;
-        }
-        json += `${key}=${val}\n`;
+    if (JSON.stringify(dict) !== JSON.stringify(configuration)) {
+        throw ConfigurationProjectError;
     }
-
+    configuration[key] = value;
+    const json = JSON.stringify(configuration);
+    const fileDir = getEnvFilePath().split(path.sep).slice(0, -1).join(path.sep);
+    fs.mkdirSync(fileDir, { recursive: true });
     fs.writeFileSync(getEnvFilePath(), json, "utf-8");
 }
 
@@ -379,7 +366,8 @@ export async function isBuildServerValid() {
         ) {
             return false;
         }
-        if ((await getProjectScheme()) !== buildServer.scheme) {
+        const configuration = getEnvList();
+        if ((await getProjectScheme(configuration)) !== buildServer.scheme) {
             return false;
         }
         let isValid = false;
@@ -408,12 +396,16 @@ export function getProjectType(projectFile: string) {
     return "-workspace";
 }
 
-export async function getTargetExecutable(product_name: string, build_configuration: string) {
+async function getTargetExecutable(
+    platform: Platform,
+    product_name: string,
+    build_configuration: string
+) {
     try {
         // if get_project_type(list["PROJECT_FILE"]) == "-package":
         //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
         const build_path = await getBuildRootPath();
-        switch (await currentPlatform()) {
+        switch (platform) {
             case Platform.macOS:
                 return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`;
             case Platform.watchOSSimulator:

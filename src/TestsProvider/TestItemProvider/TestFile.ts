@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { parseSwiftSource } from "./parseClass";
 import { TestContainer } from "./TestContainer";
-import { TestHeading } from "./TestHeading";
+import { TestHeading as TestSuite } from "./TestHeading";
 import { TestTreeContext, getContentFromFilesystem } from "../TestTreeContext";
 import { getTestIDComponents, LSPTestItem } from "../../LSP/lspExtension";
 import { TestCase } from "./TestCase";
@@ -38,7 +38,7 @@ export class TestFile implements TestContainer {
             )
         );
         if (lspTest.children.length !== 0) {
-            const test = new TestHeading(suiteGeneration);
+            const test = new TestSuite(suiteGeneration);
             this.context.testData.set(testItem, test);
         } else {
             const idComponents = getTestIDComponents(lspTest.id);
@@ -115,7 +115,7 @@ export class TestFile implements TestContainer {
 
                     const thead = controller.createTestItem(id, name, item.uri);
                     thead.range = range;
-                    this.context.testData.set(thead, new TestHeading(thisGeneration));
+                    this.context.testData.set(thead, new TestSuite(thisGeneration));
                     parent.children.push(thead);
                     ancestors.push({ item: thead, children: [] });
                 },

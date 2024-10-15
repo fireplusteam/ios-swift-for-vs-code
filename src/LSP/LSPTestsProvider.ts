@@ -27,10 +27,6 @@ export class LSPTestsProvider {
 
     async fetchTests(document: vscode.Uri, content: string): Promise<LSPTestItem[]> {
         this.version++;
-        // TODO: if you decide to implement you full support of lsp support for all the features and get rid of official Swift extension, then the next line should be uncommented
-        // until then leave it commented, as this lsp client is used only for test parser
-        // document = vscode.Uri.file(document.fsPath + "_f"); // create a fake file, it's used just for lexical parsing of test location
-        console.log(`FETCHING TESTS FOR URL: ${document.toString()}`);
 
         const client = await this.lspClient.client();
         const languageId = this.languageId(document.fsPath);

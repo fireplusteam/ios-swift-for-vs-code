@@ -121,7 +121,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     public static async updateStatus(sessionId: string, status: string) {
         await new Executor().execShell({
-            scriptOrCommand: { file: "debugger_launching.sh" },
+            scriptOrCommand: { file: "update_debugger_launching.py" },
             args: [sessionId, status],
             mode: ExecutorMode.silently,
         });
