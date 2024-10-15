@@ -1,4 +1,5 @@
 import { exec } from "child_process";
+import * as fs from "fs";
 import { glob } from "glob";
 import * as path from "path";
 import * as vscode from "vscode";
@@ -6,6 +7,7 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { buildSelectedTarget } from "./buildCommands";
 import {
+    DeviceID,
     getFilePathInWorkspace,
     getLSPWorkspacePath,
     getProjectPath,
@@ -14,11 +16,10 @@ import {
     getXCBBuildServicePath,
     getXCodeBuildServerPath,
     isBuildServerValid,
-    Platform,
     updateProject,
 } from "./env";
 import { Executor } from "./Executor";
-import { handleValidationErrors, sleep } from "./extension";
+import { handleValidationErrors } from "./extension";
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, isFolder } from "./utils";
 import { CommandContext } from "./CommandManagement/CommandContext";
@@ -232,14 +233,14 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
 export async function selectDevice(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         const devices = await commandContext.projectSettingsProvider.fetchDevices();
-        let selectedDeviceID: string;
+        let selectedDeviceID: DeviceID;
         try {
             selectedDeviceID =
                 await commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
         } catch {
-            selectedDeviceID = "";
+            selectedDeviceID = { id: "", name: "", OS: "", platform: "macOS" };
         }
-        const items = filterDevices(devices, device => selectedDeviceID === device["id"]);
+        const items = filterDevices(devices, device => selectedDeviceID.id === device["id"]);
 
         if (items.length === 0) {
             vscode.window.showErrorMessage(
@@ -261,10 +262,8 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
             return false;
         }
         if (typeof option === "object") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const obj = option as { [key: string]: any };
-            await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj.id);
-            await commandContext.projectSettingsProvider.projectEnv.setPlatform(obj.platform);
+            const obj = option as DeviceID;
+            await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj);
         }
     } catch (error) {
         return await handleValidationErrors(commandContext, error, async () => {
@@ -309,10 +308,8 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         let validDebugDeviceID = false;
         try {
             validDebugDeviceID = !(
-                (await commandContext.projectSettingsProvider.projectEnv.debugDeviceID) === ""
+                (await commandContext.projectSettingsProvider.projectEnv.debugDeviceID).id === ""
             );
-            validDebugDeviceID &&=
-                !(await commandContext.projectSettingsProvider.projectEnv.platform);
         } catch {
             validDebugDeviceID = false;
             if (
@@ -343,16 +340,21 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         lspFolder.fsPath,
         getFilePathInWorkspace(await env.projectFile)
     );
+    const projectType = await env.projectType;
+    if (projectType === "-project") {
+        // This's a workaround, if the workspace is not there, we need to create an empty folder to make everything working
+        const projectWorkspace = path.join(
+            getFilePathInWorkspace(await env.projectFile),
+            "project.xcworkspace"
+        );
+        if (!fs.existsSync(projectWorkspace)) {
+            fs.mkdirSync(projectWorkspace, { recursive: true });
+        }
+    }
     await commandContext.execShellWithOptions({
         scriptOrCommand: { command: getXCodeBuildServerPath() },
         cwd: lspFolder.fsPath,
-        args: [
-            "config",
-            "-scheme",
-            await env.projectScheme,
-            await env.projectType,
-            relativeProjectPath,
-        ],
+        args: ["config", "-scheme", await env.projectScheme, projectType, relativeProjectPath],
     });
 
     await commandContext
@@ -363,7 +365,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
             console.log(`Git exclude was not updated. Error: ${error}`);
         });
 
-    await commandContext.lspClient.restart();
+    commandContext.lspClient.restart();
 }
 
 export async function openXCode(activeFile: string) {
@@ -396,7 +398,10 @@ export async function runAppOnMultipleDevices(
     problemResolver: ProblemDiagnosticResolver
 ) {
     try {
-        if ((await commandContext.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
+        if (
+            (await commandContext.projectSettingsProvider.projectEnv.debugDeviceID).platform ===
+            "macOS"
+        ) {
             vscode.window.showErrorMessage(
                 "MacOS Platform doesn't support running on Multiple Devices"
             );
@@ -404,19 +409,18 @@ export async function runAppOnMultipleDevices(
         }
 
         const devices = await commandContext.projectSettingsProvider.fetchDevices();
-        let selectedDeviceID: string[];
+        let selectedDeviceID: DeviceID[];
         try {
-            selectedDeviceID = (
-                await commandContext.projectSettingsProvider.projectEnv.multipleDeviceID
-            )
-                .split(" |")
-                .map(device => device.substring("id=".length));
+            selectedDeviceID =
+                await commandContext.projectSettingsProvider.projectEnv.multipleDeviceID;
         } catch {
             selectedDeviceID = [];
         }
         const items = filterDevices(
             devices,
-            device => selectedDeviceID.find(id => device["id"] === id) !== undefined
+            device =>
+                selectedDeviceID.find(selectedDevice => device["id"] === selectedDevice.id) !==
+                undefined
         );
 
         if (items.length === 0) {
@@ -439,20 +443,18 @@ export async function runAppOnMultipleDevices(
             return false;
         }
 
-        const deviceIds: string[] = [];
+        const deviceIds: DeviceID[] = [];
         if (Array.isArray(option)) {
             for (const device of option) {
                 deviceIds.push(device.id);
             }
-            commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(
-                deviceIds.map(device => `id=${device}`).join(" |")
-            );
+            commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(deviceIds);
         }
 
         await buildSelectedTarget(commandContext, problemResolver);
 
         for (const device of deviceIds) {
-            emptyAppLog(device);
+            emptyAppLog(device.id);
         }
         const runApp = new RunManager(sessionID, false);
         await runApp.runOnMultipleDevices(commandContext);
@@ -485,7 +487,6 @@ export async function runAndDebugTestsForCurrentFile(
 }
 
 export async function enableXCBBuildService(enabled: boolean) {
-    await sleep(5000);
     const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
 
     return new Promise<void>(resolve => {

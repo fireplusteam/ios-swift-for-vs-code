@@ -5,7 +5,6 @@ import {
     DebugDeviceIDMissedError,
     getFilePathInWorkspace,
     isActivated,
-    isBuildServerValid,
     isWorkspaceOpened,
     ProjectConfigurationMissedError,
     ProjectFileMissedError,
@@ -63,10 +62,15 @@ async function initialize(
 ) {
     if ((await isActivated()) === false) {
         try {
+            let result: boolean | undefined;
             if ((await isWorkspaceOpened()) === false) {
                 await atomicCommand.userCommand(async context => {
-                    await selectProjectFile(context, projectManager, true, true);
+                    if ((await selectProjectFile(context, projectManager, true, true)) === false) {
+                        result = false;
+                    }
                 }, undefined);
+            }
+            if (result === false) {
                 return false;
             }
         } catch (error) {
@@ -77,15 +81,13 @@ async function initialize(
 
     emptyLog(".logs/debugger.launching");
     try {
-        if ((await isBuildServerValid()) === false) {
-            await atomicCommand.userCommand(async context => {
-                try {
-                    await generateXcodeServer(context, false);
-                } catch {
-                    /* empty */
-                }
-            }, "Initialize");
-        }
+        await atomicCommand.userCommand(async context => {
+            try {
+                await checkWorkspace(context, true);
+            } catch (error) {
+                console.log(`${error}`);
+            }
+        }, "Initialize");
     } catch {
         // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
     }

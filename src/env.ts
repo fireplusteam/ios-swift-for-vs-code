@@ -4,14 +4,6 @@ import fs from "fs";
 import { CustomError, emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
 
-export enum Platform {
-    macOS,
-    iOSSimulator,
-    watchOSSimulator,
-    visionOSSimulator,
-    tvOSSimulator,
-}
-
 export const ProjectFileMissedError = new CustomError(
     "Project File is not set in .vscode/xcode/projectConfiguration.json file. Please select project or workspace Xcode file"
 );
@@ -33,16 +25,27 @@ export const ConfigurationProjectError = new CustomError(
     "Project configuration was changed by another operation. Can not be modified by this one"
 );
 
+export interface DeviceID {
+    id: string;
+    name: string;
+    OS: string;
+    platform:
+        | "macOS"
+        | "iOS Simulator"
+        | "watchOS Simulator"
+        | "visionOS Simulator"
+        | "tvOS Simulator";
+    variant?: string;
+}
+
 export interface ProjectEnvInterface {
-    platform: Promise<Platform>;
-    platformString: Promise<string>;
     projectFile: Promise<string>;
     projectScheme: Promise<string>;
     projectConfiguration: Promise<string>;
-    debugDeviceID: Promise<string>;
-    multipleDeviceID: Promise<string>;
+    debugDeviceID: Promise<DeviceID>;
+    multipleDeviceID: Promise<DeviceID[]>;
     bundleAppName: Promise<string>;
-    appExecutablePath: Promise<string>;
+    appExecutablePath: (deviceID: DeviceID) => Promise<string>;
     projectType: Promise<"-workspace" | "-project" | "-package">;
     productName: Promise<string>;
 }
@@ -51,14 +54,13 @@ export interface SetProjectEnvInterface {
     setProjectFile(file: string): Promise<void>;
     setProjectScheme(scheme: string): Promise<void>;
     setProjectConfiguration(configuration: string): Promise<void>;
-    setDebugDeviceID(deviceID: string): Promise<void>;
-    setMultipleDeviceID(multiId: string): Promise<void>;
-    setPlatform(platform: string): Promise<void>;
+    setDebugDeviceID(deviceID: DeviceID): Promise<void>;
+    setMultipleDeviceID(multiId: DeviceID[]): Promise<void>;
 }
 
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
-    private configuration: { [key: string]: string };
+    private configuration: { [key: string]: any };
 
     constructor(settings: XCodeSettings) {
         this.settingsProvider = settings;
@@ -73,14 +75,6 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
                 throw ProductNameMissedError;
             }
         });
-    }
-
-    get platform(): Promise<Platform> {
-        return Promise.resolve(currentPlatform(this.configuration));
-    }
-
-    get platformString(): Promise<string> {
-        return Promise.resolve(getProjectPlatform(this.configuration));
     }
 
     get projectFile(): Promise<string> {
@@ -99,10 +93,10 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     get projectConfiguration(): Promise<string> {
         return Promise.resolve(getProjectConfiguration(this.configuration));
     }
-    get debugDeviceID(): Promise<string> {
+    get debugDeviceID(): Promise<DeviceID> {
         return Promise.resolve(getDeviceId(this.configuration));
     }
-    get multipleDeviceID(): Promise<string> {
+    get multipleDeviceID(): Promise<DeviceID[]> {
         return Promise.resolve(getMultiDeviceIds(this.configuration));
     }
     get bundleAppName(): Promise<string> {
@@ -114,14 +108,10 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
             }
         });
     }
-    get appExecutablePath(): Promise<string> {
+    appExecutablePath(deviceID: DeviceID): Promise<string> {
         return this.productName.then(productName => {
             return this.projectConfiguration.then(configuration => {
-                return getTargetExecutable(
-                    currentPlatform(this.configuration),
-                    productName,
-                    configuration
-                );
+                return getTargetExecutable(deviceID, productName, configuration);
             });
         });
     }
@@ -141,10 +131,10 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     async setProjectConfiguration(configuration: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_CONFIGURATION", configuration);
     }
-    async setDebugDeviceID(deviceID: string): Promise<void> {
+    async setDebugDeviceID(deviceID: DeviceID): Promise<void> {
         saveKeyToEnvList(this.configuration, "DEVICE_ID", deviceID);
     }
-    async setMultipleDeviceID(multiId: string): Promise<void> {
+    async setMultipleDeviceID(multiId: DeviceID[]): Promise<void> {
         saveKeyToEnvList(this.configuration, "MULTIPLE_DEVICE_ID", multiId);
     }
     async setPlatform(platform: string): Promise<void> {
@@ -154,23 +144,6 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     async emptySessions() {
         emptyLog(getEnvFilePath());
     }
-}
-
-function currentPlatform(configuration: { [key: string]: string }) {
-    const platform = getProjectPlatform(configuration);
-    switch (platform) {
-        case "macOS":
-            return Platform.macOS;
-        case "iOS Simulator":
-            return Platform.iOSSimulator;
-        case "watchOS Simulator":
-            return Platform.watchOSSimulator;
-        case "visionOS Simulator":
-            return Platform.visionOSSimulator;
-        case "tvOS Simulator":
-            return Platform.tvOSSimulator;
-    }
-    return Platform.iOSSimulator;
 }
 
 export function getWorkspaceFolder() {
@@ -231,14 +204,6 @@ function getProjectScheme(configuration: { [key: string]: string }) {
     return val;
 }
 
-function getProjectPlatform(configuration: { [key: string]: string }) {
-    const val = configuration["PLATFORM"];
-    if (val === undefined) {
-        throw PlatformMissedError;
-    }
-    return val;
-}
-
 function getProjectConfiguration(configuration: { [key: string]: string }) {
     const val = configuration["PROJECT_CONFIGURATION"];
     if (val === undefined) {
@@ -247,7 +212,7 @@ function getProjectConfiguration(configuration: { [key: string]: string }) {
     return val;
 }
 
-function getDeviceId(configuration: { [key: string]: string }) {
+function getDeviceId(configuration: { [key: string]: any }): DeviceID {
     const val = configuration["DEVICE_ID"];
     if (val === undefined) {
         throw DebugDeviceIDMissedError;
@@ -255,7 +220,7 @@ function getDeviceId(configuration: { [key: string]: string }) {
     return val;
 }
 
-function getMultiDeviceIds(configuration: { [key: string]: string }) {
+function getMultiDeviceIds(configuration: { [key: string]: any }) {
     const val = configuration["MULTIPLE_DEVICE_ID"];
     if (val === undefined) {
         throw MultipleDeviceMissedError;
@@ -288,16 +253,20 @@ function readEnvFileToDict() {
     if (fs.existsSync(getEnvFilePath()) === false) {
         return {};
     }
-    const lines = fs.readFileSync(getEnvFilePath(), "utf-8");
-    const json = JSON.parse(lines) as { [name: string]: string };
-    return json;
+    try {
+        const lines = fs.readFileSync(getEnvFilePath(), "utf-8");
+        const json = JSON.parse(lines) as { [name: string]: any };
+        return json;
+    } catch {
+        return {};
+    }
 }
 
 function getEnvList() {
     return readEnvFileToDict();
 }
 
-function saveKeyToEnvList(configuration: { [key: string]: string }, key: string, value: string) {
+function saveKeyToEnvList(configuration: { [key: string]: any }, key: string, value: any) {
     const dict = readEnvFileToDict();
     if (JSON.stringify(dict) !== JSON.stringify(configuration)) {
         throw ConfigurationProjectError;
@@ -370,6 +339,17 @@ export async function isBuildServerValid() {
         if ((await getProjectScheme(configuration)) !== buildServer.scheme) {
             return false;
         }
+        if (
+            configuration.build_root === undefined ||
+            configuration.workspace === undefined ||
+            configuration.kind === undefined ||
+            configuration.argv === undefined
+        ) {
+            return false;
+        }
+        if (configuration.build_root === getWorkspaceFolder()) {
+            return false; // build folder can not be the same as workspace
+        }
         let isValid = false;
         for (const arg of buildServer.argv) {
             const path = getXCodeBuildServerPath();
@@ -397,7 +377,7 @@ export function getProjectType(projectFile: string) {
 }
 
 async function getTargetExecutable(
-    platform: Platform,
+    deviceID: DeviceID,
     product_name: string,
     build_configuration: string
 ) {
@@ -405,16 +385,16 @@ async function getTargetExecutable(
         // if get_project_type(list["PROJECT_FILE"]) == "-package":
         //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
         const build_path = await getBuildRootPath();
-        switch (platform) {
-            case Platform.macOS:
+        switch (deviceID.platform) {
+            case "macOS":
                 return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`;
-            case Platform.watchOSSimulator:
+            case "watchOS Simulator":
                 return `${build_path}/Build/Products/${build_configuration}-watchsimulator/${product_name}.app`;
-            case Platform.visionOSSimulator:
+            case "visionOS Simulator":
                 return `${build_path}/Build/Products/${build_configuration}-xrsimulator/${product_name}.app`;
-            case Platform.tvOSSimulator:
+            case "tvOS Simulator":
                 return `${build_path}/Build/Products/${build_configuration}-appletvsimulator/${product_name}.app`;
-            case Platform.iOSSimulator:
+            case "iOS Simulator":
                 return `${build_path}/Build/Products/${build_configuration}-iphonesimulator/${product_name}.app`;
         }
     } catch {

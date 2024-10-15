@@ -102,8 +102,6 @@ def print_app_log(debugger, pid):
         device = os.getenv( "DEVICE_ID" ).strip("\"")
         platform = os.getenv( "PLATFORM" ).strip("\"")
         logMessage(f"SCHEME: {scheme}, device: {device}, platform: {platform}")
-        if platform == "macOS":
-            device = "MAC_OS"
         app_logger.file_path = f".logs/app_{device}.log"
         app_logger.watch_app_log()
     except Exception as e:

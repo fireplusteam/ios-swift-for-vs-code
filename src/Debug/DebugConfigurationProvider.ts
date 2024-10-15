@@ -1,11 +1,5 @@
 import * as vscode from "vscode";
-import {
-    getScriptPath,
-    getWorkspacePath,
-    isActivated,
-    Platform,
-    ProjectFileMissedError,
-} from "../env";
+import { getScriptPath, getWorkspacePath, isActivated, ProjectFileMissedError } from "../env";
 import { emptyAppLog, getSessionId } from "../utils";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
@@ -195,7 +189,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
             if (
                 runtimeWarningsConfigStatus() !== "off" &&
-                (await context.projectSettingsProvider.projectEnv.platform) !== Platform.macOS
+                (await context.projectSettingsProvider.projectEnv.debugDeviceID).platform !==
+                    "macOS"
             ) {
                 // mac OS doesn't support that feature at the moment
                 this.runtimeWarningsWatcher.startWatcher();
@@ -210,7 +205,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     private async processName(context: CommandContext) {
         const process_name = await context.projectSettingsProvider.projectEnv.productName;
-        if ((await context.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
+        if ((await context.projectSettingsProvider.projectEnv.debugDeviceID).platform === "macOS") {
             return `${process_name}.app/Contents/MacOS/${process_name}`;
         }
         // if process_name == "xctest":
@@ -238,16 +233,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         // TODO: try to refactor launch logic
         // https://junch.github.io/debug/2016/09/19/original-lldb.html
-        const exe = await context.projectSettingsProvider.projectEnv.appExecutablePath;
-
-        const logId =
-            (await context.projectSettingsProvider.projectEnv.platform) === Platform.macOS
-                ? "MAC_OS"
-                : await context.projectSettingsProvider.projectEnv.debugDeviceID;
-
-        emptyAppLog(logId);
-
         const deviceID = await context.projectSettingsProvider.projectEnv.debugDeviceID;
+        const exe = await context.projectSettingsProvider.projectEnv.appExecutablePath(deviceID);
+
+        const logId = deviceID.id;
+        emptyAppLog(logId);
 
         if (lldExePath) {
             const debugSession: vscode.DebugConfiguration = {
@@ -265,8 +255,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.app_log app_log",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
-                    `set_environmental_var DEVICE_ID=!!=${deviceID}`,
-                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platformString}`,
+                    `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
+                    `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
@@ -290,7 +280,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
                 logPath: `.logs/app_${logId}.log`,
-                deviceID: deviceID,
+                deviceID: deviceID.id,
             };
             return debugSession;
         } else {
@@ -310,8 +300,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.app_log app_log",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
-                    `set_environmental_var DEVICE_ID=!!=${deviceID}`,
-                    `set_environmental_var PLATFORM=!!=${await context.projectSettingsProvider.projectEnv.platformString}`,
+                    `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
+                    `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
@@ -331,7 +321,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
                 logPath: `.logs/app_${logId}.log`,
-                deviceID: deviceID,
+                deviceID: deviceID.id,
             };
             return debugSession;
         }

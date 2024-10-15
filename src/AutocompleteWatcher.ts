@@ -35,7 +35,7 @@ export class AutocompleteWatcher {
                 if (this.isValidFile(doc.uri.fsPath) === false) {
                     return;
                 }
-                this.changedFiles.set(doc.uri.fsPath, doc.getText());
+                this.changedFiles.set(doc.uri.fsPath, removeAllWhiteSpaces(doc.getText()));
             })
         );
         this.disposable.push(
@@ -48,12 +48,13 @@ export class AutocompleteWatcher {
                 }
 
                 const val = this.changedFiles.get(doc.uri.fsPath);
+                const textOfDoc = removeAllWhiteSpaces(doc.getText());
                 if (val) {
-                    if (val === doc.getText()) {
+                    if (val === textOfDoc) {
                         return;
                     }
                 }
-                this.changedFiles.set(doc.uri.fsPath, doc.getText());
+                this.changedFiles.set(doc.uri.fsPath, textOfDoc);
                 this.triggerIncrementalBuild().catch(() => {});
             })
         );
@@ -139,4 +140,8 @@ export class AutocompleteWatcher {
             return [];
         }
     }
+}
+
+function removeAllWhiteSpaces(str: string) {
+    return str.replace(/\s/g, "");
 }

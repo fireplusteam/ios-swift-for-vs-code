@@ -123,7 +123,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         await new Executor().execShell({
             scriptOrCommand: { file: "update_debugger_launching.py" },
             args: [sessionId, status],
-            mode: ExecutorMode.silently,
+            mode: ExecutorMode.none,
         });
     }
 
@@ -145,8 +145,12 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
+        const deviceID =
+            await this.context.commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
         const exe =
-            await this.context.commandContext.projectSettingsProvider.projectEnv.appExecutablePath;
+            await this.context.commandContext.projectSettingsProvider.projectEnv.appExecutablePath(
+                deviceID
+            );
         if (!fs.existsSync(exe)) {
             return true;
         }

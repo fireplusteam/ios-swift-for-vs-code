@@ -33,9 +33,15 @@ export class ExecutorTaskError extends Error {
 }
 
 export enum ExecutorMode {
-    verbose,
-    silently,
-    onlyCommandNameAndResult,
+    none = 0,
+    commandName = 1 << 1,
+    resultOk = 1 << 2,
+    resultError = 1 << 3,
+    stdout = 1 << 4,
+    stderr = 1 << 5,
+    // frequently used subsets
+    onlyCommandNameAndResult = commandName | resultOk | resultError,
+    verbose = commandName | resultOk | resultError | stdout | stderr,
 }
 
 export interface ShellCommand {
@@ -85,7 +91,7 @@ export class Executor {
         const cancellationToken = shell.cancellationToken;
         const scriptOrCommand = shell.scriptOrCommand;
         const args = shell.args || [];
-        const mode = shell.mode === undefined ? ExecutorMode.silently : shell.mode;
+        const mode = shell.mode === undefined ? ExecutorMode.none : shell.mode;
 
         if (cancellationToken && cancellationToken.isCancellationRequested) {
             throw Promise.reject(UserTerminatedError);
@@ -115,12 +121,17 @@ export class Executor {
             stdio: "pipe",
         });
 
-        let pipeProc: ChildProcess | undefined;
+        let pipeProc:
+            | {
+                  proc: ChildProcess;
+                  result: Promise<ShellResult>;
+              }
+            | undefined;
         if (shell.pipe) {
-            pipeProc = this.execShellByGettingProc(shell.pipe).proc;
-            if (pipeProc.stdin) {
-                proc.stdout?.pipe(pipeProc.stdin);
-                proc.stderr?.pipe(pipeProc.stdin);
+            pipeProc = this.execShellByGettingProc(shell.pipe);
+            if (pipeProc.proc.stdin) {
+                proc.stdout?.pipe(pipeProc.proc.stdin);
+                proc.stderr?.pipe(pipeProc.proc.stdin);
             }
         }
 
@@ -137,7 +148,7 @@ export class Executor {
             debugCommand = `COMMAND: ${script}\n`;
         }
 
-        if (mode === ExecutorMode.verbose || mode === ExecutorMode.onlyCommandNameAndResult) {
+        if (mode & ExecutorMode.commandName) {
             terminal?.write(debugCommand, TerminalMessageStyle.command);
         }
         console.log(debugCommand);
@@ -145,7 +156,7 @@ export class Executor {
         let stdout = "";
         proc.stdout?.on("data", data => {
             const str = data.toString();
-            if (mode === ExecutorMode.verbose) {
+            if (mode & ExecutorMode.stdout) {
                 if (terminal) {
                     terminal?.write(str);
                 }
@@ -195,13 +206,18 @@ export class Executor {
                     reject(err);
                 });
 
-                proc.once("exit", (code, signal) => {
+                proc.once("exit", async (code, signal) => {
                     userCancel?.dispose();
                     terminalClose?.dispose();
-                    pipeProc?.stdin?.end();
+                    pipeProc?.proc.stdin?.end();
+                    try {
+                        await pipeProc?.result;
+                    } catch {
+                        /* empty */
+                    }
 
                     if (signal !== null) {
-                        if (mode !== ExecutorMode.silently && stderr.length > 0) {
+                        if (mode & ExecutorMode.stderr && stderr.length > 0) {
                             terminal?.write(stderr, TerminalMessageStyle.warning);
                         }
                         reject(
@@ -212,15 +228,16 @@ export class Executor {
                         return;
                     }
 
-                    if (mode !== ExecutorMode.silently) {
-                        terminal?.write(
-                            `Exits with status code: ${code}\x1b\n`,
-                            code !== 0 ? TerminalMessageStyle.error : TerminalMessageStyle.success
-                        );
+                    if (mode & ExecutorMode.stderr && stderr.length > 0) {
+                        terminal?.write(stderr, TerminalMessageStyle.warning);
                     }
+
                     if (code !== 0) {
-                        if (mode !== ExecutorMode.silently) {
-                            terminal?.write(stderr, TerminalMessageStyle.warning);
+                        if (mode & ExecutorMode.resultError) {
+                            terminal?.write(
+                                `Exits with status code: ${code}\x1b\n`,
+                                TerminalMessageStyle.error
+                            );
                         }
                         reject(
                             new ExecutorTaskError(
@@ -232,8 +249,11 @@ export class Executor {
                             )
                         );
                     } else {
-                        if (mode !== ExecutorMode.silently) {
-                            terminal?.write(stderr, TerminalMessageStyle.warning);
+                        if (mode & ExecutorMode.resultOk) {
+                            terminal?.write(
+                                `Exits with status code: ${code}\x1b\n`,
+                                TerminalMessageStyle.success
+                            );
                         }
                         resolve({ stdout: stdout, stderr: stderr });
                     }

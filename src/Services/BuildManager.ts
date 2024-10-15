@@ -12,7 +12,7 @@ export class BuildManager {
             "-configuration",
             await projectEnv.projectConfiguration,
             "-destination",
-            `id=${await projectEnv.debugDeviceID},platform=${await projectEnv.platformString}`,
+            `id=${(await projectEnv.debugDeviceID).id},platform=${(await projectEnv.debugDeviceID).platform}`,
             "-resultBundlePath",
             ".vscode/.bundle",
             "-skipMacroValidation",
@@ -31,14 +31,14 @@ export class BuildManager {
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
             args: await BuildManager.args(context.projectSettingsProvider.projectEnv),
-            mode: ExecutorMode.silently,
+            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
                 args: [logFilePath],
-                mode: ExecutorMode.silently,
+                mode: ExecutorMode.none,
                 pipe: {
                     scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
-                    mode: ExecutorMode.verbose,
+                    mode: ExecutorMode.stdout,
                 },
             },
         });
@@ -59,11 +59,11 @@ export class BuildManager {
             env: {
                 continueBuildingAfterErrors: "True", // build even if there's an error triggered
             },
-            mode: ExecutorMode.onlyCommandNameAndResult,
+            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
                 args: [logFilePath],
-                mode: ExecutorMode.silently,
+                mode: ExecutorMode.none,
             },
         });
     }
@@ -81,17 +81,17 @@ export class BuildManager {
                 }),
                 ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
             ],
-            mode: ExecutorMode.silently,
+            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
                 args: [logFilePath],
-                mode: ExecutorMode.silently,
+                mode: ExecutorMode.none,
                 pipe: {
                     scriptOrCommand: {
                         command: "xcbeautify",
                         labelInTerminal: "Build For Testing",
                     },
-                    mode: ExecutorMode.verbose,
+                    mode: ExecutorMode.stdout,
                 },
             },
         });

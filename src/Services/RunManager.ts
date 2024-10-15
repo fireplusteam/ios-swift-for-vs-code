@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getFilePathInWorkspace, Platform } from "../env";
+import { DeviceID, getFilePathInWorkspace } from "../env";
 import { sleep } from "../extension";
 import { deleteFile, promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
@@ -17,7 +17,7 @@ export class RunManager {
     }
 
     async runOnDebugDevice(context: CommandContext) {
-        if ((await context.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
+        if ((await context.projectSettingsProvider.projectEnv.debugDeviceID).platform === "macOS") {
             return await this.runOnMac(context);
         }
 
@@ -29,22 +29,24 @@ export class RunManager {
     }
 
     async runOnMultipleDevices(context: CommandContext) {
-        if ((await context.projectSettingsProvider.projectEnv.platform) === Platform.macOS) {
+        if ((await context.projectSettingsProvider.projectEnv.debugDeviceID).platform === "macOS") {
             throw Error("MacOS Platform doesn't support running on Multiple Devices!");
         }
         if (this.isDebuggable) {
             throw Error("Debug mode is not supported in run on multiple devices");
         }
 
-        const devices = (await context.projectSettingsProvider.projectEnv.multipleDeviceID)
-            .split(" |")
-            .map(deviceId => deviceId.substring("id=".length));
+        const devices = await context.projectSettingsProvider.projectEnv.multipleDeviceID;
         if (devices === undefined || devices.length === 0) {
             throw Error("Can not run on empty device");
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
+        const debugDeviceID = await context.projectSettingsProvider.projectEnv.debugDeviceID;
         for (const device of devices) {
-            await this.runOnSimulator(context, device, false);
+            if (debugDeviceID.platform === device.platform) {
+                // we can run only on the platform that was built to
+                await this.runOnSimulator(context, device, false);
+            }
         }
     }
 
@@ -67,29 +69,33 @@ export class RunManager {
                 "-parallel-testing-enabled",
                 "NO",
             ],
-            mode: ExecutorMode.silently,
+            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
                 args: [logFilePath],
-                mode: ExecutorMode.silently,
+                mode: ExecutorMode.none,
                 pipe: {
                     scriptOrCommand: {
                         command: "xcbeautify",
                         labelInTerminal: "Run Tests",
                     },
-                    mode: ExecutorMode.verbose,
+                    mode: ExecutorMode.stdout,
                 },
             },
         });
     }
 
-    private async runOnSimulator(context: CommandContext, deviceId: string, waitDebugger: boolean) {
-        await this.terminateCurrentIOSApp(context, this.sessionID, deviceId);
+    private async runOnSimulator(
+        context: CommandContext,
+        deviceId: DeviceID,
+        waitDebugger: boolean
+    ) {
+        await this.terminateCurrentIOSApp(context, this.sessionID, deviceId.id);
 
         try {
             await context.execShellWithOptions({
                 scriptOrCommand: { command: "xcrun" },
-                args: ["simctl", "boot", deviceId],
+                args: ["simctl", "boot", deviceId.id],
             });
         } catch {
             /* empty */
@@ -120,7 +126,7 @@ export class RunManager {
             for (const key in json.devices) {
                 const value = json.devices[key];
                 for (const device of value) {
-                    if (device.udid === deviceId) {
+                    if (device.udid === deviceId.id) {
                         if (device.state === "Booted") {
                             booted = true;
                             break;
@@ -141,8 +147,8 @@ export class RunManager {
             args: [
                 "simctl",
                 "install",
-                deviceId,
-                await context.projectSettingsProvider.projectEnv.appExecutablePath,
+                deviceId.id,
+                await context.projectSettingsProvider.projectEnv.appExecutablePath(deviceId),
             ],
         });
 
@@ -165,7 +171,7 @@ export class RunManager {
                     "simctl",
                     "launch",
                     "--console-pty",
-                    deviceId,
+                    deviceId.id,
                     await context.projectSettingsProvider.projectEnv.bundleAppName,
                     "--wait-for-debugger",
                 ],
@@ -177,7 +183,7 @@ export class RunManager {
                 if (error instanceof ExecutorTaskError) {
                     if (error.code === 3) {
                         //simulator is not responding
-                        await this.shutdownSimulator(context, deviceId);
+                        await this.shutdownSimulator(context, deviceId.id);
                         if (context.cancellationToken.isCancellationRequested === false) {
                             isHandled = true;
                             this.runOnSimulator(context, deviceId, waitDebugger);
@@ -191,7 +197,9 @@ export class RunManager {
     }
 
     private async runOnMac(context: CommandContext) {
-        const exePath = await context.projectSettingsProvider.projectEnv.appExecutablePath;
+        const exePath = await context.projectSettingsProvider.projectEnv.appExecutablePath(
+            await context.projectSettingsProvider.projectEnv.debugDeviceID
+        );
         const productName = await context.projectSettingsProvider.projectEnv.productName;
 
         if (context.terminal) {
