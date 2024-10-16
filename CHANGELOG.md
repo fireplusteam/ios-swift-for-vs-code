@@ -6,6 +6,7 @@
 
 -   New breaking change. Removed .env file and moved everything to projectConfiguration.json file.
 -   Get rid of old shell commands and replace with ts implementation
+-   Own definition provider if sourcekit-lsp fails to provide location (Usually it stops working if there're errors in the file). As a workaround, symbol search works fine as a fallback (similar to Xcode).
 
 ### Fixed
 

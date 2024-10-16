@@ -8,6 +8,7 @@ import { WorkspaceContext } from "./WorkspaceContext";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { activatePeekDocuments } from "./peekDocuments";
 import { activateGetReferenceDocument } from "./getReferenceDocument";
+import { DefinitionProvider } from "./DefinitionProvider";
 
 export class SwiftLSPClient {
     private languageClient: langclient.LanguageClient | null | undefined;
@@ -15,6 +16,7 @@ export class SwiftLSPClient {
     private clientReadyPromise?: Promise<void> = undefined;
     private peekDocuments?: vscode.Disposable;
     private getReferenceDocument?: vscode.Disposable;
+    private definitionProvider: DefinitionProvider;
 
     public async client(): Promise<langclient.LanguageClient> {
         if (this.languageClient === undefined) {
@@ -31,7 +33,9 @@ export class SwiftLSPClient {
     constructor(
         private readonly workspaceContext: WorkspaceContext,
         private readonly logs: vscode.OutputChannel
-    ) {}
+    ) {
+        this.definitionProvider = new DefinitionProvider(this);
+    }
 
     public async start() {
         await this.client();
@@ -125,6 +129,10 @@ export class SwiftLSPClient {
                     ) {
                         const uri = definitions[0].uri.with({ scheme: "readonly" });
                         return new vscode.Location(uri, definitions[0].range);
+                    }
+                    if (result === null || result === undefined) {
+                        const res = await this.definitionProvider.provide(document, position);
+                        return res;
                     }
                     return result;
                 },
