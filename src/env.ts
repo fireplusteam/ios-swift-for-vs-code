@@ -340,10 +340,10 @@ export async function isBuildServerValid() {
             return false;
         }
         if (
-            configuration.build_root === undefined ||
-            configuration.workspace === undefined ||
-            configuration.kind === undefined ||
-            configuration.argv === undefined
+            buildServer.build_root === undefined ||
+            buildServer.workspace === undefined ||
+            buildServer.kind === undefined ||
+            buildServer.argv === undefined
         ) {
             return false;
         }
