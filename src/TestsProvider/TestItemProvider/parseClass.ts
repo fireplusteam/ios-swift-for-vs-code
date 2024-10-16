@@ -36,10 +36,11 @@ enum Commented {
     multiCommented,
 }
 
-function preCalcCommentedCode(text: string) {
+export function preCalcCommentedCode(text: string) {
     const line = [] as boolean[];
     let commented = Commented.notCommented;
     for (let i = 0; i < text.length - 1; ++i) {
+        let isStillCommented = false;
         switch (commented) {
             case Commented.notCommented:
                 if (text[i] === "/" && text[i + 1] === "/") {
@@ -51,20 +52,22 @@ function preCalcCommentedCode(text: string) {
             case Commented.singleCommented:
                 if (text[i] === "\n") {
                     commented = Commented.notCommented;
+                    isStillCommented = true;
                 }
                 break;
             case Commented.multiCommented:
-                if (text[i] === "*" && text[i + 1] === "/") {
+                if (i - 1 >= 0 && text[i - 1] === "*" && text[i] === "/") {
                     commented = Commented.notCommented;
+                    isStillCommented = true;
                 }
                 break;
         }
-        line.push(commented !== Commented.notCommented);
+        line.push(commented !== Commented.notCommented || isStillCommented);
     }
     return line;
 }
 
-function isCommented(commented: boolean[], start: number, end: number) {
+export function isCommented(commented: boolean[], start: number, end: number) {
     for (let i = start; i < end; ++i) {
         if (commented[i]) {
             return true;
