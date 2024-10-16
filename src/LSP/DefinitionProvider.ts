@@ -19,14 +19,14 @@ export class DefinitionProvider {
         const text = document.getText();
         const positionOffset = document.offsetAt(position);
 
-        const toCheck = getSymbolAtPosition(positionOffset, text);
+        const symbolAtCursorPosition = getSymbolAtPosition(positionOffset, text);
 
-        if (toCheck.symbol.startsWith(".")) {
-            toCheck.symbol = toCheck.symbol.slice(1);
+        if (symbolAtCursorPosition.symbol.startsWith(".")) {
+            symbolAtCursorPosition.symbol = symbolAtCursorPosition.symbol.slice(1);
         }
-        const list = generateChecksFromSymbol(toCheck);
-        for (const option of list) {
-            const query = toString(option);
+        const optionsToCheck = generateChecksFromSymbol(symbolAtCursorPosition);
+        for (const option of optionsToCheck) {
+            const query = SymbolToString(option);
             const client = await this.lspClient.client();
             const result = await client.sendRequest(langclient.WorkspaceSymbolRequest.method, {
                 query: query,
@@ -35,6 +35,7 @@ export class DefinitionProvider {
                 result as vscode.SymbolInformation[]
             ).filter(e => {
                 if (option.args.length === 0) {
+                    // can be a method symbol
                     if (e.name.toLocaleLowerCase() === `${query}()`.toLowerCase()) {
                         return true;
                     }
@@ -61,6 +62,8 @@ export class DefinitionProvider {
         return [];
     }
 }
+
+/// Local symbol parser
 
 function filtered(
     list: vscode.SymbolInformation[],
@@ -126,7 +129,7 @@ function generateChecksFromSymbol(symbol: SymbolToken) {
     return result;
 }
 
-function toString(symbol: SymbolToken) {
+function SymbolToString(symbol: SymbolToken) {
     if (symbol.args.length === 0) {
         return symbol.symbol;
     }
@@ -328,7 +331,7 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken {
     let args: string[] = [];
     if (argumentDot === undefined) {
         // not an argument
-        // parse arguments
+        // parse arguments and container
         container = parseContainer(symbol.start - 1, text, commented);
         args = parseArguments(symbol.end + 1, text, commented) || [];
         args = args.map(e => {
