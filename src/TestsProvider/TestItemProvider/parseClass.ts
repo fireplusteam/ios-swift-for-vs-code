@@ -34,35 +34,68 @@ enum Commented {
     notCommented,
     singleCommented,
     multiCommented,
+    quoted,
+    multiQuoted,
 }
 
 export function preCalcCommentedCode(text: string) {
     const line = [] as boolean[];
     let commented = Commented.notCommented;
-    for (let i = 0; i < text.length - 1; ++i) {
-        let isStillCommented = false;
+    for (let i = 0; i < text.length - 1; ) {
         switch (commented) {
             case Commented.notCommented:
                 if (text[i] === "/" && text[i + 1] === "/") {
                     commented = Commented.singleCommented;
+                    line.push(true, true);
                 } else if (text[i] === "/" && text[i + 1] === "*") {
                     commented = Commented.multiCommented;
+                    line.push(true, true);
+                } else if (text.slice(i, i + 3) === '"""') {
+                    commented = Commented.multiQuoted;
+                    line.push(true, true, true);
+                } else if (text[i] === '"') {
+                    commented = Commented.quoted;
+                    line.push(true);
+                } else {
+                    line.push(false);
                 }
                 break;
             case Commented.singleCommented:
                 if (text[i] === "\n") {
                     commented = Commented.notCommented;
-                    isStillCommented = true;
                 }
+                line.push(true);
                 break;
             case Commented.multiCommented:
-                if (i - 1 >= 0 && text[i - 1] === "*" && text[i] === "/") {
+                if (text[i] === "*" && text[i + 1] === "/") {
                     commented = Commented.notCommented;
-                    isStillCommented = true;
+                    line.push(true, true);
+                } else {
+                    line.push(true);
+                }
+                break;
+            case Commented.quoted:
+                if (text.slice(i, i + 2) === '\\"') {
+                    line.push(true, true);
+                } else if (text[i] === '"') {
+                    commented = Commented.notCommented;
+                    line.push(true);
+                } else {
+                    line.push(true);
+                }
+                break;
+            case Commented.multiQuoted:
+                if (text.slice(i, i + 2) === '\\"') {
+                    line.push(true, true);
+                } else if (text.slice(i, i + 3) === '"""') {
+                    commented = Commented.notCommented;
+                    line.push(true, true, true);
+                } else {
+                    line.push(true);
                 }
                 break;
         }
-        line.push(commented !== Commented.notCommented || isStillCommented);
+        i = line.length;
     }
     return line;
 }

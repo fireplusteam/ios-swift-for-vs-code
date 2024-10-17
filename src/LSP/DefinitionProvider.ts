@@ -20,6 +20,9 @@ export class DefinitionProvider {
         const positionOffset = document.offsetAt(position);
 
         const symbolAtCursorPosition = getSymbolAtPosition(positionOffset, text);
+        if (symbolAtCursorPosition === undefined) {
+            return [];
+        }
 
         if (symbolAtCursorPosition.symbol.startsWith(".")) {
             symbolAtCursorPosition.symbol = symbolAtCursorPosition.symbol.slice(1);
@@ -37,6 +40,11 @@ export class DefinitionProvider {
                 if (option.args.length === 0) {
                     // can be a method symbol
                     if (e.name.toLocaleLowerCase() === `${query}()`.toLowerCase()) {
+                        return true;
+                    }
+                }
+                if (query.endsWith(")")) {
+                    if (e.name.startsWith(query.slice(0, -1))) {
                         return true;
                     }
                 }
@@ -146,6 +154,9 @@ function isNotAllowedChar(ch: string) {
 
 function parseSingleToken(position: number, text: string, commented: boolean[]) {
     if (isNotAllowedChar(text[position])) {
+        return undefined;
+    }
+    if (commented[position]) {
         return undefined;
     }
     const chars = ":()[]{}-+*/\"',. \n\r\t";
@@ -319,11 +330,11 @@ function parseArguments(position: number, text: string, commented: boolean[]) {
     return parsedArgs;
 }
 
-function getSymbolAtPosition(position: number, text: string): SymbolToken {
+function getSymbolAtPosition(position: number, text: string): SymbolToken | undefined {
     const commented = preCalcCommentedCode(text);
     const symbol = parseSingleToken(position, text, commented);
     if (symbol === undefined) {
-        return { symbol: "", args: [], offset: position, length: 0 };
+        return undefined;
     }
 
     const argumentDot = argumentPos(symbol.token, text, symbol.start, symbol.end, commented);
