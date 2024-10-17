@@ -359,7 +359,8 @@ function parseArguments(position: number, text: string, commented: boolean[]) {
     let isInsideArgument = true;
     let argumentName = "";
     const parsedArgs = [] as string[];
-    for (let i = position; i < text.length; ++i) {
+    let i = position;
+    for (; i < text.length; ++i) {
         if (commented[i]) {
             continue;
         }
@@ -393,7 +394,7 @@ function parseArguments(position: number, text: string, commented: boolean[]) {
             return undefined;
         }
     }
-    if (isInsideArgument && argumentName.trim().length > 0) {
+    if (isInsideArgument && (argumentName.length > 0 || text[i - 1] === '"')) {
         parsedArgs.push("");
     }
     return parsedArgs;
@@ -431,7 +432,7 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
 
     return {
         symbol: symbol.token.replaceAll("?", "").replaceAll("!", ""),
-        container: container?.token,
+        container: container?.token.replaceAll("?", "").replaceAll("!", ""),
         args: args,
         offset: container !== undefined ? container.start : symbol.start,
         length:

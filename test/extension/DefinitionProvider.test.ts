@@ -142,6 +142,7 @@ suite("Definition Provider: Functions text with comments", () => {
                     sub:
                     .init(prop1: 10, prop2: "10")
                 )
+                true.emptyFunction(10)
 
                 sdfsdf
                 
@@ -247,6 +248,66 @@ suite("Definition Provider: Functions text with comments", () => {
         );
         assert.strictEqual(result?.symbol, "functionWithSingleParam");
         assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, ["_"]);
+    });
+
+    test("Test 10", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("emptyFunction"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "emptyFunction");
+        assert.strictEqual(result?.container, "true");
+        assert.deepStrictEqual(result?.args, ["_"]);
+    });
+});
+
+suite("Definition Provider: text with optionals", () => {
+    const textWithComments = `
+                let obj: Obj = .init?(a: 10)
+                let object = SomeStruct().var1?.some!.fun(
+                    a: b,
+                    c: anotherObject?.doSomething! (  )
+                )
+        `;
+
+    test("Test 1", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("it?(a: "),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "init");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, ["a"]);
+    });
+
+    test("Test 2", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("e!."),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "some");
+        assert.strictEqual(result?.container, "var1");
+        assert.deepStrictEqual(result?.args, []);
+    });
+
+    test("Test 3", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("fun("),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "fun");
+        assert.strictEqual(result?.container, "some");
+        assert.deepStrictEqual(result?.args, ["a", "c"]);
+    });
+
+    test("Test 4", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("ethi"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "doSomething");
+        assert.strictEqual(result?.container, "anotherObject");
         assert.deepStrictEqual(result?.args, ["_"]);
     });
 });
