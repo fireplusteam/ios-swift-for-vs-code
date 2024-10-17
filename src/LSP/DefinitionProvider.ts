@@ -1,7 +1,11 @@
 import * as langclient from "vscode-languageclient/node";
 import * as vscode from "vscode";
+import * as fs from "fs";
 import { SwiftLSPClient } from "./SwiftLSPClient";
-import { preCalcCommentedCode } from "../TestsProvider/TestItemProvider/parseClass";
+import {
+    preCalcCommentedCode,
+    preCalcLineNumbers,
+} from "../TestsProvider/TestItemProvider/parseClass";
 
 interface SymbolToken {
     symbol: string;
@@ -12,9 +16,14 @@ interface SymbolToken {
 }
 
 export class DefinitionProvider {
+    private maxNumberOfRecursiveSearch = 3; // no need to call it deeper
+
     constructor(private lspClient: SwiftLSPClient) {}
 
-    async provide(document: vscode.TextDocument, position: vscode.Position) {
+    async provide(document: vscode.TextDocument, position: vscode.Position, recursiveCall = 0) {
+        if (recursiveCall >= this.maxNumberOfRecursiveSearch) {
+            return [];
+        }
         // vscode.commands.executeCommand("workbench.action.showAllSymbols");
         const text = document.getText();
         const positionOffset = document.offsetAt(position);
@@ -27,6 +36,14 @@ export class DefinitionProvider {
         if (symbolAtCursorPosition.symbol.startsWith(".")) {
             symbolAtCursorPosition.symbol = symbolAtCursorPosition.symbol.slice(1);
         }
+
+        let parentContainer: string[] = [];
+        if (symbolAtCursorPosition.container !== undefined) {
+            const containerPos = document.positionAt(symbolAtCursorPosition.offset);
+            const rootSuggestions = await this.provide(document, containerPos, recursiveCall + 1);
+            parentContainer = transformToLine(rootSuggestions);
+        }
+
         const optionsToCheck = generateChecksFromSymbol(symbolAtCursorPosition);
         for (const option of optionsToCheck) {
             const query = SymbolToString(option);
@@ -53,6 +70,14 @@ export class DefinitionProvider {
 
             documentSymbol = filtered(documentSymbol, e => {
                 try {
+                    return containerLinesHasContainer(parentContainer, e.containerName);
+                } catch {
+                    return false;
+                }
+            });
+
+            documentSymbol = filtered(documentSymbol, e => {
+                try {
                     return e.containerName.toLowerCase().includes(option.container!.toLowerCase());
                 } catch {
                     return false;
@@ -72,6 +97,41 @@ export class DefinitionProvider {
 }
 
 /// Local symbol parser
+
+function containerLinesHasContainer(containers: string[], containerName: string) {
+    for (const item of containers) {
+        if (item.includes(containerName)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function transformToLine(locations: vscode.Location[]) {
+    return locations.map(e => {
+        const document = vscode.workspace.textDocuments
+            .filter(doc => doc.uri.fsPath === e.uri.fsPath)
+            .at(0);
+        if (document) {
+            // document was edited, check the cached version
+            return document.getText(
+                new vscode.Range(
+                    new vscode.Position(e.range.start.line, 0),
+                    new vscode.Position(e.range.end.line, 10000)
+                )
+            );
+        } // else this doc file is not open, fine to read it from a disk
+        const text = fs.readFileSync(e.uri.fsPath).toString();
+        const line = preCalcLineNumbers(text);
+        let result = "";
+        for (let i = 0; i < text.length; ++i) {
+            if (e.range.start.line <= line[i] && line[i] <= e.range.end.line) {
+                result += text[i];
+            }
+        }
+        return result;
+    });
+}
 
 function filtered(
     list: vscode.SymbolInformation[],
@@ -175,13 +235,22 @@ function parseSingleToken(position: number, text: string, commented: boolean[]) 
 function parseContainer(position: number, text: string, commented: boolean[]) {
     for (let i = position; i >= 0; --i) {
         if (isWhiteSpace(text[i]) === false) {
-            if (text[i] === ")") {
-                // start of function
-                // TODO:
-                return undefined;
-            } else if (text[i] === ".") {
-                // dot
-                return parseSingleToken(i - 1, text, commented)?.token;
+            if (text[i] === ".") {
+                const j = i;
+                for (i -= 1; i >= 0 && isWhiteSpace(text[i]); --i) {
+                    /* empty */
+                }
+                if (text[i] === ")") {
+                    // for example someFunc(parameter1: "a").symbol
+                    const containerPos = getScope(text, i - 1, "left", commented);
+                    if (containerPos) {
+                        i = containerPos - 1;
+                    }
+                } else {
+                    // not found ')'
+                    i = j - 1;
+                }
+                return parseSingleToken(i, text, commented);
             } else {
                 return undefined;
             }
@@ -338,7 +407,7 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
     }
 
     const argumentDot = argumentPos(symbol.token, text, symbol.start, symbol.end, commented);
-    let container: string | undefined = undefined;
+    let container: { token: string; start: number; end: number } | undefined = undefined;
     let args: string[] = [];
     if (argumentDot === undefined) {
         // not an argument
@@ -362,12 +431,19 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
 
     return {
         symbol: symbol.token.replaceAll("?", "").replaceAll("!", ""),
-        container: container,
+        container: container?.token,
         args: args,
-        offset: symbol.start,
-        length: symbol.end - symbol.start + 1,
+        offset: container !== undefined ? container.start : symbol.start,
+        length:
+            container !== undefined
+                ? container.end - container.start + 1
+                : symbol.end - symbol.start + 1,
     };
 }
+
+export const _private = {
+    getSymbolAtPosition,
+};
 
 // function isReference(symbol: string) {
 //     if (symbol === undefined) {

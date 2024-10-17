@@ -20,7 +20,7 @@ function getScope(text: string, start: number, commented: boolean[]) {
     }
 }
 
-function preCalcLineNumbers(text: string) {
+export function preCalcLineNumbers(text: string) {
     const line = [] as number[];
     let currentNumber = 0;
     for (let i = 0; i < text.length; ++i) {
