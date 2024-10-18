@@ -47,6 +47,17 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 this.diagnosticBuildCollection.set(fileUrl, notBuildProblems);
             })
         );
+        this.disposable.push(
+            vscode.workspace.onDidCloseTextDocument(doc => {
+                const fileUrl = doc.uri;
+                const notSourceKitProblems =
+                    this.diagnosticBuildCollection
+                        .get(fileUrl)
+                        ?.filter(e => !ProblemDiagnosticResolver.isSourcekit(e.source || "")) || [];
+                // on close clean source kit issues
+                this.diagnosticBuildCollection.set(fileUrl, notSourceKitProblems);
+            })
+        );
     }
 
     handleDiagnostics(
