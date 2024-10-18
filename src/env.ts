@@ -273,7 +273,7 @@ function saveKeyToEnvList(configuration: { [key: string]: any }, key: string, va
         throw ConfigurationProjectError;
     }
     configuration[key] = value;
-    const json = JSON.stringify(configuration);
+    const json = JSON.stringify(configuration, null, 2);
     const fileDir = getEnvFilePath().split(path.sep).slice(0, -1).join(path.sep);
     fs.mkdirSync(fileDir, { recursive: true });
     fs.writeFileSync(getEnvFilePath(), json, "utf-8");

@@ -446,7 +446,7 @@ export async function runAppOnMultipleDevices(
         const deviceIds: DeviceID[] = [];
         if (Array.isArray(option)) {
             for (const device of option) {
-                deviceIds.push(device.id);
+                deviceIds.push(device);
             }
             commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(deviceIds);
         }

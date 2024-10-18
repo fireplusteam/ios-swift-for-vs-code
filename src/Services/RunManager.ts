@@ -43,7 +43,7 @@ export class RunManager {
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
         const debugDeviceID = await context.projectSettingsProvider.projectEnv.debugDeviceID;
         for (const device of devices) {
-            if (debugDeviceID.platform === device.platform) {
+            if (debugDeviceID.platform === device.platform && debugDeviceID.arch === device.arch) {
                 // we can run only on the platform that was built to
                 await this.runOnSimulator(context, device, false);
             }
