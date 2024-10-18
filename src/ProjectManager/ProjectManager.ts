@@ -236,6 +236,8 @@ export class ProjectManager {
                 "swift.autoGenerateLaunchConfigurations": false,
                 "swift.disableAutoResolve": true,
                 "swift.sourcekit-lsp.disable": true,
+                "swift.disableSwiftPackageManagerIntegration": true,
+                "swift.searchSubfoldersForPackages": false,
             },
             extensions: {
                 // tell vs code not to recommend it as it interfere with this extension

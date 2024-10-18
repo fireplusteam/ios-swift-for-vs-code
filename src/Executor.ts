@@ -183,7 +183,7 @@ export class Executor {
                         return;
                     }
 
-                    killAll(proc.pid, "SIGKILL");
+                    killAll(proc.pid, "SIGTERM");
                 });
                 const terminalClose = terminal?.onExitEvent(() => {
                     userCancel?.dispose();
@@ -193,7 +193,7 @@ export class Executor {
                         return;
                     }
 
-                    killAll(proc.pid, "SIGKILL");
+                    killAll(proc.pid, "SIGTERM");
                 });
                 if (cancellationToken?.isCancellationRequested) {
                     reject(UserTerminatedError);

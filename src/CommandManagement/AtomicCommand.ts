@@ -207,4 +207,8 @@ export class AtomicCommand {
             }
         }
     }
+
+    cancel() {
+        this._prevCommandContext?.cancel();
+    }
 }
