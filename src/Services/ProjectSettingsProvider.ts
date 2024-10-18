@@ -77,7 +77,8 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     key === "name" ||
                     key === "platform" ||
                     key === "id" ||
-                    key === "variant"
+                    key === "variant" ||
+                    key === "arch"
                 ) {
                     formattedKey[key] = value;
                 }

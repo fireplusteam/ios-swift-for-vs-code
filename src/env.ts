@@ -36,6 +36,7 @@ export interface DeviceID {
         | "visionOS Simulator"
         | "tvOS Simulator";
     variant?: string;
+    arch?: string;
 }
 
 export interface ProjectEnvInterface {

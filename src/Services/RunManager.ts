@@ -68,6 +68,8 @@ export class RunManager {
                 ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
                 "-parallel-testing-enabled",
                 "NO",
+                // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676
+                // "./vscode/testrun_example.xctestrun",
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
