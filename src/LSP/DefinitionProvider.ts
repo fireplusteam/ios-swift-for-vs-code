@@ -394,7 +394,7 @@ function parseArguments(position: number, text: string, commented: boolean[]) {
             return undefined;
         }
     }
-    if (isInsideArgument && (argumentName.length > 0 || text[i - 1] === '"')) {
+    if (isInsideArgument && (argumentName.length > 0 || `"'`.includes(text[i - 1]))) {
         parsedArgs.push("");
     }
     return parsedArgs;

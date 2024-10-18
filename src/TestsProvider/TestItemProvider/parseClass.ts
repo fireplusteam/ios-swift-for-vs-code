@@ -41,20 +41,22 @@ enum Commented {
 export function preCalcCommentedCode(text: string) {
     const line = [] as boolean[];
     let commented = Commented.notCommented;
+    let openQuote = "";
     for (let i = 0; i < text.length - 1; ) {
         switch (commented) {
             case Commented.notCommented:
-                if (text[i] === "/" && text[i + 1] === "/") {
+                if (text.slice(i, i + 2) === "//") {
                     commented = Commented.singleCommented;
                     line.push(true, true);
-                } else if (text[i] === "/" && text[i + 1] === "*") {
+                } else if (text.slice(i, i + 2) === "/*") {
                     commented = Commented.multiCommented;
                     line.push(true, true);
                 } else if (text.slice(i, i + 3) === '"""') {
                     commented = Commented.multiQuoted;
                     line.push(true, true, true);
-                } else if (text[i] === '"') {
+                } else if (text[i] === '"' || text[i] === "'") {
                     commented = Commented.quoted;
+                    openQuote = text[i];
                     line.push(true);
                 } else {
                     line.push(false);
@@ -67,7 +69,7 @@ export function preCalcCommentedCode(text: string) {
                 line.push(true);
                 break;
             case Commented.multiCommented:
-                if (text[i] === "*" && text[i + 1] === "/") {
+                if (text.slice(i, i + 2) === "*/") {
                     commented = Commented.notCommented;
                     line.push(true, true);
                 } else {
@@ -75,9 +77,9 @@ export function preCalcCommentedCode(text: string) {
                 }
                 break;
             case Commented.quoted:
-                if (text.slice(i, i + 2) === '\\"') {
+                if (text.slice(i, i + 2) === '\\"' || text.slice(i, i + 2) === "\\'") {
                     line.push(true, true);
-                } else if (text[i] === '"') {
+                } else if (text[i] === openQuote) {
                     commented = Commented.notCommented;
                     line.push(true);
                 } else {

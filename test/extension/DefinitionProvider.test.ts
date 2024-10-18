@@ -143,6 +143,7 @@ suite("Definition Provider: Functions text with comments", () => {
                     .init(prop1: 10, prop2: "10")
                 )
                 true.emptyFunction(10)
+                let ch = '"'
 
                 sdfsdf
                 
@@ -269,6 +270,9 @@ suite("Definition Provider: text with optionals", () => {
                     a: b,
                     c: anotherObject?.doSomething! (  )
                 )
+                char ch = '\\''
+                option?.functionWithSingleParam!('"')
+                option?.anotherWay?('"\\'', "ok'", '\\'')
         `;
 
     test("Test 1", async () => {
@@ -309,5 +313,25 @@ suite("Definition Provider: text with optionals", () => {
         assert.strictEqual(result?.symbol, "doSomething");
         assert.strictEqual(result?.container, "anotherObject");
         assert.deepStrictEqual(result?.args, ["_"]);
+    });
+
+    test("Test 5", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("unction"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "functionWithSingleParam");
+        assert.strictEqual(result?.container, "option");
+        assert.deepStrictEqual(result?.args, ["_"]);
+    });
+
+    test("Test 6", async () => {
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("anotherWay"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "anotherWay");
+        assert.strictEqual(result?.container, "option");
+        assert.deepStrictEqual(result?.args, ["_", "_", "_"]);
     });
 });
