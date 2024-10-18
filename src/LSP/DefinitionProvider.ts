@@ -39,9 +39,30 @@ export class DefinitionProvider {
 
         let parentContainer: string[] = [];
         if (symbolAtCursorPosition.container !== undefined) {
-            const containerPos = document.positionAt(symbolAtCursorPosition.offset);
-            const rootSuggestions = await this.provide(document, containerPos, recursiveCall + 1);
-            parentContainer = transformToLine(rootSuggestions);
+            const containerPositionExactPos = await this.sendDefinitionRequest(
+                document,
+                symbolAtCursorPosition.offset
+            );
+
+            if (containerPositionExactPos !== null && containerPositionExactPos.length > 0) {
+                const hovers = containerPositionExactPos.map(async e => {
+                    const offset = document.offsetAt(e.range.start);
+                    const hover = await this.sendHoverRequest(document, offset);
+                    return hover?.at(0) || "";
+                });
+                for (const hover of hovers) {
+                    parentContainer.push(await hover);
+                }
+                //parentContainer = transformToLine(containerPositionExactPos);
+            } else {
+                const containerPos = document.positionAt(symbolAtCursorPosition.offset);
+                const rootSuggestions = await this.provide(
+                    document,
+                    containerPos,
+                    recursiveCall + 1
+                );
+                parentContainer = transformToLine(rootSuggestions);
+            }
         }
 
         const optionsToCheck = generateChecksFromSymbol(symbolAtCursorPosition);
@@ -94,12 +115,76 @@ export class DefinitionProvider {
 
         return [];
     }
+
+    private async sendDefinitionRequest(document: vscode.TextDocument, offset: number) {
+        const definitionPos = document.positionAt(offset);
+        const definitionParams: langclient.DefinitionParams = {
+            textDocument: { uri: document.uri.toString() },
+            position: langclient.Position.create(definitionPos.line, definitionPos.character),
+        };
+        try {
+            const locations = (await (
+                await this.lspClient.client()
+            ).sendRequest(
+                langclient.DefinitionRequest.method,
+                definitionParams
+            )) as langclient.Location[];
+            return locations.map(e => {
+                const uri = vscode.Uri.parse(e.uri.toString());
+                return new vscode.Location(uri, e.range as vscode.Range);
+            });
+        } catch {
+            return [];
+        }
+    }
+
+    private async sendHoverRequest(document: vscode.TextDocument, offset: number) {
+        const hoverPos = document.positionAt(offset);
+        const hoverParams: langclient.HoverParams = {
+            textDocument: { uri: document.uri.toString() },
+            position: langclient.Position.create(hoverPos.line, hoverPos.character),
+        };
+        try {
+            const hover = (await (
+                await this.lspClient.client()
+            ).sendRequest(langclient.HoverRequest.method, hoverParams)) as langclient.Hover;
+            const result = covertHoverToString(hover);
+            if (result) {
+                return result.filter(e => e.includes("<<error type>>") === false);
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    }
+}
+
+function covertHoverToString(hover: langclient.Hover) {
+    if (hover.contents instanceof Array) {
+        return hover.contents
+            .map(e => {
+                if (typeof e === "string") {
+                    return e;
+                } else if (typeof e === "object") {
+                    return e.value;
+                }
+                return "";
+            })
+            .filter(e => e !== "");
+    } else if (typeof hover.contents === "string") {
+        return [hover.contents];
+    } else if (typeof hover.contents === "object") {
+        return [hover.contents.value];
+    }
 }
 
 /// Local symbol parser
 
 function containerLinesHasContainer(containers: string[], containerName: string) {
     for (const item of containers) {
+        if (containerName === undefined || containerName.length === 0) {
+            return false;
+        }
         if (item.includes(containerName)) {
             return true;
         }
