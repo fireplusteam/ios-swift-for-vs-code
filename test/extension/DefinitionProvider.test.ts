@@ -6,6 +6,25 @@ import * as assert from "assert";
 import { _private } from "../../src/LSP/DefinitionProvider";
 // import * as myExtension from '../../extension';
 
+suite("Definition Provider: Split Container", () => {
+    test("Test 1", async () => {
+        const result = _private.splitContainers(new Set(["Promise<Int>.Resolver"]));
+        assert.deepStrictEqual(result, new Set(["Resolver"]));
+    });
+
+    test("Test 2", async () => {
+        const result = _private.splitContainers(new Set(["Promise<Int>"]));
+        assert.deepStrictEqual(result, new Set(["Promise"]));
+    });
+
+    test("Test 3", async () => {
+        const result = _private.splitContainers(
+            new Set(["Promise<Int,Sub<T1, T2>>.Second<One>.Ok<T>"])
+        );
+        assert.deepStrictEqual(result, new Set(["Ok"]));
+    });
+});
+
 suite("Definition Provider: Type Parser", () => {
     test("Test 1", async () => {
         const result = _private.parseVariableType("let a: Type");
