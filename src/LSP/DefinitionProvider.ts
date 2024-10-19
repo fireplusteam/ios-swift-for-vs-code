@@ -12,7 +12,7 @@ interface SymbolToken {
     container?: string;
     args: string[];
     offset: number;
-    length: number;
+    endOffset: number;
 }
 
 export class DefinitionProvider {
@@ -275,7 +275,7 @@ function generateChecksFromSymbol(symbol: SymbolToken) {
             args: symbol.args,
             container: symbol.symbol, // in that case it's an init of Symbol struct or class
             offset: symbol.offset,
-            length: symbol.length,
+            endOffset: symbol.endOffset,
         });
     }
 
@@ -295,6 +295,153 @@ function isWhiteSpace(ch: string) {
 
 function isNotAllowedChar(ch: string) {
     return /[\s[\]()"',.{}:]/.test(ch);
+}
+
+function movePosIfTextEqual(text: string, pos: number, str: string[] | string) {
+    if (str instanceof Array) {
+        for (const s of str) {
+            if (text.slice(pos, pos + s.length) === s) {
+                return pos + s.length;
+            }
+        }
+        return pos;
+    }
+    return text.slice(pos, pos + str.length) === str ? pos + str.length : pos;
+}
+
+function movePosUntilFirstNonWhiteSpace(text: string, pos: number) {
+    for (; pos < text.length; ++pos) {
+        if (isWhiteSpace(text[pos]) === true) {
+            return pos;
+        }
+    }
+    return pos;
+}
+
+function parseType(text: string, pos: number, commented: boolean[]) {
+    let result = "";
+    for (; pos < text.length; ++pos) {
+        if (commented[pos]) {
+            continue;
+        }
+        if (text[pos] === "<") {
+            let next = getScope(text, pos + 1, "right", commented, "<", ">");
+            if (next) {
+                next += 1;
+            } else {
+                next = text.length;
+            }
+            for (; pos < next; ++pos) {
+                if (!commented[pos]) {
+                    result += text[pos];
+                }
+            }
+            for (; pos < text.length; ++pos) {
+                if (!commented[pos]) {
+                    if (
+                        (isWhiteSpace(text[pos]) === false && text[pos] === "?") ||
+                        text[pos] === "!"
+                    ) {
+                        result += text[pos];
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+        if ("\n{:".includes(text[pos])) {
+            break;
+        }
+        result += text[pos];
+    }
+    return result.replaceAll(/\s/g, "").replaceAll("`", "");
+}
+
+function parseVariableType(text: string) {
+    const commented = preCalcCommentedCode(text);
+    let state: "var" | "typealias" | "type" | "func" | "funcReturn" | "none" = "none";
+    let nextI = 0;
+    for (let i = 0; i < text.length; i = nextI) {
+        switch (state) {
+            case "none":
+                nextI = movePosIfTextEqual(text, i, ["init", "case"]);
+                if (nextI !== i) {
+                    return undefined;
+                }
+                nextI = movePosIfTextEqual(text, i, ["let", "var"]);
+                if (nextI !== i) {
+                    state = "var";
+                    continue;
+                }
+                nextI = movePosIfTextEqual(text, i, "func");
+                if (nextI !== i) {
+                    state = "func";
+                    continue;
+                }
+
+                nextI = movePosIfTextEqual(text, i, "typealias");
+                if (nextI !== i) {
+                    state = "typealias";
+                    continue;
+                }
+
+                nextI = movePosIfTextEqual(text, i, ["class", "struct", "enum"]);
+                if (nextI !== i) {
+                    state = "type";
+                    continue;
+                }
+
+                break;
+            case "var":
+                if (text[i] === ":") {
+                    state = "type";
+                }
+                break;
+            case "typealias":
+                if (text[i] === "=") {
+                    state = "type";
+                }
+                break;
+            case "type":
+                if (text[i] === "@") {
+                    nextI = movePosUntilFirstNonWhiteSpace(text, i);
+                    continue;
+                }
+                nextI = movePosIfTextEqual(text, i, ["any ", "some "]);
+                if (nextI !== i) {
+                    continue;
+                }
+
+                if (text[i] === "(") {
+                    // func
+                    state = "funcReturn";
+                    nextI = getScope(text, i + 1, "right", commented) || i + 1;
+                    continue;
+                }
+                if (isWhiteSpace(text[i]) === false) {
+                    return parseType(text, i, commented);
+                }
+                break;
+            case "func":
+                if (text[i] === "(") {
+                    nextI = getScope(text, i + 1, "right", commented) || i + 1;
+                    state = "funcReturn";
+                    continue;
+                }
+                break;
+            case "funcReturn":
+                nextI = movePosIfTextEqual(text, i, "->");
+                if (nextI !== i) {
+                    state = "type";
+                    continue;
+                }
+                if ("{\n".includes(text[i]) || i === text.length - 1) {
+                    return "Void";
+                }
+                break;
+        }
+        nextI = i + 1; // else
+    }
 }
 
 function parseSingleToken(position: number, text: string, commented: boolean[]) {
@@ -362,6 +509,7 @@ function moveUntilChar(
                 return undefined;
             }
         }
+        return -1;
     } else {
         for (let i = position; i < text.length; ++i) {
             if (commented[i]) {
@@ -374,6 +522,7 @@ function moveUntilChar(
                 return undefined;
             }
         }
+        return text.length;
     }
 }
 
@@ -400,7 +549,9 @@ function getScope(
     text: string,
     position: number,
     direction: "left" | "right",
-    commented: boolean[]
+    commented: boolean[],
+    scopeChar: string = "(",
+    reversalScopeChar: string = ")"
 ) {
     const stack = [] as string[];
     if (direction === "right") {
@@ -408,9 +559,9 @@ function getScope(
             if (commented[i]) {
                 continue;
             }
-            if (text[i] === "(") {
+            if (text[i] === scopeChar) {
                 stack.push(text[i]);
-            } else if (text[i] === ")") {
+            } else if (text[i] === reversalScopeChar) {
                 if (stack.length === 0) {
                     return i;
                 }
@@ -422,9 +573,9 @@ function getScope(
             if (commented[i]) {
                 continue;
             }
-            if (text[i] === ")") {
+            if (text[i] === reversalScopeChar) {
                 stack.push(text[i]);
-            } else if (text[i] === "(") {
+            } else if (text[i] === scopeChar) {
                 if (stack.length === 0) {
                     return i;
                 }
@@ -434,7 +585,11 @@ function getScope(
     }
 }
 
-function parseArguments(position: number, text: string, commented: boolean[]) {
+function parseArguments(
+    position: number,
+    text: string,
+    commented: boolean[]
+): { args: string[]; end: number } | undefined {
     const stack = [] as string[];
     const mapper = new Map<string, string>();
     mapper.set("{", "}");
@@ -482,7 +637,7 @@ function parseArguments(position: number, text: string, commented: boolean[]) {
     if (isInsideArgument && (argumentName.length > 0 || `"'`.includes(text[i - 1]))) {
         parsedArgs.push("");
     }
-    return parsedArgs;
+    return { args: parsedArgs, end: i };
 }
 
 function getSymbolAtPosition(position: number, text: string): SymbolToken | undefined {
@@ -494,18 +649,20 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
 
     const argumentDot = argumentPos(symbol.token, text, symbol.start, symbol.end, commented);
     let container: { token: string; start: number; end: number } | undefined = undefined;
-    let args: string[] = [];
+    let args: { args: string[]; end: number } | undefined;
     if (argumentDot === undefined) {
         // not an argument
         // parse arguments and container
         container = parseContainer(symbol.start - 1, text, commented);
-        args = parseArguments(symbol.end + 1, text, commented) || [];
-        args = args.map(e => {
-            if (e === "") {
-                return "_";
-            }
-            return e;
-        });
+        args = parseArguments(symbol.end + 1, text, commented);
+        if (args) {
+            args.args = args.args.map(e => {
+                if (e === "") {
+                    return "_";
+                }
+                return e;
+            });
+        }
     } else {
         // argument
         const rightScope = getScope(text, symbol.end + 1, "right", commented);
@@ -518,17 +675,15 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
     return {
         symbol: symbol.token.replaceAll("?", "").replaceAll("!", ""),
         container: container?.token.replaceAll("?", "").replaceAll("!", ""),
-        args: args,
+        args: args?.args || [],
         offset: container !== undefined ? container.start : symbol.start,
-        length:
-            container !== undefined
-                ? container.end - container.start + 1
-                : symbol.end - symbol.start + 1,
+        endOffset: args?.end || symbol.end,
     };
 }
 
 export const _private = {
     getSymbolAtPosition,
+    parseVariableType,
 };
 
 // function isReference(symbol: string) {

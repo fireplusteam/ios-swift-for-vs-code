@@ -6,6 +6,156 @@ import * as assert from "assert";
 import { _private } from "../../src/LSP/DefinitionProvider";
 // import * as myExtension from '../../extension';
 
+suite("Definition Provider: Type Parser", () => {
+    test("Test 1", async () => {
+        const result = _private.parseVariableType("let a: Type");
+        assert.deepStrictEqual(result, "Type");
+    });
+
+    test("Test 2", async () => {
+        const result = _private.parseVariableType("swift\n```var a: StateValue<ProductState>");
+        assert.deepStrictEqual(result, "StateValue<ProductState>");
+    });
+
+    test("Test 3", async () => {
+        const result = _private.parseVariableType("swift\n```var a: StateValue<ProductState, T>");
+        assert.deepStrictEqual(result, "StateValue<ProductState,T>");
+    });
+
+    test("Test 4", async () => {
+        const result = _private.parseVariableType(`var a: StateValue<
+                ProductState,
+                T/* Good enough */,
+                OpenT< K1,  K2>, // open bot
+                Drop<() -> Void>
+            >`);
+        assert.deepStrictEqual(result, "StateValue<ProductState,T,OpenT<K1,K2>,Drop<()->Void>");
+    });
+
+    test("Test 5", async () => {
+        const result = _private.parseVariableType(`let productId: SizeUseCase.Input`);
+        assert.deepStrictEqual(result, "SizeUseCase.Input");
+    });
+
+    test("Test 6", async () => {
+        const result = _private.parseVariableType(`let productId: SizeUseCase.Input<P>? next`);
+        assert.deepStrictEqual(result, "SizeUseCase.Input<P>?");
+    });
+
+    test("Test 7", async () => {
+        const result = _private.parseVariableType(
+            `let productId: SizeUseCase.Pr.Input<  P>  ? next`
+        );
+        assert.deepStrictEqual(result, "SizeUseCase.Pr.Input<P>?");
+    });
+
+    test("Test 8.class", async () => {
+        const result = _private.parseVariableType(`class PreferredSizeIndexFinder`);
+        assert.deepStrictEqual(result, "PreferredSizeIndexFinder");
+    });
+
+    test("Test 8.struct", async () => {
+        const result = _private.parseVariableType(`struct PreferredSizeIndexFinder {}`);
+        assert.deepStrictEqual(result, "PreferredSizeIndexFinder");
+    });
+
+    test("Test 8.enum", async () => {
+        const result = _private.parseVariableType(`enum Enn : String `);
+        assert.deepStrictEqual(result, "Enn");
+    });
+
+    test("Test 9", async () => {
+        const result = _private.parseVariableType("static let dummy: `Self`");
+        assert.deepStrictEqual(result, "Self");
+    });
+
+    test("Test 10", async () => {
+        const result = _private.parseVariableType("let sizes: [ProductState.Size]?");
+        assert.deepStrictEqual(result, "[ProductState.Size]?");
+    });
+
+    test("Test 11", async () => {
+        const result = _private.parseVariableType(
+            "@Dependency var productService: any ProductService { get } "
+        );
+        assert.deepStrictEqual(result, "ProductService");
+    });
+
+    test("Test 12", async () => {
+        const result = _private.parseVariableType(
+            `@Dependency var body: some View<Text> { 
+                Text("ok")
+            } `
+        );
+        assert.deepStrictEqual(result, "View<Text>");
+    });
+
+    test("Test 13", async () => {
+        const result = _private.parseVariableType(
+            `func values<T>(observe mapper: @escaping @Sendable (State) -> T, secondParam param: @escaping @Sendable (T, T) -> Bool) -> AsyncStream<T> where T : Sendable`
+        );
+        assert.deepStrictEqual(result, "AsyncStream<T>");
+    });
+
+    test("Test 14", async () => {
+        const result = _private.parseVariableType(
+            `func values<T>(observe mapper: @escaping @Sendable (State) -> T, secondParam param: @escaping @Sendable (T, T) -> Bool) async throw {
+            }`
+        );
+        assert.deepStrictEqual(result, "Void");
+    });
+
+    test("Test 15", async () => {
+        const result = _private.parseVariableType(
+            `func values<T>(observe mapper: @escaping @Sendable (State) -> T, secondParam param: @escaping @Sendable (T, T) -> Bool) async throw -> (SomeParam) -> some SomeType {
+            }`
+        );
+        assert.deepStrictEqual(result, "SomeType");
+    });
+
+    test("Test 16", async () => {
+        const result = _private.parseVariableType(
+            `func get(forProductId productId: String) -> any OptionalType`
+        );
+        assert.deepStrictEqual(result, "OptionalType");
+    });
+
+    test("Test 17", async () => {
+        const result = _private.parseVariableType(`let some: () -> ()`);
+        assert.deepStrictEqual(result, "Void");
+        const result2 = _private.parseVariableType(`let some: () -> () -> () -> ()`);
+        assert.deepStrictEqual(result2, "Void");
+        const result3 = _private.parseVariableType(`let some: () -> () -> () -> (Some) -> Param`);
+        assert.deepStrictEqual(result3, "Param");
+    });
+
+    test("Test 18", async () => {
+        const result = _private.parseVariableType(`case one`);
+        assert.deepStrictEqual(result, undefined);
+    });
+
+    test("Test 19", async () => {
+        const result = _private.parseVariableType(
+            `public let execute: (Input) async throws -> Output `
+        );
+        assert.deepStrictEqual(result, "Output");
+    });
+
+    test("Test 20", async () => {
+        const result = _private.parseVariableType(
+            `public typealias SizePreselectorUseCase.Output = ProductSize?`
+        );
+        assert.deepStrictEqual(result, "ProductSize?");
+    });
+
+    test("Test 21", async () => {
+        const result = _private.parseVariableType(
+            `public typealias SizePreselectorUseCase.Output = () -> ProductSize?`
+        );
+        assert.deepStrictEqual(result, "ProductSize?");
+    });
+});
+
 suite("Definition Provider: Complex text with comments", () => {
     const textWithComments = `
             let a = fgdg comment_ba2.sub.doSome(
