@@ -16,94 +16,9 @@ interface SymbolToken {
 }
 
 export class DefinitionProvider {
-    private maxNumberOfRecursiveSearch = 3; // no need to call it deeper
-
     constructor(private lspClient: SwiftLSPClient) {}
 
-    private async provideContainer(
-        positionOffset: number,
-        text: string,
-        document: vscode.TextDocument
-    ): Promise<Set<string>> {
-        const definitionPos = await this.sendDefinitionRequest(document, positionOffset);
-        const types = new Set<string>();
-        if (definitionPos !== null && definitionPos.length > 0) {
-            for (const definition of definitionPos) {
-                if (definition.uri.toString() !== document.uri.toString()) {
-                    continue;
-                }
-                const offset = document.offsetAt(definition.range.start);
-                (await this.sendHoverRequest(document, offset))?.forEach(hover => {
-                    const type = parseVariableType(hover);
-                    if (type !== undefined) {
-                        types.add(type);
-                    }
-                });
-            }
-            return splitContainers(types);
-        }
-
-        const symbolAtCursorPosition = getSymbolAtPosition(positionOffset, text);
-        if (symbolAtCursorPosition === undefined) {
-            // not a symbol
-            return new Set<string>();
-        }
-        const query = SymbolToString(symbolAtCursorPosition);
-        let allSymbols = ((await this.sendAllSymbols(query)) || []).filter(e => {
-            if (symbolAtCursorPosition.args.length === 0) {
-                // can be a method symbol
-                if (e.name.toLocaleLowerCase() === `${query}()`.toLowerCase()) {
-                    return true;
-                }
-            }
-            if (query.endsWith(")")) {
-                if (e.name.startsWith(query.slice(0, -1))) {
-                    return true;
-                }
-            }
-            return e.name.toLowerCase() === query.toLocaleLowerCase();
-        });
-        if (allSymbols === undefined || allSymbols.length === 0) {
-            return new Set<string>();
-        }
-        if (symbolAtCursorPosition.container === undefined) {
-            // root element, no containers found
-            allSymbols = allSymbols.filter(symbol => {
-                return symbol.containerName !== undefined && symbol.containerName.length > 0;
-            });
-            return transformToTypes();
-        }
-        if (allSymbols.length > 1) {
-            const containers = await this.provideContainer(
-                symbolAtCursorPosition.offset,
-                text,
-                document
-            );
-            allSymbols.filter(symbol => {
-                if (containers.size > 0) {
-                    return containers.has(symbol.containerName);
-                }
-                return true;
-            });
-        }
-
-        return transformToTypes();
-
-        function transformToTypes() {
-            transformToLine(symbolToLocation(allSymbols)).forEach(location => {
-                const type = parseVariableType(location);
-                if (type !== undefined) {
-                    types.add(type);
-                }
-            });
-            return splitContainers(types);
-        }
-    }
-
-    async provide(document: vscode.TextDocument, position: vscode.Position, recursiveCall = 0) {
-        if (recursiveCall >= this.maxNumberOfRecursiveSearch) {
-            return [];
-        }
+    async provide(document: vscode.TextDocument, position: vscode.Position) {
         // vscode.commands.executeCommand("workbench.action.showAllSymbols");
         const text = document.getText();
         const positionOffset = document.offsetAt(position);
@@ -170,6 +85,97 @@ export class DefinitionProvider {
         }
 
         return [];
+    }
+
+    private async provideContainer(
+        positionOffset: number,
+        text: string,
+        document: vscode.TextDocument
+    ): Promise<Set<string>> {
+        const definitionPos = await this.sendDefinitionRequest(document, positionOffset);
+        const types = new Set<string>();
+        if (definitionPos !== null && definitionPos.length > 0) {
+            for (const definition of definitionPos) {
+                if (definition.uri.toString() !== document.uri.toString()) {
+                    continue;
+                }
+                const offset = document.offsetAt(definition.range.start);
+                (await this.sendHoverRequest(document, offset))?.forEach(hover => {
+                    const type = parseVariableType(hover);
+                    if (type !== undefined) {
+                        types.add(type);
+                    }
+                });
+            }
+            return splitContainers(types);
+        } else {
+            // check hover information if we don't need to perform further search
+            (await this.sendHoverRequest(document, positionOffset))?.forEach(hover => {
+                const type = parseVariableType(hover);
+                if (type !== undefined) {
+                    types.add(type);
+                }
+            });
+            if (types.size > 0) {
+                return splitContainers(types);
+            }
+        }
+
+        const symbolAtCursorPosition = getSymbolAtPosition(positionOffset, text);
+        if (symbolAtCursorPosition === undefined) {
+            // not a symbol
+            return new Set<string>();
+        }
+        const query = SymbolToString(symbolAtCursorPosition);
+        let allSymbols = ((await this.sendAllSymbols(query)) || []).filter(e => {
+            if (symbolAtCursorPosition.args.length === 0) {
+                // can be a method symbol
+                if (e.name.toLocaleLowerCase() === `${query}()`.toLowerCase()) {
+                    return true;
+                }
+            }
+            if (query.endsWith(")")) {
+                if (e.name.startsWith(query.slice(0, -1))) {
+                    return true;
+                }
+            }
+            return e.name.toLowerCase() === query.toLocaleLowerCase();
+        });
+        if (allSymbols === undefined || allSymbols.length === 0) {
+            return new Set<string>();
+        }
+        if (symbolAtCursorPosition.container === undefined) {
+            // root element, no containers found
+            allSymbols = allSymbols.filter(symbol => {
+                return symbol.containerName !== undefined && symbol.containerName.length > 0;
+            });
+            return transformToTypes();
+        }
+        if (allSymbols.length > 1) {
+            const containers = await this.provideContainer(
+                symbolAtCursorPosition.offset,
+                text,
+                document
+            );
+            allSymbols.filter(symbol => {
+                if (containers.size > 0) {
+                    return containers.has(symbol.containerName);
+                }
+                return true;
+            });
+        }
+
+        return transformToTypes();
+
+        function transformToTypes() {
+            transformToLine(symbolToLocation(allSymbols)).forEach(location => {
+                const type = parseVariableType(location);
+                if (type !== undefined) {
+                    types.add(type);
+                }
+            });
+            return splitContainers(types);
+        }
     }
 
     private async sendAllSymbols(query: string) {
@@ -434,7 +440,7 @@ function parseType(text: string, pos: number, commented: boolean[]) {
             }
             break;
         }
-        if ("\n{:".includes(text[pos])) {
+        if ("\r\n{:,;()".includes(text[pos])) {
             break;
         }
         result += text[pos];
@@ -449,28 +455,28 @@ function parseVariableType(text: string) {
     for (let i = 0; i < text.length; i = nextI) {
         switch (state) {
             case "none":
-                nextI = movePosIfTextEqual(text, i, ["init", "case"]);
+                nextI = movePosIfTextEqual(text, i, ["init", "case "]);
                 if (nextI !== i) {
                     return undefined;
                 }
-                nextI = movePosIfTextEqual(text, i, ["let", "var"]);
+                nextI = movePosIfTextEqual(text, i, ["let ", "var "]);
                 if (nextI !== i) {
                     state = "var";
                     continue;
                 }
-                nextI = movePosIfTextEqual(text, i, "func");
+                nextI = movePosIfTextEqual(text, i, "func ");
                 if (nextI !== i) {
                     state = "func";
                     continue;
                 }
 
-                nextI = movePosIfTextEqual(text, i, "typealias");
+                nextI = movePosIfTextEqual(text, i, "typealias ");
                 if (nextI !== i) {
                     state = "typealias";
                     continue;
                 }
 
-                nextI = movePosIfTextEqual(text, i, ["class", "struct", "enum"]);
+                nextI = movePosIfTextEqual(text, i, ["class ", "struct ", "enum ", "protocol "]);
                 if (nextI !== i) {
                     state = "type";
                     continue;

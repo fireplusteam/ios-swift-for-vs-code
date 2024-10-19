@@ -23,6 +23,18 @@ suite("Definition Provider: Split Container", () => {
         );
         assert.deepStrictEqual(result, new Set(["Ok"]));
     });
+
+    test("Test 4", async () => {
+        const result = _private.splitContainers(
+            new Set(["Promise<(),Sub<() -> Void, () -> () -> ()>>.Second.Ok"])
+        );
+        assert.deepStrictEqual(result, new Set(["Ok"]));
+    });
+
+    test("Test 6", async () => {
+        const result = _private.splitContainers(new Set(["Int", "String", "One.Two", ""]));
+        assert.deepStrictEqual(result, new Set(["Int", "String", "Two"]));
+    });
 });
 
 suite("Definition Provider: Type Parser", () => {
@@ -83,6 +95,11 @@ suite("Definition Provider: Type Parser", () => {
         assert.deepStrictEqual(result, "Enn");
     });
 
+    test("Test 8.protocol", async () => {
+        const result = _private.parseVariableType(` protocol SomeProtocol : class `);
+        assert.deepStrictEqual(result, "SomeProtocol");
+    });
+
     test("Test 9", async () => {
         const result = _private.parseVariableType("static let dummy: `Self`");
         assert.deepStrictEqual(result, "Self");
@@ -91,6 +108,23 @@ suite("Definition Provider: Type Parser", () => {
     test("Test 10", async () => {
         const result = _private.parseVariableType("let sizes: [ProductState.Size]?");
         assert.deepStrictEqual(result, "[ProductState.Size]?");
+    });
+
+    test("Test 10. , at end", async () => {
+        const result = _private.parseVariableType("let sizes: [ProductState.Size]?,");
+        assert.deepStrictEqual(result, "[ProductState.Size]?");
+    });
+
+    test("Test 10. ; at end", async () => {
+        const result = _private.parseVariableType("let sizes: [ProductState.Size]?;");
+        assert.deepStrictEqual(result, "[ProductState.Size]?");
+    });
+
+    test("Test 10. ) at end", async () => {
+        const result = _private.parseVariableType(
+            "@Dependency(\\.productService) var productService: any ProductService)"
+        );
+        assert.deepStrictEqual(result, "ProductService");
     });
 
     test("Test 11", async () => {
