@@ -235,11 +235,11 @@ export class DefinitionProvider {
         }
     }
 
-    private openedFiles = new Set<string>();
     private async sendHoverRequestFromText(
         uri: vscode.Uri,
         text: string,
-        hoverPos: vscode.Position
+        hoverPos: vscode.Position,
+        isRecursiveCall = false
     ): Promise<string[] | null> {
         const hoverParams: langclient.HoverParams = {
             textDocument: { uri: uri.toString() },
@@ -254,13 +254,16 @@ export class DefinitionProvider {
                 return result.filter(e => e.includes("<<error type>>") === false);
             }
             return null;
-        } catch (error: any) {
+        } catch (error) {
             // code: -32001
             const langId = languageId(uri.fsPath);
             if (
-                error.code === -32001 &&
-                this.openedFiles.has(uri.toString()) === false &&
-                langId !== undefined
+                (typeof error === "object" &&
+                    error !== null &&
+                    "code" in error &&
+                    error.code === -32001 &&
+                    isRecursiveCall == false,
+                langId !== undefined)
             ) {
                 const didOpenParam: langclient.DidOpenTextDocumentParams = {
                     textDocument: {
@@ -277,11 +280,10 @@ export class DefinitionProvider {
                         langclient.DidOpenTextDocumentNotification.method,
                         didOpenParam
                     );
-                    this.openedFiles.add(uri.toString());
                 } catch {
                     return null;
                 }
-                return await this.sendHoverRequestFromText(uri, text, hoverPos);
+                return await this.sendHoverRequestFromText(uri, text, hoverPos, true);
             }
 
             return null;
