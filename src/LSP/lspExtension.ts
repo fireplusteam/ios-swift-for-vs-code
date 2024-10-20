@@ -165,3 +165,15 @@ export function getTestIDComponents(id: string) {
     const testName = components.at(-1);
     return { target: target, suite: suite, testName: testName };
 }
+
+export function languageId(file: string) {
+    if (file.endsWith(".swift")) {
+        return "swift";
+    }
+    if (file.endsWith(".m")) {
+        return "objective-c";
+    }
+    if (file.endsWith(".mm")) {
+        return "objective-cpp";
+    }
+}

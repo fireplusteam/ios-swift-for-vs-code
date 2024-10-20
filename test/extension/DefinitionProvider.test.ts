@@ -538,3 +538,91 @@ suite("Definition Provider: text with optionals", () => {
         assert.deepStrictEqual(result?.args, ["_", "_", "_"]);
     });
 });
+
+suite("Definition Provider: Declarative and Separators", () => {
+    test("Test 1", async () => {
+        const textWithComments = `
+            case .updateAvailability:
+                asfjaksj
+                return someService
+                    .someAction()
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("someAction"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "someAction");
+        assert.strictEqual(result?.container, "someService");
+        assert.deepStrictEqual(result?.args, []);
+    });
+
+    test("Test 2", async () => {
+        const textWithComments = `
+            case .updateAvailability:
+                asfjaksj
+                return someService
+                    .someAction()
+                    .race(on: Dispatch.main)
+                    .catch(with: .main)
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("race"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "race");
+        assert.strictEqual(result?.container, "someAction");
+        assert.deepStrictEqual(result?.args, ["on"]);
+    });
+
+    test("Test 3", async () => {
+        const textWithComments = `
+            let a = some + .opt(val)
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("opt"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "opt");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, ["_"]);
+    });
+
+    test("Test 4", async () => {
+        const textWithComments = `
+            let a = some && .opt(val)
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("opt"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "opt");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, ["_"]);
+    });
+
+    test("Test 3", async () => {
+        const textWithComments = `
+            let a = some - .secods * .opt(val, in: one, where: two) { return "ok" }
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("opt"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "opt");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, ["_", "in", "where"]);
+    });
+
+    test("Test 4", async () => {
+        const textWithComments = `
+            let a = some - .secods * prefix_L_Right.opt_trail_Ok(Va_l, In: ONE, where: Two) { return "ok" }
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("opt"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "opt_trail_Ok");
+        assert.strictEqual(result?.container, "prefix_L_Right");
+        assert.deepStrictEqual(result?.args, ["_", "In", "where"]);
+    });
+});

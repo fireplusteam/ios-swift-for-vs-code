@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { LSPTestItem, textDocumentTestsRequest } from "./lspExtension";
+import { languageId, LSPTestItem, textDocumentTestsRequest } from "./lspExtension";
 import { SwiftLSPClient } from "./SwiftLSPClient";
 import * as lp from "vscode-languageserver-protocol";
 import * as fs from "fs";
@@ -13,24 +13,12 @@ export class LSPTestsProvider {
         fs.writeFileSync(this.dummyFile, "");
     }
 
-    private languageId(file: string) {
-        if (file.endsWith(".swift")) {
-            return "swift";
-        }
-        if (file.endsWith(".m")) {
-            return "objective-c";
-        }
-        if (file.endsWith(".mm")) {
-            return "objective-cpp";
-        }
-    }
-
     async fetchTests(document: vscode.Uri, content: string): Promise<LSPTestItem[]> {
         this.version++;
 
         const client = await this.lspClient.client();
-        const languageId = this.languageId(document.fsPath);
-        if (languageId === undefined) {
+        const langId = languageId(document.fsPath);
+        if (langId === undefined) {
             return [];
         }
 
@@ -39,7 +27,7 @@ export class LSPTestsProvider {
         const didOpenParam: lp.DidOpenTextDocumentParams = {
             textDocument: {
                 uri: dummyUri.toString(),
-                languageId: languageId,
+                languageId: langId,
                 text: content,
                 version: this.version,
             },
