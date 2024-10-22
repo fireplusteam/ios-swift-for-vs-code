@@ -24,7 +24,6 @@ export class DefinitionProvider {
         position: vscode.Position,
         cancel: vscode.CancellationToken
     ) {
-        // vscode.commands.executeCommand("workbench.action.showAllSymbols");
         const text = document.getText();
         const positionOffset = document.offsetAt(position);
 
@@ -53,16 +52,17 @@ export class DefinitionProvider {
             const result = await client.sendRequest(langclient.WorkspaceSymbolRequest.method, {
                 query: query,
             });
-            const documentSymbol = result as vscode.SymbolInformation[];
+            const documentSymbol = result as langclient.SymbolInformation[];
             if (documentSymbol && documentSymbol.length > 0) {
                 return sortedDocumentSymbol(
                     documentSymbol,
                     option.symbol,
+                    option.container,
                     containers,
                     option.args
                 ).map(e => {
                     const uri = vscode.Uri.parse(e.location.uri.toString());
-                    return new vscode.Location(uri, e.location.range);
+                    return new vscode.Location(uri, e.location.range as vscode.Range);
                 });
             }
         }
@@ -130,6 +130,7 @@ export class DefinitionProvider {
         allSymbols = sortedDocumentSymbol(
             allSymbols,
             symbolAtCursorPosition.symbol,
+            symbolAtCursorPosition.container,
             containers,
             symbolAtCursorPosition.args
         );
@@ -152,6 +153,7 @@ export class DefinitionProvider {
         allSymbols = sortedDocumentSymbol(
             allSymbols,
             query,
+            symbolAtCursorPosition.container,
             containers,
             symbolAtCursorPosition.args
         );
@@ -160,7 +162,7 @@ export class DefinitionProvider {
     }
 
     async transformToTypes(
-        allSymbols: vscode.SymbolInformation[],
+        allSymbols: langclient.SymbolInformation[],
         cancel: vscode.CancellationToken
     ) {
         const types = new Set<string>();
@@ -189,7 +191,7 @@ export class DefinitionProvider {
         const result = await client.sendRequest(langclient.WorkspaceSymbolRequest.method, {
             query: query,
         });
-        const documentSymbol: vscode.SymbolInformation[] = result as vscode.SymbolInformation[];
+        const documentSymbol = result as langclient.SymbolInformation[];
 
         if (documentSymbol && documentSymbol.length > 0) {
             return documentSymbol;
@@ -337,10 +339,10 @@ function splitContainers(containers: Set<string>) {
     return result;
 }
 
-function symbolToLocation(symbols: vscode.SymbolInformation[]) {
+function symbolToLocation(symbols: langclient.SymbolInformation[]) {
     return symbols.map(e => {
         const uri = vscode.Uri.parse(e.location.uri.toString());
-        return new vscode.Location(uri, e.location.range);
+        return new vscode.Location(uri, e.location.range as vscode.Range);
     });
 }
 
@@ -363,8 +365,8 @@ function transformToLine(locations: vscode.Location[]) {
 }
 
 function filtered(
-    list: vscode.SymbolInformation[],
-    mapper: (val: vscode.SymbolInformation) => boolean
+    list: langclient.SymbolInformation[],
+    mapper: (val: langclient.SymbolInformation) => boolean
 ) {
     const result = list.filter(mapper);
     if (result.length > 0) {
@@ -374,7 +376,7 @@ function filtered(
 }
 
 function fuseSearch(
-    documentSymbols: vscode.SymbolInformation[],
+    documentSymbols: langclient.SymbolInformation[],
     name: string,
     args: string[],
     containers: Set<string>
@@ -395,12 +397,11 @@ function fuseSearch(
     for (const container of containers) {
         listOfContainers.push({ containerName: `${container}` }); // exact match
     }
-    let searchObj: any = { name: `^${name}` };
+    let query = `${name}`;
     if (args.length > 0) {
-        const argQuery = `(${args.map(e => `${e}:`).join("")})`;
-        searchObj = { $and: [searchObj, { name: argQuery }] };
+        query += `(${args.map(e => `${e}:`).join("")})`;
     }
-    let result = new Fuse(documentSymbols, fuseOptions).search(searchObj);
+    let result = new Fuse(documentSymbols, fuseOptions).search(query);
     result = result
         .filter((item: any) => {
             return item.score < 0.3;
@@ -423,26 +424,39 @@ function fuseSearch(
 }
 
 function sortedDocumentSymbol(
-    documentSymbols: vscode.SymbolInformation[],
+    documentSymbols: langclient.SymbolInformation[],
     name: string,
+    varName: string | undefined,
     containers: Set<string>,
     args: string[]
 ) {
     // console.log(fuse);
     // check if there's exact match
     documentSymbols = fuseSearch(documentSymbols, name, args, containers);
+    documentSymbols = documentSymbols.filter(e => {
+        const length = name.length;
+        // name should strictly be the same, the exception could be if it's a name of method or a property
+        if (e.name.at(length) !== undefined && e.name.at(length) !== "(") {
+            return false;
+        }
+        if (e.kind === langclient.SymbolKind.TypeParameter) {
+            // typeParameter, sourcekit-lsp returns 26 for type in method definition
+            return false;
+        }
+        return true;
+    });
     if (name === "init") {
         // likely constructor
         documentSymbols = filtered(documentSymbols, e => {
-            return e.kind === vscode.SymbolKind.Constructor;
+            return e.kind === langclient.SymbolKind.Constructor;
         });
     }
-    if (args.length === 0 && containers.size !== 0) {
+    if (args.length === 0 && (containers.size !== 0 || varName !== undefined)) {
         /// likely property or field
         documentSymbols = filtered(documentSymbols, e => {
             switch (e.kind) {
-                case vscode.SymbolKind.Property:
-                case vscode.SymbolKind.Field:
+                case langclient.SymbolKind.Property:
+                case langclient.SymbolKind.Field:
                     return true;
                 default:
                     return false;
@@ -452,7 +466,9 @@ function sortedDocumentSymbol(
     if (args.length > 0) {
         // likely method
         documentSymbols = filtered(documentSymbols, e => {
-            return e.kind === vscode.SymbolKind.Method || e.kind === vscode.SymbolKind.Function;
+            return (
+                e.kind === langclient.SymbolKind.Method || e.kind === langclient.SymbolKind.Function
+            );
         });
     }
     return documentSymbols;
