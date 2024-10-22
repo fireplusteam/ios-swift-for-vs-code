@@ -42,20 +42,18 @@ export class DefinitionProvider {
             );
         }
 
-        const optionsToCheck = generateChecksFromSymbol(symbolAtCursorPosition);
-        for (const option of optionsToCheck) {
+        const provide = async (option: SymbolToken) => {
             if (cancel.isCancellationRequested) {
                 return [];
             }
             const query = SymbolToString(option);
             const client = await this.lspClient.client();
-            const result = await client.sendRequest(langclient.WorkspaceSymbolRequest.method, {
+            const result = (await client.sendRequest(langclient.WorkspaceSymbolRequest.method, {
                 query: query,
-            });
-            const documentSymbol = result as langclient.SymbolInformation[];
-            if (documentSymbol && documentSymbol.length > 0) {
+            })) as langclient.SymbolInformation[];
+            if (result && result.length > 0) {
                 return sortedDocumentSymbol(
-                    documentSymbol,
+                    result,
                     option.symbol,
                     option.container,
                     containers,
@@ -64,6 +62,20 @@ export class DefinitionProvider {
                     const uri = vscode.Uri.parse(e.location.uri.toString());
                     return new vscode.Location(uri, e.location.range as vscode.Range);
                 });
+            }
+        };
+        let result = await provide(symbolAtCursorPosition);
+        if (result !== undefined) {
+            return result;
+        }
+        if (symbolAtCursorPosition.symbol[0] === symbolAtCursorPosition.symbol[0].toUpperCase()) {
+            // probably a constructor
+            symbolAtCursorPosition.container = symbolAtCursorPosition.symbol;
+            symbolAtCursorPosition.symbol = "init";
+            containers = new Set([symbolAtCursorPosition.container]);
+            result = await provide(symbolAtCursorPosition);
+            if (result !== undefined) {
+                return result;
             }
         }
 
@@ -472,11 +484,6 @@ function sortedDocumentSymbol(
         });
     }
     return documentSymbols;
-}
-
-function generateChecksFromSymbol(symbol: SymbolToken) {
-    const result: SymbolToken[] = [symbol];
-    return result;
 }
 
 function SymbolToString(symbol: SymbolToken) {
