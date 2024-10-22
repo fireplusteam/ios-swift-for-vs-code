@@ -625,4 +625,68 @@ suite("Definition Provider: Declarative and Separators", () => {
         assert.strictEqual(result?.container, "prefix_L_Right");
         assert.deepStrictEqual(result?.args, ["_", "In", "where"]);
     });
+    test("Test 5", async () => {
+        const textWithComments = `
+            return .send(.reload(updated))
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("send"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "send");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, ["_"]);
+    });
+
+    test("Test 6", async () => {
+        const textWithComments = `
+            var ab = .send(.reload(updated))
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("ab"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "ab");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, []);
+    });
+
+    test("Test 7", async () => {
+        const textWithComments = `
+            let ab = .send(.reload(updated))
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("ab"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "ab");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, []);
+    });
+
+    test("Test 8", async () => {
+        const textWithComments = `
+            if ab == .send(.reload(updated))
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("ab"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "ab");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, []);
+    });
+
+    test("Test 8", async () => {
+        const textWithComments = `
+            else ab == .send(.reload(updated))
+        `;
+        const result = _private.getSymbolAtPosition(
+            textWithComments.indexOf("ab"),
+            textWithComments
+        );
+        assert.strictEqual(result?.symbol, "ab");
+        assert.strictEqual(result?.container, undefined);
+        assert.deepStrictEqual(result?.args, []);
+    });
 });

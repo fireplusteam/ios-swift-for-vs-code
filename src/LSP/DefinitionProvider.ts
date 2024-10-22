@@ -4,6 +4,9 @@ import * as fs from "fs";
 import { SwiftLSPClient } from "./SwiftLSPClient";
 import { preCalcCommentedCode } from "../TestsProvider/TestItemProvider/parseClass";
 import { languageId } from "./lspExtension";
+// import Fuse from "fuse.js";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Fuse = require("fuse.js");
 
 interface SymbolToken {
     symbol: string;
@@ -16,7 +19,11 @@ interface SymbolToken {
 export class DefinitionProvider {
     constructor(private lspClient: SwiftLSPClient) {}
 
-    async provide(document: vscode.TextDocument, position: vscode.Position) {
+    async provide(
+        document: vscode.TextDocument,
+        position: vscode.Position,
+        cancel: vscode.CancellationToken
+    ) {
         // vscode.commands.executeCommand("workbench.action.showAllSymbols");
         const text = document.getText();
         const positionOffset = document.offsetAt(position);
@@ -28,53 +35,32 @@ export class DefinitionProvider {
 
         let containers = new Set<string>();
         if (symbolAtCursorPosition.container !== undefined) {
-            containers = await this.provideContainer(symbolAtCursorPosition.offset, text, document);
+            containers = await this.provideContainer(
+                symbolAtCursorPosition.offset,
+                text,
+                document,
+                cancel
+            );
         }
 
         const optionsToCheck = generateChecksFromSymbol(symbolAtCursorPosition);
         for (const option of optionsToCheck) {
+            if (cancel.isCancellationRequested) {
+                return [];
+            }
             const query = SymbolToString(option);
             const client = await this.lspClient.client();
             const result = await client.sendRequest(langclient.WorkspaceSymbolRequest.method, {
                 query: query,
             });
-            let documentSymbol: vscode.SymbolInformation[] = (
-                result as vscode.SymbolInformation[]
-            ).filter(e => {
-                if (option.args.length === 0) {
-                    // can be a method symbol
-                    if (e.name.toLocaleLowerCase() === `${query}()`.toLowerCase()) {
-                        return true;
-                    }
-                }
-                if (query.endsWith(")")) {
-                    if (e.name.startsWith(query.slice(0, -1))) {
-                        return true;
-                    }
-                }
-                return e.name.toLowerCase() === query.toLocaleLowerCase();
-            });
-
-            if (containers.size > 0) {
-                documentSymbol = filtered(documentSymbol, e => {
-                    try {
-                        return containers.has(e.containerName);
-                    } catch {
-                        return false;
-                    }
-                });
-            }
-
-            // documentSymbol = filtered(documentSymbol, e => {
-            //     try {
-            //         return e.containerName.toLowerCase().includes(option.container!.toLowerCase());
-            //     } catch {
-            //         return false;
-            //     }
-            // });
-
+            const documentSymbol = result as vscode.SymbolInformation[];
             if (documentSymbol && documentSymbol.length > 0) {
-                return sortedDocumentSymbol(documentSymbol, option).map(e => {
+                return sortedDocumentSymbol(
+                    documentSymbol,
+                    option.symbol,
+                    containers,
+                    option.args
+                ).map(e => {
                     const uri = vscode.Uri.parse(e.location.uri.toString());
                     return new vscode.Location(uri, e.location.range);
                 });
@@ -87,84 +73,101 @@ export class DefinitionProvider {
     private async provideContainer(
         positionOffset: number,
         text: string,
-        document: vscode.TextDocument
+        document: vscode.TextDocument,
+        cancel: vscode.CancellationToken
     ): Promise<Set<string>> {
-        const definitionPos = await this.sendDefinitionRequest(document, positionOffset);
         const types = new Set<string>();
+        if (cancel.isCancellationRequested) {
+            return types;
+        }
+        const definitionPos = await this.sendDefinitionRequest(document, positionOffset);
         if (definitionPos !== null && definitionPos.length > 0) {
             for (const definition of definitionPos) {
                 if (definition.uri.toString() !== document.uri.toString()) {
                     continue;
                 }
                 const offset = document.offsetAt(definition.range.start);
-                (await this.sendHoverRequest(document, offset))?.forEach(hover => {
+                const hovers = (await this.sendHoverRequest(document, offset)) || [];
+                for (const hover of hovers) {
+                    if (cancel.isCancellationRequested) {
+                        return types;
+                    }
                     const type = parseVariableType(hover);
                     if (type !== undefined) {
                         types.add(type);
                     }
-                });
+                }
             }
             return splitContainers(types);
         } else {
             // check hover information if we don't need to perform further search
-            (await this.sendHoverRequest(document, positionOffset))?.forEach(hover => {
+            const hovers = (await this.sendHoverRequest(document, positionOffset)) || [];
+            for (const hover of hovers) {
+                if (cancel.isCancellationRequested) {
+                    return types;
+                }
                 const type = parseVariableType(hover);
                 if (type !== undefined) {
                     types.add(type);
                 }
-            });
+            }
             if (types.size > 0) {
                 return splitContainers(types);
             }
         }
 
+        if (cancel.isCancellationRequested) {
+            return types;
+        }
         const symbolAtCursorPosition = getSymbolAtPosition(positionOffset, text);
         if (symbolAtCursorPosition === undefined) {
             // not a symbol
             return new Set<string>();
         }
         const query = SymbolToString(symbolAtCursorPosition);
-        const allSymbols = ((await this.sendAllSymbols(query)) || []).filter(e => {
-            if (symbolAtCursorPosition.args.length === 0) {
-                // can be a method symbol
-                if (e.name.toLocaleLowerCase() === `${query}()`.toLowerCase()) {
-                    return true;
-                }
-            }
-            if (query.endsWith(")")) {
-                if (e.name.startsWith(query.slice(0, -1))) {
-                    return true;
-                }
-            }
-            return e.name.toLowerCase() === query.toLocaleLowerCase();
-        });
+        let allSymbols = (await this.sendAllSymbols(query)) || [];
+        let containers = new Set<string>();
+        allSymbols = sortedDocumentSymbol(
+            allSymbols,
+            symbolAtCursorPosition.symbol,
+            containers,
+            symbolAtCursorPosition.args
+        );
+
         if (allSymbols === undefined || allSymbols.length === 0) {
             return new Set<string>();
         }
         if (symbolAtCursorPosition.container === undefined) {
             // root element, no containers found
-            return await this.transformToTypes(allSymbols);
+            return this.transformToTypes(allSymbols, cancel);
         }
         if (allSymbols.length > 1) {
-            const containers = await this.provideContainer(
+            containers = await this.provideContainer(
                 symbolAtCursorPosition.offset,
                 text,
-                document
+                document,
+                cancel
             );
-            allSymbols.filter(symbol => {
-                if (containers.size > 0) {
-                    return containers.has(symbol.containerName);
-                }
-                return true;
-            });
         }
+        allSymbols = sortedDocumentSymbol(
+            allSymbols,
+            query,
+            containers,
+            symbolAtCursorPosition.args
+        );
 
-        return await this.transformToTypes(allSymbols);
+        return this.transformToTypes(allSymbols, cancel);
     }
 
-    async transformToTypes(allSymbols: vscode.SymbolInformation[]) {
+    async transformToTypes(
+        allSymbols: vscode.SymbolInformation[],
+        cancel: vscode.CancellationToken
+    ) {
         const types = new Set<string>();
         for (const location of transformToLine(symbolToLocation(allSymbols))) {
+            if (cancel.isCancellationRequested) {
+                return types;
+            }
             const hovers =
                 (await this.sendHoverRequestFromText(
                     location.location.uri,
@@ -262,7 +265,7 @@ export class DefinitionProvider {
                     error !== null &&
                     "code" in error &&
                     error.code === -32001 &&
-                    isRecursiveCall == false,
+                    isRecursiveCall === false,
                 langId !== undefined)
             ) {
                 const didOpenParam: langclient.DidOpenTextDocumentParams = {
@@ -370,24 +373,71 @@ function filtered(
     return list;
 }
 
+function fuseSearch(
+    documentSymbols: vscode.SymbolInformation[],
+    name: string,
+    args: string[],
+    containers: Set<string>
+) {
+    const fuseOptions = {
+        keys: ["name"],
+        isCaseSensitive: true,
+        shouldSort: true,
+        includeScore: true,
+        ignoreLocation: false,
+        findAllMatches: true,
+        location: 0,
+        distance: 0,
+        minMatchCharLength: 3,
+        useExtendedSearch: true,
+    };
+    const listOfContainers = [];
+    for (const container of containers) {
+        listOfContainers.push({ containerName: `${container}` }); // exact match
+    }
+    let searchObj: any = { name: `^${name}` };
+    if (args.length > 0) {
+        const argQuery = `(${args.map(e => `${e}:`).join("")})`;
+        searchObj = { $and: [searchObj, { name: argQuery }] };
+    }
+    let result = new Fuse(documentSymbols, fuseOptions).search(searchObj);
+    result = result
+        .filter((item: any) => {
+            return item.score < 0.3;
+        })
+        .map((item: any) => {
+            return item.item;
+        });
+    if (listOfContainers.length > 0) {
+        fuseOptions.keys = ["containerName"];
+        result = new Fuse(result, fuseOptions)
+            .search({ $or: listOfContainers })
+            .filter((item: any) => {
+                return item.score < 0.3;
+            })
+            .map((item: any) => {
+                return item.item;
+            });
+    }
+    return result;
+}
+
 function sortedDocumentSymbol(
     documentSymbols: vscode.SymbolInformation[],
-    symbolToken: SymbolToken
+    name: string,
+    containers: Set<string>,
+    args: string[]
 ) {
+    // console.log(fuse);
     // check if there's exact match
-    documentSymbols = filtered(documentSymbols, e => {
-        return symbolToken.symbol === e.name;
-    });
-    documentSymbols = filtered(documentSymbols, e => {
-        return symbolToken.container === e.containerName;
-    });
-    if (symbolToken.symbol === "init") {
+    documentSymbols = fuseSearch(documentSymbols, name, args, containers);
+    if (name === "init") {
         // likely constructor
         documentSymbols = filtered(documentSymbols, e => {
             return e.kind === vscode.SymbolKind.Constructor;
         });
     }
-    if (symbolToken.args.length === 0 && symbolToken.container !== undefined) {
+    if (args.length === 0 && containers.size !== 0) {
         /// likely property or field
         documentSymbols = filtered(documentSymbols, e => {
             switch (e.kind) {
@@ -399,7 +449,7 @@ function sortedDocumentSymbol(
             }
         });
     }
-    if (symbolToken.args.length > 0) {
+    if (args.length > 0) {
         // likely method
         documentSymbols = filtered(documentSymbols, e => {
             return e.kind === vscode.SymbolKind.Method || e.kind === vscode.SymbolKind.Function;
@@ -410,16 +460,6 @@ function sortedDocumentSymbol(
 
 function generateChecksFromSymbol(symbol: SymbolToken) {
     const result: SymbolToken[] = [symbol];
-    // if (symbol.args.length > 0) {
-    //     result.push({
-    //         symbol: "init",
-    //         args: symbol.args,
-    //         container: symbol.symbol, // in that case it's an init of Symbol struct or class
-    //         offset: symbol.offset,
-    //         endOffset: symbol.endOffset,
-    //     });
-    // }
-
     return result;
 }
 
@@ -784,7 +824,7 @@ function parseArguments(
 function getSymbolAtPosition(position: number, text: string): SymbolToken | undefined {
     const commented = preCalcCommentedCode(text);
     const symbol = parseSingleToken(position, text, commented);
-    if (symbol === undefined) {
+    if (symbol === undefined || isKeyword(symbol?.token)) {
         return undefined;
     }
 
@@ -795,6 +835,9 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
         // not an argument
         // parse arguments and container
         container = parseContainer(symbol.start - 1, text, commented);
+        if (isKeyword(container?.token)) {
+            container = undefined;
+        }
         args = parseArguments(symbol.end + 1, text, commented);
         if (args) {
             args.args = args.args.map(e => {
@@ -827,3 +870,24 @@ export const _private = {
     parseVariableType,
     splitContainers,
 };
+function isKeyword(keyWord: string | undefined) {
+    switch (keyWord) {
+        case "return":
+        case "case":
+        case "for":
+        case "if":
+        case "guard":
+        case "switch":
+        case "else":
+        case "let":
+        case "var":
+        case "class":
+        case "struct":
+        case "enum":
+        case "protocol":
+        case "func":
+        case "_":
+            return true;
+    }
+    return false;
+}

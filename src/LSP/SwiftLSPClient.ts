@@ -131,7 +131,11 @@ export class SwiftLSPClient {
                         return new vscode.Location(uri, definitions[0].range);
                     }
                     if (result === null || result === undefined) {
-                        const res = await this.definitionProvider.provide(document, position);
+                        const res = await this.definitionProvider.provide(
+                            document,
+                            position,
+                            token
+                        );
                         return res;
                     }
                     return result;
