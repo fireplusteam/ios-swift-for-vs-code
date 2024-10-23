@@ -275,12 +275,12 @@ export class DefinitionProvider {
             // code: -32001
             const langId = languageId(uri.fsPath);
             if (
-                (typeof error === "object" &&
-                    error !== null &&
-                    "code" in error &&
-                    error.code === -32001 &&
-                    isRecursiveCall === false,
-                langId !== undefined)
+                typeof error === "object" &&
+                error !== null &&
+                "code" in error &&
+                error.code === -32001 &&
+                isRecursiveCall === false &&
+                langId !== undefined
             ) {
                 const didOpenParam: langclient.DidOpenTextDocumentParams = {
                     textDocument: {
