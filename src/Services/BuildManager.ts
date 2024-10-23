@@ -16,6 +16,9 @@ export class BuildManager {
             "-resultBundlePath",
             ".vscode/.bundle",
             "-skipMacroValidation",
+            "-skipPackageUpdates", // to speed up the build
+            "-disableAutomaticPackageResolution",
+            "-onlyUsePackageVersionsFromResolvedFile",
             "-showBuildTimingSummary",
             await projectEnv.projectType,
             await projectEnv.projectFile,
