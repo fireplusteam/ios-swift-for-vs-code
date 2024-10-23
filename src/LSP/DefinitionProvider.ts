@@ -16,6 +16,10 @@ interface SymbolToken {
     endOffset: number;
 }
 
+// if it's more then 40, then it's too many combination anyway
+const maxNumberOfSymbolsToCheckOnTypes = 40;
+const maxRecursiveCalls = 5;
+
 export class DefinitionProvider {
     constructor(private lspClient: SwiftLSPClient) {}
 
@@ -38,6 +42,7 @@ export class DefinitionProvider {
                 symbolAtCursorPosition.offset,
                 text,
                 document,
+                0,
                 cancel
             );
         }
@@ -53,6 +58,7 @@ export class DefinitionProvider {
             })) as langclient.SymbolInformation[];
             if (result && result.length > 0) {
                 return sortedDocumentSymbol(
+                    document.uri.toString(),
                     result,
                     option.symbol,
                     option.container,
@@ -65,7 +71,7 @@ export class DefinitionProvider {
             }
         };
         let result = await provide(symbolAtCursorPosition);
-        if (result !== undefined) {
+        if (result !== undefined && result.length > 0) {
             return result;
         }
         if (symbolAtCursorPosition.symbol[0] === symbolAtCursorPosition.symbol[0].toUpperCase()) {
@@ -73,6 +79,13 @@ export class DefinitionProvider {
             symbolAtCursorPosition.container = symbolAtCursorPosition.symbol;
             symbolAtCursorPosition.symbol = "init";
             containers = new Set([symbolAtCursorPosition.container]);
+            result = await provide(symbolAtCursorPosition);
+            if (result !== undefined) {
+                return result;
+            }
+        } else if (symbolAtCursorPosition.args.length > 0) {
+            // probably a property of closure type
+            symbolAtCursorPosition.args = [];
             result = await provide(symbolAtCursorPosition);
             if (result !== undefined) {
                 return result;
@@ -86,43 +99,37 @@ export class DefinitionProvider {
         positionOffset: number,
         text: string,
         document: vscode.TextDocument,
+        recursiveCall: number,
         cancel: vscode.CancellationToken
     ): Promise<Set<string>> {
         const types = new Set<string>();
-        if (cancel.isCancellationRequested) {
+        if (cancel.isCancellationRequested || recursiveCall >= maxRecursiveCalls) {
             return types;
         }
         const definitionPos = await this.sendDefinitionRequest(document, positionOffset);
         if (definitionPos !== null && definitionPos.length > 0) {
-            for (const definition of definitionPos) {
-                if (definition.uri.toString() !== document.uri.toString()) {
-                    continue;
-                }
-                const offset = document.offsetAt(definition.range.start);
-                const hovers = (await this.sendHoverRequest(document, offset)) || [];
-                for (const hover of hovers) {
-                    if (cancel.isCancellationRequested) {
-                        return types;
-                    }
-                    const type = parseVariableType(hover);
-                    if (type !== undefined) {
-                        types.add(type);
-                    }
-                }
+            const definitions = transformToLine(definitionPos);
+            for (const definition of definitions) {
+                const defTypes = await this.transformAlias(
+                    definition.location.uri,
+                    definition.text,
+                    definition.location.range.start,
+                    definition.offset,
+                    cancel
+                );
+                defTypes?.forEach(type => types.add(type));
             }
             return splitContainers(types);
         } else {
             // check hover information if we don't need to perform further search
-            const hovers = (await this.sendHoverRequest(document, positionOffset)) || [];
-            for (const hover of hovers) {
-                if (cancel.isCancellationRequested) {
-                    return types;
-                }
-                const type = parseVariableType(hover);
-                if (type !== undefined) {
-                    types.add(type);
-                }
-            }
+            const hovTypes = await this.transformAlias(
+                document.uri,
+                document.getText(),
+                document.positionAt(positionOffset),
+                positionOffset,
+                cancel
+            );
+            hovTypes?.forEach(type => types.add(type));
             if (types.size > 0) {
                 return splitContainers(types);
             }
@@ -140,6 +147,7 @@ export class DefinitionProvider {
         let allSymbols = (await this.sendAllSymbols(query)) || [];
         let containers = new Set<string>();
         allSymbols = sortedDocumentSymbol(
+            document.uri.toString(),
             allSymbols,
             symbolAtCursorPosition.symbol,
             symbolAtCursorPosition.container,
@@ -159,12 +167,14 @@ export class DefinitionProvider {
                 symbolAtCursorPosition.offset,
                 text,
                 document,
+                recursiveCall + 1,
                 cancel
             );
         }
         allSymbols = sortedDocumentSymbol(
+            document.uri.toString(),
             allSymbols,
-            query,
+            symbolAtCursorPosition.symbol,
             symbolAtCursorPosition.container,
             containers,
             symbolAtCursorPosition.args
@@ -173,27 +183,73 @@ export class DefinitionProvider {
         return this.transformToTypes(allSymbols, cancel);
     }
 
-    async transformToTypes(
+    private async transformAlias(
+        uri: vscode.Uri,
+        text: string,
+        position: vscode.Position,
+        offset: number,
+        cancel: vscode.CancellationToken
+    ) {
+        const hovers = (await this.sendHoverRequestFromText(uri, text, position)) || [];
+        const types = new Set<string>();
+        for (const hover of hovers) {
+            if (cancel.isCancellationRequested) {
+                return types;
+            }
+            const type = parseVariableType(hover)?.type;
+            if (type !== undefined) {
+                const posOffset = findLeftTypePattern(text, offset);
+                const typeInText = parseVariableType(text, posOffset);
+                if (
+                    typeInText?.type !== undefined &&
+                    removeOptionalFromType(type) === removeOptionalFromType(typeInText.type) &&
+                    typeInText.offset !== undefined
+                ) {
+                    const possibleTypeAliasHover =
+                        (await this.sendHoverRequestFromText(
+                            uri,
+                            text,
+                            getPosition(text, typeInText.offset)
+                        )) || [];
+                    for (const typeAlias of possibleTypeAliasHover) {
+                        if (cancel.isCancellationRequested) {
+                            return types;
+                        }
+                        const newType = parseVariableType(typeAlias)?.type;
+                        if (newType) {
+                            types.add(newType);
+                        }
+                    }
+                } else {
+                    types.add(type);
+                }
+            }
+        }
+        return types;
+    }
+
+    private async transformToTypes(
         allSymbols: langclient.SymbolInformation[],
         cancel: vscode.CancellationToken
     ) {
         const types = new Set<string>();
+        if (allSymbols.length > maxNumberOfSymbolsToCheckOnTypes) {
+            // limit, otherwise it too long anyway to wait
+            return types;
+        }
         for (const location of transformToLine(symbolToLocation(allSymbols))) {
             if (cancel.isCancellationRequested) {
                 return types;
             }
-            const hovers =
-                (await this.sendHoverRequestFromText(
-                    location.location.uri,
-                    location.text,
-                    location.location.range.start
-                )) || [];
-            for (const hover of hovers) {
-                const type = parseVariableType(hover);
-                if (type !== undefined) {
-                    types.add(type);
-                }
-            }
+            const defTypes = await this.transformAlias(
+                location.location.uri,
+                location.text,
+                location.location.range.start,
+                location.offset,
+                cancel
+            );
+
+            defTypes?.forEach(type => types.add(type));
         }
         return splitContainers(types);
     }
@@ -229,26 +285,6 @@ export class DefinitionProvider {
             });
         } catch {
             return [];
-        }
-    }
-
-    private async sendHoverRequest(document: vscode.TextDocument, offset: number) {
-        const hoverPos = document.positionAt(offset);
-        const hoverParams: langclient.HoverParams = {
-            textDocument: { uri: document.uri.toString() },
-            position: langclient.Position.create(hoverPos.line, hoverPos.character),
-        };
-        try {
-            const hover = (await (
-                await this.lspClient.client()
-            ).sendRequest(langclient.HoverRequest.method, hoverParams)) as langclient.Hover;
-            const result = covertHoverToString(hover);
-            if (result) {
-                return result.filter(e => e.includes("<<error type>>") === false);
-            }
-            return null;
-        } catch {
-            return null;
         }
     }
 
@@ -358,21 +394,56 @@ function symbolToLocation(symbols: langclient.SymbolInformation[]) {
     });
 }
 
+function getPosition(text: string, offset: number): vscode.Position {
+    let line = 0,
+        ch = 0;
+    const end = Math.min(offset, text.length);
+    for (let i = 0; i < end; ++i) {
+        if (text[i] === "\n") {
+            line++;
+            ch = 0;
+        } else {
+            ++ch;
+        }
+    }
+    return new vscode.Position(line, ch);
+}
+
 function transformToLine(locations: vscode.Location[]) {
     return locations.map(e => {
         const document = vscode.workspace.textDocuments
             .filter(doc => doc.uri.fsPath === e.uri.fsPath)
             .at(0);
         let text: string | undefined;
+        let offset = 0;
         if (document) {
             // document was edited, check the cached version
             text = document.getText();
+            offset = document.offsetAt(e.range.start);
         } // else this doc file is not open, fine to read it from a disk
         if (text === undefined) {
             text = fs.readFileSync(e.uri.fsPath).toString();
+            for (let line = 0, ch = 0; offset < text.length; ++offset) {
+                if (line === e.range.start.line && ch === e.range.start.character) {
+                    break;
+                }
+                if (text[offset] === "\n") {
+                    ++line;
+                    ch = 0;
+                } else {
+                    ++ch;
+                }
+            }
         }
 
-        return { location: e, text: text };
+        if (document) {
+            const ff = document.offsetAt(e.range.start);
+            if (ff !== offset) {
+                console.log("wrong");
+            }
+        }
+
+        return { location: e, offset: offset, text: text };
     });
 }
 
@@ -401,29 +472,19 @@ function fuseSearch(
         ignoreLocation: false,
         findAllMatches: true,
         location: 0,
-        distance: 0,
-        minMatchCharLength: 3,
-        useExtendedSearch: true,
+        distance: 20,
+        minMatchCharLength: 2,
+        // useExtendedSearch: true,
     };
     const listOfContainers = [];
     for (const container of containers) {
         listOfContainers.push({ containerName: `${container}` }); // exact match
     }
-    let query = `${name}`;
-    if (args.length > 0) {
-        query += `(${args.map(e => `${e}:`).join("")})`;
-    }
-    let result = new Fuse(documentSymbols, fuseOptions).search(query);
-    result = result
-        .filter((item: any) => {
-            return item.score < 0.3;
-        })
-        .map((item: any) => {
-            return item.item;
-        });
+
     if (listOfContainers.length > 0) {
+        // in case of having container, we just display all results in containers
         fuseOptions.keys = ["containerName"];
-        result = new Fuse(result, fuseOptions)
+        const result = new Fuse(documentSymbols, fuseOptions)
             .search({ $or: listOfContainers })
             .filter((item: any) => {
                 return item.score < 0.3;
@@ -431,11 +492,26 @@ function fuseSearch(
             .map((item: any) => {
                 return item.item;
             });
+        return result;
+    } else {
+        let query = `${name}`;
+        if (args.length > 0) {
+            query += `(${args.map(e => `${e}:`).join("")})`;
+        }
+        const result = new Fuse(documentSymbols, fuseOptions)
+            .search(query)
+            .filter((item: any) => {
+                return item.score < 0.3 || containers.has(item.item.containerName);
+            })
+            .map((item: any) => {
+                return item.item;
+            });
+        return result;
     }
-    return result;
 }
 
 function sortedDocumentSymbol(
+    symbolUrl: string,
     documentSymbols: langclient.SymbolInformation[],
     name: string,
     varName: string | undefined,
@@ -449,6 +525,9 @@ function sortedDocumentSymbol(
         const length = name.length;
         // name should strictly be the same, the exception could be if it's a name of method or a property
         if (e.name.at(length) !== undefined && e.name.at(length) !== "(") {
+            return false;
+        }
+        if (e.name.slice(0, length) !== name) {
             return false;
         }
         if (e.kind === langclient.SymbolKind.TypeParameter) {
@@ -483,6 +562,9 @@ function sortedDocumentSymbol(
             );
         });
     }
+    documentSymbols = filtered(documentSymbols, e => {
+        return e.location.uri.toString() === symbolUrl;
+    });
     return documentSymbols;
 }
 
@@ -501,16 +583,31 @@ function isNotAllowedChar(ch: string) {
     return /[\s[\]()"',.{}:]/.test(ch);
 }
 
-function movePosIfTextEqual(text: string, pos: number, str: string[] | string) {
+function movePosIfTextEqual(
+    text: string,
+    pos: number,
+    str: string[] | string,
+    direction: "right" | "left" = "right"
+) {
     if (str instanceof Array) {
         for (const s of str) {
-            if (text.slice(pos, pos + s.length) === s) {
-                return pos + s.length;
+            if (direction === "right") {
+                if (text.slice(pos, pos + s.length) === s) {
+                    return pos + s.length;
+                }
+            } else {
+                if (text.slice(pos - s.length + 1, pos + 1) === s) {
+                    return pos - s.length + 1;
+                }
             }
         }
         return pos;
     }
-    return text.slice(pos, pos + str.length) === str ? pos + str.length : pos;
+    if (direction === "right") {
+        return text.slice(pos, pos + str.length) === str ? pos + str.length : pos;
+    } else {
+        return text.slice(pos - str.length + 1, pos + 1) === str ? pos - str.length + 1 : pos;
+    }
 }
 
 function movePosUntilFirstNonWhiteSpace(text: string, pos: number) {
@@ -524,6 +621,7 @@ function movePosUntilFirstNonWhiteSpace(text: string, pos: number) {
 
 function parseType(text: string, pos: number, commented: boolean[]) {
     let result = "";
+    let startOffset: number | undefined = undefined;
     for (; pos < text.length; ++pos) {
         if (commented[pos]) {
             continue;
@@ -553,19 +651,58 @@ function parseType(text: string, pos: number, commented: boolean[]) {
             }
             break;
         }
-        if ("\r\n{:,;()".includes(text[pos])) {
+        if ("\r\n{:,;()=".includes(text[pos])) {
             break;
+        }
+        if (startOffset === undefined) {
+            startOffset = pos;
         }
         result += text[pos];
     }
-    return result.replaceAll(/\s/g, "").replaceAll("`", "");
+    return { type: result.replaceAll(/\s/g, "").replaceAll("`", ""), offset: startOffset };
 }
 
-function parseVariableType(text: string) {
+function removeOptionalFromType(type: string) {
+    while (type.length > 0 && type.at(-1) !== undefined && "?!".includes(type.at(-1) || "")) {
+        type = type.slice(0, -1);
+    }
+    return type;
+}
+
+function findLeftTypePattern(text: string, offset: number) {
+    let nextI = offset;
+    for (let i = offset; i >= 0; --i) {
+        nextI = movePosIfTextEqual(text, i, ["init", "case "], "left");
+        if (nextI !== i) {
+            return undefined;
+        }
+        nextI = movePosIfTextEqual(text, i, ["let ", "var "], "left");
+        if (nextI !== i) {
+            return nextI;
+        }
+        nextI = movePosIfTextEqual(text, i, "func ", "left");
+        if (nextI !== i) {
+            return nextI;
+            continue;
+        }
+
+        nextI = movePosIfTextEqual(text, i, "typealias ", "left");
+        if (nextI !== i) {
+            return nextI;
+        }
+
+        nextI = movePosIfTextEqual(text, i, ["class ", "struct ", "enum ", "protocol "], "left");
+        if (nextI !== i) {
+            return nextI;
+        }
+    }
+}
+
+function parseVariableType(text: string, offset = 0) {
     const commented = preCalcCommentedCode(text);
     let state: "var" | "typealias" | "type" | "func" | "funcReturn" | "none" = "none";
-    let nextI = 0;
-    for (let i = 0; i < text.length; i = nextI) {
+    let nextI = offset;
+    for (let i = offset; i < text.length; i = nextI) {
         switch (state) {
             case "none":
                 nextI = movePosIfTextEqual(text, i, ["init", "case "]);
@@ -640,7 +777,7 @@ function parseVariableType(text: string) {
                     continue;
                 }
                 if ("{\n".includes(text[i]) || i === text.length - 1) {
-                    return "Void";
+                    return { type: "Void", offset: undefined };
                 }
                 break;
         }
@@ -888,11 +1025,6 @@ function getSymbolAtPosition(position: number, text: string): SymbolToken | unde
     };
 }
 
-export const _private = {
-    getSymbolAtPosition,
-    parseVariableType,
-    splitContainers,
-};
 function isKeyword(keyWord: string | undefined) {
     switch (keyWord) {
         case "return":
@@ -914,3 +1046,11 @@ function isKeyword(keyWord: string | undefined) {
     }
     return false;
 }
+
+export const _private = {
+    getSymbolAtPosition,
+    parseVariableType,
+    splitContainers,
+    findLeftTypePattern,
+    getPosition,
+};
