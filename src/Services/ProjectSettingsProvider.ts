@@ -51,6 +51,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
+            mode: ExecutorMode.verbose,
         });
 
         const devices = result.stdout.split("\n").filter(e => e.indexOf("platform:") !== -1);
@@ -119,7 +120,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 buildConfiguration,
                 "-json",
             ],
-            mode: ExecutorMode.onlyCommandNameAndResult,
+            mode: ExecutorMode.verbose,
         });
         const jsonSettings = JSON.parse(settings.stdout);
         ProjectSettingsProvider.cachedSettings = [

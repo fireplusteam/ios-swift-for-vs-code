@@ -34,9 +34,24 @@ export class BuildManager {
                 await context.projectSettingsProvider.projectEnv.projectType,
                 await context.projectSettingsProvider.projectEnv.projectFile,
                 "-checkFirstLaunchStatus",
-                "-resolvePackageDependencies",
             ],
             mode: ExecutorMode.verbose,
+        });
+
+        await context.execShellWithOptions({
+            scriptOrCommand: { command: "xcodebuild" },
+            args: [
+                "-resolvePackageDependencies",
+                await context.projectSettingsProvider.projectEnv.projectType,
+                await context.projectSettingsProvider.projectEnv.projectFile,
+                "-scheme",
+                await context.projectSettingsProvider.projectEnv.projectScheme,
+            ],
+            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+            pipe: {
+                scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
+                mode: ExecutorMode.stdout,
+            },
         });
     }
 

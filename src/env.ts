@@ -149,6 +149,8 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
     async setProjectScheme(scheme: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_SCHEME", scheme);
+        // if the scheme was changed then we need to update dependencies
+        this.firstLaunchedConfigured = false;
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_CONFIGURATION", configuration);
