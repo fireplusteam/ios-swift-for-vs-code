@@ -273,6 +273,16 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
     }
 }
 
+export async function updatePackageDependencies(commandContext: CommandContext, check = true) {
+    if (check) {
+        await checkWorkspace(commandContext);
+    }
+    const buildManager = new BuildManager();
+    await buildManager.checkFirstLaunchStatus(commandContext);
+    // at this point everything is set
+    commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured = true;
+}
+
 export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         let validProjectScheme: boolean = false;
@@ -325,11 +335,8 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             await generateXcodeServer(commandContext, false);
         }
         if (commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured === false) {
-            const buildManager = new BuildManager();
-            await buildManager.checkFirstLaunchStatus(commandContext);
+            updatePackageDependencies(commandContext, false);
         }
-        // at this point everything is set
-        commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured = true;
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {
             return await checkWorkspace(commandContext, ignoreFocusOut);

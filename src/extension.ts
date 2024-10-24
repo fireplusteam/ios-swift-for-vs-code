@@ -22,6 +22,7 @@ import {
     selectDevice,
     selectProjectFile,
     selectTarget,
+    updatePackageDependencies,
 } from "./commands";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
@@ -416,6 +417,14 @@ export async function activate(context: vscode.ExtensionContext) {
             } catch {
                 vscode.window.showErrorMessage("Project was not reloaded due to error");
             }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.run.project.update.deps", async () => {
+            atomicCommand.userCommand(async context => {
+                await updatePackageDependencies(context);
+            }, "Update Package Dependencies");
         })
     );
 }

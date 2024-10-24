@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.4.1",
+    "version": "0.4.2",
     "os": [
         "darwin"
     ],
@@ -190,11 +190,11 @@
         "commands": [
             {
                 "command": "vscode-ios.tools.install",
-                "title": "iOS: Install Dependencies"
+                "title": "iOS: Install Extension Dependencies"
             },
             {
                 "command": "vscode-ios.tools.update",
-                "title": "iOS: Update Dependencies"
+                "title": "iOS: Update Extensions Dependencies"
             },
             {
                 "command": "vscode-ios.project.select",
@@ -266,6 +266,10 @@
             {
                 "command": "vscode-ios.run.project.reload",
                 "title": "iOS: Project: Reload"
+            },
+            {
+                "command": "vscode-ios.run.project.update.deps",
+                "title": "iOS: Project: Update Package Dependencies"
             }
         ],
         "languages": [
