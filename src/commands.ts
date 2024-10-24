@@ -24,6 +24,7 @@ import { QuickPickItem, showPicker } from "./inputPicker";
 import { emptyAppLog, isFolder } from "./utils";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { RunManager } from "./Services/RunManager";
+import { BuildManager } from "./Services/BuildManager";
 
 function filterDevices(
     devices: { [name: string]: string }[],
@@ -323,6 +324,12 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if ((await isBuildServerValid()) === false) {
             await generateXcodeServer(commandContext, false);
         }
+        if (commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured === false) {
+            const buildManager = new BuildManager();
+            await buildManager.checkFirstLaunchStatus(commandContext);
+        }
+        // at this point everything is set
+        commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured = true;
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {
             return await checkWorkspace(commandContext, ignoreFocusOut);

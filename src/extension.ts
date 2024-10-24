@@ -26,7 +26,7 @@ import {
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { askIfDebuggable, setContext } from "./inputPicker";
+import { askIfDebuggable, initializeWithError, setContext } from "./inputPicker";
 import { emptyLog, getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
@@ -82,13 +82,10 @@ async function initialize(
     emptyLog(".logs/debugger.launching");
     try {
         await atomicCommand.userCommand(async context => {
-            try {
-                await checkWorkspace(context, true);
-            } catch (error) {
-                console.log(`${error}`);
-            }
+            await checkWorkspace(context, true);
         }, "Initialize");
-    } catch {
+    } catch (error) {
+        await initializeWithError(error);
         // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
     }
     lsp.start();
@@ -459,5 +456,7 @@ export async function handleValidationErrors<T>(
             throw error;
         }
         return await repeatOnChange();
+    } else {
+        throw error;
     }
 }

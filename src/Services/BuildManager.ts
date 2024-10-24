@@ -27,6 +27,19 @@ export class BuildManager {
         ];
     }
 
+    async checkFirstLaunchStatus(context: CommandContext) {
+        await context.execShellWithOptions({
+            scriptOrCommand: { command: "xcodebuild" },
+            args: [
+                await context.projectSettingsProvider.projectEnv.projectType,
+                await context.projectSettingsProvider.projectEnv.projectFile,
+                "-checkFirstLaunchStatus",
+                "-resolvePackageDependencies",
+            ],
+            mode: ExecutorMode.verbose,
+        });
+    }
+
     async build(context: CommandContext, logFilePath: string) {
         deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
 
@@ -56,6 +69,7 @@ export class BuildManager {
             args: [
                 "build-for-testing",
                 ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
+                "-skipUnavailableActions", // for autocomplete, skip if it fails
                 "-jobs",
                 "4",
             ],

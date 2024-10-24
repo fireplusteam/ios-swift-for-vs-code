@@ -13,13 +13,22 @@ export const ProjectSchemeMissedError = new CustomError(
 export const ProjectConfigurationMissedError = new CustomError(
     "Project configuration is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
 );
-export const DebugDeviceIDMissedError = new CustomError("DebugDeviceIDMissedError");
-export const MultipleDeviceMissedError = new CustomError("MultipleDeviceMissedError");
-export const BundleAppNameMissedError = new CustomError("BundleAppNameMissedError");
-export const AppExecutablePathMissedError = new CustomError("AppExecutablePathMissedError");
-export const PlatformMissedError = new CustomError("PlatformMissedError");
-export const AppTargetExecutableMissedError = new CustomError("AppTargetExecutableMissedError");
-export const ProductNameMissedError = new CustomError("ProductNameMissedError");
+export const DebugDeviceIDMissedError = new CustomError(
+    "Debug device is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
+);
+export const MultipleDeviceMissedError = new CustomError(
+    "Multiple devices are not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
+);
+export const BundleAppNameMissedError = new CustomError("Bundle app name is missed");
+export const PlatformMissedError = new CustomError(
+    "Platform is not set for the given configuration"
+);
+export const AppTargetExecutableMissedError = new CustomError(
+    "App executable is not set for the given configuration"
+);
+export const ProductNameMissedError = new CustomError(
+    "Product name is missed for given configuration"
+);
 
 export const ConfigurationProjectError = new CustomError(
     "Project configuration was changed by another operation. Can not be modified by this one"
@@ -49,6 +58,8 @@ export interface ProjectEnvInterface {
     appExecutablePath: (deviceID: DeviceID) => Promise<string>;
     projectType: Promise<"-workspace" | "-project" | "-package">;
     productName: Promise<string>;
+
+    firstLaunchedConfigured: boolean;
 }
 
 export interface SetProjectEnvInterface {
@@ -58,6 +69,9 @@ export interface SetProjectEnvInterface {
     setDebugDeviceID(deviceID: DeviceID): Promise<void>;
     setMultipleDeviceID(multiId: DeviceID[]): Promise<void>;
 }
+
+// at this point, project file can be changed only at the start of extension, so it's safe to check it only once
+let globalFirstLaunchedConfigured = false;
 
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
@@ -121,6 +135,13 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         return this.projectFile.then(value => {
             return getProjectType(value);
         });
+    }
+
+    get firstLaunchedConfigured(): boolean {
+        return globalFirstLaunchedConfigured;
+    }
+    set firstLaunchedConfigured(val: boolean) {
+        globalFirstLaunchedConfigured = val;
     }
 
     async setProjectFile(file: string): Promise<void> {

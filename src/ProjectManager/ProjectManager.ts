@@ -142,11 +142,14 @@ export class ProjectManager {
             const option = await vscode.window.showErrorMessage(
                 `Projects were loaded with ERRORS: ${wasLoadedWithError.join(", ")}. Update dependencies and retry?`,
                 "Update Dependencies",
+                "Open in Xcode",
                 "Cancel"
             );
             if (option === "Update Dependencies" && this.onUpdateDeps !== undefined) {
                 await this.onUpdateDeps();
                 this.loadProjectFiles(shouldDropCache);
+            } else if (option === "Open in Xcode") {
+                vscode.commands.executeCommand("vscode-ios.env.open.xcode");
             }
         }
     }

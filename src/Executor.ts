@@ -40,7 +40,7 @@ export enum ExecutorMode {
     stdout = 1 << 4,
     stderr = 1 << 5,
     // frequently used subsets
-    onlyCommandNameAndResult = commandName | resultOk | resultError,
+    onlyCommandNameAndResult = commandName | resultOk | resultError | stderr,
     verbose = commandName | resultOk | resultError | stdout | stderr,
 }
 

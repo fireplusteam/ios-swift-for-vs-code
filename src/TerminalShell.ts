@@ -9,7 +9,7 @@ export enum TerminalMessageStyle {
 }
 
 export class TerminalShell {
-    private terminal?: vscode.Terminal;
+    private terminal?: Promise<vscode.Terminal>;
     private writeEmitter: vscode.EventEmitter<string> | undefined;
     private changeNameEmitter: vscode.EventEmitter<string> | undefined;
     private animationInterval: NodeJS.Timeout | undefined;
@@ -50,7 +50,7 @@ export class TerminalShell {
     }
 
     public show() {
-        this.terminal?.show();
+        this.terminal?.then(terminal => terminal.show());
     }
 
     private dataToPrint(data: string) {
@@ -59,24 +59,26 @@ export class TerminalShell {
     }
 
     public write(data: string, style = TerminalMessageStyle.default) {
-        const toPrint = this.dataToPrint(data);
-        switch (style) {
-            case TerminalMessageStyle.default:
-                this.writeEmitter?.fire(toPrint);
-                break;
-            case TerminalMessageStyle.command:
-                this.writeEmitter?.fire(`\x1b[100m${toPrint}\x1b[0m`);
-                break;
-            case TerminalMessageStyle.error:
-                this.writeEmitter?.fire(`\x1b[41m${toPrint}\x1b[0m`); // BgRed
-                break;
-            case TerminalMessageStyle.warning:
-                this.writeEmitter?.fire(`\x1b[43m${toPrint}\x1b[0m`); // BgYellow
-                break;
-            case TerminalMessageStyle.success:
-                this.writeEmitter?.fire(`\x1b[42m${toPrint}\x1b[0m`); // BgGreen
-                break;
-        }
+        this.terminal?.then(() => {
+            const toPrint = this.dataToPrint(data);
+            switch (style) {
+                case TerminalMessageStyle.default:
+                    this.writeEmitter?.fire(toPrint);
+                    break;
+                case TerminalMessageStyle.command:
+                    this.writeEmitter?.fire(`\x1b[100m${toPrint}\x1b[0m`);
+                    break;
+                case TerminalMessageStyle.error:
+                    this.writeEmitter?.fire(`\x1b[41m${toPrint}\x1b[0m`); // BgRed
+                    break;
+                case TerminalMessageStyle.warning:
+                    this.writeEmitter?.fire(`\x1b[43m${toPrint}\x1b[0m`); // BgYellow
+                    break;
+                case TerminalMessageStyle.success:
+                    this.writeEmitter?.fire(`\x1b[42m${toPrint}\x1b[0m`); // BgGreen
+                    break;
+            }
+        });
     }
 
     private createTitleAnimation(terminalId: string) {
@@ -96,7 +98,7 @@ export class TerminalShell {
         return terminalId;
     }
 
-    private getTerminal(id: string) {
+    private getTerminal(id: string): Promise<vscode.Terminal> {
         const terminalId = this.getTerminalName(id);
         clearInterval(this.animationInterval);
         this.animationInterval = this.createTitleAnimation(terminalId);
@@ -104,21 +106,31 @@ export class TerminalShell {
             this.changeNameEmitter?.fire(`${terminalId}`);
             return this.terminal;
         }
-        this.writeEmitter = new vscode.EventEmitter<string>();
-        this.changeNameEmitter = new vscode.EventEmitter<string>();
-        const pty: vscode.Pseudoterminal = {
-            onDidWrite: this.writeEmitter.event,
-            onDidChangeName: this.changeNameEmitter.event,
-            open: () => this.writeEmitter?.fire(`\x1b[42m${terminalId}:\x1b[0m\r\n`), //BgGreen
-            close: () => {
-                this.terminal = undefined;
-                this.exitEmitter.fire();
-            },
-        };
-        this.terminal = vscode.window.createTerminal({
-            name: terminalId,
-            pty: pty,
+
+        return new Promise((resolve, reject) => {
+            this.writeEmitter = new vscode.EventEmitter<string>();
+            this.changeNameEmitter = new vscode.EventEmitter<string>();
+            let terminal: vscode.Terminal | undefined = undefined;
+            const pty: vscode.Pseudoterminal = {
+                onDidWrite: this.writeEmitter.event,
+                onDidChangeName: this.changeNameEmitter.event,
+                open: () => {
+                    this.writeEmitter?.fire(`\x1b[42m${terminalId}:\x1b[0m\r\n`);
+                    if (terminal) {
+                        resolve(terminal);
+                    } else {
+                        reject(Error("Terminal is not created"));
+                    }
+                }, //BgGreen
+                close: () => {
+                    this.terminal = undefined;
+                    this.exitEmitter.fire();
+                },
+            };
+            terminal = vscode.window.createTerminal({
+                name: terminalId,
+                pty: pty,
+            });
         });
-        return this.terminal;
     }
 }

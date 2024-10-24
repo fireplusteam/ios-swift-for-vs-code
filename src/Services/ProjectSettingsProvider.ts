@@ -1,5 +1,6 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { getProjectPath, getProjectType, ProjectEnv, ProjectFileMissedError } from "../env";
+import { ExecutorMode } from "../Executor";
 import { getProjectFiles } from "../ProjectManager/ProjectManager";
 
 export interface XCodeSettings {
@@ -118,6 +119,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 buildConfiguration,
                 "-json",
             ],
+            mode: ExecutorMode.onlyCommandNameAndResult,
         });
         const jsonSettings = JSON.parse(settings.stdout);
         ProjectSettingsProvider.cachedSettings = [
@@ -138,6 +140,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
+            mode: ExecutorMode.onlyCommandNameAndResult,
         });
         const json = JSON.parse(result.stdout);
 
