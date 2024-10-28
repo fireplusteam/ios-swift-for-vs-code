@@ -146,7 +146,7 @@ export async function selectProjectFile(
     if (selection === undefined || selection === "") {
         return false;
     }
-    await updateProject(commandContext.projectSettingsProvider.projectEnv, selection);
+    await updateProject(commandContext.projectEnv, selection);
     await projectManager.loadProjectFiles(true);
     await checkWorkspace(commandContext, true);
     return true;
@@ -157,7 +157,7 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
         const schemes = await commandContext.projectSettingsProvider.fetchSchemes();
         let currentScheme: string;
         try {
-            currentScheme = await commandContext.projectSettingsProvider.projectEnv.projectScheme;
+            currentScheme = await commandContext.projectEnv.projectScheme;
         } catch {
             currentScheme = "";
         }
@@ -181,7 +181,7 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
         if (option === undefined) {
             return false;
         }
-        await commandContext.projectSettingsProvider.projectEnv.setProjectScheme(option);
+        await commandContext.projectEnv.setProjectScheme(option);
     } catch (error) {
         return await handleValidationErrors(commandContext, error, async () => {
             await selectTarget(commandContext, ignoreFocusOut);
@@ -194,8 +194,7 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
         const configurations = await commandContext.projectSettingsProvider.fetchConfigurations();
         let currentConfiguration: string;
         try {
-            currentConfiguration =
-                await commandContext.projectSettingsProvider.projectEnv.projectConfiguration;
+            currentConfiguration = await commandContext.projectEnv.projectConfiguration;
         } catch {
             currentConfiguration = "";
         }
@@ -223,7 +222,7 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
             return false;
         }
 
-        await commandContext.projectSettingsProvider.projectEnv.setProjectConfiguration(option);
+        await commandContext.projectEnv.setProjectConfiguration(option);
     } catch (error) {
         return await handleValidationErrors(commandContext, error, async () => {
             await selectConfiguration(commandContext, ignoreFocusOut);
@@ -236,8 +235,7 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
         const devices = await commandContext.projectSettingsProvider.fetchDevices();
         let selectedDeviceID: DeviceID;
         try {
-            selectedDeviceID =
-                await commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
+            selectedDeviceID = await commandContext.projectEnv.debugDeviceID;
         } catch {
             selectedDeviceID = { id: "", name: "", OS: "", platform: "macOS" };
         }
@@ -264,7 +262,7 @@ export async function selectDevice(commandContext: CommandContext, ignoreFocusOu
         }
         if (typeof option === "object") {
             const obj = option as DeviceID;
-            await commandContext.projectSettingsProvider.projectEnv.setDebugDeviceID(obj);
+            await commandContext.projectEnv.setDebugDeviceID(obj);
         }
     } catch (error) {
         return await handleValidationErrors(commandContext, error, async () => {
@@ -280,16 +278,14 @@ export async function updatePackageDependencies(commandContext: CommandContext, 
     const buildManager = new BuildManager();
     await buildManager.checkFirstLaunchStatus(commandContext);
     // at this point everything is set
-    commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured = true;
+    commandContext.projectEnv.firstLaunchedConfigured = true;
 }
 
 export async function checkWorkspace(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         let validProjectScheme: boolean = false;
         try {
-            validProjectScheme = !(
-                (await commandContext.projectSettingsProvider.projectEnv.projectScheme) === ""
-            );
+            validProjectScheme = !((await commandContext.projectEnv.projectScheme) === "");
         } catch {
             validProjectScheme = false;
         }
@@ -303,8 +299,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         let validProjectConfiguration = false;
         try {
             validProjectConfiguration = !(
-                (await commandContext.projectSettingsProvider.projectEnv.projectConfiguration) ===
-                ""
+                (await commandContext.projectEnv.projectConfiguration) === ""
             );
         } catch {
             validProjectConfiguration = false;
@@ -318,9 +313,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
 
         let validDebugDeviceID = false;
         try {
-            validDebugDeviceID = !(
-                (await commandContext.projectSettingsProvider.projectEnv.debugDeviceID).id === ""
-            );
+            validDebugDeviceID = !((await commandContext.projectEnv.debugDeviceID).id === "");
         } catch {
             validDebugDeviceID = false;
             if (
@@ -334,7 +327,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if ((await isBuildServerValid()) === false) {
             await generateXcodeServer(commandContext, false);
         }
-        if (commandContext.projectSettingsProvider.projectEnv.firstLaunchedConfigured === false) {
+        if (commandContext.projectEnv.firstLaunchedConfigured === false) {
             updatePackageDependencies(commandContext, false);
         }
     } catch (error) {
@@ -348,7 +341,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
     if (check) {
         await checkWorkspace(commandContext);
     }
-    const env = commandContext.projectSettingsProvider.projectEnv;
+    const env = commandContext.projectEnv;
     const lspFolder = await getLSPWorkspacePath();
     const relativeProjectPath = path.relative(
         lspFolder.fsPath,
@@ -412,10 +405,7 @@ export async function runAppOnMultipleDevices(
     problemResolver: ProblemDiagnosticResolver
 ) {
     try {
-        if (
-            (await commandContext.projectSettingsProvider.projectEnv.debugDeviceID).platform ===
-            "macOS"
-        ) {
+        if ((await commandContext.projectEnv.debugDeviceID).platform === "macOS") {
             vscode.window.showErrorMessage(
                 "MacOS Platform doesn't support running on Multiple Devices"
             );
@@ -425,8 +415,7 @@ export async function runAppOnMultipleDevices(
         const devices = await commandContext.projectSettingsProvider.fetchDevices();
         let selectedDeviceID: DeviceID[];
         try {
-            selectedDeviceID =
-                await commandContext.projectSettingsProvider.projectEnv.multipleDeviceID;
+            selectedDeviceID = await commandContext.projectEnv.multipleDeviceID;
         } catch {
             selectedDeviceID = [];
         }
@@ -462,7 +451,7 @@ export async function runAppOnMultipleDevices(
             for (const device of option) {
                 deviceIds.push(device);
             }
-            commandContext.projectSettingsProvider.projectEnv.setMultipleDeviceID(deviceIds);
+            commandContext.projectEnv.setMultipleDeviceID(deviceIds);
         }
 
         await buildSelectedTarget(commandContext, problemResolver);

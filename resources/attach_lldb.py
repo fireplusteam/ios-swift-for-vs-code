@@ -6,7 +6,6 @@ import subprocess
 import helper
 import threading
 from app_log import AppLogger
-import time
 import os
 import runtime_warning_database
 

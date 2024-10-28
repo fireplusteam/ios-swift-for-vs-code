@@ -12,8 +12,8 @@ export class SimulatorFocus {
     }
 
     async init() {
-        this.deviceID = await this.context.projectSettingsProvider.projectEnv.debugDeviceID;
-        this.productName = await this.context.projectSettingsProvider.projectEnv.productName;
+        this.deviceID = await this.context.projectEnv.debugDeviceID;
+        this.productName = await this.context.projectEnv.productName;
     }
 
     focus() {

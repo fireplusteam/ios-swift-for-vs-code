@@ -189,8 +189,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
             if (
                 runtimeWarningsConfigStatus() !== "off" &&
-                (await context.projectSettingsProvider.projectEnv.debugDeviceID).platform !==
-                    "macOS"
+                (await context.projectEnv.debugDeviceID).platform !== "macOS"
             ) {
                 // mac OS doesn't support that feature at the moment
                 this.runtimeWarningsWatcher.startWatcher();
@@ -204,8 +203,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     private async processName(context: CommandContext) {
-        const process_name = await context.projectSettingsProvider.projectEnv.productName;
-        if ((await context.projectSettingsProvider.projectEnv.debugDeviceID).platform === "macOS") {
+        const process_name = await context.projectEnv.productName;
+        if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
             return `${process_name}.app/Contents/MacOS/${process_name}`;
         }
         // if process_name == "xctest":
@@ -233,8 +232,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         // TODO: try to refactor launch logic
         // https://junch.github.io/debug/2016/09/19/original-lldb.html
-        const deviceID = await context.projectSettingsProvider.projectEnv.debugDeviceID;
-        const exe = await context.projectSettingsProvider.projectEnv.appExecutablePath(deviceID);
+        const deviceID = await context.projectEnv.debugDeviceID;
+        const exe = await context.projectEnv.appExecutablePath(deviceID);
 
         const logId = deviceID.id;
         emptyAppLog(logId);
@@ -254,10 +253,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
 
-                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
+                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
-                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
+                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
 
@@ -299,10 +298,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
 
-                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectSettingsProvider.projectEnv.projectScheme}`,
+                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
-                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectSettingsProvider.projectEnv.productName}`,
+                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
 

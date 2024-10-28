@@ -17,31 +17,27 @@ export class RunManager {
     }
 
     async runOnDebugDevice(context: CommandContext) {
-        if ((await context.projectSettingsProvider.projectEnv.debugDeviceID).platform === "macOS") {
+        if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
             return await this.runOnMac(context);
         }
 
-        return await this.runOnSimulator(
-            context,
-            await context.projectSettingsProvider.projectEnv.debugDeviceID,
-            true
-        );
+        return await this.runOnSimulator(context, await context.projectEnv.debugDeviceID, true);
     }
 
     async runOnMultipleDevices(context: CommandContext) {
-        if ((await context.projectSettingsProvider.projectEnv.debugDeviceID).platform === "macOS") {
+        if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
             throw Error("MacOS Platform doesn't support running on Multiple Devices!");
         }
         if (this.isDebuggable) {
             throw Error("Debug mode is not supported in run on multiple devices");
         }
 
-        const devices = await context.projectSettingsProvider.projectEnv.multipleDeviceID;
+        const devices = await context.projectEnv.multipleDeviceID;
         if (devices === undefined || devices.length === 0) {
             throw Error("Can not run on empty device");
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-        const debugDeviceID = await context.projectSettingsProvider.projectEnv.debugDeviceID;
+        const debugDeviceID = await context.projectEnv.debugDeviceID;
         for (const device of devices) {
             if (debugDeviceID.platform === device.platform && debugDeviceID.arch === device.arch) {
                 // we can run only on the platform that was built to
@@ -65,7 +61,7 @@ export class RunManager {
                 ...tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
-                ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
+                ...(await BuildManager.args(context.projectEnv)),
                 "-parallel-testing-enabled",
                 "NO",
                 // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676
@@ -150,7 +146,7 @@ export class RunManager {
                 "simctl",
                 "install",
                 deviceId.id,
-                await context.projectSettingsProvider.projectEnv.appExecutablePath(deviceId),
+                await context.projectEnv.appExecutablePath(deviceId),
             ],
         });
 
@@ -174,7 +170,7 @@ export class RunManager {
                     "launch",
                     "--console-pty",
                     deviceId.id,
-                    await context.projectSettingsProvider.projectEnv.bundleAppName,
+                    await context.projectEnv.bundleAppName,
                     "--wait-for-debugger",
                 ],
                 pipeToDebugConsole: true,
@@ -199,10 +195,10 @@ export class RunManager {
     }
 
     private async runOnMac(context: CommandContext) {
-        const exePath = await context.projectSettingsProvider.projectEnv.appExecutablePath(
-            await context.projectSettingsProvider.projectEnv.debugDeviceID
+        const exePath = await context.projectEnv.appExecutablePath(
+            await context.projectEnv.debugDeviceID
         );
-        const productName = await context.projectSettingsProvider.projectEnv.productName;
+        const productName = await context.projectEnv.productName;
 
         if (context.terminal) {
             context.terminal.terminalName = "Waiting Debugger";
@@ -238,7 +234,7 @@ export class RunManager {
         sessionID: string,
         deviceId: string
     ) {
-        const bundleAppName = await commandContext.projectSettingsProvider.projectEnv.bundleAppName;
+        const bundleAppName = await commandContext.projectEnv.bundleAppName;
         try {
             // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
             await promiseWithTimeout(10000, async () => {

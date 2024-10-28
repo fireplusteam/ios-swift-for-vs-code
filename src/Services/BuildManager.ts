@@ -31,8 +31,8 @@ export class BuildManager {
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             args: [
-                await context.projectSettingsProvider.projectEnv.projectType,
-                await context.projectSettingsProvider.projectEnv.projectFile,
+                await context.projectEnv.projectType,
+                await context.projectEnv.projectFile,
                 "-checkFirstLaunchStatus",
             ],
             mode: ExecutorMode.verbose,
@@ -42,10 +42,10 @@ export class BuildManager {
             scriptOrCommand: { command: "xcodebuild" },
             args: [
                 "-resolvePackageDependencies",
-                await context.projectSettingsProvider.projectEnv.projectType,
-                await context.projectSettingsProvider.projectEnv.projectFile,
+                await context.projectEnv.projectType,
+                await context.projectEnv.projectFile,
                 "-scheme",
-                await context.projectSettingsProvider.projectEnv.projectScheme,
+                await context.projectEnv.projectScheme,
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
@@ -61,7 +61,7 @@ export class BuildManager {
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
-            args: await BuildManager.args(context.projectSettingsProvider.projectEnv),
+            args: await BuildManager.args(context.projectEnv),
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
@@ -83,7 +83,7 @@ export class BuildManager {
             pipeToParseBuildErrors: true,
             args: [
                 "build-for-testing",
-                ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
+                ...(await BuildManager.args(context.projectEnv)),
                 "-skipUnavailableActions", // for autocomplete, skip if it fails
                 "-jobs",
                 "4",
@@ -111,7 +111,7 @@ export class BuildManager {
                 ...tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
-                ...(await BuildManager.args(context.projectSettingsProvider.projectEnv)),
+                ...(await BuildManager.args(context.projectEnv)),
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {

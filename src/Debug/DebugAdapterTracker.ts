@@ -145,12 +145,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
-        const deviceID =
-            await this.context.commandContext.projectSettingsProvider.projectEnv.debugDeviceID;
-        const exe =
-            await this.context.commandContext.projectSettingsProvider.projectEnv.appExecutablePath(
-                deviceID
-            );
+        const deviceID = await this.context.commandContext.projectEnv.debugDeviceID;
+        const exe = await this.context.commandContext.projectEnv.appExecutablePath(deviceID);
         if (!fs.existsSync(exe)) {
             return true;
         }

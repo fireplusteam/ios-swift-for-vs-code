@@ -9,15 +9,11 @@ export interface XCodeSettings {
 }
 
 export class ProjectSettingsProvider implements XCodeSettings {
-    private _projectEnv: ProjectEnv;
-    get projectEnv(): ProjectEnv {
-        return this._projectEnv;
-    }
+    projectEnv: WeakRef<ProjectEnv> | undefined;
     private _context: CommandContext;
 
     constructor(context: CommandContext) {
         this._context = context;
-        this._projectEnv = new ProjectEnv(this);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,8 +22,12 @@ export class ProjectSettingsProvider implements XCodeSettings {
     }
 
     async fetchSchemes(): Promise<string[]> {
-        const json = await this.fetchXcodeList(await this._projectEnv.projectFile);
-        if ((await this.projectEnv.projectType) === "-workspace") {
+        const projectEnv = this.projectEnv?.deref();
+        if (projectEnv === undefined) {
+            throw Error("ProjectEnv is not set");
+        }
+        const json = await this.fetchXcodeList(await projectEnv.projectFile);
+        if ((await projectEnv.projectType) === "-workspace") {
             return json.workspace.schemes;
         }
         return json.project.schemes;
@@ -43,10 +43,14 @@ export class ProjectSettingsProvider implements XCodeSettings {
     }
 
     async fetchDevices() {
-        const args = ["-scheme", await this.projectEnv.projectScheme, "-showdestinations", "-json"];
-        const projectType = await this.projectEnv.projectType;
+        const projectEnv = this.projectEnv?.deref();
+        if (projectEnv === undefined) {
+            throw Error("ProjectEnv is not set");
+        }
+        const args = ["-scheme", await projectEnv.projectScheme, "-showdestinations", "-json"];
+        const projectType = await projectEnv.projectType;
         if (projectType !== "-package") {
-            args.push(projectType, await this.projectEnv.projectFile);
+            args.push(projectType, await projectEnv.projectFile);
         }
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -97,9 +101,13 @@ export class ProjectSettingsProvider implements XCodeSettings {
     private static cachedSettings: [string, string, string, any] | undefined = undefined;
 
     private async fetchProjectXcodeBuildSettings() {
-        const projectFile = await this.projectEnv.projectFile;
-        const scheme = await this.projectEnv.projectScheme;
-        const buildConfiguration = await this.projectEnv.projectConfiguration;
+        const projectEnv = this.projectEnv?.deref();
+        if (projectEnv === undefined) {
+            throw Error("ProjectEnv is not set");
+        }
+        const projectFile = await projectEnv.projectFile;
+        const scheme = await projectEnv.projectScheme;
+        const buildConfiguration = await projectEnv.projectConfiguration;
 
         if (ProjectSettingsProvider.cachedSettings) {
             const [_pF, _pS, _bC, _settings] = ProjectSettingsProvider.cachedSettings;
@@ -135,7 +143,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
 
     private async fetchXcodeList(projectFile: string) {
         const args = ["-list", "-json"];
-        if ((await getProjectType(projectFile)) !== "-package") {
+        if (getProjectType(projectFile) !== "-package") {
             args.push(getProjectType(projectFile), projectFile);
         }
         const result = await this._context.execShellWithOptions({

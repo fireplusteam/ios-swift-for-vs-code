@@ -11,6 +11,7 @@ import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
 import { TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
+import { ProjectEnv } from "../env";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -27,15 +28,21 @@ interface CommandOptions {
 }
 
 export class CommandContext {
+    /// project environment
+    readonly projectEnv: ProjectEnv;
+    /// Xcode project settings provider
     private _projectSettingsProvider: ProjectSettingsProvider;
     get projectSettingsProvider(): ProjectSettingsProvider {
         return this._projectSettingsProvider;
     }
+
+    /// debug logs emitter
     private _debugConsoleEmitter = new vscode.EventEmitter<string>();
     get debugConsoleEvent(): vscode.Event<string> {
         return this._debugConsoleEmitter.event;
     }
 
+    /// build logs emitter
     private _buildEmitter = new vscode.EventEmitter<string>();
     get buildEvent(): vscode.Event<string> {
         return this._buildEmitter.event;
@@ -60,6 +67,8 @@ export class CommandContext {
     ) {
         this._cancellationTokenSource = cancellationToken;
         this._projectSettingsProvider = new ProjectSettingsProvider(this);
+        this.projectEnv = new ProjectEnv(this._projectSettingsProvider);
+        this._projectSettingsProvider.projectEnv = new WeakRef(this.projectEnv);
         this._terminal = terminal;
         this.lspClient = lspClient;
     }
@@ -79,7 +88,9 @@ export class CommandContext {
                   }
                 : undefined;
         shellExe.stdoutCallback = stdoutCallback;
-        shellExe.terminal = this.terminal;
+        if (attachTerminal) {
+            shellExe.terminal = this.terminal;
+        }
 
         if (shell.pipe) {
             shellExe.pipe = this.convertToExeParams(shell.pipe, attachTerminal);
