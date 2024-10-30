@@ -130,7 +130,10 @@ export class SwiftLSPClient {
                         const uri = definitions[0].uri.with({ scheme: "readonly" });
                         return new vscode.Location(uri, definitions[0].range);
                     }
-                    if (result === null || result === undefined) {
+                    if (
+                        (result === null || result === undefined) &&
+                        document.uri.fsPath.endsWith(".swift") // supports only swift files
+                    ) {
                         const res = await this.definitionProvider.provide(
                             document,
                             position,
@@ -140,8 +143,6 @@ export class SwiftLSPClient {
                     }
                     return result;
                 },
-                // temporarily remove text edit from Inlay hints while SourceKit-LSP
-                // returns invalid replacement text
                 provideInlayHints: async (document, position, token, next) => {
                     const result = await next(document, position, token);
                     return result;
