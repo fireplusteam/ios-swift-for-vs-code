@@ -16,11 +16,13 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Autocomplete
 
-[![Autocomplete](https://img.youtube.com/vi/0dXQGY0IIEA/0.jpg)](https://youtu.be/0dXQGY0IIEA)
+[![Autocomplete](media/autocomplete.gif)](https://youtu.be/0dXQGY0IIEA)
 
 ## 🌳 File Tree Integration
 
-[![🌳 File Tree Integration](https://img.youtube.com/vi/3C-abUZGkgE/0.jpg)](https://youtu.be/3C-abUZGkgE)
+[![🌳 File Tree Integration](media/project_tree.gif)](https://youtu.be/3C-abUZGkgE)
+
+### Also check [Tricks and Tips](Tricks_and_tips.md)
 
 ## Features
 
