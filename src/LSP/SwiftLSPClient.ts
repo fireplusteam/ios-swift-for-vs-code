@@ -87,7 +87,7 @@ export class SwiftLSPClient {
                 env: {
                     ...process.env,
                     XXX_BUILD_SERVER_KIT: "/SERVE",
-                    SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
+                    // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
                     SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
             },

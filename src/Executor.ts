@@ -203,6 +203,7 @@ export class Executor {
                 proc.once("error", err => {
                     userCancel?.dispose();
                     terminalClose?.dispose();
+                    pipeProc?.proc.stdin?.end();
                     reject(err);
                 });
 
