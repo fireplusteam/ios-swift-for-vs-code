@@ -78,11 +78,16 @@ export class BuildManager {
     async buildAutocomplete(context: CommandContext, logFilePath: string) {
         deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
 
+        let buildCommand = "build";
+        if ((await context.projectSettingsProvider.testPlans).length > 0) {
+            buildCommand = "build-for-testing";
+        }
+
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
             args: [
-                "build-for-testing",
+                buildCommand,
                 ...(await BuildManager.args(context.projectEnv)),
                 "-skipUnavailableActions", // for autocomplete, skip if it fails
                 "-jobs",

@@ -109,6 +109,7 @@ export class AutocompleteWatcher {
                 if (this.buildId !== buildId || (await this.isWatcherEnabledAnyFile()) === false) {
                     return;
                 }
+
                 emptyAutobuildLog();
                 const fileLog = ".logs/autocomplete.log";
                 const rawParser = this.problemResolver.parseAsyncLogs(fileLog, context.buildEvent);

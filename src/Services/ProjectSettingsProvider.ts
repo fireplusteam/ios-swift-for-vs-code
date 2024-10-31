@@ -27,6 +27,10 @@ export class ProjectSettingsProvider implements XCodeSettings {
         return this.fetchProjectXcodeBuildSettings();
     }
 
+    get testPlans(): Promise<string[]> {
+        return this.fetchTestPlan();
+    }
+
     async fetchSchemes(): Promise<string[]> {
         const projectEnv = this.projectEnv?.deref();
         if (projectEnv === undefined) {
@@ -104,8 +108,52 @@ export class ProjectSettingsProvider implements XCodeSettings {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private static cachedSettings: [string, string, string, any] | undefined = undefined;
+    private static cachedTestPlans: [string, string[]] | undefined = undefined;
+    private async fetchTestPlan() {
+        const scheme = await this._context.projectEnv.projectScheme;
+        if (ProjectSettingsProvider.cachedTestPlans) {
+            const [cachedScheme, cachedTestPlans] = ProjectSettingsProvider.cachedTestPlans;
+            if (cachedScheme === scheme) {
+                return cachedTestPlans;
+            }
+        }
+        try {
+            const result = await this._context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                args: [
+                    "test",
+                    await this._context.projectEnv.projectType,
+                    await this._context.projectEnv.projectFile,
+                    "-scheme",
+                    scheme,
+                    "-showTestPlans",
+                    "-json",
+                ],
+                mode: ExecutorMode.onlyCommandNameAndResult,
+            });
+            console.log(result.stdout);
+            const json = JSON.parse(result.stdout);
+            const testPlans = json.testPlans.map((e: any) => e.name);
+            ProjectSettingsProvider.cachedTestPlans = [scheme, testPlans];
+            return testPlans;
+        } catch (error) {
+            if (
+                typeof error === "object" &&
+                error !== null &&
+                "code" in error &&
+                error.code === 66 // test plan is not configured
+            ) {
+                const testPlans: string[] = [];
+                ProjectSettingsProvider.cachedTestPlans = [scheme, testPlans];
+                return testPlans;
+            } else {
+                throw error;
+            }
+        }
+    }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private static cachedSettings: [string, string, string, any] | undefined = undefined;
     private async fetchProjectXcodeBuildSettings() {
         const projectEnv = this.projectEnv?.deref();
         if (projectEnv === undefined) {
