@@ -5,11 +5,14 @@ import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./C
 import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
+import { getWorkspaceFolder } from "../env";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
 function isShowErrorEnabled() {
-    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("show.log");
+    const isEnabled = vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get("show.log");
     if (!isEnabled) {
         return false;
     }
@@ -17,7 +20,9 @@ function isShowErrorEnabled() {
 }
 
 function shouldAskTerminateCurrentTask() {
-    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("confirm.terminate.task");
+    const isEnabled = vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get("confirm.terminate.task");
     if (!isEnabled) {
         return false;
     }

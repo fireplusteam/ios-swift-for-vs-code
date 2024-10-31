@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { getScriptPath, getWorkspacePath, isActivated, ProjectFileMissedError } from "../env";
+import {
+    getScriptPath,
+    getWorkspaceFolder,
+    getWorkspacePath,
+    isActivated,
+    ProjectFileMissedError,
+} from "../env";
 import { emptyAppLog, getSessionId } from "../utils";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
@@ -9,7 +15,9 @@ import { CommandContext, UserTerminatedError } from "../CommandManagement/Comman
 import { checkWorkspace } from "../commands";
 
 function runtimeWarningsConfigStatus() {
-    return vscode.workspace.getConfiguration("vscode-ios").get<string>("swiftui.runtimeWarnings");
+    return vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get<string>("swiftui.runtimeWarnings");
 }
 
 function runtimeWarningBreakPointCommand() {

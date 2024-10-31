@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { isActivated } from "./env";
+import { getWorkspaceFolder, isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./extension";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
@@ -79,7 +79,7 @@ export class AutocompleteWatcher {
             return false;
         }
         const isWatcherEnabled = vscode.workspace
-            .getConfiguration("vscode-ios")
+            .getConfiguration("vscode-ios", getWorkspaceFolder())
             .get("watcher.singleModule");
         if (!isWatcherEnabled || this.terminatingExtension) {
             return false;

@@ -121,37 +121,50 @@
                         "Report about SwiftUI runtime warning without stopping the process execution",
                         "Stop a process execution on hit SwiftUI runtime warning",
                         "Disable SwiftUI runtime warning reporting."
-                    ]
+                    ],
+                    "scope": "resource"
                 },
                 "vscode-ios.xcb.build.service": {
                     "type": "boolean",
                     "default": false,
                     "title": "Enable XCBBuildService Proxy",
-                    "description": "if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch)"
+                    "description": "if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch)",
+                    "scope": "machine"
                 },
                 "vscode-ios.watcher.singleModule": {
                     "type": "boolean",
                     "default": true,
                     "title": "Changes Watcher",
-                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes while editing"
+                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes while editing",
+                    "scope": "resource"
                 },
                 "vscode-ios.debug.lldb-dap": {
                     "type": "boolean",
                     "default": true,
                     "title": "LLDB-DAP for debug",
-                    "description": "Use lldb-dap for debugging. Starting Xcode 16, it's included in swift toolchain and if enabled, extension will use it. Disable it if you want to use Code-lldb extension instead or experience any issue with it. On swift 5 it always uses Code-lldb disregard of this setting"
+                    "description": "Use lldb-dap for debugging. Starting Xcode 16, it's included in swift toolchain and if enabled, extension will use it. Disable it if you want to use Code-lldb extension instead or experience any issue with it. On swift 5 it always uses Code-lldb disregard of this setting",
+                    "scope": "resource"
                 },
                 "vscode-ios.show.log": {
                     "type": "boolean",
                     "default": true,
                     "title": "Show Log Alert on Error?",
-                    "description": "If enabled, show error alert on task failed"
+                    "description": "If enabled, show error alert on task failed",
+                    "scope": "resource"
                 },
                 "vscode-ios.confirm.terminate.task": {
                     "type": "boolean",
                     "default": true,
                     "title": "Confirm to Terminate Current Task",
-                    "description": "If enabled, asks a user to terminate current running task before executing the current one"
+                    "description": "If enabled, asks a user to terminate current running task before executing the current one",
+                    "scope": "resource"
+                },
+                "vscode-ios.lsp.c_family": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Enable lsp on C/C++ files",
+                    "description": "if Enabled, sourcekit-lsp provide suggestions for C/C++ files. Turn it off if you want to use another lsp extension provider.",
+                    "scope": "resource"
                 }
             }
         },

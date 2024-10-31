@@ -10,6 +10,14 @@ import { activatePeekDocuments } from "./peekDocuments";
 import { activateGetReferenceDocument } from "./getReferenceDocument";
 import { DefinitionProvider } from "./DefinitionProvider";
 
+function useLspForCFamilyFiles(folder: vscode.Uri) {
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");
+    if (!isEnabled) {
+        return false;
+    }
+    return true;
+}
+
 export class SwiftLSPClient {
     private languageClient: langclient.LanguageClient | null | undefined;
 
@@ -79,7 +87,7 @@ export class SwiftLSPClient {
                 env: {
                     ...process.env,
                     XXX_BUILD_SERVER_KIT: "/SERVE",
-                    // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
+                    SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
                     SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
             },
@@ -90,23 +98,31 @@ export class SwiftLSPClient {
             workspaceFolder = { uri: folder, name: path.basename(folder.fsPath), index: 0 };
         }
 
+        const documentSelector = [
+            { scheme: "sourcekit-lsp", language: "swift" },
+            { scheme: "file", language: "swift" },
+            { scheme: "untitled", language: "swift" },
+            { scheme: "file", language: "objective-c" },
+            { scheme: "untitled", language: "objective-c" },
+            { scheme: "file", language: "objective-cpp" },
+            { scheme: "untitled", language: "objective-cpp" },
+        ];
+        if (folder === undefined || useLspForCFamilyFiles(folder)) {
+            documentSelector.push(
+                ...[
+                    // C family
+                    { scheme: "file", language: "c" },
+                    { scheme: "untitled", language: "c" },
+                    { scheme: "file", language: "cpp" },
+                    { scheme: "untitled", language: "cpp" },
+                ]
+            );
+        }
+
         const errorHandler = new SourceKitLSPErrorHandler(5);
         const clientOptions: langclient.LanguageClientOptions = {
             // at the moment it's empty, as it's should not be active, only used for tests parsing at the moment
-            documentSelector: [
-                { scheme: "sourcekit-lsp", language: "swift" },
-                { scheme: "file", language: "swift" },
-                { scheme: "untitled", language: "swift" },
-                { scheme: "file", language: "objective-c" },
-                { scheme: "untitled", language: "objective-c" },
-                { scheme: "file", language: "objective-cpp" },
-                { scheme: "untitled", language: "objective-cpp" },
-                // C family
-                { scheme: "file", language: "c" },
-                { scheme: "untitled", language: "c" },
-                { scheme: "file", language: "cpp" },
-                { scheme: "untitled", language: "cpp" },
-            ],
+            documentSelector: documentSelector,
             revealOutputChannelOn: langclient.RevealOutputChannelOn.Never,
             workspaceFolder: workspaceFolder,
             outputChannel: this.logs,
