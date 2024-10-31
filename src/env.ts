@@ -186,6 +186,23 @@ export function getWorkspacePath() {
     return workspace;
 }
 
+export function isPlatformValid(platform: string, variant: string | undefined) {
+    switch (platform) {
+        case "macOS":
+            if (variant !== undefined) {
+                return false;
+            }
+            return true;
+        case "iOS Simulator":
+        case "watchOS Simulator":
+        case "visionOS Simulator":
+        case "tvOS Simulator":
+            return true;
+        default:
+            return false;
+    }
+}
+
 function getVSCodePath() {
     return path.join(getWorkspacePath(), ".vscode");
 }

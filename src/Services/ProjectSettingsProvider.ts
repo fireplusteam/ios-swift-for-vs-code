@@ -1,5 +1,11 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getProjectPath, getProjectType, ProjectEnv, ProjectFileMissedError } from "../env";
+import {
+    getProjectPath,
+    getProjectType,
+    isPlatformValid,
+    ProjectEnv,
+    ProjectFileMissedError,
+} from "../env";
 import { ExecutorMode } from "../Executor";
 import { getProjectFiles } from "../ProjectManager/ProjectManager";
 
@@ -89,7 +95,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     formattedKey[key] = value;
                 }
             }
-            if (isValid) {
+            if (isValid && isPlatformValid(formattedKey["platform"], formattedKey["variant"])) {
                 json.push(formattedKey);
             }
         }
