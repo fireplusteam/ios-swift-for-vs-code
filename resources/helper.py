@@ -73,7 +73,7 @@ def update_git_exclude(file_to_exclude):
 
 
 #---------DEBUGGER--------------------------------
-debugger_config_file = ".logs/debugger.launching"
+debugger_config_file = ".vscode/xcode/debugger.launching"
 def wait_debugger_to_launch(session_id):
     while True:
         with FileLock(debugger_config_file):

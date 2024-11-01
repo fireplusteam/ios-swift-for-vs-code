@@ -14,12 +14,13 @@ class SetEncoder(json.JSONEncoder):
             return data
         return json.JSONEncoder.default(self, obj)
 
+file = open(f".vscode/xcode/fifo/.app_runtime_warnings.fifo", "w", 1, encoding="utf-8") 
 
 def dump_database():
     global data_base
-
-    with open(f".logs/app_runtime_warnings.log", "w", encoding="utf-8") as file:
-        json.dump(data_base, file, indent=2, cls=SetEncoder)
+    global file
+    str = json.dumps(data_base,cls=SetEncoder)
+    file.write(f"{str}\n")
     
 
 def store_runtime_warning(error_message: str, data: tuple):

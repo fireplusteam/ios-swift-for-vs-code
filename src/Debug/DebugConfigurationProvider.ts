@@ -200,7 +200,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 (await context.projectEnv.debugDeviceID).platform !== "macOS"
             ) {
                 // mac OS doesn't support that feature at the moment
-                this.runtimeWarningsWatcher.startWatcher();
+                await this.runtimeWarningsWatcher.startWatcher();
             }
         } catch (error) {
             context.cancel();

@@ -80,7 +80,7 @@ async function initialize(
         }
     }
 
-    emptyLog(".logs/debugger.launching");
+    emptyLog(".vscode/xcode/debugger.launching");
     try {
         await atomicCommand.userCommand(async context => {
             await checkWorkspace(context, true);

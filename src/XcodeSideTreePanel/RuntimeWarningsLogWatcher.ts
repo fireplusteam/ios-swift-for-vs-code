@@ -1,6 +1,5 @@
 import * as fs from "fs";
-import { FSWatcher, watch } from "fs";
-import { emptyAppLog, getAppLog } from "../utils";
+import { createFifo } from "../utils";
 import { getWorkspacePath } from "../env";
 import path from "path";
 import {
@@ -9,24 +8,27 @@ import {
     RuntimeWarningsDataProvider,
 } from "./RuntimeWarningsDataProvider";
 import { error } from "console";
+import { createInterface } from "readline";
+import { sleep } from "../extension";
 
 export class RuntimeWarningsLogWatcher {
-    private static LogPath = "runtime_warnings";
+    private static LogPath = ".vscode/xcode/fifo/.app_runtime_warnings.fifo";
 
     private panel: RuntimeWarningsDataProvider;
-    private fsWatcher: FSWatcher | undefined = undefined;
+    private stream?: fs.ReadStream;
+
     private cachedContent: string = "";
 
-    private get logPath(): string {
-        return path.join(getWorkspacePath(), getAppLog(RuntimeWarningsLogWatcher.LogPath));
+    static get logPath(): string {
+        return path.join(getWorkspacePath(), RuntimeWarningsLogWatcher.LogPath);
     }
 
     constructor(panel: RuntimeWarningsDataProvider) {
         this.panel = panel;
     }
 
-    public startWatcher() {
-        emptyAppLog(RuntimeWarningsLogWatcher.LogPath);
+    public async startWatcher() {
+        await createFifo(RuntimeWarningsLogWatcher.logPath);
         try {
             this.panel.refresh([]);
             this.cachedContent = "";
@@ -37,41 +39,33 @@ export class RuntimeWarningsLogWatcher {
         this.startWatcherImp();
     }
 
-    private startWatcherImp() {
-        this.disposeWatcher();
-        this.fsWatcher = watch(this.logPath);
+    private async startWatcherImp() {
+        try {
+            this.disposeWatcher();
+            const stream = fs.createReadStream(RuntimeWarningsLogWatcher.logPath, { flags: "r" });
+            this.stream = stream;
 
-        this.fsWatcher.on("change", () => {
-            this.readFileContent();
-        });
+            const rl = createInterface({ input: stream, crlfDelay: Infinity });
+            await sleep(500);
+            for await (const line of rl) {
+                this.readContent(line);
+            }
+        } catch (error) {
+            console.log(`FIFO file for warnings log got error: ${error}`);
+        }
     }
 
-    private readFileContent(numOfTries = 0) {
-        if (numOfTries >= 5) {
-            // TODO: try 5 times, then give up
-            this.startWatcherImp();
-            return;
+    private readContent(data: string) {
+        try {
+            this.updateTree(data);
+        } catch {
+            /* empty */
         }
-        fs.readFile(this.logPath, (err, data) => {
-            if (err) {
-                this.startWatcherImp();
-                return;
-            }
-            const contentString = data.toString();
-            try {
-                this.updateTree(contentString);
-            } catch {
-                this.readFileContent(numOfTries + 1);
-                return;
-            }
-
-            this.startWatcherImp();
-        });
     }
 
     private disposeWatcher() {
-        this.fsWatcher?.close();
-        this.fsWatcher = undefined;
+        this.stream?.close();
+        this.stream = undefined;
     }
 
     private updateTree(content: string) {

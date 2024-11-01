@@ -1,10 +1,11 @@
 import path from "path";
 import { getWorkspacePath } from "./env";
-import fs from "fs";
+import fs, { existsSync } from "fs";
 import find from "find-process";
 import treeKill from "tree-kill";
 import psTree from "ps-tree";
 import { lock, unlock } from "lockfile";
+import { exec } from "child_process";
 
 export class CustomError implements Error {
     name: string = "Cancel";
@@ -191,4 +192,22 @@ export function isFileMoved(oldFile: string, newFile: string) {
         return true;
     }
     return false;
+}
+
+export async function createFifo(fifoPath: string) {
+    return new Promise<void>((resolve, reject) => {
+        if (!existsSync(fifoPath)) {
+            const fileDir = fifoPath.split(path.sep).slice(0, -1).join(path.sep);
+            fs.mkdirSync(fileDir, { recursive: true });
+            exec(`mkfifo ${fifoPath}`, error => {
+                if (error) {
+                    reject(error);
+                } else {
+                    resolve();
+                }
+            });
+        } else {
+            resolve();
+        }
+    });
 }
