@@ -19,13 +19,9 @@ def create_app_logger():
 app_logger = create_app_logger()
 
 log_file = ".logs/lldb.log"
-runtime_warning_log = ".logs/runtime_warning.log"
 if LOG_DEBUG != 0:
     with open(log_file, 'w', encoding="utf-8") as file:
         file.write("")
-
-with open(runtime_warning_log, 'w', encoding="utf-8") as file:
-    file.write("")
 
 
 log_mutex = threading.Lock()
@@ -224,7 +220,7 @@ def printRuntimeWarning(debugger, command, result, internal_dict):
         threading.Thread(target=logRuntimeError, args=(debugger, frame)).start()
         
     except Exception as e:
-        logMessage("---------------Runtime warning error:\n" + str(e), file_name=runtime_warning_log)
+        logMessage("---------------Runtime warning error:\n" + str(e))
     logMessage("Logged runtime warning")
 
 

@@ -4,7 +4,10 @@ import { ExecutorMode } from "../Executor";
 import { deleteFile } from "../utils";
 
 export class BuildManager {
-    static BundlePath = ".vscode/.bundle";
+    static BundlePath = ".vscode/xcode/.bundle";
+    static get BundleResultPath(): string {
+        return `${BuildManager.BundlePath}.xcresult`;
+    }
     constructor() {}
 
     static async args(projectEnv: ProjectEnv) {
@@ -14,7 +17,7 @@ export class BuildManager {
             "-destination",
             `id=${(await projectEnv.debugDeviceID).id},platform=${(await projectEnv.debugDeviceID).platform}`,
             "-resultBundlePath",
-            ".vscode/.bundle",
+            BuildManager.BundlePath,
             "-skipMacroValidation",
             "-skipPackageUpdates", // to speed up the build
             "-disableAutomaticPackageResolution",

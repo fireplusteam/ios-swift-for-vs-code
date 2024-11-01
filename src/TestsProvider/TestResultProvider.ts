@@ -1,11 +1,11 @@
 // https://keith.github.io/xcode-man-pages/xcresulttool.1.html
-// xcrun xcresulttool get test-results tests --legacy --path ./.vscode/.bundle.xcresult --format json
+// xcrun xcresulttool get test-results tests --legacy --path ./.vscode/xcode/.bundle.xcresult --format json
 
 import * as vscode from "vscode";
 import { getFilePathInWorkspace } from "../env";
 import { Executor } from "../Executor";
 
-// xcrun xcresulttool get log --legacy --path ./.vscode/.bundle.xcresult --type action
+// xcrun xcresulttool get log --legacy --path ./.vscode/xcode/.bundle.xcresult --type action
 
 interface TestCaseResultNode {
     duration: string;
