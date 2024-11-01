@@ -3,7 +3,9 @@ import json
 
 data_base = dict()
 item_id = 0
-            
+
+storage_file = None
+
 
 class SetEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -14,14 +16,16 @@ class SetEncoder(json.JSONEncoder):
             return data
         return json.JSONEncoder.default(self, obj)
 
-file = open(f".vscode/xcode/fifo/.app_runtime_warnings.fifo", "w", 1, encoding="utf-8") 
+
 
 def dump_database():
     global data_base
-    global file
+    global storage_file
+    if storage_file is None:
+        storage_file = open(f".vscode/xcode/fifo/.app_runtime_warnings.fifo", "w", 1, encoding="utf-8") 
     str = json.dumps(data_base,cls=SetEncoder)
-    file.write(f"{str}\n")
-    
+    storage_file.write(f"{str}\n")
+
 
 def store_runtime_warning(error_message: str, data: tuple):
     global data_base

@@ -8,13 +8,13 @@ import {
     RuntimeWarningsDataProvider,
 } from "./RuntimeWarningsDataProvider";
 import { error } from "console";
-import { createInterface } from "readline";
-import { sleep } from "../extension";
+import { createInterface, Interface } from "readline";
 
 export class RuntimeWarningsLogWatcher {
     private static LogPath = ".vscode/xcode/fifo/.app_runtime_warnings.fifo";
 
     private panel: RuntimeWarningsDataProvider;
+    private rl?: Interface;
     private stream?: fs.ReadStream;
 
     private cachedContent: string = "";
@@ -28,6 +28,11 @@ export class RuntimeWarningsLogWatcher {
     }
 
     public async startWatcher() {
+        try {
+            // await deleteFifo(RuntimeWarningsLogWatcher.logPath);
+        } catch (error) {
+            console.log(`Error deleting fifo file: ${error}`);
+        }
         await createFifo(RuntimeWarningsLogWatcher.logPath);
         try {
             this.panel.refresh([]);
@@ -36,17 +41,19 @@ export class RuntimeWarningsLogWatcher {
         } catch {
             /* empty */
         }
-        this.startWatcherImp();
+
+        if (this.rl === undefined || this.stream?.closed === true) {
+            this.startWatcherImp();
+        }
     }
 
     private async startWatcherImp() {
         try {
-            this.disposeWatcher();
             const stream = fs.createReadStream(RuntimeWarningsLogWatcher.logPath, { flags: "r" });
             this.stream = stream;
 
             const rl = createInterface({ input: stream, crlfDelay: Infinity });
-            await sleep(500);
+            this.rl = rl;
             for await (const line of rl) {
                 this.readContent(line);
             }
@@ -63,8 +70,10 @@ export class RuntimeWarningsLogWatcher {
         }
     }
 
-    private disposeWatcher() {
+    disposeWatcher() {
+        this.rl?.close();
         this.stream?.close();
+        this.rl = undefined;
         this.stream = undefined;
     }
 

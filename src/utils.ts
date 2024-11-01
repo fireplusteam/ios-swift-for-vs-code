@@ -211,3 +211,15 @@ export async function createFifo(fifoPath: string) {
         }
     });
 }
+
+export async function deleteFifo(fifoPath: string) {
+    return new Promise<void>((resolve, reject) => {
+        fs.unlink(fifoPath, error => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
+    });
+}

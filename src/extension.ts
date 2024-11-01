@@ -107,6 +107,9 @@ let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
 
+const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
+const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
+
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -167,9 +170,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 
-    const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
     vscode.window.registerTreeDataProvider("RuntimeWarningsProvider", runtimeWarningsDataProvider);
-    const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
 
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterDescriptorFactory(
@@ -433,6 +434,7 @@ export async function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
     autocompleteWatcher?.terminate();
     atomicCommand.cancel();
+    runtimeWarningLogWatcher.disposeWatcher();
     // await projectExecutor.terminateShell();
 }
 
