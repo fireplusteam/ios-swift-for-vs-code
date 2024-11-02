@@ -28,9 +28,9 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 -   Supports iOS/MacOS/WatchOS/VisionOS/TvOS
 -   Swift/Objective-C/C++ autocompletion
--   Compatibility with CodeLLDB
--   Debug/Run iOS app
--   Debug/Run unit/snapshot tests. Support running single/multiple tests for a class/target/set of classes
+-   Compatibility with CodeLLDB/lldb-dap
+-   Debug/Run app on Simulators
+-   Debug/Run unit/snapshot/UI tests. Support running single/multiple tests for a class/target/set of classes
 -   Support code coverage
 -   Run an application on multiple simulator with a single command
 -   Support project/workspace
@@ -38,7 +38,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 -   Support diff snapshots testing
 -   Add/Delete/Rename/Move files/folders inside vscode
 -   VS Code workspace generation based on Xcode project/workspace
--   Parsing build/test logs and display in Problems panel in real time
+-   Parsing build/test logs and display in real time
 
 Instead of xCode preview you can use hot reloading [InjectionIII](https://github.com/johnno1962/InjectionIII) which works great with this extension:
 

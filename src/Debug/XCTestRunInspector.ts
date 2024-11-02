@@ -22,22 +22,22 @@ export type XCTestTarget = {
 export class XCTestRunInspector {
     constructor(private problemResolver: ProblemDiagnosticResolver) {}
 
-    async build(context: CommandContext) {
+    async build(context: CommandContext, tests: string[] | undefined) {
         const existingFiles = await this.getAllXCRunFiles();
-        await buildTests(context, this.problemResolver);
-        const changedFiles = await this.getChangedFiles(existingFiles);
-        const selectedTestPlan = await this.getSelectedTestPlan(context);
-        return this.parseXCRun(changedFiles, selectedTestPlan);
-    }
-
-    async buildForTests(context: CommandContext, tests: string[]) {
-        const existingFiles = await this.getAllXCRunFiles();
-        await buildTestsForCurrentFile(context, this.problemResolver, tests);
+        if (tests) {
+            await buildTestsForCurrentFile(context, this.problemResolver, tests);
+        } else {
+            await buildTests(context, this.problemResolver);
+        }
         const changedFiles = await this.getChangedFiles(existingFiles);
         const selectedTestPlan = await this.getSelectedTestPlan(context);
         const targets = await this.parseXCRun(changedFiles, selectedTestPlan);
-        const testsTargets = tests.map(test => test.split("/").at(-1));
-        return targets.filter(target => testsTargets.includes(target.target));
+        if (tests) {
+            const testsTargets = tests.map(test => test.split("/").at(-1));
+            return targets.filter(target => testsTargets.includes(target.target));
+        } else {
+            return targets;
+        }
     }
 
     private async getAllXCRunFiles(): Promise<XCTestRunFile[]> {

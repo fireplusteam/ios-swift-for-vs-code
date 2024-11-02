@@ -509,7 +509,7 @@ export async function runAppOnMultipleDevices(
     }
 }
 
-export async function runAndDebugTestsForCurrentFile(
+export async function runAndDebugTests(
     commandContext: CommandContext,
     sessionID: string,
     isDebuggable: boolean,

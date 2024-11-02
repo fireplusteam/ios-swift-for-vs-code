@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { buildSelectedTarget, buildTestsForCurrentFile } from "../buildCommands";
-import { runAndDebugTestsForCurrentFile, runApp } from "../commands";
+import { runAndDebugTests, runApp } from "../commands";
 import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
@@ -132,8 +132,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     private async executeAppCommand(
         buildCommand: (commandContext: CommandContext) => Promise<void>,
-        runCommandClosure: (commandContext: CommandContext) => Promise<void>,
-        successMessage: string | undefined = undefined
+        runCommandClosure: (commandContext: CommandContext) => Promise<void>
     ) {
         if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
             await DebugAdapterTracker.updateStatus(this.sessionID, "building");
@@ -142,9 +141,6 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
         await runCommandClosure(this.context.commandContext);
-        if (successMessage) {
-            vscode.window.showInformationMessage(successMessage);
-        }
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
@@ -188,7 +184,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     },
                     async context => {
                         this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
-                        await runAndDebugTestsForCurrentFile(
+                        await runAndDebugTests(
                             context,
                             this.sessionID,
                             isDebuggable,

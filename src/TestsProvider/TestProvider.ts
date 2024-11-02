@@ -151,8 +151,8 @@ export class TestProvider {
                     wasTerminalClosed = UserTerminalCloseError.isEqual(error);
                     throw error;
                 } finally {
-                    await context.bundle.merge(context);
                     try {
+                        await context.bundle.merge(context);
                         // read testing results
                         if (
                             !context.cancellationToken.isCancellationRequested &&

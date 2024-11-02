@@ -94,17 +94,18 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSTestsDebugger(
+        tests: string[] | undefined,
         isDebuggable: boolean,
         testRun: vscode.TestRun,
         context: CommandContext
     ) {
-        const sessions = await this.testRunInspector.build(context);
+        const sessions = await this.testRunInspector.build(context, tests);
 
         for (const session of sessions) {
             const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
-                name: "iOS: Run Tests & Debug: Current File",
+                name: "iOS: Run Tests & Debug",
                 request: "launch",
                 target: "testsForCurrentFile",
                 isDebuggable: isDebuggable,
@@ -136,39 +137,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 console.log(error);
             }
         }
-        return true;
-    }
-
-    async startIOSTestsForCurrentFileDebugger(
-        tests: string[],
-        isDebuggable: boolean,
-        testRun: vscode.TestRun,
-        context: CommandContext
-    ) {
-        await this.testRunInspector.buildForTests(context, tests);
-
-        const sessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
-        const debugSession: vscode.DebugConfiguration = {
-            type: "xcode-lldb",
-            name: "iOS: Run Tests & Debug: Current File",
-            request: "launch",
-            target: "testsForCurrentFile",
-            isDebuggable: isDebuggable,
-            sessionId: sessionId,
-            testsToRun: tests,
-            buildBeforeLaunch: "never",
-        };
-
-        const waiter = this.waitForDebugSession(context, sessionId);
-        if (
-            (await vscode.debug.startDebugging(undefined, debugSession, {
-                testRun: testRun,
-            })) === false
-        ) {
-            context.cancel();
-            return false;
-        }
-        await waiter;
         return true;
     }
 

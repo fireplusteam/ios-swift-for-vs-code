@@ -22,6 +22,7 @@ import {
     selectDevice,
     selectProjectFile,
     selectTarget,
+    selectTestPlan,
     updatePackageDependencies,
 } from "./commands";
 import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
@@ -197,20 +198,12 @@ export async function activate(context: vscode.ExtensionContext) {
         projectManager,
         new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
         async (tests, isDebuggable, testRun, context) => {
-            if (tests) {
-                return await debugConfiguration.startIOSTestsForCurrentFileDebugger(
-                    tests,
-                    isDebuggable,
-                    testRun,
-                    context
-                );
-            } else {
-                return await debugConfiguration.startIOSTestsDebugger(
-                    isDebuggable,
-                    testRun,
-                    context
-                );
-            }
+            return await debugConfiguration.startIOSTestsDebugger(
+                tests,
+                isDebuggable,
+                testRun,
+                context
+            );
         }
     );
     if (await isActivated()) {
@@ -310,6 +303,14 @@ export async function activate(context: vscode.ExtensionContext) {
             await atomicCommand.userCommandWithoutThrowingException(async context => {
                 await selectConfiguration(context);
             }, "Select Configuration");
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.project.selectTestPlan", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await selectTestPlan(context);
+            }, "Select Test Plan");
         })
     );
 

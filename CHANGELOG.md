@@ -1,5 +1,17 @@
 # Change Log
 
+## 0.5.0 - 2024-10-20
+
+### Added
+
+-   Debug UI tests and multiple targets are now supported
+-   Support Test Plan
+
+### Fixed
+
+-   Runtime warning communication between lldb and extension is done via fifo
+-   Improved stability and bug fixes
+
 ## 0.4.0 - 2024-10-20
 
 ### Added

@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.4.4",
+    "version": "0.5.0",
     "os": [
         "darwin"
     ],
@@ -220,6 +220,10 @@
             {
                 "command": "vscode-ios.project.selectConfiguration",
                 "title": "iOS: Select Build Configuration"
+            },
+            {
+                "command": "vscode-ios.project.selectTestPlan",
+                "title": "iOS: Select Test Plan"
             },
             {
                 "command": "vscode-ios.project.selectDevice",

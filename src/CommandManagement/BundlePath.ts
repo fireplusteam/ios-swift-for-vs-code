@@ -5,19 +5,20 @@ import { getFilePathInWorkspace } from "../env";
 import { CommandContext } from "./CommandContext";
 
 export class BundlePath {
-    private BundlePath(number: number): string {
-        return `.vscode/xcode/.${this.name}${number}`;
-    }
-    private BundleResultPath(number: number): string {
-        return `${this.BundlePath(number)}.xcresult`;
-    }
-
     private number = 0;
+
     private name: string;
 
     constructor(name: string) {
         this.name = name;
         this.deleteExistingFilesIfAny();
+    }
+
+    private BundlePath(number: number): string {
+        return `.vscode/xcode/.${this.name}_${number}`;
+    }
+    private BundleResultPath(number: number): string {
+        return `${this.BundlePath(number)}.xcresult`;
     }
 
     private deleteExistingFilesIfAny() {
@@ -33,18 +34,21 @@ export class BundlePath {
     bundlePath() {
         return this.BundlePath(this.number);
     }
+
     bundleResultPath() {
         return this.BundleResultPath(this.number);
     }
 
     async merge(context: CommandContext) {
-        // const command = `xcrun xcresulttool merge /path/to/A.xcresult /path/to/B.xcresult --output-path merged.xcresult`;
         const resultBundles: string[] = [];
         for (let i = 0; i <= this.number; ++i) {
             const filePath = getFilePathInWorkspace(this.BundleResultPath(i));
             if (fs.existsSync(filePath)) {
                 resultBundles.push(filePath);
             }
+        }
+        if (resultBundles.length <= 1) {
+            return; // nothing to merge
         }
         // generate next bundle id to merge all results
         this.generateNext();
@@ -56,7 +60,7 @@ export class BundlePath {
                 "--output-path",
                 getFilePathInWorkspace(this.bundleResultPath()),
             ],
-            mode: ExecutorMode.verbose,
+            mode: ExecutorMode.onlyCommandNameAndResult,
         });
     }
 }
