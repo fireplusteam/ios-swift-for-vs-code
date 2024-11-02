@@ -37,7 +37,7 @@ export class CommandContext {
         return this._projectSettingsProvider;
     }
 
-    readonly bundle = new BundlePath();
+    readonly bundle: BundlePath;
 
     /// debug logs emitter
     private _debugConsoleEmitter = new vscode.EventEmitter<string>();
@@ -66,8 +66,10 @@ export class CommandContext {
     constructor(
         cancellationToken: vscode.CancellationTokenSource,
         terminal: TerminalShell | undefined,
-        lspClient: LSPClientContext
+        lspClient: LSPClientContext,
+        bundle: BundlePath
     ) {
+        this.bundle = bundle;
         this._cancellationTokenSource = cancellationToken;
         this._projectSettingsProvider = new ProjectSettingsProvider(this);
         this.projectEnv = new ProjectEnv(this._projectSettingsProvider);

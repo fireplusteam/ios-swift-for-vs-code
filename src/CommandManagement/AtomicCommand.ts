@@ -6,6 +6,7 @@ import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
 import { getWorkspaceFolder } from "../env";
+import { BundlePath } from "./BundlePath";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -78,7 +79,8 @@ export class AtomicCommand {
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
                 this.watcherTerminal,
-                this.lspClient
+                this.lspClient,
+                new BundlePath("autowatcher")
             );
             this._prevCommandContext = commandContext;
             this.watcherTerminal.terminalName = "Watcher";
@@ -158,7 +160,8 @@ export class AtomicCommand {
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
                 this.userTerminal,
-                this.lspClient
+                this.lspClient,
+                new BundlePath("bundle")
             );
             this._prevCommandContext = commandContext;
             if (taskName) {

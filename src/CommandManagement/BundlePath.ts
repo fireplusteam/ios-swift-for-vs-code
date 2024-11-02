@@ -6,15 +6,17 @@ import { CommandContext } from "./CommandContext";
 
 export class BundlePath {
     private BundlePath(number: number): string {
-        return `.vscode/xcode/.bundle_${number}`;
+        return `.vscode/xcode/.${this.name}${number}`;
     }
     private BundleResultPath(number: number): string {
         return `${this.BundlePath(number)}.xcresult`;
     }
 
     private number = 0;
+    private name: string;
 
-    constructor() {
+    constructor(name: string) {
+        this.name = name;
         this.deleteExistingFilesIfAny();
     }
 
