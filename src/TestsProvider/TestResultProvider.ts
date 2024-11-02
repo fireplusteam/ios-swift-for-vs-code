@@ -4,6 +4,7 @@
 import * as vscode from "vscode";
 import { getFilePathInWorkspace } from "../env";
 import { Executor } from "../Executor";
+import { BundlePath } from "../CommandManagement/BundlePath";
 
 // xcrun xcresulttool get log --legacy --path ./.vscode/xcode/.bundle.xcresult --type action
 
@@ -23,14 +24,12 @@ interface TestCaseNode {
 }
 
 export class TestResultProvider {
-    private xcresultPath: string;
-
-    constructor(xcresultPath: string) {
-        this.xcresultPath = getFilePathInWorkspace(xcresultPath);
+    private xcresultPath(bundle: BundlePath) {
+        return getFilePathInWorkspace(bundle.bundleResultPath());
     }
-
     async enumerateTestsResults(
         fileUrl: (key: string) => string,
+        bundle: BundlePath,
         onTest: (
             key: string,
             result: string,
@@ -39,7 +38,7 @@ export class TestResultProvider {
             duration: number
         ) => void
     ) {
-        const command = `xcrun xcresulttool get test-results tests --legacy --path '${this.xcresultPath}' --format json`;
+        const command = `xcrun xcresulttool get test-results tests --legacy --path '${this.xcresultPath(bundle)}' --format json`;
         const executor = new Executor();
         const outFileCoverageStr = await executor.execShell({
             scriptOrCommand: { command: command },

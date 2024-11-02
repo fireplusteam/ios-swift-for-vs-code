@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { DeviceID, getFilePathInWorkspace } from "../env";
+import { DeviceID } from "../env";
 import { sleep } from "../extension";
-import { deleteFile, promiseWithTimeout, TimeoutError } from "../utils";
+import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
 import { ExecutorMode, ExecutorTaskError } from "../Executor";
 import { BuildManager } from "./BuildManager";
@@ -47,8 +47,7 @@ export class RunManager {
     }
 
     async runTests(context: CommandContext, tests: string[], xctestrun: string) {
-        deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-        deleteFile(getFilePathInWorkspace(`${BuildManager.BundlePath}.xcresult`));
+        context.bundle.generateNext();
         const logFilePath = ".logs/tests.log";
 
         await this.waitDebugger(context);
@@ -63,7 +62,7 @@ export class RunManager {
                 }),
                 "-xctestrun",
                 xctestrun,
-                ...(await BuildManager.commonArgs(context.projectEnv)),
+                ...(await BuildManager.commonArgs(context.projectEnv, context.bundle)),
                 "-parallel-testing-enabled",
                 "NO",
                 // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676

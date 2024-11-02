@@ -1,23 +1,19 @@
+import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getFilePathInWorkspace, ProjectEnv } from "../env";
+import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
-import { deleteFile } from "../utils";
 
 export class BuildManager {
-    static BundlePath = ".vscode/xcode/.bundle";
-    static get BundleResultPath(): string {
-        return `${BuildManager.BundlePath}.xcresult`;
-    }
     constructor() {}
 
-    static async commonArgs(projectEnv: ProjectEnv) {
+    static async commonArgs(projectEnv: ProjectEnv, bundle: BundlePath) {
         return [
             "-configuration",
             await projectEnv.projectConfiguration,
             "-destination",
             `id=${(await projectEnv.debugDeviceID).id},platform=${(await projectEnv.debugDeviceID).platform}`,
             "-resultBundlePath",
-            BuildManager.BundlePath,
+            bundle.bundlePath(),
             "-skipMacroValidation",
             "-skipPackageUpdates", // to speed up the build
             "-disableAutomaticPackageResolution",
@@ -26,9 +22,9 @@ export class BuildManager {
         ];
     }
 
-    static async args(projectEnv: ProjectEnv) {
+    static async args(projectEnv: ProjectEnv, bundle: BundlePath) {
         return [
-            ...(await BuildManager.commonArgs(projectEnv)),
+            ...(await BuildManager.commonArgs(projectEnv, bundle)),
             await projectEnv.projectType,
             await projectEnv.projectFile,
             "-scheme",
@@ -65,12 +61,11 @@ export class BuildManager {
     }
 
     async build(context: CommandContext, logFilePath: string) {
-        deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-
+        context.bundle.generateNext();
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
-            args: await BuildManager.args(context.projectEnv),
+            args: await BuildManager.args(context.projectEnv, context.bundle),
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
@@ -85,8 +80,7 @@ export class BuildManager {
     }
 
     async buildAutocomplete(context: CommandContext, logFilePath: string) {
-        deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-
+        context.bundle.generateNext();
         let buildCommand = "build";
         if ((await context.projectSettingsProvider.testPlans).length > 0) {
             buildCommand = "build-for-testing";
@@ -97,7 +91,7 @@ export class BuildManager {
             pipeToParseBuildErrors: true,
             args: [
                 buildCommand,
-                ...(await BuildManager.args(context.projectEnv)),
+                ...(await BuildManager.args(context.projectEnv, context.bundle)),
                 "-skipUnavailableActions", // for autocomplete, skip if it fails
                 "-jobs",
                 "4",
@@ -115,8 +109,7 @@ export class BuildManager {
     }
 
     async buildForTestingWithTests(context: CommandContext, logFilePath: string, tests: string[]) {
-        deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
-
+        context.bundle.generateNext();
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
@@ -125,7 +118,7 @@ export class BuildManager {
                 ...tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
-                ...(await BuildManager.args(context.projectEnv)),
+                ...(await BuildManager.args(context.projectEnv, context.bundle)),
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {

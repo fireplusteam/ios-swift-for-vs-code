@@ -1,20 +1,16 @@
+import { BundlePath } from "../CommandManagement/BundlePath";
 import { Executor } from "../Executor";
 import { getFilePathInWorkspace } from "../env";
 import * as vscode from "vscode";
 
 class XCFileCoverage extends vscode.FileCoverage {
     lineCoverage: vscode.StatementCoverage[] | undefined;
+    bundle: BundlePath | undefined;
 }
 
 export class CoverageProvider {
-    private xcresultPath: string;
-
-    constructor(xcresultPath: string) {
-        this.xcresultPath = getFilePathInWorkspace(xcresultPath);
-    }
-
-    public async getCoverageFiles(): Promise<vscode.FileCoverage[]> {
-        const tree = await this.getCoverageData();
+    public async getCoverageFiles(bundle: BundlePath): Promise<vscode.FileCoverage[]> {
+        const tree = await this.getCoverageData(bundle);
 
         const allCoverages = [] as vscode.FileCoverage[];
 
@@ -24,6 +20,7 @@ export class CoverageProvider {
                     vscode.Uri.file(file.path),
                     new vscode.TestCoverageCount(file.coveredLines, file.executableLines)
                 );
+                fileCoverage.bundle = bundle;
                 allCoverages.push(fileCoverage);
             }
         }
@@ -34,14 +31,17 @@ export class CoverageProvider {
     public async getStatementCoverageFor(
         fileCoverage: vscode.FileCoverage
     ): Promise<vscode.StatementCoverage[]> {
-        const command = `xcrun xccov view --archive --json --file '${fileCoverage.uri.fsPath}' '${this.xcresultPath}'`;
-        const executor = new Executor();
-        const outFileCoverageStr = await executor.execShell({
-            scriptOrCommand: { command: command },
-        });
-        const coverage = JSON.parse(outFileCoverageStr.stdout);
-
         if (fileCoverage instanceof XCFileCoverage) {
+            if (fileCoverage.bundle === undefined) {
+                return [];
+            }
+            const command = `xcrun xccov view --archive --json --file '${fileCoverage.uri.fsPath}' '${this.xcresultPath(fileCoverage.bundle)}'`;
+            const executor = new Executor();
+            const outFileCoverageStr = await executor.execShell({
+                scriptOrCommand: { command: command },
+            });
+            const coverage = JSON.parse(outFileCoverageStr.stdout);
+
             if (fileCoverage.lineCoverage) {
                 return fileCoverage.lineCoverage;
             }
@@ -66,13 +66,17 @@ export class CoverageProvider {
         return [];
     }
 
-    private async getCoverageData() {
+    private async getCoverageData(bundle: BundlePath) {
         const shell = new Executor();
-        const command = `xcrun xccov view --report --json '${this.xcresultPath}'`;
+        const command = `xcrun xccov view --report --json '${this.xcresultPath(bundle)}'`;
         const coverageJsonStr = await shell.execShell({
             scriptOrCommand: { command: command },
         });
 
         return JSON.parse(coverageJsonStr.stdout);
+    }
+
+    private xcresultPath(bundle: BundlePath) {
+        return getFilePathInWorkspace(bundle.bundleResultPath());
     }
 }

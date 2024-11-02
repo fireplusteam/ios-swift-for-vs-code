@@ -9,6 +9,7 @@ import { TestCaseAsyncParser } from "./RawLogParsers/TestCaseAsyncParser";
 import { TestTreeContext } from "./TestTreeContext";
 import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
 import { CommandContext, UserTerminalCloseError } from "../CommandManagement/CommandContext";
+import { BundlePath } from "../CommandManagement/BundlePath";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -150,13 +151,14 @@ export class TestProvider {
                     wasTerminalClosed = UserTerminalCloseError.isEqual(error);
                     throw error;
                 } finally {
+                    await context.bundle.merge(context);
                     try {
                         // read testing results
                         if (
                             !context.cancellationToken.isCancellationRequested &&
                             !wasTerminalClosed
                         ) {
-                            await this.extractTestingResults(mapTests, run);
+                            await this.extractTestingResults(context.bundle, mapTests, run);
                         }
                     } catch (error) {
                         console.log(`Error parsing test result logs: ${error}`);
@@ -170,7 +172,9 @@ export class TestProvider {
 
                     try {
                         // read coverage results
-                        const convergedFiles = await this.context.coverage.getCoverageFiles();
+                        const convergedFiles = await this.context.coverage.getCoverageFiles(
+                            context.bundle
+                        );
                         for (const file of convergedFiles) {
                             run.addCoverage(file);
                         }
@@ -259,6 +263,7 @@ export class TestProvider {
     }
 
     private async extractTestingResults(
+        bundle: BundlePath,
         mapTests: Map<string, { test: vscode.TestItem; data: TestCase }>,
         run: vscode.TestRun
     ) {
@@ -267,6 +272,7 @@ export class TestProvider {
                 const item = mapTests.get(key)?.test;
                 return item?.uri?.fsPath || key;
             },
+            bundle,
             (key, result, rawMessage, messages, duration) => {
                 const item = mapTests.get(key)?.test;
                 if (item) {

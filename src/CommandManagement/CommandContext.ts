@@ -12,6 +12,7 @@ import { TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
 import { ProjectEnv } from "../env";
+import { BundlePath } from "./BundlePath";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -35,6 +36,8 @@ export class CommandContext {
     get projectSettingsProvider(): ProjectSettingsProvider {
         return this._projectSettingsProvider;
     }
+
+    readonly bundle = new BundlePath();
 
     /// debug logs emitter
     private _debugConsoleEmitter = new vscode.EventEmitter<string>();

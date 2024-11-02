@@ -7,7 +7,6 @@ import { CoverageProvider } from "./CoverageProvider";
 import { LSPTestsProvider } from "../LSP/LSPTestsProvider";
 import { TestResultProvider } from "./TestResultProvider";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
-import { BuildManager } from "../Services/BuildManager";
 
 const textDecoder = new TextDecoder("utf-8");
 
@@ -21,8 +20,8 @@ export class TestTreeContext {
         "iOSTestController",
         "iOS Tests"
     );
-    readonly coverage: CoverageProvider = new CoverageProvider(BuildManager.BundleResultPath);
-    readonly testResult: TestResultProvider = new TestResultProvider(BuildManager.BundleResultPath);
+    readonly coverage: CoverageProvider = new CoverageProvider();
+    readonly testResult: TestResultProvider = new TestResultProvider();
     readonly lspTestProvider: LSPTestsProvider;
     readonly atomicCommand: AtomicCommand;
 
