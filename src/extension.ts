@@ -46,6 +46,7 @@ import { LSPTestsProvider } from "./LSP/LSPTestsProvider";
 import { WorkspaceContextImp } from "./LSP/WorkspaceContext";
 import { activateNotActiveExtension } from "./nonActiveExtension";
 import { getReadOnlyDocumentProvider } from "./LSP/ReadOnlyDocumentProvider";
+import { XCTestRunInspector } from "./Debug/XCTestRunInspector";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -186,7 +187,11 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.debug.registerDebugAdapterTrackerFactory("lldb", debugAdapterFactory)
     );
 
-    debugConfiguration = new DebugConfigurationProvider(runtimeWarningLogWatcher, atomicCommand);
+    debugConfiguration = new DebugConfigurationProvider(
+        runtimeWarningLogWatcher,
+        new XCTestRunInspector(problemDiagnosticResolver),
+        atomicCommand
+    );
 
     testProvider = new TestProvider(
         projectManager,

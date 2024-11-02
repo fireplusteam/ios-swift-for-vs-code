@@ -10,7 +10,7 @@ export class BuildManager {
     }
     constructor() {}
 
-    static async args(projectEnv: ProjectEnv) {
+    static async commonArgs(projectEnv: ProjectEnv) {
         return [
             "-configuration",
             await projectEnv.projectConfiguration,
@@ -23,6 +23,12 @@ export class BuildManager {
             "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile",
             "-showBuildTimingSummary",
+        ];
+    }
+
+    static async args(projectEnv: ProjectEnv) {
+        return [
+            ...(await BuildManager.commonArgs(projectEnv)),
             await projectEnv.projectType,
             await projectEnv.projectFile,
             "-scheme",

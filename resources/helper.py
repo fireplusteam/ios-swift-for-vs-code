@@ -74,7 +74,7 @@ def update_git_exclude(file_to_exclude):
 
 #---------DEBUGGER--------------------------------
 debugger_config_file = ".vscode/xcode/debugger.launching"
-def wait_debugger_to_launch(session_id):
+def wait_debugger_to_action(session_id, actions: list[str]):
     while True:
         with FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
@@ -82,12 +82,9 @@ def wait_debugger_to_launch(session_id):
         if config is not None and not session_id in config:
             break
             
-        if config is not None and config[session_id]["status"] == "launched":
+        if config is not None and config[session_id]["status"] in actions:
             break
-
-        if config is not None and config[session_id]["status"] == "stopped":
-            break
-
+        
         time.sleep(1)
 
 

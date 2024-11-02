@@ -46,7 +46,7 @@ export class RunManager {
         }
     }
 
-    async runTests(context: CommandContext, tests: string[]) {
+    async runTests(context: CommandContext, tests: string[], xctestrun: string) {
         deleteFile(getFilePathInWorkspace(BuildManager.BundlePath));
         deleteFile(getFilePathInWorkspace(`${BuildManager.BundlePath}.xcresult`));
         const logFilePath = ".logs/tests.log";
@@ -61,7 +61,9 @@ export class RunManager {
                 ...tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
-                ...(await BuildManager.args(context.projectEnv)),
+                "-xctestrun",
+                xctestrun,
+                ...(await BuildManager.commonArgs(context.projectEnv)),
                 "-parallel-testing-enabled",
                 "NO",
                 // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676

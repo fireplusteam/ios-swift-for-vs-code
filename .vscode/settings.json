@@ -37,12 +37,14 @@
         "showdestinations",
         "sswg",
         "swiftinterface",
+        "TESTROOT",
         "typealias",
         "visionos",
         "vsdiag",
         "waitfor",
         "watchos",
         "xcresulttool",
+        "xctestrun",
         "xrsimulator"
     ]
 }

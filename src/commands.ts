@@ -230,6 +230,47 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
     }
 }
 
+export async function selectTestPlan(commandContext: CommandContext, ignoreFocusOut = false) {
+    try {
+        const testPlans = await commandContext.projectSettingsProvider.testPlans;
+        let currentTestPlan: string;
+        try {
+            currentTestPlan = await commandContext.projectEnv.projectTestPlan;
+        } catch {
+            currentTestPlan = "";
+        }
+        const json = testPlans.map<QuickPickItem>(testPlan => {
+            if (currentTestPlan === testPlan) {
+                return {
+                    label: "$(notebook-state-success) " + testPlan,
+                    value: testPlan,
+                };
+            } else {
+                return { label: testPlan, value: testPlan };
+            }
+        });
+
+        const option = await showPicker(
+            json,
+            "Test Plan",
+            "Please Select Test Plan Configuration",
+            false,
+            ignoreFocusOut,
+            true
+        );
+
+        if (option === undefined) {
+            return false;
+        }
+
+        await commandContext.projectEnv.setProjectTestPlan(option);
+    } catch (error) {
+        return await handleValidationErrors(commandContext, error, async () => {
+            await selectTestPlan(commandContext, ignoreFocusOut);
+        });
+    }
+}
+
 export async function selectDevice(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         const devices = await commandContext.projectSettingsProvider.fetchDevices();
@@ -468,25 +509,16 @@ export async function runAppOnMultipleDevices(
     }
 }
 
-export async function runAndDebugTests(
-    commandContext: CommandContext,
-    sessionID: string,
-    isDebuggable: boolean
-) {
-    await checkWorkspace(commandContext, false);
-    const runManager = new RunManager(sessionID, isDebuggable);
-    await runManager.runTests(commandContext, []);
-}
-
 export async function runAndDebugTestsForCurrentFile(
     commandContext: CommandContext,
     sessionID: string,
     isDebuggable: boolean,
-    tests: string[]
+    tests: string[],
+    xctestrun: string
 ) {
     await checkWorkspace(commandContext, false);
     const runManager = new RunManager(sessionID, isDebuggable);
-    await runManager.runTests(commandContext, tests);
+    await runManager.runTests(commandContext, tests, xctestrun);
 }
 
 export async function enableXCBBuildService(enabled: boolean) {

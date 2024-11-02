@@ -13,6 +13,9 @@ export const ProjectSchemeMissedError = new CustomError(
 export const ProjectConfigurationMissedError = new CustomError(
     "Project configuration is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
 );
+export const ProjectTestPlanMissedError = new CustomError(
+    "Project test plan is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
+);
 export const DebugDeviceIDMissedError = new CustomError(
     "Debug device is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
 );
@@ -52,6 +55,7 @@ export interface ProjectEnvInterface {
     projectFile: Promise<string>;
     projectScheme: Promise<string>;
     projectConfiguration: Promise<string>;
+    projectTestPlan: Promise<string>;
     debugDeviceID: Promise<DeviceID>;
     multipleDeviceID: Promise<DeviceID[]>;
     bundleAppName: Promise<string>;
@@ -66,6 +70,7 @@ export interface SetProjectEnvInterface {
     setProjectFile(file: string): Promise<void>;
     setProjectScheme(scheme: string): Promise<void>;
     setProjectConfiguration(configuration: string): Promise<void>;
+    setProjectTestPlan(testPlan: string): Promise<void>;
     setDebugDeviceID(deviceID: DeviceID): Promise<void>;
     setMultipleDeviceID(multiId: DeviceID[]): Promise<void>;
 }
@@ -107,6 +112,9 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
     get projectConfiguration(): Promise<string> {
         return Promise.resolve(getProjectConfiguration(this.configuration));
+    }
+    get projectTestPlan(): Promise<string> {
+        return Promise.resolve(getProjectTestPlan(this.configuration));
     }
     get debugDeviceID(): Promise<DeviceID> {
         return Promise.resolve(getDeviceId(this.configuration));
@@ -154,6 +162,9 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_CONFIGURATION", configuration);
+    }
+    async setProjectTestPlan(testPlan: string): Promise<void> {
+        saveKeyToEnvList(this.configuration, "PROJECT_TEST_PLAN", testPlan);
     }
     async setDebugDeviceID(deviceID: DeviceID): Promise<void> {
         saveKeyToEnvList(this.configuration, "DEVICE_ID", deviceID);
@@ -249,6 +260,14 @@ function getProjectConfiguration(configuration: { [key: string]: string }) {
     const val = configuration["PROJECT_CONFIGURATION"];
     if (val === undefined) {
         throw ProjectConfigurationMissedError;
+    }
+    return val;
+}
+
+function getProjectTestPlan(configuration: { [key: string]: string }) {
+    const val = configuration["PROJECT_TEST_PLAN"];
+    if (val === undefined) {
+        throw ProjectTestPlanMissedError;
     }
     return val;
 }
@@ -425,18 +444,33 @@ async function getTargetExecutable(
     try {
         // if get_project_type(list["PROJECT_FILE"]) == "-package":
         //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
+        return `${await getBuildDir(deviceID, build_configuration)}/${product_name}.app`;
+    } catch {
+        throw AppTargetExecutableMissedError;
+    }
+}
+
+export async function getProductDir() {
+    const build_path = await getBuildRootPath();
+    return `${build_path}/Build/Products/`;
+}
+
+async function getBuildDir(deviceID: DeviceID, build_configuration: string) {
+    try {
+        // if get_project_type(list["PROJECT_FILE"]) == "-package":
+        //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
         const build_path = await getBuildRootPath();
         switch (deviceID.platform) {
             case "macOS":
-                return `${build_path}/Build/Products/${build_configuration}/${product_name}.app`;
+                return `${build_path}/Build/Products/${build_configuration}`;
             case "watchOS Simulator":
-                return `${build_path}/Build/Products/${build_configuration}-watchsimulator/${product_name}.app`;
+                return `${build_path}/Build/Products/${build_configuration}-watchsimulator`;
             case "visionOS Simulator":
-                return `${build_path}/Build/Products/${build_configuration}-xrsimulator/${product_name}.app`;
+                return `${build_path}/Build/Products/${build_configuration}-xrsimulator`;
             case "tvOS Simulator":
-                return `${build_path}/Build/Products/${build_configuration}-appletvsimulator/${product_name}.app`;
+                return `${build_path}/Build/Products/${build_configuration}-appletvsimulator`;
             case "iOS Simulator":
-                return `${build_path}/Build/Products/${build_configuration}-iphonesimulator/${product_name}.app`;
+                return `${build_path}/Build/Products/${build_configuration}-iphonesimulator`;
         }
     } catch {
         throw AppTargetExecutableMissedError;

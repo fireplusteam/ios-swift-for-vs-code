@@ -123,6 +123,8 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
                 
+                helper.update_debugger_launch_config(session_id, "status", "attached")
+                
                 threading.Thread(target=print_app_log, args=(debugger, pid)).start()
                 create_apple_runtime_warning_watch_process(debugger, pid)
                                 

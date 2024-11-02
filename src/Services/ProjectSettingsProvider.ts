@@ -182,7 +182,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 buildConfiguration,
                 "-json",
             ],
-            mode: ExecutorMode.verbose,
+            mode: ExecutorMode.onlyCommandNameAndResult,
         });
         const jsonSettings = JSON.parse(settings.stdout);
         ProjectSettingsProvider.cachedSettings = [

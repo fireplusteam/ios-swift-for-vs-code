@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
-import { buildSelectedTarget, buildTests, buildTestsForCurrentFile } from "../buildCommands";
-import { runAndDebugTests, runAndDebugTestsForCurrentFile, runApp } from "../commands";
+import { buildSelectedTarget, buildTestsForCurrentFile } from "../buildCommands";
+import { runAndDebugTestsForCurrentFile, runApp } from "../commands";
 import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
@@ -26,6 +26,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
     private get testsToRun(): string[] {
         return this.debugSession.configuration.testsToRun || [];
+    }
+    private get xctestrun(): string {
+        return this.debugSession.configuration.xctestrun;
     }
     private get context() {
         return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
@@ -174,17 +177,6 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                         await runApp(context, this.sessionID, isDebuggable);
                     }
                 );
-            } else if (dbgConfig.target === "tests") {
-                await this.executeAppCommand(
-                    async context => {
-                        await buildTests(context, this.problemResolver);
-                    },
-                    async context => {
-                        this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
-                        await runAndDebugTests(context, this.sessionID, isDebuggable);
-                    },
-                    "All Tests Are Passed"
-                );
             } else if (dbgConfig.target === "testsForCurrentFile") {
                 await this.executeAppCommand(
                     async context => {
@@ -200,10 +192,10 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                             context,
                             this.sessionID,
                             isDebuggable,
-                            this.testsToRun
+                            this.testsToRun,
+                            this.xctestrun
                         );
-                    },
-                    "All Tests Are Passed"
+                    }
                 );
             }
         } catch (error) {

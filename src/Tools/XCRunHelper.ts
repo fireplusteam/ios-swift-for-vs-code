@@ -53,4 +53,8 @@ export class XCRunHelper {
             throw Error("swift lang is not determined");
         }
     }
+
+    public static async convertPlistToJson(file: string) {
+        return this.getStdOut(`plutil -convert json -o - "${file}"`);
+    }
 }

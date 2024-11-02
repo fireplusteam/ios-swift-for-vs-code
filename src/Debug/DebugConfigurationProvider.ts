@@ -13,6 +13,7 @@ import { DebugAdapterTracker } from "./DebugAdapterTracker";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { CommandContext, UserTerminatedError } from "../CommandManagement/CommandContext";
 import { checkWorkspace } from "../commands";
+import { XCTestRunInspector } from "./XCTestRunInspector";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -40,9 +41,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         this._counterID += 1;
         return this._counterID;
     }
-    private runtimeWarningsWatcher: RuntimeWarningsLogWatcher;
-
-    private atomicCommand: AtomicCommand;
 
     private static contextBinder = new Map<
         string,
@@ -56,10 +54,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return this.contextBinder.get(session);
     }
 
-    constructor(runtimeWarningsWatcher: RuntimeWarningsLogWatcher, atomicCommand: AtomicCommand) {
-        this.runtimeWarningsWatcher = runtimeWarningsWatcher;
-        this.atomicCommand = atomicCommand;
-    }
+    constructor(
+        private runtimeWarningsWatcher: RuntimeWarningsLogWatcher,
+        private testRunInspector: XCTestRunInspector,
+        private atomicCommand: AtomicCommand
+    ) {}
 
     private waitForDebugSession(context: CommandContext, sessionID: string): Promise<void> {
         const operation = context.waitToCancel();
@@ -99,25 +98,44 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         testRun: vscode.TestRun,
         context: CommandContext
     ) {
-        const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
-        const debugSession: vscode.DebugConfiguration = {
-            type: "xcode-lldb",
-            name: "iOS: Run Tests & Debug",
-            request: "launch",
-            target: "tests",
-            isDebuggable: isDebuggable,
-            sessionId: sessionId,
-        };
+        const sessions = await this.testRunInspector.build(context);
 
-        const waiter = this.waitForDebugSession(context, sessionId);
-        if (
-            (await vscode.debug.startDebugging(undefined, debugSession, { testRun: testRun })) ===
-            false
-        ) {
-            context.cancel();
-            return false;
+        for (const session of sessions) {
+            const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
+            const debugSession: vscode.DebugConfiguration = {
+                type: "xcode-lldb",
+                name: "iOS: Run Tests & Debug: Current File",
+                request: "launch",
+                target: "testsForCurrentFile",
+                isDebuggable: isDebuggable,
+                sessionId: sessionId,
+                testsToRun: [session.target],
+                buildBeforeLaunch: "never",
+                hostApp: session.host,
+                hostProcess: session.process,
+                xctestrun: session.testRun,
+            };
+
+            const waiter = this.waitForDebugSession(context, sessionId);
+            if (
+                (await vscode.debug.startDebugging(undefined, debugSession, {
+                    testRun: testRun,
+                })) === false
+            ) {
+                context.cancel();
+                return false;
+            }
+            try {
+                await waiter;
+            } catch (error: any) {
+                if (error.code === 65) {
+                    // skip
+                } else {
+                    throw error;
+                }
+                console.log(error);
+            }
         }
-        await waiter;
         return true;
     }
 
@@ -127,6 +145,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         testRun: vscode.TestRun,
         context: CommandContext
     ) {
+        await this.testRunInspector.buildForTests(context, tests);
+
         const sessionId = `${getSessionId(tests.join(","))}_${isDebuggable}${this.counterID}`;
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
@@ -136,6 +156,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             isDebuggable: isDebuggable,
             sessionId: sessionId,
             testsToRun: tests,
+            buildBeforeLaunch: "never",
         };
 
         const waiter = this.waitForDebugSession(context, sessionId);
@@ -210,7 +231,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
     }
 
-    private async processName(context: CommandContext) {
+    private async processName(context: CommandContext, dbgConfig: vscode.DebugConfiguration) {
+        if (dbgConfig.hostProcess) {
+            return dbgConfig.hostProcess;
+        }
         const process_name = await context.projectEnv.productName;
         if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
             return `${process_name}.app/Contents/MacOS/${process_name}`;
@@ -241,7 +265,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         // TODO: try to refactor launch logic
         // https://junch.github.io/debug/2016/09/19/original-lldb.html
         const deviceID = await context.projectEnv.debugDeviceID;
-        const exe = await context.projectEnv.appExecutablePath(deviceID);
+        const exe = dbgConfig.hostApp
+            ? dbgConfig.hostApp
+            : await context.projectEnv.appExecutablePath(deviceID);
 
         const logId = deviceID.id;
         emptyAppLog(logId);
@@ -264,9 +290,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
-                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
+                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context, dbgConfig)}`,
 
                     `create_target ${sessionID}`,
 
@@ -288,6 +313,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
                 logPath: `.logs/app_${logId}.log`,
                 deviceID: deviceID.id,
+                xctestrun: dbgConfig.xctestrun,
             };
             return debugSession;
         } else {
@@ -309,9 +335,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
-                    `set_environmental_var PRODUCT_NAME=!!=${await context.projectEnv.productName}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context)}`,
+                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context, dbgConfig)}`,
 
                     `create_target ${sessionID}`,
                 ],
@@ -329,6 +354,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
                 logPath: `.logs/app_${logId}.log`,
                 deviceID: deviceID.id,
+                xctestrun: dbgConfig.xctestrun,
             };
             return debugSession;
         }
