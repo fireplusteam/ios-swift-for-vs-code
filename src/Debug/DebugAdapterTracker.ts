@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
-import { buildSelectedTarget, buildTestsForCurrentFile } from "../buildCommands";
+import { buildSelectedTarget } from "../buildCommands";
 import { runAndDebugTests, runApp } from "../commands";
 import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
@@ -132,10 +132,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     private async executeAppCommand(
-        buildCommand: (commandContext: CommandContext) => Promise<void>,
+        buildCommand: ((commandContext: CommandContext) => Promise<void>) | undefined,
         runCommandClosure: (commandContext: CommandContext) => Promise<void>
     ) {
-        if (await this.checkBuildBeforeLaunch(this.debugSession.configuration)) {
+        if (
+            buildCommand !== undefined &&
+            (await this.checkBuildBeforeLaunch(this.debugSession.configuration))
+        ) {
             await DebugAdapterTracker.updateStatus(this.sessionID, "building");
             this.context.commandContext.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
             await buildCommand(this.context.commandContext);
@@ -175,25 +178,16 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     }
                 );
             } else if (dbgConfig.target === "testsForCurrentFile") {
-                await this.executeAppCommand(
-                    async context => {
-                        await buildTestsForCurrentFile(
-                            context,
-                            this.problemResolver,
-                            this.testsToRun
-                        );
-                    },
-                    async context => {
-                        this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
-                        await runAndDebugTests(
-                            context,
-                            this.sessionID,
-                            isDebuggable,
-                            this.testsToRun,
-                            this.xctestrun
-                        );
-                    }
-                );
+                await this.executeAppCommand(undefined, async context => {
+                    this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
+                    await runAndDebugTests(
+                        context,
+                        this.sessionID,
+                        isDebuggable,
+                        this.testsToRun,
+                        this.xctestrun
+                    );
+                });
             }
             this.context.token.fire();
             if (dbgConfig.target !== "app") {

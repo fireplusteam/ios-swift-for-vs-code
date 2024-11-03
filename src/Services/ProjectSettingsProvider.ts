@@ -133,6 +133,10 @@ export class ProjectSettingsProvider implements XCodeSettings {
             });
             console.log(result.stdout);
             const json = JSON.parse(result.stdout);
+            if (json.testPlans === null) {
+                ProjectSettingsProvider.cachedTestPlans = [scheme, []];
+                return [];
+            }
             const testPlans = json.testPlans.map((e: any) => e.name);
             ProjectSettingsProvider.cachedTestPlans = [scheme, testPlans];
             return testPlans;

@@ -199,7 +199,7 @@ export async function createFifo(fifoPath: string) {
         if (!existsSync(fifoPath)) {
             const fileDir = fifoPath.split(path.sep).slice(0, -1).join(path.sep);
             fs.mkdirSync(fileDir, { recursive: true });
-            exec(`mkfifo ${fifoPath}`, error => {
+            exec(`mkfifo "${fifoPath}"`, error => {
                 if (error) {
                     reject(error);
                 } else {

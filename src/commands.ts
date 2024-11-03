@@ -233,6 +233,13 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
 export async function selectTestPlan(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         const testPlans = await commandContext.projectSettingsProvider.testPlans;
+        if (testPlans.length === 0) {
+            vscode.window.showErrorMessage(
+                "There're no available Test Plans to select for given scheme/project configuration."
+            );
+            return false;
+        }
+
         let currentTestPlan: string;
         try {
             currentTestPlan = await commandContext.projectEnv.projectTestPlan;
@@ -369,7 +376,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             await generateXcodeServer(commandContext, false);
         }
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
-            updatePackageDependencies(commandContext, false);
+            await updatePackageDependencies(commandContext, false);
         }
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {

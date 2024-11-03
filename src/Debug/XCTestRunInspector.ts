@@ -86,14 +86,18 @@ export class XCTestRunInspector {
         for (const testRun of testRuns) {
             const stdout = await XCRunHelper.convertPlistToJson(testRun);
             const json = JSON.parse(stdout);
-            if (selectedTestPlan === undefined) {
-                if (json.TestPlan.IsDefault === true) {
+            if (testRuns.length === 1) {
+                selectedTestRun = json;
+                selectedFile = testRun;
+                break;
+            } else if (selectedTestPlan === undefined) {
+                if (json.TestPlan?.IsDefault === true) {
                     // set default as it was not preselected by a user
                     selectedTestRun = json;
                     selectedFile = testRun;
                     break;
                 }
-            } else if (json.TestPlan.Name === selectedTestPlan) {
+            } else if (json.TestPlan?.Name === selectedTestPlan) {
                 selectedFile = testRun;
                 selectedTestRun = json;
                 break;
@@ -102,7 +106,16 @@ export class XCTestRunInspector {
         const result: XCTestTarget[] = [];
         if (selectedTestRun !== null) {
             // parse configs to targets
-            const configurations = selectedTestRun.TestConfigurations;
+            let configurations = selectedTestRun.TestConfigurations;
+            if (configurations === undefined) {
+                const testTargets = [];
+                for (const key in selectedTestRun) {
+                    if (selectedTestRun[key].BlueprintName !== undefined) {
+                        testTargets.push(selectedTestRun[key]);
+                    }
+                }
+                configurations = [{ TestTargets: testTargets }];
+            }
             for (const config of configurations) {
                 console.log(config);
                 for (const testTarget of config.TestTargets) {
