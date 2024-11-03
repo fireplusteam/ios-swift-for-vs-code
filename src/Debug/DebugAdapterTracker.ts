@@ -30,6 +30,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get xctestrun(): string {
         return this.debugSession.configuration.xctestrun;
     }
+    private get isCoverage(): boolean {
+        return this.debugSession.configuration.isCoverage;
+    }
     private get context() {
         return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
     }
@@ -185,7 +188,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                         this.sessionID,
                         isDebuggable,
                         this.testsToRun,
-                        this.xctestrun
+                        this.xctestrun,
+                        this.isCoverage
                     );
                 });
             }

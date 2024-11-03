@@ -97,11 +97,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         tests: string[] | undefined,
         isDebuggable: boolean,
         testRun: vscode.TestRun,
-        context: CommandContext
+        context: CommandContext,
+        isCoverage: boolean
     ) {
         context.terminal!.terminalName = `Building for ${isDebuggable ? "Debug Tests" : "Run Tests"}`;
 
-        const sessions = await this.testRunInspector.build(context, tests);
+        const sessions = await this.testRunInspector.build(context, tests, isCoverage);
 
         let wasErrorThrown: any | null = null;
         for (const session of sessions) {
@@ -125,6 +126,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 hostApp: session.host,
                 hostProcess: session.process,
                 xctestrun: session.testRun,
+                isCoverage: isCoverage,
             };
 
             const waiter = this.waitForDebugSession(context, sessionId);
@@ -296,6 +298,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 logPath: `.logs/app_${logId}.log`,
                 deviceID: deviceID.id,
                 xctestrun: dbgConfig.xctestrun,
+                isCoverage: dbgConfig.isCoverage,
             };
             return debugSession;
         } else {
@@ -337,6 +340,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 logPath: `.logs/app_${logId}.log`,
                 deviceID: deviceID.id,
                 xctestrun: dbgConfig.xctestrun,
+                isCoverage: dbgConfig.isCoverage,
             };
             return debugSession;
         }

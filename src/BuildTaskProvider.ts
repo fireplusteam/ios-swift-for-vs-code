@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { buildSelectedTarget, buildTests, cleanDerivedData } from "./buildCommands";
+import { buildSelectedTarget, buildTestsForCurrentFile, cleanDerivedData } from "./buildCommands";
 import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand } from "./CommandManagement/AtomicCommand";
@@ -64,7 +64,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             "Build Tests",
             vscode.TaskGroup.Build,
             async context => {
-                await buildTests(context, this.problemResolver);
+                await buildTestsForCurrentFile(context, this.problemResolver, [], false);
             }
         );
 

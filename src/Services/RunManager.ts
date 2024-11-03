@@ -46,7 +46,12 @@ export class RunManager {
         }
     }
 
-    async runTests(context: CommandContext, tests: string[], xctestrun: string) {
+    async runTests(
+        context: CommandContext,
+        tests: string[],
+        xctestrun: string,
+        isCoverage: boolean
+    ) {
         context.bundle.generateNext();
         const logFilePath = ".logs/tests.log";
 
@@ -65,6 +70,8 @@ export class RunManager {
                 ...(await BuildManager.commonArgs(context.projectEnv, context.bundle)),
                 "-parallel-testing-enabled",
                 "NO",
+                "-enableCodeCoverage",
+                isCoverage ? "YES" : "NO",
                 // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676
                 // "./vscode/testrun_example.xctestrun",
             ],

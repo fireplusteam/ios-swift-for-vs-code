@@ -36,32 +36,18 @@ export async function buildSelectedTarget(
 
 // TESTS
 
-export async function buildTests(
-    context: CommandContext,
-    problemResolver: ProblemDiagnosticResolver
-) {
-    await checkWorkspace(context);
-    const buildManager = new BuildManager();
-    const filePath = getFileNameLog();
-    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
-    try {
-        await buildManager.buildForTestingWithTests(context, filePath, []);
-    } finally {
-        problemResolver.end(rawParser);
-    }
-}
-
 export async function buildTestsForCurrentFile(
     context: CommandContext,
     problemResolver: ProblemDiagnosticResolver,
-    tests: string[]
+    tests: string[],
+    isCoverage: boolean
 ) {
     await checkWorkspace(context);
     const buildManager = new BuildManager();
     const filePath = getFileNameLog();
     const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
     try {
-        await buildManager.buildForTestingWithTests(context, filePath, tests);
+        await buildManager.buildForTestingWithTests(context, filePath, tests, isCoverage);
     } finally {
         problemResolver.end(rawParser);
     }

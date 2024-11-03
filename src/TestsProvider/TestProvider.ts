@@ -25,7 +25,8 @@ export class TestProvider {
         tests: string[] | undefined,
         isDebuggable: boolean,
         testRun: vscode.TestRun,
-        context: CommandContext
+        context: CommandContext,
+        isCoverage: boolean
     ) => Promise<boolean>;
     context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser();
@@ -41,7 +42,8 @@ export class TestProvider {
             tests: string[] | undefined,
             isDebuggable: boolean,
             testRun: vscode.TestRun,
-            context: CommandContext
+            context: CommandContext,
+            isCoverage: boolean
         ) => Promise<boolean>
     ) {
         this.projectManager = projectManager;
@@ -154,7 +156,8 @@ export class TestProvider {
                             request.include === undefined ? undefined : testList,
                             request.profile?.kind === vscode.TestRunProfileKind.Debug,
                             run,
-                            context
+                            context,
+                            request.profile?.kind === vscode.TestRunProfileKind.Coverage
                         );
                     } finally {
                         this.asyncParser.end(rawParser);

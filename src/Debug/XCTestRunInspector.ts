@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { glob } from "glob";
-import { buildTests, buildTestsForCurrentFile } from "../buildCommands";
+import { buildTestsForCurrentFile } from "../buildCommands";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { getProductDir } from "../env";
@@ -22,12 +22,12 @@ export type XCTestTarget = {
 export class XCTestRunInspector {
     constructor(private problemResolver: ProblemDiagnosticResolver) {}
 
-    async build(context: CommandContext, tests: string[] | undefined) {
+    async build(context: CommandContext, tests: string[] | undefined, isCoverage: boolean) {
         const existingFiles = await this.getAllXCRunFiles();
         if (tests) {
-            await buildTestsForCurrentFile(context, this.problemResolver, tests);
+            await buildTestsForCurrentFile(context, this.problemResolver, tests, isCoverage);
         } else {
-            await buildTests(context, this.problemResolver);
+            await buildTestsForCurrentFile(context, this.problemResolver, [], isCoverage);
         }
         const changedFiles = await this.getChangedFiles(existingFiles);
         const selectedTestPlan = await this.getSelectedTestPlan(context);

@@ -108,7 +108,12 @@ export class BuildManager {
         });
     }
 
-    async buildForTestingWithTests(context: CommandContext, logFilePath: string, tests: string[]) {
+    async buildForTestingWithTests(
+        context: CommandContext,
+        logFilePath: string,
+        tests: string[],
+        isCoverage: boolean
+    ) {
         context.bundle.generateNext();
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -119,6 +124,8 @@ export class BuildManager {
                     return `-only-testing:${test}`;
                 }),
                 ...(await BuildManager.args(context.projectEnv, context.bundle)),
+                "-enableCodeCoverage",
+                isCoverage ? "YES" : "NO",
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {

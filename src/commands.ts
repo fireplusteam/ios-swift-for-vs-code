@@ -521,11 +521,12 @@ export async function runAndDebugTests(
     sessionID: string,
     isDebuggable: boolean,
     tests: string[],
-    xctestrun: string
+    xctestrun: string,
+    isCoverage: boolean
 ) {
     await checkWorkspace(commandContext, false);
     const runManager = new RunManager(sessionID, isDebuggable);
-    await runManager.runTests(commandContext, tests, xctestrun);
+    await runManager.runTests(commandContext, tests, xctestrun, isCoverage);
 }
 
 export async function enableXCBBuildService(enabled: boolean) {
