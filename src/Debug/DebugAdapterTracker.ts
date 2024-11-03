@@ -115,9 +115,10 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 if (isCancelled) {
                     this.context.commandContext.cancel();
                 }
-                await vscode.debug.stopDebugging(this.debugSession);
             } catch {
                 /* empty */
+            } finally {
+                await vscode.debug.stopDebugging(this.debugSession);
             }
         }
     }
@@ -200,8 +201,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         } finally {
             if (dbgConfig.target !== "app") {
                 await this.terminateCurrentSession(false);
-                this.context.token.fire();
             }
+            this.context.token.fire();
         }
     }
 }

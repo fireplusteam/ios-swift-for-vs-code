@@ -70,7 +70,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         });
         return operation.wait.finally(() => {
             DebugConfigurationProvider.contextBinder.delete(sessionID);
-            DebugAdapterTracker.updateStatus(sessionID, "stopped");
         });
     }
 
