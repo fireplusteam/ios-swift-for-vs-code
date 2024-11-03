@@ -35,7 +35,7 @@ function runtimeWarningBreakPointCommand() {
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     static Type = "xcode-lldb";
-    static lldbName = "iOS: App Debugger Console";
+    static lldbName = "Xcode: App Debugger Console";
 
     private _counterID = 0;
     private get counterID(): number {
@@ -78,7 +78,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const sessionId = getSessionId(`App_${isDebuggable}${this.counterID}`);
         const debugSession: vscode.DebugConfiguration = {
             type: "xcode-lldb",
-            name: "iOS: Run App & Debug",
+            name: "Xcode: Run App & Debug",
             request: "launch",
             target: "app",
             isDebuggable: isDebuggable,
@@ -114,7 +114,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             }
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
-                name: "iOS: Run Tests & Debug",
+                name: "Xcode: Run Tests & Debug",
                 request: "launch",
                 target: "testsForCurrentFile",
                 isDebuggable: isDebuggable,

@@ -203,90 +203,90 @@
         "commands": [
             {
                 "command": "vscode-ios.tools.install",
-                "title": "iOS: Install Extension Dependencies"
+                "title": "Xcode: Install Extension Dependencies"
             },
             {
                 "command": "vscode-ios.tools.update",
-                "title": "iOS: Update Extensions Dependencies"
+                "title": "Xcode: Update Extensions Dependencies"
             },
             {
                 "command": "vscode-ios.project.select",
-                "title": "iOS: Select Project/Workspace"
+                "title": "Xcode: Select Project/Workspace"
             },
             {
                 "command": "vscode-ios.project.selectTarget",
-                "title": "iOS: Select Target"
+                "title": "Xcode: Select Target"
             },
             {
                 "command": "vscode-ios.project.selectConfiguration",
-                "title": "iOS: Select Build Configuration"
+                "title": "Xcode: Select Build Configuration"
             },
             {
                 "command": "vscode-ios.project.selectTestPlan",
-                "title": "iOS: Select Test Plan"
+                "title": "Xcode: Select Test Plan"
             },
             {
                 "command": "vscode-ios.project.selectDevice",
-                "title": "iOS: Select DEBUG Device"
+                "title": "Xcode: Select DEBUG Device"
             },
             {
                 "command": "vscode-ios.lsp.restart",
-                "title": "iOS: Restart LSP Server"
+                "title": "Xcode: Restart LSP Server"
             },
             {
                 "command": "vscode-ios.check.workspace",
-                "title": "iOS: Validate Environment"
+                "title": "Xcode: Validate Environment"
             },
             {
                 "command": "vscode-ios.check.generateXcodeServer",
-                "title": "iOS: Generate xCode Server Config"
+                "title": "Xcode: Generate xCode Server Config"
             },
             {
                 "command": "vscode-ios.env.open.xcode",
-                "title": "iOS: Open In Xcode"
+                "title": "Xcode: Open In Xcode"
             },
             {
                 "command": "vscode-ios.build.clean",
-                "title": "iOS: Clean Derived Data",
+                "title": "Xcode: Clean Derived Data",
                 "category": "build"
             },
             {
                 "command": "vscode-ios.build.selectedTarget",
-                "title": "iOS: Build",
+                "title": "Xcode: Build",
                 "category": "build"
             },
             {
                 "command": "vscode-ios.build.tests",
-                "title": "iOS: Build Tests",
+                "title": "Xcode: Build Tests",
                 "category": "build"
             },
             {
                 "command": "vscode-ios.run.app.multiple.devices",
-                "title": "iOS: Run App On Multiple Devices"
+                "title": "Xcode: Run App On Multiple Devices"
             },
             {
                 "command": "vscode-ios.run.app.debug",
-                "title": "iOS: Run App & Debug"
+                "title": "Xcode: Run App & Debug"
             },
             {
                 "command": "vscode-ios.project.file.add",
-                "title": "iOS: Add Files"
+                "title": "Xcode: Add Files"
             },
             {
                 "command": "vscode-ios.project.delete.reference",
-                "title": "iOS: Delete Files Reference"
+                "title": "Xcode: Delete Files Reference"
             },
             {
                 "command": "vscode-ios.project.file.edit.targets",
-                "title": "iOS: Edit File Targets"
+                "title": "Xcode: Edit File Targets"
             },
             {
                 "command": "vscode-ios.run.project.reload",
-                "title": "iOS: Project: Reload"
+                "title": "Xcode: Project: Reload"
             },
             {
                 "command": "vscode-ios.run.project.update.deps",
-                "title": "iOS: Project: Update Package Dependencies"
+                "title": "Xcode: Project: Update Package Dependencies"
             }
         ],
         "languages": [
@@ -349,7 +349,7 @@
         "debuggers": [
             {
                 "type": "xcode-lldb",
-                "label": "iOS: APP Debug",
+                "label": "Xcode: APP Debug",
                 "configurationAttributes": {
                     "launch": {
                         "properties": {
@@ -387,7 +387,7 @@
                 "initialConfigurations": [
                     {
                         "type": "xcode-lldb",
-                        "name": "iOS: Run App & Debug",
+                        "name": "Xcode: Run App & Debug",
                         "request": "launch",
                         "target": "app",
                         "isDebuggable": true,
@@ -397,11 +397,11 @@
                 ],
                 "configurationSnippets": [
                     {
-                        "label": "iOS: Run App & Debug",
+                        "label": "Xcode: Run App & Debug",
                         "description": "Add a new configuration for iOS debugging",
                         "body": {
                             "type": "xcode-lldb",
-                            "name": "iOS: Run App & Debug",
+                            "name": "Xcode: Run App & Debug",
                             "request": "launch",
                             "target": "app",
                             "isDebuggable": true,

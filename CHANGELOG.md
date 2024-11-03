@@ -2,6 +2,10 @@
 
 ## 0.5.0 - 2024-10-20
 
+### Changed
+
+-   Breaking change: `iOS:` renamed to `Xcode:` for all commands
+
 ### Added
 
 -   Debug UI tests and multiple targets are now supported

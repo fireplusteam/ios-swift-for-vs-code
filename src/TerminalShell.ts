@@ -94,7 +94,7 @@ export class TerminalShell {
     }
 
     private getTerminalName(id: string) {
-        const terminalId = `iOS: ${id}`;
+        const terminalId = `Xcode: ${id}`;
         return terminalId;
     }
 

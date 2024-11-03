@@ -79,15 +79,15 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 ## How to use
 
--   Once you installed all the dependencies, you can open a folder which contains the iOS project, it project or workspace is located in the local folder then an extension will ask you if you want to configure it otherwise you need to perform command "iOS: Select Project/Workspace" and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
+-   Once you installed all the dependencies, you can open a folder which contains the iOS project, it project or workspace is located in the local folder then an extension will ask you if you want to configure it otherwise you need to perform command "Xcode: Select Project/Workspace" and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
 
--   There's ios launch configuration that can be added to launch.json file to run and debug ios project (there's also "iOS: Run App & Debug" snippet)
+-   There's ios launch configuration that can be added to launch.json file to run and debug ios project (there's also "Xcode: Run App & Debug" snippet)
 
 ```json
 "configurations": [
     {
         "type": "xcode-lldb",
-        "name": "iOS: Run App & Debug",
+        "name": "Xcode: Run App & Debug",
         "request": "launch",
         "target": "app",
         "isDebuggable": true,

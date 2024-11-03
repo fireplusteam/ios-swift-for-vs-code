@@ -93,7 +93,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             vscode.TaskScope.Workspace,
             title,
             "iOS",
-            this.customExecution(`iOS: ${title}`, commandClosure)
+            this.customExecution(`Xcode: ${title}`, commandClosure)
         );
         buildTask.group = group;
         buildTask.presentationOptions = {
