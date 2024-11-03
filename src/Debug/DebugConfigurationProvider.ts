@@ -99,6 +99,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         testRun: vscode.TestRun,
         context: CommandContext
     ) {
+        context.terminal!.terminalName = `Building for ${isDebuggable ? "Debug Tests" : "Run Tests"}`;
+
         const sessions = await this.testRunInspector.build(context, tests);
 
         let wasErrorThrown: any | null = null;

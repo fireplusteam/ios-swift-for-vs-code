@@ -195,14 +195,17 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     }
                 );
             }
+            this.context.token.fire();
+            if (dbgConfig.target !== "app") {
+                try {
+                    await this.terminateCurrentSession(false);
+                } catch {
+                    /* empty */
+                }
+            }
         } catch (error) {
             this.context.rejectToken.fire(error);
             await this.terminateCurrentSession(false);
-        } finally {
-            if (dbgConfig.target !== "app") {
-                await this.terminateCurrentSession(false);
-            }
-            this.context.token.fire();
         }
     }
 }

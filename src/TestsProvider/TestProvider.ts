@@ -200,21 +200,23 @@ export class TestProvider {
             // resolve all tree before start testing
             await this.findInitialFiles(this.context.ctrl);
             await discoverTests(request.include ?? this.gatherTestItems(ctrl.items));
-            this.context.atomicCommand.userCommand(async context => {
-                if (token.isCancellationRequested) {
-                    context.cancel();
-                }
-                const dis = token.onCancellationRequested(() => {
-                    dis.dispose();
-                    context.cancel();
-                });
-                try {
-                    await runTestQueue(context);
-                } catch (error) {
-                    console.log(`${error}`);
-                    throw error;
-                }
-            }, "Start Testing");
+            this.context.atomicCommand
+                .userCommand(async context => {
+                    if (token.isCancellationRequested) {
+                        context.cancel();
+                    }
+                    const dis = token.onCancellationRequested(() => {
+                        dis.dispose();
+                        context.cancel();
+                    });
+                    try {
+                        await runTestQueue(context);
+                    } catch (error) {
+                        console.log(`${error}`);
+                        throw error;
+                    }
+                }, "Start Testing")
+                .catch(() => {});
         };
 
         ctrl.refreshHandler = async () => {
