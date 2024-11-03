@@ -33,7 +33,7 @@ export class XCTestRunInspector {
         const selectedTestPlan = await this.getSelectedTestPlan(context);
         const targets = await this.parseXCRun(changedFiles, selectedTestPlan);
         if (tests) {
-            const testsTargets = tests.map(test => test.split("/").at(-1));
+            const testsTargets = tests.map(test => test.split("/").at(0));
             return targets.filter(target => testsTargets.includes(target.target));
         } else {
             return targets;

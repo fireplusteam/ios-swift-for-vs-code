@@ -10,6 +10,7 @@ import { TestTreeContext } from "./TestTreeContext";
 import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
 import { CommandContext, UserTerminalCloseError } from "../CommandManagement/CommandContext";
 import { BundlePath } from "../CommandManagement/BundlePath";
+import path from "path";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -91,7 +92,7 @@ export class TestProvider {
 
             const runTestQueue = async (context: CommandContext) => {
                 const mapTests = new Map<string, { test: vscode.TestItem; data: TestCase }>();
-                const xcodebuildTestsIds: string[] = [];
+                const xcodebuildTestsIds = new Set<string>();
                 for (const { test, data } of queue) {
                     run.appendOutput(`Running ${test.id}\r\n`);
                     if (run.token.isCancellationRequested) {
@@ -101,7 +102,7 @@ export class TestProvider {
                             run.started(test);
                             const xCodeBuildTest = data.getXCodeBuildTest();
                             const testId = data.getTestId();
-                            xcodebuildTestsIds.push(xCodeBuildTest);
+                            xcodebuildTestsIds.add(xCodeBuildTest);
                             mapTests.set(testId, { test: test, data: data });
                         } catch (error) {
                             run.failed(test, { message: "Test Case was not well parsed" });
@@ -138,8 +139,19 @@ export class TestProvider {
                         }
                     );
                     try {
+                        // filter out all repetition tests
+                        const testList = [...xcodebuildTestsIds.values()].filter(test => {
+                            const component = test.split(path.sep);
+                            for (let i = 1; i < component.length; ++i) {
+                                const key = component.slice(0, i).join(path.sep);
+                                if (xcodebuildTestsIds.has(key)) {
+                                    return false;
+                                }
+                            }
+                            return true;
+                        });
                         await this.executeTests(
-                            request.include === undefined ? undefined : xcodebuildTestsIds,
+                            request.include === undefined ? undefined : testList,
                             request.profile?.kind === vscode.TestRunProfileKind.Debug,
                             run,
                             context

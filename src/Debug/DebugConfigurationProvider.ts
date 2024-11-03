@@ -14,6 +14,7 @@ import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { CommandContext, UserTerminatedError } from "../CommandManagement/CommandContext";
 import { checkWorkspace } from "../commands";
 import { XCTestRunInspector } from "./XCTestRunInspector";
+import path from "path";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -101,8 +102,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     ) {
         const sessions = await this.testRunInspector.build(context, tests);
 
+        let wasErrorThrown: any | null = null;
         for (const session of sessions) {
             const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
+            const testToRun =
+                tests === undefined
+                    ? [session.target]
+                    : tests.filter(test => test.split(path.sep).at(0) === session.target);
+            if (testToRun.length === 0) {
+                continue;
+            }
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
                 name: "iOS: Run Tests & Debug",
@@ -110,7 +119,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 target: "testsForCurrentFile",
                 isDebuggable: isDebuggable,
                 sessionId: sessionId,
-                testsToRun: [session.target],
+                testsToRun: testToRun,
                 buildBeforeLaunch: "never",
                 hostApp: session.host,
                 hostProcess: session.process,
@@ -128,14 +137,18 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             }
             try {
                 await waiter;
-            } catch (error: any) {
-                if (error.code === 65) {
-                    // skip
+            } catch (error) {
+                if (typeof error === "object" && error && "code" in error && error.code === 65) {
+                    wasErrorThrown = error;
+                    // code 65 means that xcodebuild found failed tests. However we want to continue running all
                 } else {
                     throw error;
                 }
                 console.log(error);
             }
+        }
+        if (wasErrorThrown) {
+            throw wasErrorThrown;
         }
         return true;
     }
