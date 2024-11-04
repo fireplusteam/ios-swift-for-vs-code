@@ -29,7 +29,7 @@ import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, initializeWithError, setContext } from "./inputPicker";
-import { emptyLog, getSessionId } from "./utils";
+import { deleteFile, emptyLog, getSessionId } from "./utils";
 import { AutocompleteWatcher } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
@@ -442,7 +442,7 @@ export async function deactivate() {
     autocompleteWatcher?.terminate();
     atomicCommand.cancel();
     runtimeWarningLogWatcher.disposeWatcher();
-    // await projectExecutor.terminateShell();
+    deleteFile(getFilePathInWorkspace(".vscode/xcode/bundles"));
 }
 
 export async function handleValidationErrors<T>(
