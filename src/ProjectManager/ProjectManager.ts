@@ -221,6 +221,7 @@ export class ProjectManager {
         const excludedFiles = projectTree.excludedFiles();
         // fifo files should be excluded
         excludedFiles.push(getFilePathInWorkspace(".vscode/xcode/fifo"));
+        excludedFiles.push(getFilePathInWorkspace(".vscode/xcode/bundles"));
         const excludedFilesDict: { [key: string]: boolean } = {};
         for (const file of excludedFiles) {
             const relative = path.relative(getWorkspacePath(), file);

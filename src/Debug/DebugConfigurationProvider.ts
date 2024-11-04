@@ -142,8 +142,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 await waiter;
             } catch (error) {
                 if (typeof error === "object" && error && "code" in error && error.code === 65) {
-                    wasErrorThrown = error;
                     // code 65 means that xcodebuild found failed tests. However we want to continue running all
+                    wasErrorThrown = error;
                 } else {
                     throw error;
                 }
