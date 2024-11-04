@@ -187,6 +187,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterTrackerFactory("lldb", debugAdapterFactory)
     );
+    context.subscriptions.push(
+        vscode.debug.registerDebugAdapterTrackerFactory("debugpy", debugAdapterFactory)
+    );
 
     debugConfiguration = new DebugConfigurationProvider(
         runtimeWarningLogWatcher,

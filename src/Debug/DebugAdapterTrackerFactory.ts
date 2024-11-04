@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
+import { ParentDebugAdapterTracker } from "./ParentDebugAdapterTracker";
 
 export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFactory {
     private problemResolver: ProblemDiagnosticResolver;
@@ -11,7 +12,10 @@ export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFac
 
     createDebugAdapterTracker(
         session: vscode.DebugSession
-    ): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+    ): vscode.ProviderResult<vscode.DebugAdapterTracker | ParentDebugAdapterTracker> {
+        if (session.type === "debugpy" && session.configuration.sessionId !== undefined) {
+            return new ParentDebugAdapterTracker(session);
+        }
         if (
             (session.type === "xcode-lldb" || session.type === "lldb") &&
             session.configuration.sessionId

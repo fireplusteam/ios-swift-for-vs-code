@@ -141,7 +141,7 @@ export class CommandContext {
                 disLocalCancel.push(
                     this.cancellationToken.onCancellationRequested(() => {
                         disLocalCancel.forEach(e => e.dispose());
-                        resolve();
+                        reject(UserTerminatedError);
                     })
                 );
                 disLocalCancel.push(

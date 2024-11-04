@@ -93,6 +93,55 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return true;
     }
 
+    private async startParentSession(
+        context: CommandContext,
+        testRun: vscode.TestRun,
+        isDebuggable: boolean
+    ) {
+        const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`) + "_parent";
+        const waiter = this.waitForDebugSession(context, sessionId);
+
+        const parentSession: vscode.DebugConfiguration = {
+            type: "xcode-lldb",
+            name: "Xcode: Xcodebuild Tests",
+            request: "launch",
+            target: "parent",
+            isDebuggable: isDebuggable,
+            sessionId: sessionId,
+        };
+
+        const session = await new Promise<vscode.DebugSession>((resolve, reject) => {
+            const dis: vscode.Disposable[] = [];
+            dis.push(
+                vscode.debug.onDidStartDebugSession(session => {
+                    if (session.configuration.sessionId === parentSession.sessionId) {
+                        dis.forEach(d => d.dispose());
+                        resolve(session);
+                    }
+                })
+            );
+            dis.push(
+                context.cancellationToken.onCancellationRequested(() => {
+                    dis.forEach(d => d.dispose());
+                    reject(UserTerminatedError);
+                })
+            );
+            vscode.debug
+                .startDebugging(undefined, parentSession, {
+                    testRun: testRun,
+                })
+                .then(value => {
+                    if (value === false) {
+                        dis.forEach(d => d.dispose());
+                        reject(Error("Can not start parent session"));
+                        context.cancel();
+                    }
+                });
+        });
+
+        return { sessionWaiter: waiter, debugSession: session, sessionId: sessionId };
+    }
+
     async startIOSTestsDebugger(
         tests: string[] | undefined,
         isDebuggable: boolean,
@@ -102,55 +151,69 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     ) {
         context.terminal!.terminalName = `Building for ${isDebuggable ? "Debug Tests" : "Run Tests"}`;
 
-        const sessions = await this.testRunInspector.build(context, tests, isCoverage);
+        const sessions = this.testRunInspector.build(context, tests, isCoverage);
 
-        let wasErrorThrown: any | null = null;
-        for (const session of sessions) {
-            const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
-            const testToRun =
-                tests === undefined
-                    ? [session.target]
-                    : tests.filter(test => test.split(path.sep).at(0) === session.target);
-            if (testToRun.length === 0) {
-                continue;
-            }
-            const debugSession: vscode.DebugConfiguration = {
-                type: "xcode-lldb",
-                name: "Xcode: Run Tests & Debug",
-                request: "launch",
-                target: "testsForCurrentFile",
-                isDebuggable: isDebuggable,
-                sessionId: sessionId,
-                testsToRun: testToRun,
-                buildBeforeLaunch: "never",
-                hostApp: session.host,
-                xctestrun: session.testRun,
-                isCoverage: isCoverage,
-            };
+        const parent = await this.startParentSession(context, testRun, isDebuggable);
 
-            const waiter = this.waitForDebugSession(context, sessionId);
-            if (
-                (await vscode.debug.startDebugging(undefined, debugSession, {
-                    testRun: testRun,
-                })) === false
-            ) {
-                context.cancel();
-                return false;
-            }
-            try {
-                await waiter;
-            } catch (error) {
-                if (typeof error === "object" && error && "code" in error && error.code === 65) {
-                    // code 65 means that xcodebuild found failed tests. However we want to continue running all
-                    wasErrorThrown = error;
-                } else {
-                    throw error;
+        try {
+            let wasErrorThrown: any | null = null;
+            for (const session of await sessions) {
+                const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
+                const testToRun =
+                    tests === undefined
+                        ? [session.target]
+                        : tests.filter(test => test.split(path.sep).at(0) === session.target);
+                if (testToRun.length === 0) {
+                    continue;
                 }
-                console.log(error);
+                const debugSession: vscode.DebugConfiguration = {
+                    type: "xcode-lldb",
+                    name: "Xcode: Run Tests & Debug",
+                    request: "launch",
+                    target: "testsForCurrentFile",
+                    isDebuggable: isDebuggable,
+                    sessionId: sessionId,
+                    testsToRun: testToRun,
+                    buildBeforeLaunch: "never",
+                    hostApp: session.host,
+                    xctestrun: session.testRun,
+                    isCoverage: isCoverage,
+                };
+
+                const waiter = this.waitForDebugSession(context, sessionId);
+                if (
+                    (await vscode.debug.startDebugging(undefined, debugSession, {
+                        parentSession: parent.debugSession,
+                        lifecycleManagedByParent: true,
+                    })) === false
+                ) {
+                    context.cancel();
+                    return false;
+                }
+                try {
+                    await waiter;
+                } catch (error) {
+                    if (
+                        typeof error === "object" &&
+                        error &&
+                        "code" in error &&
+                        error.code === 65
+                    ) {
+                        // code 65 means that xcodebuild found failed tests. However we want to continue running all
+                        wasErrorThrown = error;
+                    } else {
+                        throw error;
+                    }
+                    console.log(error);
+                }
             }
-        }
-        if (wasErrorThrown) {
-            throw wasErrorThrown;
+            if (wasErrorThrown) {
+                throw wasErrorThrown;
+            }
+        } finally {
+            if (parent) {
+                DebugAdapterTracker.updateStatus(parent.sessionId, "stopped");
+            }
         }
         return true;
     }
@@ -166,6 +229,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         if (dbgConfig.type !== DebugConfigurationProvider.Type) {
             return null;
         }
+
         const isDebuggable =
             dbgConfig.noDebug === true ? false : (dbgConfig.isDebuggable as boolean);
 
@@ -198,13 +262,14 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             }
             await checkWorkspace(context);
             await DebugAdapterTracker.updateStatus(sessionID, "configuring");
-
-            if (
-                runtimeWarningsConfigStatus() !== "off" &&
-                (await context.projectEnv.debugDeviceID).platform !== "macOS"
-            ) {
-                // mac OS doesn't support that feature at the moment
-                await this.runtimeWarningsWatcher.startWatcher();
+            if (dbgConfig.target !== "parent") {
+                if (
+                    runtimeWarningsConfigStatus() !== "off" &&
+                    (await context.projectEnv.debugDeviceID).platform !== "macOS"
+                ) {
+                    // mac OS doesn't support that feature at the moment
+                    await this.runtimeWarningsWatcher.startWatcher();
+                }
             }
         } catch (error) {
             context.cancel();
@@ -233,6 +298,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         sessionID: string,
         isDebuggable: boolean
     ): Promise<vscode.DebugConfiguration> {
+        if (dbgConfig.target === "parent") {
+            return {
+                name: dbgConfig.name,
+                type: "debugpy",
+                request: "launch",
+                program: `${getScriptPath()}/parent_xcodebuild.py`,
+                stopOnEntry: false,
+                args: [sessionID],
+                console: "internalConsole",
+                internalConsoleOptions: "neverOpen",
+                cwd: getWorkspacePath(),
+                sessionId: sessionID,
+            };
+        }
         const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
         const lldbCommands = dbgConfig.lldbCommands || [];
         const command = runtimeWarningBreakPointCommand();

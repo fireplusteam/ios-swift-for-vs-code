@@ -414,7 +414,8 @@
         ]
     },
     "extensionDependencies": [
-        "vadimcn.vscode-lldb"
+        "vadimcn.vscode-lldb",
+        "ms-python.debugpy"
     ],
     "extensionPack": [
         "vadimcn.vscode-lldb"

@@ -15,7 +15,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
     private problemResolver: ProblemDiagnosticResolver;
     private isTerminated = false;
-    private debugConsoleOutput?: vscode.Disposable;
+    private disList: vscode.Disposable[] = [];
     private simulatorInteractor: SimulatorFocus;
 
     private get sessionID(): string {
@@ -59,9 +59,16 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.simulatorInteractor.init();
         console.log("Session is starting");
         vscode.debug.activeDebugSession;
-        this.debugConsoleOutput = this.context.commandContext.debugConsoleEvent(std => {
-            this._stream.write(std);
-        });
+        this.disList.push(
+            this.context.commandContext.debugConsoleEvent(std => {
+                this._stream.write(std);
+            })
+        );
+        this.disList.push(
+            this.context.commandContext.cancellationToken.onCancellationRequested(() => {
+                this.terminateCurrentSession(false, false);
+            })
+        );
         this.build(this.debugSession.configuration);
     }
 
@@ -91,7 +98,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillStopSession() {
         console.log("Session will stop");
         if (this.debugSession.configuration.target === "app") {
-            this.terminateCurrentSession(true);
+            this.terminateCurrentSession(true, true);
         }
     }
 
@@ -103,12 +110,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         console.log(`Exited with code ${code} and signal ${signal}`);
     }
 
-    private async terminateCurrentSession(isCancelled: boolean) {
+    private async terminateCurrentSession(isCancelled: boolean, isStop: boolean) {
         if (this.isTerminated) {
             return;
         }
         try {
-            this.debugConsoleOutput?.dispose();
+            this.disList.forEach(dis => dis.dispose());
+            this.disList = [];
             this._stream.close();
             this.isTerminated = true;
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
@@ -121,7 +129,11 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             } catch {
                 /* empty */
             } finally {
-                await vscode.debug.stopDebugging(this.debugSession);
+                if (isStop) {
+                    await vscode.debug.stopDebugging(this.debugSession);
+                } else {
+                    this.debugSession.customRequest("disconnect");
+                }
             }
         }
     }
@@ -196,14 +208,14 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             this.context.token.fire();
             if (dbgConfig.target !== "app") {
                 try {
-                    await this.terminateCurrentSession(false);
+                    await this.terminateCurrentSession(false, true);
                 } catch {
                     /* empty */
                 }
             }
         } catch (error) {
             this.context.rejectToken.fire(error);
-            await this.terminateCurrentSession(false);
+            await this.terminateCurrentSession(false, true);
         }
     }
 }
