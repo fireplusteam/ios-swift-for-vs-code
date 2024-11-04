@@ -5,7 +5,6 @@ import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { getProductDir } from "../env";
 import { XCRunHelper } from "../Tools/XCRunHelper";
-import path from "path";
 
 type XCTestRunFile = {
     file: string;
@@ -15,7 +14,6 @@ type XCTestRunFile = {
 export type XCTestTarget = {
     target: string;
     host: string;
-    process: string;
     testRun: string;
 };
 
@@ -123,15 +121,10 @@ export class XCTestRunInspector {
                         "__TESTROOT__/",
                         await getProductDir()
                     );
-                    let process = testTarget.TestHostPath.split(path.sep).at(-1) as string;
-                    if (process.endsWith(".app")) {
-                        process = `${process}/${process.slice(0, -".app".length)}`;
-                    }
 
                     result.push({
                         target: testTarget.BlueprintName,
                         host: hostPath,
-                        process: process,
                         testRun: selectedFile,
                     });
                 }

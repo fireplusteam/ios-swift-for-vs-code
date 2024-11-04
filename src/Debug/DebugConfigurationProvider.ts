@@ -124,7 +124,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 testsToRun: testToRun,
                 buildBeforeLaunch: "never",
                 hostApp: session.host,
-                hostProcess: session.process,
                 xctestrun: session.testRun,
                 isCoverage: isCoverage,
             };
@@ -215,19 +214,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
     }
 
-    private async processName(context: CommandContext, dbgConfig: vscode.DebugConfiguration) {
-        if (dbgConfig.hostProcess) {
-            return dbgConfig.hostProcess;
-        }
-        const process_name = await context.projectEnv.productName;
-        if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
-            return `${process_name}.app/Contents/MacOS/${process_name}`;
-        }
-        // if process_name == "xctest":
-        //     return process_name
-        return `${process_name}.app/${process_name}`;
-    }
-
     private async debugSession(
         context: CommandContext,
         dbgConfig: vscode.DebugConfiguration,
@@ -275,7 +261,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context, dbgConfig)}`,
+                    `set_environmental_var PROCESS_EXE=!!=${exe}`,
 
                     `create_target ${sessionID}`,
 
@@ -321,7 +307,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${await this.processName(context, dbgConfig)}`,
+                    `set_environmental_var PROCESS_EXE=!!=${exe}`,
 
                     `create_target ${sessionID}`,
                 ],
