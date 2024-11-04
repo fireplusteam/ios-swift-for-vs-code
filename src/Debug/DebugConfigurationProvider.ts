@@ -214,6 +214,19 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
     }
 
+    private async processName(context: CommandContext, exe: string) {
+        let process_name = exe.split(path.sep).at(-1);
+        if (process_name?.endsWith(".app")) {
+            process_name = process_name.slice(0, -".app".length);
+        }
+        if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
+            return `${process_name}.app/Contents/MacOS/${process_name}`;
+        }
+        // if process_name == "xctest":
+        //     return process_name
+        return `${process_name}.app/${process_name}`;
+    }
+
     private async debugSession(
         context: CommandContext,
         dbgConfig: vscode.DebugConfiguration,
@@ -238,6 +251,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const exe = dbgConfig.hostApp
             ? dbgConfig.hostApp
             : await context.projectEnv.appExecutablePath(deviceID);
+        const processExe = await this.processName(context, exe);
 
         const logId = deviceID.id;
         emptyAppLog(logId);
@@ -261,7 +275,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${exe}`,
+                    `set_environmental_var PROCESS_EXE=!!=${processExe}`,
 
                     `create_target ${sessionID}`,
 
@@ -307,7 +321,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${exe}`,
+                    `set_environmental_var PROCESS_EXE=!!=${processExe}`,
 
                     `create_target ${sessionID}`,
                 ],

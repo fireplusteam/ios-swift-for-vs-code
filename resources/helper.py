@@ -24,7 +24,7 @@ class FileLock:
         os.remove(self.lock_file)
 
 
-def get_list_of_pids(process_name):
+def get_list_of_pids(process_name: str):
     proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
 
     #print(proc.stdout)
