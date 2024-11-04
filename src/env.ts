@@ -363,7 +363,7 @@ export async function isActivated() {
     if (!Object.prototype.hasOwnProperty.call(env, "PROJECT_FILE")) {
         return false;
     }
-    if (!isWorkspaceOpened()) {
+    if ((await isWorkspaceOpened()) === false) {
         return false;
     }
     return true;
