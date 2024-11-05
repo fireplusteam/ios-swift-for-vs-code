@@ -126,17 +126,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     reject(UserTerminatedError);
                 })
             );
-            vscode.debug
-                .startDebugging(undefined, parentSession, {
-                    testRun: testRun,
-                })
-                .then(value => {
-                    if (value === false) {
-                        dis.forEach(d => d.dispose());
-                        reject(Error("Can not start parent session"));
-                        context.cancel();
-                    }
-                });
+            vscode.debug.startDebugging(undefined, parentSession).then(value => {
+                if (value === false) {
+                    dis.forEach(d => d.dispose());
+                    reject(Error("Can not start parent session"));
+                    context.cancel();
+                }
+            });
         });
 
         return { sessionWaiter: waiter, debugSession: session, sessionId: sessionId };
@@ -212,6 +208,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             }
         } finally {
             if (parent) {
+                DebugConfigurationProvider.getContextForSession(parent.sessionId)?.token.fire();
+                await parent.sessionWaiter;
                 DebugAdapterTracker.updateStatus(parent.sessionId, "stopped");
             }
         }

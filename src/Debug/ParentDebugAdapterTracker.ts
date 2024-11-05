@@ -17,9 +17,7 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.debugSession = debugSession;
     }
 
-    onWillStartSession() {
-        this.context.token.fire();
-    }
+    onWillStartSession() {}
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
     onDidSendMessage(_message: any) {}
