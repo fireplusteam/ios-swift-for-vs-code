@@ -1,8 +1,7 @@
 import * as fs from "fs";
-import { ExecutorMode } from "../Executor";
+import { Executor } from "../Executor";
 import { deleteFile } from "../utils";
 import { getFilePathInWorkspace } from "../env";
-import { CommandContext } from "./CommandContext";
 
 let globalId = 0;
 function generateGlobalId() {
@@ -48,7 +47,7 @@ export class BundlePath {
         return this.BundleResultPath(this.number);
     }
 
-    async merge(context: CommandContext) {
+    async merge() {
         const resultBundles: string[] = [];
         for (const i of this.allBundles) {
             const filePath = getFilePathInWorkspace(this.BundleResultPath(i));
@@ -62,7 +61,7 @@ export class BundlePath {
         // generate next bundle id to merge all results
         this.allBundles = [];
         this.generateNext();
-        await context.execShellWithOptions({
+        await new Executor().execShell({
             scriptOrCommand: { command: "xcrun xcresulttool" },
             args: [
                 "merge",
@@ -70,7 +69,6 @@ export class BundlePath {
                 "--output-path",
                 getFilePathInWorkspace(this.bundleResultPath()),
             ],
-            mode: ExecutorMode.onlyCommandNameAndResult,
         });
     }
 }

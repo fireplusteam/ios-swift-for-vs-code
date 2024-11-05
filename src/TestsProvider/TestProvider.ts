@@ -8,7 +8,7 @@ import { emptyTestsLog } from "../utils";
 import { TestCaseAsyncParser } from "./RawLogParsers/TestCaseAsyncParser";
 import { TestTreeContext } from "./TestTreeContext";
 import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
-import { CommandContext, UserTerminalCloseError } from "../CommandManagement/CommandContext";
+import { CommandContext } from "../CommandManagement/CommandContext";
 import { BundlePath } from "../CommandManagement/BundlePath";
 import path from "path";
 
@@ -113,7 +113,6 @@ export class TestProvider {
                     }
                 }
 
-                let wasTerminalClosed = false;
                 try {
                     emptyTestsLog();
                     const rawParser = this.asyncParser.parseAsyncLogs(
@@ -162,19 +161,11 @@ export class TestProvider {
                     } finally {
                         this.asyncParser.end(rawParser);
                     }
-                } catch (error: any) {
-                    wasTerminalClosed = UserTerminalCloseError.isEqual(error);
-                    throw error;
                 } finally {
                     try {
-                        await context.bundle.merge(context);
+                        await context.bundle.merge();
                         // read testing results
-                        if (
-                            !context.cancellationToken.isCancellationRequested &&
-                            !wasTerminalClosed
-                        ) {
-                            await this.extractTestingResults(context.bundle, mapTests, run);
-                        }
+                        await this.extractTestingResults(context.bundle, mapTests, run);
                     } catch (error) {
                         console.log(`Error parsing test result logs: ${error}`);
                     } finally {

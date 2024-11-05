@@ -176,11 +176,15 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     isCoverage: isCoverage,
                 };
 
+                if (context.cancellationToken.isCancellationRequested) {
+                    return false;
+                }
+
                 const waiter = this.waitForDebugSession(context, sessionId);
                 if (
                     (await vscode.debug.startDebugging(undefined, debugSession, {
                         parentSession: parent.debugSession,
-                        lifecycleManagedByParent: true,
+                        // lifecycleManagedByParent: true,
                     })) === false
                 ) {
                     context.cancel();

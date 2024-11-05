@@ -85,7 +85,12 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
         // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
-        if (message.command === "continue" && this.refreshBreakpoints === false) {
+        if (
+            message.command === "disconnect" &&
+            (message.arguments === undefined || message.arguments.terminateDebuggee === true)
+        ) {
+            this.terminateCurrentSession(true, false);
+        } else if (message.command === "continue" && this.refreshBreakpoints === false) {
             this.refreshBreakpoints = true;
             if (this.debugSession.configuration.type === "xcode-lldb") {
                 const breakpoints = vscode.debug.breakpoints;
@@ -205,8 +210,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     );
                 });
             }
+
+            this.context.token.fire();
             if (dbgConfig.target !== "app") {
-                this.context.token.fire();
                 try {
                     await this.terminateCurrentSession(false, true);
                 } catch {

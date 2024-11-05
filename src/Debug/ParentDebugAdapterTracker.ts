@@ -13,11 +13,22 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
         return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
     }
 
+    private dis?: vscode.Disposable;
+
     constructor(debugSession: vscode.DebugSession) {
         this.debugSession = debugSession;
     }
 
-    onWillStartSession() {}
+    onWillStartSession() {
+        try {
+            this.dis = this.context.commandContext.cancellationToken.onCancellationRequested(() => {
+                this.terminateCurrentSession();
+            });
+        } catch {
+            /* empty */
+            this.terminateCurrentSession();
+        }
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
     onDidSendMessage(_message: any) {}
@@ -43,6 +54,8 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
             return;
         }
         try {
+            this.dis?.dispose();
+            this.dis = undefined;
             this.isTerminated = true;
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {
