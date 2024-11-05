@@ -18,14 +18,14 @@ export class RawBuildParser {
 }
 
 export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolver {
-    static xcodebuild = "xcodebuild";
+    private static xcodebuild = "xcodebuild";
     static isSourcekit: SourcePredicate = source => this.xcodebuild !== source;
     static isXcodebuild: SourcePredicate = source => this.xcodebuild === source;
 
-    disposable: vscode.Disposable[] = [];
-    diagnosticBuildCollection: vscode.DiagnosticCollection;
+    private disposable: vscode.Disposable[] = [];
+    private diagnosticBuildCollection: vscode.DiagnosticCollection;
 
-    buildErrors = new Set<string>();
+    private buildErrors = new Set<string>();
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("Xcode");
@@ -60,17 +60,13 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         );
     }
 
-    handleDiagnostics(
+    public handleDiagnostics(
         uri: vscode.Uri,
         isSourceKit: SourcePredicate,
         newDiagnostics: vscode.Diagnostic[]
     ): void {
         console.log(uri, isSourceKit(""), newDiagnostics);
-        const allOthers =
-            this.diagnosticBuildCollection.get(uri)?.filter(e => !isSourceKit(e.source || "")) ||
-            [];
-
-        this.diagnosticBuildCollection.set(uri, this.uniqueProblems(newDiagnostics, allOthers));
+        this.diagnosticBuildCollection.set(uri, newDiagnostics);
     }
 
     private clear() {
@@ -164,11 +160,14 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                       []),
                 ...files[file],
             ];
-            this.diagnosticBuildCollection.set(fileUri, this.uniqueProblems(list, allOthers));
+            this.diagnosticBuildCollection.set(fileUri, [
+                ...this.uniqueProblems(list, allOthers),
+                ...allOthers,
+            ]);
         }
     }
 
-    parseAsyncLogs(filePath: string, buildPipeEvent: vscode.Event<string>) {
+    public parseAsyncLogs(filePath: string, buildPipeEvent: vscode.Event<string>) {
         const buildLogFile = getFilePathInWorkspace(filePath);
 
         this.clear();
