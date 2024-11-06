@@ -13,7 +13,11 @@ export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFac
     createDebugAdapterTracker(
         session: vscode.DebugSession
     ): vscode.ProviderResult<vscode.DebugAdapterTracker | ParentDebugAdapterTracker> {
-        if (session.type === "debugpy" && session.configuration.sessionId !== undefined) {
+        if (
+            session.type === "debugpy" &&
+            session.configuration.sessionId !== undefined &&
+            session.configuration.target === "parent"
+        ) {
             return new ParentDebugAdapterTracker(session);
         }
         if (

@@ -166,7 +166,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     type: "xcode-lldb",
                     name: "Xcode: Run Tests & Debug",
                     request: "launch",
-                    target: "testsForCurrentFile",
+                    target: "tests",
                     isDebuggable: isDebuggable,
                     sessionId: sessionId,
                     testsToRun: testToRun,
@@ -264,7 +264,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             }
             await checkWorkspace(context);
             await DebugAdapterTracker.updateStatus(sessionID, "configuring");
-            if (dbgConfig.target !== "parent") {
+            if (dbgConfig.target !== "parent" && dbgConfig.target !== "tests") {
                 if (
                     runtimeWarningsConfigStatus() !== "off" &&
                     (await context.projectEnv.debugDeviceID).platform !== "macOS"
@@ -312,6 +312,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 internalConsoleOptions: "neverOpen",
                 cwd: getWorkspacePath(),
                 sessionId: sessionID,
+                target: "parent",
             };
         }
         const lldExePath = await LLDBDapDescriptorFactory.getXcodeDebuggerExePath();
