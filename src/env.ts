@@ -349,7 +349,7 @@ export async function isWorkspaceOpened() {
         if (workspaceFile === undefined) {
             return false;
         }
-        if (!workspaceFile.includes(`.vscode/xcode/${projectName}`)) {
+        if (vscode.workspace.workspaceFolders?.at(0)?.name.includes(projectName) === false) {
             return false;
         }
         return true;
