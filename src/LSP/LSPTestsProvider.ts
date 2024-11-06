@@ -18,7 +18,7 @@ export class LSPTestsProvider {
 
         const client = await this.lspClient.client();
         const langId = languageId(document.fsPath);
-        if (langId === undefined) {
+        if (langId !== "swift") {
             return [];
         }
 
