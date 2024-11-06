@@ -192,6 +192,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     debugConfiguration = new DebugConfigurationProvider(
+        workspaceContext,
         runtimeWarningLogWatcher,
         new XCTestRunInspector(problemDiagnosticResolver),
         atomicCommand

@@ -15,6 +15,7 @@ import { CommandContext, UserTerminatedError } from "../CommandManagement/Comman
 import { checkWorkspace } from "../commands";
 import { XCTestRunInspector } from "./XCTestRunInspector";
 import path from "path";
+import { WorkspaceContext } from "../LSP/WorkspaceContext";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -36,6 +37,7 @@ function runtimeWarningBreakPointCommand() {
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     static Type = "xcode-lldb";
     static lldbName = "Xcode: App Debugger Console";
+    static shouldSetCodeLLDB = true;
 
     private _counterID = 0;
     private get counterID(): number {
@@ -56,6 +58,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     constructor(
+        private workspaceContext: WorkspaceContext,
         private runtimeWarningsWatcher: RuntimeWarningsLogWatcher,
         private testRunInspector: XCTestRunInspector,
         private atomicCommand: AtomicCommand
@@ -384,6 +387,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             };
             return debugSession;
         } else {
+            if (DebugConfigurationProvider.shouldSetCodeLLDB) {
+                // ask only at the first launch, so it doesn't effect performance
+                await this.workspaceContext.setLLDBVersion();
+                DebugConfigurationProvider.shouldSetCodeLLDB = false;
+            }
+
             // old code-lldb way: deprecated
             const debugSession: vscode.DebugConfiguration = {
                 type: "lldb",

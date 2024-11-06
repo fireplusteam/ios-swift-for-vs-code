@@ -54,6 +54,10 @@ export class XCRunHelper {
         }
     }
 
+    public static async lldbBinPath() {
+        return await this.getStdOut("xcrun --find lldb");
+    }
+
     public static async convertPlistToJson(file: string) {
         return this.getStdOut(`plutil -convert json -o - "${file}"`);
     }
