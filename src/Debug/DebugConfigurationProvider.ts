@@ -156,6 +156,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         try {
             let wasErrorThrown: any | null = null;
+            if ((await sessions).length === 0) {
+                throw Error("There's no tests available for selected project/scheme");
+            }
             for (const session of await sessions) {
                 const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
                 const testToRun =

@@ -24,6 +24,9 @@ export class WorkspaceContextImp implements WorkspaceContext {
         // check we are using CodeLLDB
         try {
             const libPath = await getLLDBLibPath();
+            if (libPath === undefined) {
+                throw Error("LLDB bin framework is not found.");
+            }
             const lldbConfig = vscode.workspace.getConfiguration("lldb", getWorkspaceFolder());
             const configLLDBPath = lldbConfig.get<string>("library");
             const expressions = lldbConfig.get<string>("launch.expressions");
