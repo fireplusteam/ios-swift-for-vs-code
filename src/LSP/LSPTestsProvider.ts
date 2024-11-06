@@ -8,14 +8,28 @@ import { getFilePathInWorkspace } from "../env";
 export class LSPTestsProvider {
     private version = 0;
     private dummyFile = getFilePathInWorkspace(".vscode/xcode/dummy.swift");
+    private request: Promise<LSPTestItem[]> | undefined;
 
     constructor(private lspClient: SwiftLSPClient) {
         fs.writeFileSync(this.dummyFile, "");
     }
 
     async fetchTests(document: vscode.Uri, content: string): Promise<LSPTestItem[]> {
-        this.version++;
+        if (this.request) {
+            try {
+                await this.request;
+            } catch {
+                /* empty */
+            }
+        }
 
+        const isRequested = this.performFetch(document, content);
+        this.request = isRequested;
+        return isRequested;
+    }
+
+    private async performFetch(document: vscode.Uri, content: string) {
+        this.version++;
         const client = await this.lspClient.client();
         const langId = languageId(document.fsPath);
         if (langId !== "swift") {
@@ -38,17 +52,18 @@ export class LSPTestsProvider {
         try {
             const testsInDocument = await (
                 await this.lspClient.client()
-            ).sendRequest(textDocumentTestsRequest, { textDocument: { uri: dummyUri.toString() } });
+            ).sendRequest(textDocumentTestsRequest, {
+                textDocument: { uri: dummyUri.toString() },
+            });
             return testsInDocument;
         } finally {
-            const didCloseParam: lp.DidCloseTextDocumentParams = {
-                textDocument: { uri: dummyUri.toString() },
-            };
-
-            await client.sendNotification(
-                lp.DidCloseTextDocumentNotification.method,
-                didCloseParam
-            );
+            // const didCloseParam: lp.DidCloseTextDocumentParams = {
+            //     textDocument: { uri: dummyUri.toString() },
+            // };
+            // await client.sendNotification(
+            //     lp.DidCloseTextDocumentNotification.method,
+            //     didCloseParam
+            // );
         }
     }
 }

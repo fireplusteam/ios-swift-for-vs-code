@@ -258,8 +258,8 @@ export class TestProvider {
             }
         };
 
-        for (const document of vscode.workspace.textDocuments) {
-            this.updateNodeForDocument(document);
+        if (this.loadingState !== TestProviderLoadingState.loaded) {
+            this.findInitialFiles(this.context.ctrl);
         }
 
         context.subscriptions.push(
