@@ -120,6 +120,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.4.0
+### 0.5.2
 
 It's still under development, so you can face some bugs

@@ -115,6 +115,11 @@ export class BuildManager {
         isCoverage: boolean
     ) {
         context.bundle.generateNext();
+        const extraArguments: string[] = [];
+        if (isCoverage) {
+            extraArguments.push(...["-enableCodeCoverage", "YES"]);
+        }
+
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
@@ -124,8 +129,7 @@ export class BuildManager {
                     return `-only-testing:${test}`;
                 }),
                 ...(await BuildManager.args(context.projectEnv, context.bundle)),
-                "-enableCodeCoverage",
-                isCoverage ? "YES" : "NO",
+                ...extraArguments,
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
