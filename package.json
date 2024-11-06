@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.5.1",
+    "version": "0.5.2",
     "os": [
         "darwin"
     ],
@@ -416,9 +416,6 @@
     "extensionDependencies": [
         "vadimcn.vscode-lldb",
         "ms-python.debugpy"
-    ],
-    "extensionPack": [
-        "vadimcn.vscode-lldb"
     ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
