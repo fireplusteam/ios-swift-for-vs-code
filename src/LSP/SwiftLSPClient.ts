@@ -10,6 +10,10 @@ import { activatePeekDocuments } from "./peekDocuments";
 import { activateGetReferenceDocument } from "./getReferenceDocument";
 import { DefinitionProvider } from "./DefinitionProvider";
 
+import { sleep } from "../extension";
+import { exec } from "child_process";
+import { kill } from "process";
+
 function useLspForCFamilyFiles(folder: vscode.Uri) {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");
     if (!isEnabled) {
@@ -18,7 +22,7 @@ function useLspForCFamilyFiles(folder: vscode.Uri) {
     return true;
 }
 
-export class SwiftLSPClient {
+export class SwiftLSPClient implements vscode.Disposable {
     private languageClient: langclient.LanguageClient | null | undefined;
 
     private clientReadyPromise?: Promise<void> = undefined;
@@ -43,6 +47,18 @@ export class SwiftLSPClient {
         private readonly logs: vscode.OutputChannel
     ) {
         this.definitionProvider = new DefinitionProvider(this);
+        this.startMonitorMemoryUsage();
+    }
+
+    dispose() {
+        this.peekDocuments?.dispose();
+        this.getReferenceDocument?.dispose();
+        this.peekDocuments?.dispose();
+
+        this.languageClient?.stop();
+        this.clientReadyPromise?.finally(() => {
+            this.languageClient?.stop();
+        });
     }
 
     public async start() {
@@ -261,4 +277,50 @@ export class SwiftLSPClient {
         // }
         return options;
     }
+
+    async startMonitorMemoryUsage() {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            try {
+                await sleep(1000);
+                await killProcessWithHighMemoryUsageOFSourceKit();
+            } catch {
+                /* empty */
+            }
+        }
+    }
+}
+
+/// this's workaround to restart sourcekit-lsp if it grows really large,
+/// should be fixed in swift 6.1 https://github.com/swiftlang/sourcekit-lsp/issues/1541
+/// until then we use this workaround to kill it
+function killProcessWithHighMemoryUsageOFSourceKit() {
+    return new Promise<void>((resolve, reject) => {
+        exec(`ps aux | grep 'sourcekit-lsp' | grep -v grep`, (error, stdout, stderr) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            if (stderr) {
+                reject(Error(stderr));
+                return;
+            }
+
+            // Print the output which includes memory info
+            // console.log(stdout);
+
+            // Parsing stdout to find the memory usage specifically
+            const lines = stdout.trim().split("\n");
+            lines.forEach(line => {
+                const parts = line.split(/\s+/);
+                const memoryUsage = parts[5]; // %MEM column in `ps aux`
+                const pid = parts[1]; // PID column in `ps aux`
+                if (Number(memoryUsage) >= 2 * 1024 * 1024 && pid) {
+                    kill(Number(pid), "SIGKILL");
+                }
+                // console.log(`PID: ${pid}, Memory Usage: ${memoryUsage}kb`);
+            });
+            resolve();
+        });
+    });
 }

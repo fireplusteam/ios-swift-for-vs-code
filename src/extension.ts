@@ -140,6 +140,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // initialise code
+    context.subscriptions.push(sourceLsp);
 
     setContext(context);
 
