@@ -36,7 +36,6 @@ function runtimeWarningBreakPointCommand() {
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     static Type = "xcode-lldb";
-    static lldbName = "Xcode: App Debugger Console";
     static shouldSetCodeLLDB = true;
 
     private _counterID = 0;
@@ -170,7 +169,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 }
                 const debugSession: vscode.DebugConfiguration = {
                     type: "xcode-lldb",
-                    name: "Xcode: Run Tests & Debug",
+                    name: `Xcode: Testing: ${session.target}`,
                     request: "launch",
                     target: "tests",
                     isDebuggable: isDebuggable,
@@ -348,7 +347,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             const debugSession: vscode.DebugConfiguration = {
                 type: "xcode-lldb",
                 request: "attach",
-                name: DebugConfigurationProvider.lldbName,
+                name: dbgConfig.name,
                 attachCommands: [
                     `command script import '${getScriptPath()}/attach_lldb.py'`,
                     "command script add -f attach_lldb.set_environmental_var set_environmental_var",
@@ -400,7 +399,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             const debugSession: vscode.DebugConfiguration = {
                 type: "lldb",
                 request: "custom",
-                name: DebugConfigurationProvider.lldbName,
+                name: dbgConfig.name,
                 targetCreateCommands: [
                     `command script import '${getScriptPath()}/attach_lldb.py'`,
                     "command script add -f attach_lldb.set_environmental_var set_environmental_var",

@@ -1,6 +1,13 @@
 # Change Log
 
-## 0.5.0 - 2024-10-20
+## 0.5.3 - 2024-11-7
+
+### Fixed
+
+-   Kill sourcekit-lsp as it grows in memory usage rapidly in some cases (this should be fixed in swift 6.1 https://github.com/swiftlang/sourcekit-lsp/issues/1541)
+-   Improved stability and bug fixes
+
+## 0.5.0 - 2024-11-5
 
 ### Changed
 
