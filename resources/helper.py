@@ -3,26 +3,7 @@ import subprocess
 import json
 import os
 import time
-
-#-----------------------FILE_LOCK
-class FileLock:
-    def __init__(self, file_name):
-        self.lock_file = f"{file_name}.lock"
-
-    def __enter__(self):
-        while True:
-            try:
-                # If the lock file can be created, it means there's no other one existing
-                self.fd = os.open(self.lock_file, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-                break;
-            except FileExistsError:
-                # If the creation fails because the file already exists the file is locked by another process
-                time.sleep(0.1)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        os.close(self.fd)
-        os.remove(self.lock_file)
-
+import fileLock
 
 def get_list_of_pids(process_name: str):
     proc = subprocess.run(["ps", "aux"], capture_output=True, text=True)
@@ -76,7 +57,7 @@ def update_git_exclude(file_to_exclude):
 debugger_config_file = ".vscode/xcode/debugger.launching"
 def wait_debugger_to_action(session_id, actions: list[str]):
     while True:
-        with FileLock(debugger_config_file):
+        with fileLock.FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
         if config is not None and not session_id in config:
@@ -90,7 +71,7 @@ def wait_debugger_to_action(session_id, actions: list[str]):
 
 def is_debug_session_valid(session_id) -> bool:
     try:
-        with FileLock(debugger_config_file):
+        with fileLock.FileLock(debugger_config_file):
             with open(debugger_config_file, 'r') as file:
                 config = json.load(file)
             if not session_id in config:
@@ -104,7 +85,7 @@ def is_debug_session_valid(session_id) -> bool:
     
 
 def get_debugger_launch_config(session_id, key):
-    with FileLock(debugger_config_file):
+    with fileLock.FileLock(debugger_config_file):
         with open(debugger_config_file, 'r') as file:
             config = json.load(file)
             if config is not None and not session_id in config:
@@ -117,7 +98,7 @@ def get_debugger_launch_config(session_id, key):
 def update_debugger_launch_config(session_id, key, value):
     config = {}
     try:
-        with FileLock(debugger_config_file):
+        with fileLock.FileLock(debugger_config_file):
             if os.path.exists(debugger_config_file):
                 try: 
                     with open(debugger_config_file, "r+") as file:
