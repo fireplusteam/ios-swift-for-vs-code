@@ -167,12 +167,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 if (testToRun.length === 0) {
                     continue;
                 }
+                const device = await context.projectEnv.debugDeviceID;
                 const debugSession: vscode.DebugConfiguration = {
                     type: "xcode-lldb",
                     name: `Xcode: Testing: ${session.target}`,
                     request: "launch",
                     target: "tests",
-                    isDebuggable: isDebuggable,
+                    isDebuggable:
+                        device.platform === "macOS" && session.host.includes("-Runner.app")
+                            ? false
+                            : isDebuggable, // for macOS, we can not debug UITests as it freezes for some reason
                     sessionId: sessionId,
                     testsToRun: testToRun,
                     buildBeforeLaunch: "never",
@@ -386,6 +390,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 deviceID: deviceID.id,
                 xctestrun: dbgConfig.xctestrun,
                 isCoverage: dbgConfig.isCoverage,
+                processExe: processExe,
             };
             return debugSession;
         } else {
@@ -434,6 +439,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 deviceID: deviceID.id,
                 xctestrun: dbgConfig.xctestrun,
                 isCoverage: dbgConfig.isCoverage,
+                processExe: processExe,
             };
             return debugSession;
         }

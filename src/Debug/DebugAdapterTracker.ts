@@ -33,6 +33,9 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get isCoverage(): boolean {
         return this.debugSession.configuration.isCoverage;
     }
+    private get processExe(): string {
+        return this.debugSession.configuration.processExe;
+    }
     private get context() {
         return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
     }
@@ -48,7 +51,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
-        this.simulatorInteractor = new SimulatorFocus(this.context.commandContext);
+        this.simulatorInteractor = new SimulatorFocus();
     }
 
     private get logPath(): string {
@@ -56,7 +59,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStartSession() {
-        this.simulatorInteractor.init();
+        this.simulatorInteractor.init(this.context.commandContext.projectEnv, this.processExe);
         console.log("Session is starting");
         vscode.debug.activeDebugSession;
         this.disList.push(

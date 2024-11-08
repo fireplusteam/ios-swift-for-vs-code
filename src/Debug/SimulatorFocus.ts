@@ -1,19 +1,21 @@
 import { execSync } from "child_process";
-import { CommandContext } from "../CommandManagement/CommandContext";
-import { DeviceID } from "../env";
+import { DeviceID, ProjectEnv } from "../env";
+import path from "path";
 
 export class SimulatorFocus {
-    private context: CommandContext;
     private deviceID?: DeviceID;
     private productName?: string;
 
-    constructor(context: CommandContext) {
-        this.context = context;
-    }
+    constructor() {}
 
-    async init() {
-        this.deviceID = await this.context.projectEnv.debugDeviceID;
-        this.productName = await this.context.projectEnv.productName;
+    async init(projectEnv: ProjectEnv, processExe: string) {
+        this.deviceID = await projectEnv.debugDeviceID;
+        this.productName = processExe.split(path.sep).at(0);
+        if (this.productName === undefined) {
+            this.productName = await projectEnv.productName;
+        } else if (this.productName.endsWith(".app")) {
+            this.productName = this.productName.slice(0, -".app".length);
+        }
     }
 
     focus() {
