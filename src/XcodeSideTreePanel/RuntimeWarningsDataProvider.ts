@@ -44,8 +44,8 @@ export class RuntimeWarningsDataProvider implements vscode.TreeDataProvider<vsco
     private _onDidChangeTreeData: vscode.EventEmitter<any> = new vscode.EventEmitter<any>();
     readonly onDidChangeTreeData: vscode.Event<any> = this._onDidChangeTreeData.event;
 
-    warnings: RuntimeWarningMessageNode[] = [];
-    used = new Map<string, RuntimeWarningMessageNode>();
+    private warnings: RuntimeWarningMessageNode[] = [];
+    private used = new Map<string, RuntimeWarningMessageNode>();
 
     public refresh(elements: RuntimeWarningMessageNode[]): any {
         const newComingElements = new Set<string>();

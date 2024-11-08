@@ -154,30 +154,46 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
 
     async setProjectFile(file: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_FILE", file);
+        this.notifyDidChange();
     }
     async setProjectScheme(scheme: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_SCHEME", scheme);
         // if the scheme was changed then we need to update dependencies
         this.firstLaunchedConfigured = false;
+        this.notifyDidChange();
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_CONFIGURATION", configuration);
+        this.notifyDidChange();
     }
     async setProjectTestPlan(testPlan: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_TEST_PLAN", testPlan);
+        this.notifyDidChange();
     }
     async setDebugDeviceID(deviceID: DeviceID): Promise<void> {
         saveKeyToEnvList(this.configuration, "DEVICE_ID", deviceID);
+        this.notifyDidChange();
     }
     async setMultipleDeviceID(multiId: DeviceID[]): Promise<void> {
         saveKeyToEnvList(this.configuration, "MULTIPLE_DEVICE_ID", multiId);
+        this.notifyDidChange();
     }
     async setPlatform(platform: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PLATFORM", platform);
+        this.notifyDidChange();
+    }
+
+    notifyDidChange() {
+        ProjectEnv.onDidChangeEmitter.fire(this);
     }
 
     async emptySessions() {
         emptyLog(getEnvFilePath());
+    }
+
+    private static onDidChangeEmitter = new vscode.EventEmitter<ProjectEnv>();
+    static onDidChangeProjectEnv(on: (projectEnv: ProjectEnv) => Promise<void>) {
+        return this.onDidChangeEmitter.event(on);
     }
 }
 

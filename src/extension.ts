@@ -7,6 +7,7 @@ import {
     isActivated,
     isWorkspaceOpened,
     ProjectConfigurationMissedError,
+    ProjectEnv,
     ProjectFileMissedError,
     ProjectSchemeMissedError,
 } from "./env";
@@ -48,6 +49,8 @@ import { WorkspaceContextImp } from "./LSP/WorkspaceContext";
 import { activateNotActiveExtension } from "./nonActiveExtension";
 import { getReadOnlyDocumentProvider } from "./LSP/ReadOnlyDocumentProvider";
 import { XCTestRunInspector } from "./Debug/XCTestRunInspector";
+import { StatusBar } from "./StatusBar/StatusBar";
+import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectConfigurationDataProvider";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -112,6 +115,8 @@ let testProvider: TestProvider | undefined;
 const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
 const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
 
+const statusBar = new StatusBar();
+
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -168,12 +173,28 @@ export async function activate(context: vscode.ExtensionContext) {
         activateNotActiveExtension(context);
         return;
     }
+    statusBar.update(new ProjectEnv({ settings: Promise.resolve({}) }));
+    context.subscriptions.push(
+        ProjectEnv.onDidChangeProjectEnv(projectEnv => statusBar.update(projectEnv))
+    );
+
+    context.subscriptions.push(statusBar);
 
     context.subscriptions.push(getReadOnlyDocumentProvider());
 
     vscode.commands.executeCommand("setContext", "vscode-ios.activated", true);
 
     vscode.window.registerTreeDataProvider("RuntimeWarningsProvider", runtimeWarningsDataProvider);
+
+    const projectConfigurationDataProvider = new ProjectConfigurationDataProvider();
+    projectConfigurationDataProvider.refresh(new ProjectEnv({ settings: Promise.resolve({}) }));
+    ProjectEnv.onDidChangeProjectEnv(projectEnv =>
+        projectConfigurationDataProvider.refresh(projectEnv)
+    );
+    vscode.window.registerTreeDataProvider(
+        "ProjectConfigurationDataProvider",
+        projectConfigurationDataProvider
+    );
 
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterDescriptorFactory(

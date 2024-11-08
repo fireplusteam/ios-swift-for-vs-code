@@ -42,7 +42,7 @@
         "test",
         "coverage"
     ],
-    "version": "0.5.3",
+    "version": "0.5.4",
     "os": [
         "darwin"
     ],
@@ -78,6 +78,11 @@
         },
         "views": {
             "xcode-explorer": [
+                {
+                    "id": "ProjectConfigurationDataProvider",
+                    "name": "Project Configuration",
+                    "visibility": "visible"
+                },
                 {
                     "id": "RuntimeWarningsProvider",
                     "name": "Runtime Warnings",

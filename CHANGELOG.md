@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.5.4 - 2024-11-8
+
+### Added
+
+-   Status Bar to better info a user about selected scheme, configuration, device, test plan
+-   Added currently selected configuration panel to vscode side bar
+
 ## 0.5.3 - 2024-11-7
 
 ### Fixed
