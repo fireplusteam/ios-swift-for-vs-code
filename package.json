@@ -76,6 +76,16 @@
                 }
             ]
         },
+        "viewsWelcome": [
+            {
+                "view": "ProjectConfigurationDataProvider",
+                "contents": "No Xcode project found in the folder. Select a folder where at least one *.xcodeproj or *.xcworkspace file "
+            },
+            {
+                "view": "RuntimeWarningsProvider",
+                "contents": "No runtime warnings found yet."
+            }
+        ],
         "views": {
             "xcode-explorer": [
                 {
