@@ -358,7 +358,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.create_target create_target",
                     "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
-                    "command script add -f attach_lldb.setScriptPath setScriptPath",
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
 
@@ -367,11 +366,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${processExe}`,
+                    `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
 
                     `create_target ${sessionID}`,
 
                     ...lldbCommands,
-                    `setScriptPath ${getScriptPath()}`,
                     `watch_new_process ${sessionID} lldb-dap`,
                 ],
                 args: [],
@@ -411,7 +410,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.create_target create_target",
                     "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
-                    "command script add -f attach_lldb.setScriptPath setScriptPath",
                     "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
                     "command script add -f attach_lldb.app_log app_log",
 
@@ -420,12 +418,12 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
                     `set_environmental_var APP_EXE=!!=${exe}`,
                     `set_environmental_var PROCESS_EXE=!!=${processExe}`,
+                    `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
 
                     `create_target ${sessionID}`,
                 ],
                 processCreateCommands: [
                     ...lldbCommands,
-                    `setScriptPath ${getScriptPath()}`,
                     `watch_new_process ${sessionID} codelldb`,
                     "continue",
                 ],

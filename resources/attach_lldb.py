@@ -50,10 +50,8 @@ def perform_debugger_command(debugger, command):
         logMessage("Error executing command:" + str(e))
 
 
-script_path = None
-
 def kill_codelldb(debugger):
-    global script_path
+    script_path = os.getenv("SCRIPT_PATH")
     perform_debugger_command(debugger, f"target create {script_path}/lldb_exe_stub")
     process = subprocess.Popen(f"{script_path}/lldb_exe_stub")
     perform_debugger_command(debugger, f"process attach --pid {process.pid}")
@@ -150,12 +148,6 @@ def watch_new_process(debugger, command, result, internal_dict):
     existing_pids = helper.get_list_of_pids(process_name)
     helper.update_debugger_launch_config(session_id, "status", "launched")
     wait_for_process(process_name, debugger, existing_pids, session_id)
-
-
-def setScriptPath(debugger, command, result, internal_dict):
-    global script_path
-    logMessage("Set Script Path to: " + str(command))
-    script_path = command
 
 
 mutex_log_runtime_error = threading.Lock()

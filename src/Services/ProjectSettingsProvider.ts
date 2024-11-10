@@ -57,7 +57,14 @@ export class ProjectSettingsProvider implements XCodeSettings {
         if (projectEnv === undefined) {
             throw Error("ProjectEnv is not set");
         }
-        const args = ["-scheme", await projectEnv.projectScheme, "-showdestinations", "-json"];
+        const args = [
+            "-scheme",
+            await projectEnv.projectScheme,
+            "-showdestinations",
+            "-json",
+            "-disableAutomaticPackageResolution",
+            "-skipPackageUpdates",
+        ];
         const projectType = await projectEnv.projectType;
         if (projectType !== "-package") {
             args.push(projectType, await projectEnv.projectFile);
@@ -128,6 +135,8 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     scheme,
                     "-showTestPlans",
                     "-json",
+                    "-disableAutomaticPackageResolution",
+                    "-skipPackageUpdates",
                 ],
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
@@ -185,6 +194,8 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 "-configuration",
                 buildConfiguration,
                 "-json",
+                "-disableAutomaticPackageResolution",
+                "-skipPackageUpdates",
             ],
             mode: ExecutorMode.onlyCommandNameAndResult,
         });
@@ -200,7 +211,12 @@ export class ProjectSettingsProvider implements XCodeSettings {
     }
 
     private async fetchXcodeList(projectFile: string) {
-        const args = ["-list", "-json"];
+        const args = [
+            "-list",
+            "-json",
+            "-disableAutomaticPackageResolution",
+            "-skipPackageUpdates",
+        ];
         if (getProjectType(projectFile) !== "-package") {
             args.push(getProjectType(projectFile), projectFile);
         }

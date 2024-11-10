@@ -87,13 +87,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
-        // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
         if (
             message.command === "disconnect" &&
             (message.arguments === undefined || message.arguments.terminateDebuggee === true)
         ) {
             this.terminateCurrentSession(true, false);
         } else if (message.command === "continue" && this.refreshBreakpoints === false) {
+            // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
             this.refreshBreakpoints = true;
             if (this.debugSession.configuration.type === "xcode-lldb") {
                 const breakpoints = vscode.debug.breakpoints;
