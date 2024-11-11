@@ -3,3 +3,16 @@
 .vscode
 build
 **/__pycache__
+node_modules
+out
+src
+!src/XCBBuildServiceProxy/dist
+dist/extension.js.map
+esbuild.js
+Gemfile
+Gemfile.lock
+make.sh
+tsconfig.json
+sourcekit_build.sh
+test
+HOW_TO_BUILD.md

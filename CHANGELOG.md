@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.4 - 2024-11-11
+
+### Added
+
+-   Release an extension as a single bundle which increases the speed of js code execution
+
 ## 0.5.4 - 2024-11-8
 
 ### Added

@@ -246,9 +246,9 @@ export async function updateProject(projectEvn: ProjectEnv, projectPath: string)
 
 export function getScriptPath(script: string | undefined = undefined) {
     if (script === undefined) {
-        return path.join(__dirname, "..", "..", "resources");
+        return path.join(__dirname, "..", "resources");
     }
-    return path.join(__dirname, "..", "..", "resources", script);
+    return path.join(__dirname, "..", "resources", script);
 }
 
 export function getFilePathInWorkspace(fileName: string) {
@@ -318,11 +318,11 @@ export async function getProjectFolderPath() {
 }
 
 export function getXCodeBuildServerPath() {
-    return path.join(__dirname, "..", "..", "xcode-build-server", "xcode-build-server");
+    return path.join(__dirname, "..", "xcode-build-server", "xcode-build-server");
 }
 
 export function getXCBBuildServicePath() {
-    return path.join(__dirname, "..", "..", "dist", "XCBBuildService");
+    return path.join(__dirname, "..", "dist", "XCBBuildService");
 }
 
 function readEnvFileToDict() {
