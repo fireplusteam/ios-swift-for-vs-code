@@ -211,12 +211,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
     }
 
     private async fetchXcodeList(projectFile: string) {
-        const args = [
-            "-list",
-            "-json",
-            "-disableAutomaticPackageResolution",
-            "-skipPackageUpdates",
-        ];
+        const args = ["-list", "-json"];
         if (getProjectType(projectFile) !== "-package") {
             args.push(getProjectType(projectFile), projectFile);
         }
