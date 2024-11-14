@@ -45,6 +45,8 @@ Instead of xCode preview you can use hot reloading [InjectionIII](https://github
 -   HotReloading & Injection with [HotReloading](https://github.com/johnno1962/HotReloading)
 -   SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
+To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
+
 ## Dependencies
 
 Before an extension is activated, there's a automatic check if those dependencies are installed and if not, it's ask a user to install them automatically.
