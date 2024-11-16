@@ -16,6 +16,7 @@ import { checkWorkspace } from "../commands";
 import { XCTestRunInspector } from "./XCTestRunInspector";
 import path from "path";
 import { WorkspaceContext } from "../LSP/WorkspaceContext";
+import { handleValidationErrors } from "../extension";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -287,7 +288,20 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             return null;
         }
 
-        return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
+        try {
+            return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
+        } catch (error) {
+            try {
+                return await handleValidationErrors(context, error, async () => {
+                    await checkWorkspace(context);
+                    return await this.debugSession(context, dbgConfig, sessionID, isDebuggable);
+                });
+            } catch {
+                // still error, a user didn't resolve it
+                context.cancel();
+                return null;
+            }
+        }
     }
 
     private async processName(context: CommandContext, exe: string) {

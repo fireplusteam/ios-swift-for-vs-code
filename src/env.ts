@@ -71,7 +71,7 @@ export interface SetProjectEnvInterface {
     setProjectScheme(scheme: string): Promise<void>;
     setProjectConfiguration(configuration: string): Promise<void>;
     setProjectTestPlan(testPlan: string): Promise<void>;
-    setDebugDeviceID(deviceID: DeviceID): Promise<void>;
+    setDebugDeviceID(deviceID: DeviceID | null): Promise<void>;
     setMultipleDeviceID(multiId: DeviceID[]): Promise<void>;
 }
 
@@ -170,7 +170,7 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         saveKeyToEnvList(this.configuration, "PROJECT_TEST_PLAN", testPlan);
         this.notifyDidChange();
     }
-    async setDebugDeviceID(deviceID: DeviceID): Promise<void> {
+    async setDebugDeviceID(deviceID: DeviceID | null): Promise<void> {
         saveKeyToEnvList(this.configuration, "DEVICE_ID", deviceID);
         this.notifyDidChange();
     }
@@ -290,7 +290,7 @@ function getProjectTestPlan(configuration: { [key: string]: string }) {
 
 function getDeviceId(configuration: { [key: string]: any }): DeviceID {
     const val = configuration["DEVICE_ID"];
-    if (val === undefined) {
+    if (val === undefined || val === null) {
         throw DebugDeviceIDMissedError;
     }
     return val;

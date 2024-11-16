@@ -2,6 +2,8 @@ import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
+import { CustomError } from "../utils";
+import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
 
 export class BuildManager {
     constructor() {}
@@ -81,9 +83,15 @@ export class BuildManager {
 
     async buildAutocomplete(context: CommandContext, logFilePath: string) {
         context.bundle.generateNext();
-        let buildCommand = "build";
-        if ((await context.projectSettingsProvider.testPlans).length > 0) {
-            buildCommand = "build-for-testing";
+        let buildCommand = "build-for-testing";
+        try {
+            await context.projectSettingsProvider.testPlans;
+        } catch (error) {
+            if (error instanceof CustomError && error.isEqual(TestPlanIsNotConfigured)) {
+                buildCommand = "build";
+            } else {
+                throw error;
+            }
         }
 
         await context.execShellWithOptions({

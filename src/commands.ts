@@ -21,10 +21,11 @@ import {
 import { Executor } from "./Executor";
 import { handleValidationErrors } from "./extension";
 import { QuickPickItem, showPicker } from "./inputPicker";
-import { emptyAppLog, isFolder } from "./utils";
+import { CustomError, emptyAppLog, isFolder } from "./utils";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { RunManager } from "./Services/RunManager";
 import { BuildManager } from "./Services/BuildManager";
+import { TestPlanIsNotConfigured } from "./Services/ProjectSettingsProvider";
 
 function filterDevices(
     devices: { [name: string]: string }[],
@@ -232,12 +233,24 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
 
 export async function selectTestPlan(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
-        const testPlans = await commandContext.projectSettingsProvider.testPlans;
-        if (testPlans.length === 0) {
-            vscode.window.showErrorMessage(
-                "There're no available Test Plans to select for given scheme/project configuration."
-            );
-            return false;
+        let testPlans: string[] = [];
+        try {
+            testPlans = await commandContext.projectSettingsProvider.testPlans;
+            if (testPlans.length === 0) {
+                vscode.window.showErrorMessage(
+                    "There're no available Test Plans to select for given scheme/project configuration."
+                );
+                return false;
+            }
+        } catch (error) {
+            if (error instanceof CustomError && error.isEqual(TestPlanIsNotConfigured)) {
+                vscode.window.showErrorMessage(
+                    "There're no available Test Plans to select for given scheme/project configuration."
+                );
+                return false;
+            } else {
+                throw error;
+            }
         }
 
         let currentTestPlan: string;

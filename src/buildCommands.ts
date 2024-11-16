@@ -5,6 +5,7 @@ import path from "path";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { BuildManager } from "./Services/BuildManager";
 import { ExecutorMode } from "./Executor";
+import { handleValidationErrors } from "./extension";
 
 export function getFileNameLog() {
     const fileName = path.join(".logs", "build.log");
@@ -28,7 +29,17 @@ export async function buildSelectedTarget(
     const filePath = getFileNameLog();
     const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
     try {
-        await buildManager.build(context, filePath);
+        const build = async () => {
+            try {
+                await buildManager.build(context, filePath);
+            } catch (error) {
+                await handleValidationErrors(context, error, async () => {
+                    await checkWorkspace(context);
+                    await build();
+                });
+            }
+        };
+        await build();
     } finally {
         problemResolver.end(rawParser);
     }
@@ -47,7 +58,17 @@ export async function buildTestsForCurrentFile(
     const filePath = getFileNameLog();
     const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
     try {
-        await buildManager.buildForTestingWithTests(context, filePath, tests, isCoverage);
+        const build = async () => {
+            try {
+                await buildManager.buildForTestingWithTests(context, filePath, tests, isCoverage);
+            } catch (error) {
+                await handleValidationErrors(context, error, async () => {
+                    await checkWorkspace(context);
+                    await build();
+                });
+            }
+        };
+        await build();
     } finally {
         problemResolver.end(rawParser);
     }

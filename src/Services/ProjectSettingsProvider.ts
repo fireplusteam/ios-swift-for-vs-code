@@ -8,11 +8,14 @@ import {
 } from "../env";
 import { ExecutorMode } from "../Executor";
 import { getProjectFiles } from "../ProjectManager/ProjectManager";
+import { CustomError } from "../utils";
 
 export interface XCodeSettings {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     settings: Promise<any>;
 }
+
+export const TestPlanIsNotConfigured = new CustomError("Test Plan is not configured");
 
 export class ProjectSettingsProvider implements XCodeSettings {
     projectEnv: WeakRef<ProjectEnv> | undefined;
@@ -156,9 +159,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 "code" in error &&
                 error.code === 66 // test plan is not configured
             ) {
-                const testPlans: string[] = [];
-                ProjectSettingsProvider.cachedTestPlans = [scheme, testPlans];
-                return testPlans;
+                throw TestPlanIsNotConfigured;
             } else {
                 throw error;
             }

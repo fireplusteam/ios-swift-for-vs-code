@@ -476,6 +476,16 @@ export async function handleValidationErrors<T>(
     error: unknown,
     repeatOnChange: () => Promise<T>
 ) {
+    if (typeof error === "object" && error !== null && "code" in error) {
+        switch (error.code) {
+            case 65: // scheme is not valid
+                await commandContext.projectEnv.setProjectScheme("");
+                return await repeatOnChange();
+            case 70: // device destination is not valid
+                await commandContext.projectEnv.setDebugDeviceID(null);
+                return await repeatOnChange();
+        }
+    }
     if (error === ProjectFileMissedError) {
         if (!projectManager) {
             throw Error("ProjectManager is not valid");

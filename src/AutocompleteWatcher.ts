@@ -49,10 +49,8 @@ export class AutocompleteWatcher {
 
                 const val = this.changedFiles.get(doc.uri.fsPath);
                 const textOfDoc = removeAllWhiteSpaces(doc.getText());
-                if (val) {
-                    if (val === textOfDoc) {
-                        return;
-                    }
+                if (val === textOfDoc) {
+                    return;
                 }
                 this.changedFiles.set(doc.uri.fsPath, textOfDoc);
                 this.triggerIncrementalBuild().catch(() => {});
