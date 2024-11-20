@@ -1,0 +1,12 @@
+
+xcodebuild log random prefix
+
+
+error: TCA.framework library is not found.
+
+ok, this is working well
+
+clang: error: failed to link. Firebase.framework is not not found
+
+
+some random text

@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.9 - 2024-11-20
+
+### Fixed
+
+-   Build was looped at error
+
 ## 0.5.8 - 2024-11-20
 
 ### Fixed

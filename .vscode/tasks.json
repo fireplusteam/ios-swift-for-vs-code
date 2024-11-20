@@ -19,6 +19,22 @@
         },
         {
             "type": "npm",
+            "script": "pretest",
+            "group": "build",
+            "problemMatcher": "$esbuild-watch",
+            "isBackground": true,
+            "label": "npm: pretest",
+            "dependsOn": [
+                "npm: watch:tsc",
+                "npm: watch:esbuild"
+            ],
+            "presentation": {
+                "group": "watch",
+                "reveal": "never"
+            }
+        },
+        {
+            "type": "npm",
             "script": "watch:esbuild",
             "group": "build",
             "problemMatcher": "$esbuild-watch",

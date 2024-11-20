@@ -479,8 +479,17 @@ export async function handleValidationErrors<T>(
     if (typeof error === "object" && error !== null && "code" in error) {
         switch (error.code) {
             case 65: // scheme is not valid
-                await commandContext.projectEnv.setProjectScheme("");
-                return await repeatOnChange();
+                if ("stderr" in error) {
+                    const stderr = error.stderr as string;
+                    const searchPattern = `does not contain a scheme named "${await commandContext.projectEnv.projectScheme}"`;
+
+                    if (stderr.indexOf(searchPattern) !== -1) {
+                        await commandContext.projectEnv.setProjectScheme("");
+                        return await repeatOnChange();
+                    }
+                }
+                break;
+
             case 70: // device destination is not valid
                 await commandContext.projectEnv.setDebugDeviceID(null);
                 return await repeatOnChange();

@@ -18,7 +18,7 @@ export class RawBuildParser {
 }
 
 export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolver {
-    private static xcodebuild = "xcodebuild";
+    static xcodebuild = "xcodebuild";
     static isSourcekit: SourcePredicate = source => this.xcodebuild !== source;
     static isXcodebuild: SourcePredicate = source => this.xcodebuild === source;
 
@@ -205,7 +205,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         }
         if (lastErrorIndex !== -1) {
             rawParser.triggerCharacter = "^";
-            const problems = this.parseBuildLog(
+            const problems = parseBuildLog(
                 rawParser.buildLogFile,
                 rawParser.stdout.substring(0, lastErrorIndex + 1),
                 rawParser.numberOfLines
@@ -238,134 +238,138 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
             this.buildErrors.clear();
         }
     }
+}
 
-    private problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
-    private problemLinkerPattern = /^(clang):\s+(error):\s+(.*)$/gm;
-    private frameworkErrorPattern = /^(error: )(.*?)$/gm;
+const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
+const problemLinkerPattern = /^(clang):\s+(error):\s+(.*)$/gm;
+const frameworkErrorPattern = /^(error: )(.*?)$/gm;
 
-    private column(output: string, messageEnd: number) {
-        let newLineCounter = 0;
-        let str = "";
-        let shouldBreak = false;
-        for (let i = messageEnd; i < output.length; ++i) {
-            if (output[i] === "\n") {
-                if (shouldBreak) {
-                    break;
-                }
-                str = "";
-                newLineCounter += 1;
-            } else {
-                str += output[i];
-            }
-            if (output[i] === "^") {
-                shouldBreak = true;
-            }
-            if (newLineCounter >= 3) {
+function column(output: string, messageEnd: number) {
+    let newLineCounter = 0;
+    let str = "";
+    let shouldBreak = false;
+    for (let i = messageEnd; i < output.length; ++i) {
+        if (output[i] === "\n") {
+            if (shouldBreak) {
                 break;
             }
+            str = "";
+            newLineCounter += 1;
+        } else {
+            str += output[i];
         }
-        let start = str.length,
-            end = 0;
-        for (let i = 0; i < str.length; ++i) {
-            if (str[i] !== " ") {
-                start = Math.min(i, start);
-                end = Math.max(end, i);
-            }
+        if (output[i] === "^") {
+            shouldBreak = true;
         }
-        if (start > end) {
-            return [0, 10000];
+        if (newLineCounter >= 3) {
+            break;
         }
-        return [start, end];
     }
-
-    private parseBuildLog(buildLogFile: string, output: string, numberOfLines: number) {
-        const files: { [key: string]: vscode.Diagnostic[] } = {};
-        try {
-            let matches = [...output.matchAll(this.problemPattern)];
-            for (const match of matches) {
-                const file = match[1];
-                const line = Number(match[2]) - 1;
-                const column = this.column(output, (match?.index || 0) + match[0].length);
-
-                const severity = match[4];
-                const message = match[5];
-                let errorSeverity = vscode.DiagnosticSeverity.Error;
-
-                switch (severity) {
-                    case "warning":
-                        errorSeverity = vscode.DiagnosticSeverity.Warning;
-                        break;
-                    case "note":
-                        errorSeverity = vscode.DiagnosticSeverity.Information;
-                        break;
-                    default:
-                        break;
-                }
-
-                const diagnostic = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(line, column[0]),
-                        new vscode.Position(line, column[1])
-                    ),
-                    message,
-                    errorSeverity
-                );
-                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
-                const value = files[file] || [];
-                value.push(diagnostic);
-                if (fs.existsSync(file)) {
-                    files[file] = value;
-                }
-            }
-            // parsing linker errors
-            matches = [...output.matchAll(this.problemLinkerPattern)];
-            for (const match of matches) {
-                const file = buildLogFile;
-
-                let line = numberOfLines;
-                for (let i = 0; i < (match.index || 0); ++i) {
-                    line += output[i] === "\n" ? 1 : 0;
-                }
-
-                const message = match[3];
-                const errorSeverity = vscode.DiagnosticSeverity.Error;
-
-                const diagnostic = new vscode.Diagnostic(
-                    new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
-                    message,
-                    errorSeverity
-                );
-                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
-                const value = files[file] || [];
-                value.push(diagnostic);
-                files[file] = value;
-            }
-            // parsing framework errors
-            matches = [...output.matchAll(this.frameworkErrorPattern)];
-            for (const match of matches) {
-                const file = buildLogFile;
-
-                let line = numberOfLines;
-                for (let i = 0; i < (match.index || 0); ++i) {
-                    line += output[i] === "\n" ? 1 : 0;
-                }
-
-                const message = match[2];
-                const errorSeverity = vscode.DiagnosticSeverity.Error;
-
-                const diagnostic = new vscode.Diagnostic(
-                    new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
-                    message,
-                    errorSeverity
-                );
-                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
-                const value = files[file] || [];
-                value.push(diagnostic);
-                files[file] = value;
-            }
-        } catch (err) {
-            console.log(`Error parsing build logs: ${err}`);
+    let start = str.length,
+        end = 0;
+    for (let i = 0; i < str.length; ++i) {
+        if (str[i] !== " ") {
+            start = Math.min(i, start);
+            end = Math.max(end, i);
         }
-        return files;
     }
+    if (start > end) {
+        return [0, 10000];
+    }
+    return [start, end];
 }
+
+function parseBuildLog(buildLogFile: string, output: string, numberOfLines: number) {
+    const files: { [key: string]: vscode.Diagnostic[] } = {};
+    try {
+        let matches = [...output.matchAll(problemPattern)];
+        for (const match of matches) {
+            const file = match[1];
+            const line = Number(match[2]) - 1;
+            const localColumn = column(output, (match?.index || 0) + match[0].length);
+
+            const severity = match[4];
+            const message = match[5];
+            let errorSeverity = vscode.DiagnosticSeverity.Error;
+
+            switch (severity) {
+                case "warning":
+                    errorSeverity = vscode.DiagnosticSeverity.Warning;
+                    break;
+                case "note":
+                    errorSeverity = vscode.DiagnosticSeverity.Information;
+                    break;
+                default:
+                    break;
+            }
+
+            const diagnostic = new vscode.Diagnostic(
+                new vscode.Range(
+                    new vscode.Position(line, localColumn[0]),
+                    new vscode.Position(line, localColumn[1])
+                ),
+                message,
+                errorSeverity
+            );
+            diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
+            const value = files[file] || [];
+            value.push(diagnostic);
+            if (fs.existsSync(file)) {
+                files[file] = value;
+            }
+        }
+        // parsing linker errors
+        matches = [...output.matchAll(problemLinkerPattern)];
+        for (const match of matches) {
+            const file = buildLogFile;
+
+            let line = numberOfLines;
+            for (let i = 0; i < (match.index || 0); ++i) {
+                line += output[i] === "\n" ? 1 : 0;
+            }
+
+            const message = match[3];
+            const errorSeverity = vscode.DiagnosticSeverity.Error;
+
+            const diagnostic = new vscode.Diagnostic(
+                new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
+                message,
+                errorSeverity
+            );
+            diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
+            const value = files[file] || [];
+            value.push(diagnostic);
+            files[file] = value;
+        }
+        // parsing framework errors
+        matches = [...output.matchAll(frameworkErrorPattern)];
+        for (const match of matches) {
+            const file = buildLogFile;
+
+            let line = numberOfLines;
+            for (let i = 0; i < (match.index || 0); ++i) {
+                line += output[i] === "\n" ? 1 : 0;
+            }
+
+            const message = match[2];
+            const errorSeverity = vscode.DiagnosticSeverity.Error;
+
+            const diagnostic = new vscode.Diagnostic(
+                new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 0)),
+                message,
+                errorSeverity
+            );
+            diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
+            const value = files[file] || [];
+            value.push(diagnostic);
+            files[file] = value;
+        }
+    } catch (err) {
+        console.log(`Error parsing build logs: ${err}`);
+    }
+    return files;
+}
+
+export const _private = {
+    parseBuildLog,
+};
