@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.8 - 2024-11-20
+
+### Fixed
+
+-   Updated icon
+
 ## 0.5.7 - 2024-11-11
 
 ### Fixed
