@@ -1,7 +1,7 @@
 {
     "name": "vscode-ios",
     "displayName": "Xcode iOS Swift IDE",
-    "description": "Develop/Debug/Test your iOS application in VS Code like in Xcode using Swift",
+    "description": "Develop Swift iOS applications in VS Code like in Xcode",
     "icon": "icons/icon.png",
     "keywords": [
         "ios",
@@ -45,7 +45,7 @@
     "recommendation": [
         "connor4312.esbuild-problem-matchers"
     ],
-    "version": "0.5.9",
+    "version": "0.5.10",
     "os": [
         "darwin"
     ],

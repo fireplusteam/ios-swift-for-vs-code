@@ -1,11 +1,12 @@
-# vscode-ios README
+# Xcode iOS Swift IDE <img valign="middle" alt="Xcode iOS Swift IDE logo" width="40" src="./icons/icon.png" />
 
 📦[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=FirePlusTeam.vscode-ios) | 🐞
 [Github Issues](https://github.com/fireplusteam/ios_vs_code/issues)
 
-You can support this project by giving a star on GitHub ⭐️
+You can support this project by giving a star on GitHub ⭐️ or by becoming an official sponsor 💰
 
 [![GitHub](https://img.shields.io/github/stars/fireplusteam/ios_vs_code?style=social)](https://github.com/fireplusteam/ios_vs_code)
+[![Github Sponsors](https://img.shields.io/badge/Github%20Sponsors-%E2%9D%A4-red?style=flat&logo=github)](https://github.com/sponsors/ios_vs_code)
 
 <hr/>
 Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions.
@@ -14,7 +15,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 <hr/>
 
-## Autocomplete
+## ✅ Autocomplete
 
 [![Autocomplete](media/autocomplete.gif)](https://youtu.be/0dXQGY0IIEA)
 
@@ -54,7 +55,8 @@ Use the following guide to install them manually if any it doesn't work for you:
 
 **Required Dependencies**:
 
--   **Xcode** and simulators. Make sure that your Xcode is installed in `/Application/Xcode/` folder
+-   🍏 **MacOS** — Other platforms are currently not supported
+-   📱 **Xcode** and simulators. Make sure that your Xcode is installed in `/Application/Xcode/` folder
 
 -   **homebrew**:
 
@@ -81,9 +83,9 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 ## How to use
 
--   Once you installed all the dependencies, you can open a folder which contains the iOS project, it project or workspace is located in the local folder then an extension will ask you if you want to configure it otherwise you need to perform command "Xcode: Select Project/Workspace" and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
+-   Once you installed all the dependencies, you can open a folder which contains the iOS project. If project or workspace is located in the local folder then an extension will ask you if you want to configure it, otherwise you need to perform command **"Xcode: Select Project/Workspace"** and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
 
--   There's ios launch configuration that can be added to launch.json file to run and debug ios project (there's also "Xcode: Run App & Debug" snippet)
+-   There's ios launch configuration that can be added to `launch.json` file to run and debug ios project (there's also "Xcode: Run App & Debug" snippet)
 
 ```json
 "configurations": [
@@ -93,7 +95,8 @@ This's just needed to override the **continueBuildingAfterError** property when 
         "request": "launch",
         "target": "app",
         "isDebuggable": true,
-        "buildBeforeLaunch": "always"
+        "buildBeforeLaunch": "always",
+        "lldbCommands": []
     }
 ]
 ```
@@ -112,6 +115,7 @@ This extension contributes the following settings:
 ## Known Issues
 
 -   You still need Xcode to use SwiftUI preview or edit storyboard/assets/project settings.
+-   Running/debugging on device is not currently supported.
 -   [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) use indexing while build. if you find definition or references is not work correctly, just build it to update index or restart Swift LSP in VS Code.
 -   When running for the first time, **you need to ensure that the log is complete**, otherwise some files cannot obtain the correct flags.
 -   If Generating of project is not working as expected or generates some kind of errors if Xcode opens the same project file, you simply need to update **xcodeproj** lib and ruby library to the latest
@@ -122,6 +126,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.5.2
+### 0.5.10
 
 It's still under development, so you can face some bugs

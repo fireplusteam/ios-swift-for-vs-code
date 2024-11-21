@@ -17,4 +17,4 @@ npm run test
 
 vsce package
 
-code --install-extension vscode-ios-0.5.9.vsix
+code --install-extension vscode-ios-0.5.10.vsix
