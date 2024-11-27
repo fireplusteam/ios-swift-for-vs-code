@@ -3,7 +3,7 @@
 📦[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=FirePlusTeam.vscode-ios) | 🐞
 [Github Issues](https://github.com/fireplusteam/ios_vs_code/issues)
 
-You can support this project by giving a star on GitHub ⭐️ or by becoming an official sponsor 💰
+You can support this project by giving a star on GitHub ⭐️
 
 [![GitHub](https://img.shields.io/github/stars/fireplusteam/ios_vs_code?style=social)](https://github.com/fireplusteam/ios_vs_code)
 [![Github Sponsors](https://img.shields.io/badge/Github%20Sponsors-%E2%9D%A4-red?style=flat&logo=github)](https://github.com/sponsors/ios_vs_code)
