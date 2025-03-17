@@ -176,7 +176,7 @@ export class ProjectManager {
             projectTree.addIncluded(file);
         }
         for (const folder of [...this.projectCache.files(true)]) {
-            projectTree.addIncluded(folder, false);
+            projectTree.addIncluded(folder, true);
         }
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getFilePathInWorkspace(".logs"));
