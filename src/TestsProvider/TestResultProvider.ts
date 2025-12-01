@@ -202,6 +202,9 @@ export class TestResultProvider {
     }
 
     private convertDuration(duration: string) {
+        if (duration === null || duration === undefined || duration.length === 0) {
+            return Number(0);
+        }
         return Number(duration.replace(",", ".").replace("s", ""));
     }
 

@@ -26,10 +26,13 @@ export class TestCase {
             // TODO: remove this once xcodebuild tool supports full test id path
             // for some reason for new swift testing framework it doesn't understand the last part of the path
             if (this.testStyle === "swift-testing") {
-                const testName = this.testName.split("/").slice(0, -1).join("/");
-                if (testName !== undefined && testName.length > 0) {
-                    list.push(testName);
-                }
+                // My hypothesis is that xcodebuild strips the ending parentheses, but only the last pair. Therefore, I tried adding an extra pair of parentheses to the identifier. Surprisingly, it works, confirming my hypothesis.
+                // Note that, for free test functions, we don’t need to add extra parentheses because the strip behavior only applies to the 3rd component (ie. test function) of the identifier.
+                list.push(this.testName + (list.length > 2 ? "()" : ""));
+                // const testName = this.testName.split("/").slice(0, -1).join("/");
+                // if (testName !== undefined && testName.length > 0) {
+                //     list.push(testName);
+                // }
             } else {
                 list.push(this.testName);
             }
