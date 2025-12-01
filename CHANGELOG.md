@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.12 - 2025-12-01
+
+### Fixed
+
+-   Fixed an issue with running a single Swift test.
+
 ## 0.5.9 - 2024-11-20
 
 ### Fixed
