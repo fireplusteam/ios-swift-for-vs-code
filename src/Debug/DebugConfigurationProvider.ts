@@ -37,6 +37,7 @@ function runtimeWarningBreakPointCommand() {
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     static Type = "xcode-lldb";
+    static RealLLDBTypeAdapter = "lldb-dap"; // lldb-dap official extension. To use the build in just change to "xcode-lldb"
     static shouldSetCodeLLDB = true;
 
     private _counterID = 0;
@@ -363,7 +364,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         if (lldExePath) {
             const debugSession: vscode.DebugConfiguration = {
-                type: "xcode-lldb",
+                type: DebugConfigurationProvider.RealLLDBTypeAdapter,
                 request: "attach",
                 name: dbgConfig.name,
                 attachCommands: [
@@ -415,7 +416,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
             // old code-lldb way: deprecated
             const debugSession: vscode.DebugConfiguration = {
-                type: "lldb",
+                type: "lldb", // code lldb
                 request: "custom",
                 name: dbgConfig.name,
                 targetCreateCommands: [

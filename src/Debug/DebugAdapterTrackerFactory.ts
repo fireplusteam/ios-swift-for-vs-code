@@ -21,7 +21,9 @@ export class DebugAdapterTrackerFactory implements vscode.DebugAdapterTrackerFac
             return new ParentDebugAdapterTracker(session);
         }
         if (
-            (session.type === "xcode-lldb" || session.type === "lldb") &&
+            (session.type === "xcode-lldb" ||
+                session.type === "lldb-dap" ||
+                session.type === "lldb") &&
             session.configuration.sessionId
         ) {
             return new DebugAdapterTracker(session, this.problemResolver);

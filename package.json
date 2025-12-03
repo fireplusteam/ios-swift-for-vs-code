@@ -435,7 +435,8 @@
     },
     "extensionDependencies": [
         "vadimcn.vscode-lldb",
-        "ms-python.debugpy"
+        "ms-python.debugpy",
+        "llvm-vs-code-extensions.lldb-dap"
     ],
     "scripts": {
         "compile": "npm run check-types && node esbuild.js",

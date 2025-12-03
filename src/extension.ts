@@ -207,6 +207,9 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.debug.registerDebugAdapterTrackerFactory("xcode-lldb", debugAdapterFactory)
     );
     context.subscriptions.push(
+        vscode.debug.registerDebugAdapterTrackerFactory("lldb-dap", debugAdapterFactory)
+    );
+    context.subscriptions.push(
         vscode.debug.registerDebugAdapterTrackerFactory("lldb", debugAdapterFactory)
     );
     context.subscriptions.push(

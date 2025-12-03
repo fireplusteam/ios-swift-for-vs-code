@@ -95,7 +95,10 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         } else if (message.command === "continue" && this.refreshBreakpoints === false) {
             // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
             this.refreshBreakpoints = true;
-            if (this.debugSession.configuration.type === "xcode-lldb") {
+            if (
+                this.debugSession.configuration.type ===
+                DebugConfigurationProvider.RealLLDBTypeAdapter
+            ) {
                 const breakpoints = vscode.debug.breakpoints;
                 vscode.debug.removeBreakpoints(breakpoints);
                 vscode.debug.addBreakpoints(breakpoints);
