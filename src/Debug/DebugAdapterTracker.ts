@@ -83,7 +83,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         }
     }
 
-    private refreshBreakpoints = false;
+    private refreshBreakpoints = true; // with new lldb-dap this is not needed anymore, so default to true. If you face issues with breakpoints set to false
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
