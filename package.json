@@ -92,11 +92,13 @@
         "views": {
             "xcode-explorer": [
                 {
+                    "icon": "media/sidebar_tool.svg",
                     "id": "ProjectConfigurationDataProvider",
                     "name": "Project Configuration",
                     "visibility": "visible"
                 },
                 {
+                    "icon": "media/sidebar_tool.svg",
                     "id": "RuntimeWarningsProvider",
                     "name": "Runtime Warnings",
                     "visibility": "visible"

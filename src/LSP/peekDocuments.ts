@@ -14,7 +14,7 @@
 
 import * as vscode from "vscode";
 import * as langclient from "vscode-languageclient/node";
-import { PeekDocumentsParams, PeekDocumentsRequest } from "./lspExtension";
+import { PeekDocumentsParams, PeekDocumentsRequest } from "./PeekDocumentsRequest";
 
 /**
  * Opens a peeked editor in `uri` at `position` having contents from `locations`.
