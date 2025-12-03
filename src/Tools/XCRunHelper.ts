@@ -43,6 +43,25 @@ export class XCRunHelper {
         return this.lldbDapPath;
     }
 
+    public static isVersionGreaterOrEqual(
+        versionA: [string, string, string] | null,
+        versionB: [number, number, number]
+    ) {
+        if (versionA === null) {
+            return false;
+        }
+        for (let i = 0; i < 3; i++) {
+            const numA = parseInt(versionA[i], 10);
+            const numB = versionB[i];
+            if (numA > numB) {
+                return true;
+            } else if (numA < numB) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static async swiftToolchainVersion(): Promise<[string, string, string]> {
         const stdout = await this.getStdOut("xcrun swift --version");
         const versionPattern = /swiftlang-([0-9]+)?.([0-9]+)?.([0-9]+)?/g;

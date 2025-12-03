@@ -143,6 +143,39 @@ export class SwiftLSPClient implements vscode.Disposable {
             workspaceFolder: workspaceFolder,
             outputChannel: this.logs,
             middleware: {
+                provideCompletionItem: async (document, position, context, token, next) => {
+                    const result = await next(document, position, context, token);
+
+                    if (!result) {
+                        return result;
+                    }
+
+                    if (Array.isArray(result)) {
+                        return addParameterHintsCommandsIfNeeded(result, document.uri);
+                    }
+
+                    return {
+                        ...result,
+                        items: addParameterHintsCommandsIfNeeded(result.items, document.uri),
+                    };
+                },
+                provideCodeLenses: async (document, token, next) => {
+                    const result = await next(document, token);
+                    return result?.map(codelens => {
+                        switch (codelens.command?.command) {
+                            case "swift.run":
+                                codelens.command.title = `$(play)\u00A0${codelens.command.title}`;
+                                break;
+                            case "swift.debug":
+                                codelens.command.title = `$(debug)\u00A0${codelens.command.title}`;
+                                break;
+                            case "swift.play":
+                                codelens.command.title = `$(play)\u00A0${codelens.command.title}`;
+                                break;
+                        }
+                        return codelens;
+                    });
+                },
                 provideDocumentSymbols: async (document, token, next) => {
                     try {
                         const result = await next(document, token);
@@ -157,7 +190,8 @@ export class SwiftLSPClient implements vscode.Disposable {
                     const definitions = result as vscode.Location[];
                     if (
                         definitions &&
-                        path.extname(definitions[0].uri.path) === ".swiftinterface"
+                        path.extname(definitions[0].uri.path) === ".swiftinterface" &&
+                        definitions[0].uri.scheme === "file"
                     ) {
                         const uri = definitions[0].uri.with({ scheme: "readonly" });
                         return new vscode.Location(uri, definitions[0].range);
@@ -212,7 +246,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             // Avoid attempting to reinitialize multiple times. If we fail to initialize
             // we aren't doing anything different the second time and so will fail again.
             initializationFailedHandler: () => false,
-            initializationOptions: this.initializationOptions(),
+            initializationOptions: await this.initializationOptions(),
         };
 
         return {
@@ -256,18 +290,58 @@ export class SwiftLSPClient implements vscode.Disposable {
     }
 
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    private initializationOptions(): any {
-        const options: any = {
-            "workspace/peekDocuments": true, // workaround for client capability to handle `PeekDocumentsRequest`
-            "workspace/getReferenceDocument": true, // the client can handle URIs with scheme `sourcekit-lsp:`
+    private async initializationOptions(): Promise<any> {
+        async function getSwiftVersion() {
+            try {
+                return await XCRunHelper.swiftToolchainVersion();
+            } catch {
+                return null;
+            }
+        }
+        const swiftVersion = await getSwiftVersion();
+
+        let options: any = {
             "textDocument/codeLens": {
                 supportedCommands: {
                     "swift.run": "swift.run",
                     "swift.debug": "swift.debug",
+                    "swift.play": "swift.play",
                 },
             },
         };
-
+        // Swift 6.3 changed the value to enable experimental client capabilities from `true` to `{ "supported": true }`
+        // (https://github.com/swiftlang/sourcekit-lsp/pull/2204)
+        if (XCRunHelper.isVersionGreaterOrEqual(swiftVersion, [6, 3, 0])) {
+            options = {
+                ...options,
+                "workspace/peekDocuments": {
+                    supported: true, // workaround for client capability to handle `PeekDocumentsRequest`
+                    peekLocation: true, // allow SourceKit-LSP to send `Location` instead of `DocumentUri` for the locations to peek.
+                },
+                "workspace/getReferenceDocument": {
+                    supported: true, // the client can handle URIs with scheme `sourcekit-lsp:`
+                },
+            };
+        } else {
+            options = {
+                ...options,
+                "workspace/peekDocuments": true, // workaround for client capability to handle `PeekDocumentsRequest`
+                "workspace/getReferenceDocument": true, // the client can handle URIs with scheme `sourcekit-lsp:`
+            };
+        }
+        if (XCRunHelper.isVersionGreaterOrEqual(swiftVersion, [6, 3, 0])) {
+            options = {
+                ...options,
+                "window/didChangeActiveDocument": {
+                    supported: true, // the client can send `window/didChangeActiveDocument` notifications
+                },
+            };
+        } else if (XCRunHelper.isVersionGreaterOrEqual(swiftVersion, [6, 1, 0])) {
+            options = {
+                ...options,
+                "window/didChangeActiveDocument": true, // the client can send `window/didChangeActiveDocument` notifications
+            };
+        }
         // if (configuration.backgroundIndexing) {
         //     options = {
         //         ...options,
@@ -289,6 +363,34 @@ export class SwiftLSPClient implements vscode.Disposable {
             }
         }
     }
+}
+
+function addParameterHintsCommandsIfNeeded(
+    items: vscode.CompletionItem[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    documentUri: vscode.Uri
+): vscode.CompletionItem[] {
+    // if (!configuration.parameterHintsEnabled(documentUri)) {
+    //     return items;
+    // }
+
+    return items.map(item => {
+        switch (item.kind) {
+            case vscode.CompletionItemKind.Function:
+            case vscode.CompletionItemKind.Method:
+            case vscode.CompletionItemKind.Constructor:
+            case vscode.CompletionItemKind.EnumMember:
+                return {
+                    command: {
+                        title: "Trigger Parameter Hints",
+                        command: "editor.action.triggerParameterHints",
+                    },
+                    ...item,
+                };
+            default:
+                return item;
+        }
+    });
 }
 
 /// this's workaround to restart sourcekit-lsp if it grows really large,

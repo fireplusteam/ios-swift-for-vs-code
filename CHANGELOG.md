@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.13 - 2025-12-03
+
+### Fixed
+
+-   Updated lsp to use latest features of swift lsp client like code lenses, etc
+
 ## 0.5.12 - 2025-12-01
 
 ### Fixed
