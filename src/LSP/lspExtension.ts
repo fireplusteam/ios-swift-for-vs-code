@@ -1,4 +1,3 @@
-import * as ls from "vscode-languageserver-protocol";
 import * as langclient from "vscode-languageclient/node";
 import * as vscode from "vscode";
 
@@ -18,57 +17,6 @@ export interface HandleProblemDiagnosticResolver {
         isSourceKit: SourcePredicate,
         newDiagnostics: vscode.Diagnostic[]
     ) => void;
-}
-
-export interface LSPTestItem {
-    /**
-     * This identifier uniquely identifies the test case or test suite. It can be used to run an individual test (suite).
-     */
-    id: string;
-
-    /**
-     * Display name describing the test.
-     */
-    label: string;
-
-    /**
-     * Optional description that appears next to the label.
-     */
-    description?: string;
-
-    /**
-     * A string that should be used when comparing this item with other items.
-     *
-     * When `undefined` the `label` is used.
-     */
-    sortText?: string;
-
-    /**
-     *  Whether the test is disabled.
-     */
-    disabled: boolean;
-
-    /**
-     * The type of test, eg. the testing framework that was used to declare the test.
-     */
-    style: TestStyle;
-
-    /**
-     * The location of the test item in the source code.
-     */
-    location: ls.Location;
-
-    /**
-     * The children of this test item.
-     *
-     * For a test suite, this may contain the individual test cases or nested suites.
-     */
-    children: LSPTestItem[];
-
-    /**
-     * Tags associated with this test item.
-     */
-    tags: { id: string }[];
 }
 
 // Definitions for non-standard requests used by sourcekit-lsp
@@ -111,42 +59,12 @@ export const PeekDocumentsRequest = new langclient.RequestType<
     unknown
 >("workspace/peekDocuments");
 
-// Get Reference Document
-export interface GetReferenceDocumentParams {
-    /**
-     * The `DocumentUri` of the custom scheme url for which content is required
-     */
-    uri: langclient.DocumentUri;
-}
-
 /**
  * Response containing `content` of `GetReferenceDocumentRequest`
  */
 export interface GetReferenceDocumentResult {
     content: string;
 }
-
-/**
- * Request from the client to the server asking for contents of a URI having a custom scheme
- * For example: "sourcekit-lsp:"
- */
-export const GetReferenceDocumentRequest = new langclient.RequestType<
-    GetReferenceDocumentParams,
-    GetReferenceDocumentResult,
-    unknown
->("workspace/getReferenceDocument");
-
-interface DocumentTestsParams {
-    textDocument: {
-        uri: ls.URI;
-    };
-}
-
-export const textDocumentTestsRequest = new langclient.RequestType<
-    DocumentTestsParams,
-    LSPTestItem[],
-    unknown
->("textDocument/tests");
 
 /** Language client errors */
 export enum LanguageClientError {

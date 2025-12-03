@@ -3,8 +3,9 @@ import { parseSwiftSource } from "./parseClass";
 import { TestContainer } from "./TestContainer";
 import { TestHeading as TestSuite } from "./TestHeading";
 import { TestTreeContext, getContentFromFilesystem } from "../TestTreeContext";
-import { getTestIDComponents, LSPTestItem } from "../../LSP/lspExtension";
+import { getTestIDComponents } from "../../LSP/lspExtension";
 import { TestCase } from "./TestCase";
+import { LSPTestItem } from "../../LSP/GetTestsRequest";
 
 let generationCounter = 0;
 

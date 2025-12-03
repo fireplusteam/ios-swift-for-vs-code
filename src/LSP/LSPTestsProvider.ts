@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
-import { languageId, LSPTestItem, textDocumentTestsRequest } from "./lspExtension";
+import { LSPTestItem, TextDocumentTestsRequest } from "./GetTestsRequest";
 import { SwiftLSPClient } from "./SwiftLSPClient";
 import * as lp from "vscode-languageserver-protocol";
 import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
+import { languageId } from "./lspExtension";
 
 export class LSPTestsProvider {
     private version = 0;
@@ -52,7 +53,7 @@ export class LSPTestsProvider {
         try {
             const testsInDocument = await (
                 await this.lspClient.client()
-            ).sendRequest(textDocumentTestsRequest, {
+            ).sendRequest(TextDocumentTestsRequest.type, {
                 textDocument: { uri: dummyUri.toString() },
             });
             return testsInDocument;
