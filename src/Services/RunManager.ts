@@ -55,6 +55,13 @@ export class RunManager {
         context.bundle.generateNext();
         const logFilePath = ".logs/tests.log";
 
+        let isSimulatorRequired = false;
+        const deviceId = await context.projectEnv.debugDeviceID;
+        if (deviceId.platform !== "macOS") {
+            isSimulatorRequired = true;
+            await this.prepareSimulator(context, deviceId);
+        }
+
         await this.waitDebugger(context);
 
         await context.execShellWithOptions({
@@ -70,6 +77,7 @@ export class RunManager {
                 ...(await BuildManager.commonArgs(context.projectEnv, context.bundle)),
                 "-parallel-testing-enabled",
                 "NO",
+                ...(isSimulatorRequired ? ["-destination", `id=${deviceId.id}`] : []),
                 "-enableCodeCoverage",
                 isCoverage ? "YES" : "NO",
                 // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676
@@ -96,58 +104,8 @@ export class RunManager {
         deviceId: DeviceID,
         waitDebugger: boolean
     ) {
-        await this.terminateCurrentIOSApp(context, this.sessionID, deviceId.id);
+        await this.prepareSimulator(context, deviceId);
 
-        try {
-            await context.execShellWithOptions({
-                scriptOrCommand: { command: "xcrun" },
-                args: ["simctl", "boot", deviceId.id],
-            });
-        } catch {
-            /* empty */
-        }
-
-        try {
-            await context.execShellWithOptions({
-                scriptOrCommand: {
-                    command:
-                        "open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/",
-                    labelInTerminal: "Opening Simulator",
-                },
-                mode: ExecutorMode.onlyCommandNameAndResult,
-            });
-        } catch (error) {
-            console.log("Simulator loaded");
-        }
-
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-            const result = await context.execShellWithOptions({
-                scriptOrCommand: { command: `xcrun`, labelInTerminal: "Check if simulator opened" },
-                args: ["simctl", "list", "devices", "-j"],
-                mode: ExecutorMode.onlyCommandNameAndResult,
-            });
-            const json = JSON.parse(result.stdout);
-            let booted = false;
-            for (const key in json.devices) {
-                const value = json.devices[key];
-                for (const device of value) {
-                    if (device.udid === deviceId.id) {
-                        if (device.state === "Booted") {
-                            booted = true;
-                            break;
-                        }
-                    }
-                }
-                if (booted) {
-                    break;
-                }
-            }
-            if (booted) {
-                break;
-            }
-            sleep(1);
-        }
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcrun" },
             args: [
@@ -200,6 +158,60 @@ export class RunManager {
                     DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
                 }
             });
+    }
+
+    private async prepareSimulator(context: CommandContext, deviceId: DeviceID) {
+        await this.terminateCurrentIOSApp(context, this.sessionID, deviceId.id);
+
+        try {
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcrun" },
+                args: ["simctl", "boot", deviceId.id],
+            });
+        } catch {
+            /* empty */
+        }
+
+        try {
+            await context.execShellWithOptions({
+                scriptOrCommand: {
+                    command:
+                        "open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/",
+                    labelInTerminal: "Opening Simulator",
+                },
+                mode: ExecutorMode.onlyCommandNameAndResult,
+            });
+        } catch (error) {
+            console.log("Simulator loaded");
+        }
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const result = await context.execShellWithOptions({
+                scriptOrCommand: { command: `xcrun`, labelInTerminal: "Check if simulator opened" },
+                args: ["simctl", "list", "devices", "-j"],
+                mode: ExecutorMode.onlyCommandNameAndResult,
+            });
+            const json = JSON.parse(result.stdout);
+            let booted = false;
+            for (const key in json.devices) {
+                const value = json.devices[key];
+                for (const device of value) {
+                    if (device.udid === deviceId.id) {
+                        if (device.state === "Booted") {
+                            booted = true;
+                            break;
+                        }
+                    }
+                }
+                if (booted) {
+                    break;
+                }
+            }
+            if (booted) {
+                break;
+            }
+            sleep(1);
+        }
     }
 
     private async runOnMac(context: CommandContext) {

@@ -5,6 +5,7 @@ tags
 vscode-test
 *.vsix
 !.eslintrc.json
+!.mocharc.json
 !.prettierignore
 !.prettierrc.json
 !.vscode-test.mjs
