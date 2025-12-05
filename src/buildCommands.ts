@@ -41,7 +41,7 @@ export async function buildSelectedTarget(
         };
         await build();
     } finally {
-        problemResolver.end(rawParser);
+        await problemResolver.end(context.bundle, rawParser);
     }
 }
 
@@ -70,6 +70,6 @@ export async function buildTestsForCurrentFile(
         };
         await build();
     } finally {
-        problemResolver.end(rawParser);
+        await problemResolver.end(context.bundle, rawParser);
     }
 }

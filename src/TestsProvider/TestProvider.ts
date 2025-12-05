@@ -11,6 +11,7 @@ import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { BundlePath } from "../CommandManagement/BundlePath";
 import * as path from "path";
+import { Mutex } from "async-mutex";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -33,7 +34,7 @@ export class TestProvider {
     asyncTestCaseParser = new TestCaseProblemParser();
 
     private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialized;
-    private initialFilesLoadingPromise = Promise.resolve();
+    private initialFilesLoadingMutex = new Mutex();
 
     constructor(
         projectManager: ProjectManager,
@@ -357,17 +358,16 @@ export class TestProvider {
     }
 
     async findInitialFiles(controller: vscode.TestController) {
-        if (this.loadingState === TestProviderLoadingState.loading) {
-            return this.initialFilesLoadingPromise;
-        }
+        const release = await this.initialFilesLoadingMutex.acquire();
         try {
             this.loadingState = TestProviderLoadingState.loading;
-            this.initialFilesLoadingPromise = this.findInitialFilesIml(controller);
-            await this.initialFilesLoadingPromise;
+            await this.findInitialFilesIml(controller);
             this.loadingState = TestProviderLoadingState.loaded;
         } catch (err) {
             this.loadingState = TestProviderLoadingState.error;
             throw err;
+        } finally {
+            release();
         }
     }
 

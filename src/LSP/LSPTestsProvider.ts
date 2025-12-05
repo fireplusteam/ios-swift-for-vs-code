@@ -5,28 +5,25 @@ import * as lp from "vscode-languageserver-protocol";
 import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
 import { languageId } from "./lspExtension";
+import { Mutex } from "async-mutex";
 
 export class LSPTestsProvider {
     private version = 0;
     private dummyFile = getFilePathInWorkspace(".vscode/xcode/dummy.swift");
-    private request: Promise<LSPTestItem[]> | undefined;
+    private _mutex = new Mutex();
 
     constructor(private lspClient: SwiftLSPClient) {
         fs.writeFileSync(this.dummyFile, "");
     }
 
     async fetchTests(document: vscode.Uri, content: string): Promise<LSPTestItem[]> {
-        if (this.request) {
-            try {
-                await this.request;
-            } catch {
-                /* empty */
-            }
+        const release = await this._mutex.acquire();
+        try {
+            const result = await this.performFetch(document, content);
+            return result;
+        } finally {
+            release();
         }
-
-        const isRequested = this.performFetch(document, content);
-        this.request = isRequested;
-        return isRequested;
     }
 
     private async performFetch(document: vscode.Uri, content: string) {

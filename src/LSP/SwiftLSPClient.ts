@@ -13,6 +13,7 @@ import { DefinitionProvider } from "./DefinitionProvider";
 import { sleep } from "../extension";
 import { exec } from "child_process";
 import { kill } from "process";
+import { Mutex } from "async-mutex";
 
 function useLspForCFamilyFiles(folder: vscode.Uri) {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");
@@ -24,22 +25,22 @@ function useLspForCFamilyFiles(folder: vscode.Uri) {
 
 export class SwiftLSPClient implements vscode.Disposable {
     private languageClient: langclient.LanguageClient | null | undefined;
+    private mutex = new Mutex();
 
-    private clientReadyPromise?: Promise<void> = undefined;
     private peekDocuments?: vscode.Disposable;
     private getReferenceDocument?: vscode.Disposable;
     private definitionProvider: DefinitionProvider;
 
     public async client(): Promise<langclient.LanguageClient> {
-        if (this.languageClient === undefined) {
-            if (this.clientReadyPromise === undefined) {
-                this.clientReadyPromise = this.setupLanguageClient(
-                    await this.workspaceContext.workspaceFolder
-                );
+        const release = await this.mutex.acquire();
+        try {
+            if (this.languageClient === undefined) {
+                await this.setupLanguageClient(await this.workspaceContext.workspaceFolder);
             }
-            await this.clientReadyPromise;
+            return this.languageClient!;
+        } finally {
+            release();
         }
-        return this.languageClient!;
     }
 
     constructor(
@@ -51,14 +52,13 @@ export class SwiftLSPClient implements vscode.Disposable {
     }
 
     dispose() {
+        this.mutex.release();
+
         this.peekDocuments?.dispose();
         this.getReferenceDocument?.dispose();
         this.peekDocuments?.dispose();
 
         this.languageClient?.stop();
-        this.clientReadyPromise?.finally(() => {
-            this.languageClient?.stop();
-        });
     }
 
     public async start() {
@@ -71,7 +71,6 @@ export class SwiftLSPClient implements vscode.Disposable {
         this.getReferenceDocument?.dispose();
         this.getReferenceDocument = undefined;
         const client = await this.client();
-        this.clientReadyPromise = undefined;
         this.languageClient = undefined;
         try {
             client.stop();
@@ -285,8 +284,6 @@ export class SwiftLSPClient implements vscode.Disposable {
         }
 
         this.languageClient = client;
-
-        return this.clientReadyPromise;
     }
 
     /* eslint-disable @typescript-eslint/no-explicit-any */

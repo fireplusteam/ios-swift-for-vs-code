@@ -107,7 +107,7 @@ export class TestTreeContext {
                 if (res) {
                     return;
                 }
-                res = this.addItemImp(item, childItem, shouldAdd);
+                res = res || this.addItemImp(item, childItem, shouldAdd);
             });
             return res;
         }

@@ -115,7 +115,7 @@ export class AutocompleteWatcher {
                     const buildManager = new BuildManager();
                     await buildManager.buildAutocomplete(context, fileLog);
                 } finally {
-                    this.problemResolver.end(rawParser, false);
+                    await this.problemResolver.end(context.bundle, rawParser, false);
                 }
             });
         } catch (err) {

@@ -3,10 +3,11 @@ import { getScriptPath } from "../env";
 import { createInterface, Interface } from "readline";
 import * as vscode from "vscode";
 import * as fs from "fs";
+import { Mutex } from "async-mutex";
 
 export class XcodeProjectFileProxy {
     private process: ChildProcess | undefined;
-    private commandQueue: Promise<string[]> | undefined;
+    private mutex = new Mutex();
     private rl: Interface | undefined;
     private onEndRead = new vscode.EventEmitter<string[]>();
     private onEndReadWithError = new vscode.EventEmitter<any>();
@@ -64,21 +65,20 @@ export class XcodeProjectFileProxy {
     }
 
     async request(command: string): Promise<string[]> {
-        if (this.commandQueue === undefined) {
+        const release = await this.mutex.acquire();
+        try {
             let dis: vscode.Disposable | undefined;
             let disError: vscode.Disposable | undefined;
-            this.commandQueue = new Promise<string[]>((resolve, reject) => {
+            const result = await new Promise<string[]>((resolve, reject) => {
                 if (this.rl === undefined) {
                     reject(Error("Process is killed"));
                 }
                 dis = this.onEndRead.event(e => {
                     dis?.dispose();
-                    this.commandQueue = undefined;
                     resolve(e);
                 });
                 disError = this.onEndReadWithError.event(e => {
                     disError?.dispose();
-                    this.commandQueue = undefined;
                     reject(e);
                 });
                 if (this.process?.stdin?.writable) {
@@ -86,11 +86,9 @@ export class XcodeProjectFileProxy {
                     this.process.stdin.uncork();
                 }
             });
-            return await this.commandQueue;
-        } else {
-            const wait = this.commandQueue;
-            await wait;
-            return await this.request(command);
+            return result;
+        } finally {
+            release();
         }
     }
 }

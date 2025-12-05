@@ -23,11 +23,10 @@ export class TestFile implements TestContainer {
         parent: vscode.TestItem,
         target: string | undefined,
         lspTest: LSPTestItem,
-        controller: vscode.TestController,
         suiteGeneration: number
     ): vscode.TestItem[] {
         const id = `${parent.uri}/${lspTest.id}`;
-        const testItem = controller.createTestItem(id, lspTest.label, parent.uri);
+        const testItem = this.context.ctrl.createTestItem(id, lspTest.label, parent.uri);
         testItem.range = new vscode.Range(
             new vscode.Position(
                 lspTest.location.range.start.line,
@@ -54,10 +53,10 @@ export class TestFile implements TestContainer {
         const itemChildren: vscode.TestItem[] = [];
         for (const lspChild of lspTest.children) {
             itemChildren.push(
-                ...this.mapTestItems(testItem, target, lspChild, controller, suiteGeneration + 1)
+                ...this.mapTestItems(testItem, target, lspChild, suiteGeneration + 1)
             );
         }
-        testItem.children.replace(itemChildren);
+        this.context.replaceItemsChildren(testItem, itemChildren);
         return [testItem];
     }
 
@@ -83,9 +82,9 @@ export class TestFile implements TestContainer {
             const itemChildren: vscode.TestItem[] = [];
             const target = this.target;
             for (const lspChild of tests) {
-                itemChildren.push(...this.mapTestItems(item, target, lspChild, controller, 1));
+                itemChildren.push(...this.mapTestItems(item, target, lspChild, 1));
             }
-            item.children.replace(itemChildren);
+            this.context.replaceItemsChildren(item, itemChildren);
         } catch {
             // legacy fallback
             const ancestors = [{ item, children: [] as vscode.TestItem[] }];
@@ -94,7 +93,7 @@ export class TestFile implements TestContainer {
             const ascend = (depth: number) => {
                 while (ancestors.length > depth) {
                     const finished = ancestors.pop()!;
-                    finished.item.children.replace(finished.children);
+                    this.context.replaceItemsChildren(finished.item, finished.children);
                 }
             };
 

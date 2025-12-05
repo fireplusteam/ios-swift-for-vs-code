@@ -20,11 +20,13 @@ import { ProjectsCache } from "./ProjectsCache";
 import { error } from "console";
 import { QuickPickItem, showPicker } from "../inputPicker";
 import { XcodeProjectFileProxy } from "./XcodeProjectFileProxy";
+import { Mutex } from "async-mutex";
 
 export class ProjectManager {
     private disposable: vscode.Disposable[] = [];
 
     private projectCache = new ProjectsCache();
+    private projectFileEditMutex = new Mutex();
 
     onProjectUpdate = new vscode.EventEmitter<void>();
     onProjectLoaded = new vscode.EventEmitter<void>();
@@ -366,6 +368,7 @@ export class ProjectManager {
             return;
         }
 
+        const release = await this.projectFileEditMutex.acquire();
         const modifiedProjects = new Set<string>();
         try {
             const projectFiles = this.projectCache.getProjects();
@@ -416,6 +419,7 @@ export class ProjectManager {
             for (const project of modifiedProjects) {
                 await saveProject(getFilePathInWorkspace(project));
             }
+            release();
         }
     }
 
@@ -434,6 +438,7 @@ export class ProjectManager {
         }
         const projectFiles = this.projectCache.getProjects();
         const modifiedProjects = new Set<string>();
+        const release = await this.projectFileEditMutex.acquire();
         try {
             for (const file of files) {
                 const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
@@ -463,6 +468,7 @@ export class ProjectManager {
             for (const project of modifiedProjects) {
                 await saveProject(getFilePathInWorkspace(project));
             }
+            release();
         }
     }
 
@@ -539,116 +545,121 @@ export class ProjectManager {
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
-        if (!this.isAllowed()) {
-            if (await isActivated()) {
-                this.onProjectUpdate.fire();
+        const release = await this.projectFileEditMutex.acquire();
+        try {
+            if (!this.isAllowed()) {
+                if (await isActivated()) {
+                    this.onProjectUpdate.fire();
+                    return;
+                }
                 return;
             }
-            return;
-        }
-        if (files === undefined) {
-            return;
-        }
-        let fileList: vscode.Uri[] = [];
-        if (files instanceof vscode.Uri) {
-            fileList = [files as vscode.Uri];
-        } else {
-            fileList = files as vscode.Uri[];
-            if (fileList.length === 0) {
+            if (files === undefined) {
                 return;
             }
-        }
+            let fileList: vscode.Uri[] = [];
+            if (files instanceof vscode.Uri) {
+                fileList = [files as vscode.Uri];
+            } else {
+                fileList = files as vscode.Uri[];
+                if (fileList.length === 0) {
+                    return;
+                }
+            }
 
-        const projectFiles = this.projectCache.getProjects();
-        const selectedProject: string | undefined = await this.selectBestFitProject(
-            "Select A Project File to Add a new Files",
-            fileList[0],
-            projectFiles
-        );
-        if (selectedProject === undefined) {
-            return;
-        }
+            const projectFiles = this.projectCache.getProjects();
+            const selectedProject: string | undefined = await this.selectBestFitProject(
+                "Select A Project File to Add a new Files",
+                fileList[0],
+                projectFiles
+            );
+            if (selectedProject === undefined) {
+                return;
+            }
 
-        const paths = fileList.map(file => {
-            return { path: file, isFolder: isFolder(file.fsPath) };
-        });
+            const paths = fileList.map(file => {
+                return { path: file, isFolder: isFolder(file.fsPath) };
+            });
 
-        for (const path of paths) {
-            if (path.isFolder) {
-                // add all files in subfolders
-                const files = await glob.glob("**", {
-                    absolute: true,
-                    cwd: path.path.fsPath,
-                    dot: true,
-                    nodir: false,
-                    ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
-                });
-                for (const file of files) {
-                    if (file !== path.path.fsPath) {
-                        paths.push({ path: vscode.Uri.file(file), isFolder: isFolder(file) });
+            for (const path of paths) {
+                if (path.isFolder) {
+                    // add all files in subfolders
+                    const files = await glob.glob("**", {
+                        absolute: true,
+                        cwd: path.path.fsPath,
+                        dot: true,
+                        nodir: false,
+                        ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
+                    });
+                    for (const file of files) {
+                        if (file !== path.path.fsPath) {
+                            paths.push({ path: vscode.Uri.file(file), isFolder: isFolder(file) });
+                        }
                     }
                 }
             }
-        }
 
-        const foldersToAdd = new Set<string>();
-        const filesToAdd = new Set<string>();
-        const allFilesInProject = this.projectCache.getList(selectedProject, false);
-        for (const filePath of paths) {
-            if (!filePath.isFolder) {
-                const localFolder = filePath.path.fsPath
-                    .split(path.sep)
-                    .slice(0, -1)
-                    .join(path.sep);
-                if (!allFilesInProject.has(localFolder)) {
-                    foldersToAdd.add(localFolder);
+            const foldersToAdd = new Set<string>();
+            const filesToAdd = new Set<string>();
+            const allFilesInProject = this.projectCache.getList(selectedProject, false);
+            for (const filePath of paths) {
+                if (!filePath.isFolder) {
+                    const localFolder = filePath.path.fsPath
+                        .split(path.sep)
+                        .slice(0, -1)
+                        .join(path.sep);
+                    if (!allFilesInProject.has(localFolder)) {
+                        foldersToAdd.add(localFolder);
+                    }
+                    if (!allFilesInProject.has(filePath.path.fsPath)) {
+                        filesToAdd.add(filePath.path.fsPath);
+                    }
+                } else if (!allFilesInProject.has(filePath.path.fsPath)) {
+                    foldersToAdd.add(filePath.path.fsPath);
                 }
-                if (!allFilesInProject.has(filePath.path.fsPath)) {
-                    filesToAdd.add(filePath.path.fsPath);
-                }
-            } else if (!allFilesInProject.has(filePath.path.fsPath)) {
-                foldersToAdd.add(filePath.path.fsPath);
             }
-        }
-        if (filesToAdd.size === 0 && foldersToAdd.size === 0) {
-            return;
-        }
-
-        let selectedTargets: string | undefined;
-        if (filesToAdd.size > 0) {
-            const proposedTargets = await this.determineTargetForFile(
-                [...filesToAdd][0],
-                selectedProject
-            );
-            const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
-            const items = sortTargets(targets, proposedTargets);
-            const selectedTargetsArray = await showPicker(
-                items,
-                "Select Targets for The Files",
-                "",
-                true,
-                true,
-                false
-            );
-            if (selectedTargetsArray === undefined) {
+            if (filesToAdd.size === 0 && foldersToAdd.size === 0) {
                 return;
             }
-            selectedTargets = selectedTargetsArray.join(",");
-        }
 
-        for (const folder of foldersToAdd) {
-            await addFolderToProject(getFilePathInWorkspace(selectedProject), folder);
-        }
+            let selectedTargets: string | undefined;
+            if (filesToAdd.size > 0) {
+                const proposedTargets = await this.determineTargetForFile(
+                    [...filesToAdd][0],
+                    selectedProject
+                );
+                const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
+                const items = sortTargets(targets, proposedTargets);
+                const selectedTargetsArray = await showPicker(
+                    items,
+                    "Select Targets for The Files",
+                    "",
+                    true,
+                    true,
+                    false
+                );
+                if (selectedTargetsArray === undefined) {
+                    return;
+                }
+                selectedTargets = selectedTargetsArray.join(",");
+            }
 
-        for (const file of filesToAdd) {
-            await addFileToProject(
-                getFilePathInWorkspace(selectedProject),
-                selectedTargets || "",
-                file
-            );
-        }
+            for (const folder of foldersToAdd) {
+                await addFolderToProject(getFilePathInWorkspace(selectedProject), folder);
+            }
 
-        await saveProject(getFilePathInWorkspace(selectedProject));
+            for (const file of filesToAdd) {
+                await addFileToProject(
+                    getFilePathInWorkspace(selectedProject),
+                    selectedTargets || "",
+                    file
+                );
+            }
+
+            await saveProject(getFilePathInWorkspace(selectedProject));
+        } finally {
+            release();
+        }
     }
 
     private async selectBestFitProject(title: string, file: vscode.Uri, projectFiles: string[]) {
