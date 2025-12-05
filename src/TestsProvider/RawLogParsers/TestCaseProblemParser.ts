@@ -2,7 +2,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 
 const problemPattern =
-    /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):?/m;
+    /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):/m;
 const diffPattern = /(XCTAssertEqual|XCTAssertNotEqual)\sfailed:\s\((.*?)\).*?\((.*?)\)/m;
 
 export class TestCaseProblemParser {
@@ -29,8 +29,9 @@ export class TestCaseProblemParser {
         stdout += "\nerror:";
         try {
             let startIndex = 0;
+            let lastStartIndex = 0;
             while (startIndex < stdout.length) {
-                while (startIndex > 0) {
+                while (startIndex > lastStartIndex) {
                     // find the start of line for the next pattern search
                     if (stdout[startIndex] === "\n") {
                         break;
@@ -41,7 +42,7 @@ export class TestCaseProblemParser {
                 const output = stdout.slice(startIndex);
                 const match = output.match(problemPattern);
                 if (!match) {
-                    return;
+                    break;
                 }
                 const line = Number(match[2]) - 1;
                 const column = this.column(output, (match?.index || 0) + match[0].length);
@@ -76,6 +77,11 @@ export class TestCaseProblemParser {
 
                 files.push(diagnostic);
 
+                lastStartIndex =
+                    startIndex +
+                    (match.index || lastStartIndex) +
+                    match[0].lastIndexOf(message) +
+                    message.length;
                 startIndex += (match.index || 0) + match[0].length;
             }
         } catch (err) {
