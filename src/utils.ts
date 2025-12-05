@@ -1,10 +1,10 @@
 import * as path from "path";
 import { getWorkspacePath } from "./env";
 import * as fs from "fs";
-import * as treeKill from "tree-kill";
-import * as psTree from "ps-tree";
 import { lock, unlock } from "lockfile";
 import { exec } from "child_process";
+import treeKill = require("tree-kill");
+import psTree = require("ps-tree");
 export class CustomError implements Error {
     name: string = "Cancel";
     message: string;
