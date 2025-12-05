@@ -1,6 +1,6 @@
-import path from "path";
+import * as path from "path";
 import * as vscode from "vscode";
-import fs from "fs";
+import * as fs from "fs";
 import { CustomError, emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
 

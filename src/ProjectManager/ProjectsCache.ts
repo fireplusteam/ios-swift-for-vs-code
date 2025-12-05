@@ -2,7 +2,7 @@ import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
 import { listFilesFromProject } from "./ProjectManager";
 import { watch } from "fs";
-import path from "path";
+import * as path from "path";
 import * as vscode from "vscode";
 
 type ProjFilePath = {

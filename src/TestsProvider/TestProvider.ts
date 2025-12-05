@@ -10,7 +10,7 @@ import { TestTreeContext } from "./TestTreeContext";
 import { TestCaseProblemParser } from "./RawLogParsers/TestCaseProblemParser";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { BundlePath } from "../CommandManagement/BundlePath";
-import path from "path";
+import * as path from "path";
 
 enum TestProviderLoadingState {
     nonInitialized,

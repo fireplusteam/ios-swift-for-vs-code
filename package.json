@@ -469,12 +469,10 @@
         "typescript": "^5.6.2"
     },
     "dependencies": {
-        "@types/find-process": "^1.1.0",
         "@types/lockfile": "^1.0.4",
         "@types/ps-tree": "^1.1.6",
         "async-mutex": "^0.5.0",
         "fast-xml-parser": "^4.3.5",
-        "find-process": "^1.4.7",
         "fuse.js": "^7.0.0",
         "glob": "^10.3.10",
         "lockfile": "1.0.4",

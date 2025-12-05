@@ -1,5 +1,5 @@
 import { exec } from "child_process";
-import path from "path";
+import * as path from "path";
 
 export class XCRunHelper {
     private static async getStdOut(command: string): Promise<string> {

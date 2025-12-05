@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { createFifo } from "../utils";
 import { getWorkspacePath } from "../env";
-import path from "path";
+import * as path from "path";
 import {
     RuntimeWarningMessageNode,
     RuntimeWarningStackNode,

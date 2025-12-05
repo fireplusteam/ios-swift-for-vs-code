@@ -1,8 +1,8 @@
-import fs from "fs";
 import { ChildProcess, spawn } from "child_process";
 import { getScriptPath } from "../env";
 import { createInterface, Interface } from "readline";
 import * as vscode from "vscode";
+import * as fs from "fs";
 
 export class XcodeProjectFileProxy {
     private process: ChildProcess | undefined;

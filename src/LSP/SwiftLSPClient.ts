@@ -1,7 +1,7 @@
 import * as langclient from "vscode-languageclient/node";
 import * as vscode from "vscode";
 import { SourceKitLSPErrorHandler } from "./SourceKitLSPErrorHandler";
-import path from "path";
+import * as path from "path";
 import { uriConverters } from "./uriConverters";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { WorkspaceContext } from "./WorkspaceContext";

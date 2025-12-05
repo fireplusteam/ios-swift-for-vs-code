@@ -4,7 +4,7 @@ import { TestTreeContext } from "../TestTreeContext";
 import { TestContainer } from "./TestContainer";
 import { getFilePathInWorkspace } from "../../env";
 import { FSWatcher, watch } from "fs";
-import path from "path";
+import * as path from "path";
 import { TestTarget } from "./TestTarget";
 
 export class TestProject implements TestContainer {

@@ -1,5 +1,5 @@
 import { exec } from "child_process";
-import fs from "fs";
+import * as fs from "fs";
 import * as vscode from "vscode";
 import { InteractiveTerminal } from "./InteractiveTerminal";
 import { getScriptPath } from "../env";

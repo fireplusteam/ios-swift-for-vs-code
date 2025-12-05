@@ -279,7 +279,12 @@ function column(output: string, messageEnd: number) {
     return [start, end];
 }
 
-function parseBuildLog(buildLogFile: string, output: string, numberOfLines: number) {
+function parseBuildLog(
+    buildLogFile: string,
+    output: string,
+    numberOfLines: number,
+    existsSync = fs.existsSync
+) {
     const files: { [key: string]: vscode.Diagnostic[] } = {};
     try {
         let matches = [...output.matchAll(problemPattern)];
@@ -314,7 +319,7 @@ function parseBuildLog(buildLogFile: string, output: string, numberOfLines: numb
             diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
             const value = files[file] || [];
             value.push(diagnostic);
-            if (fs.existsSync(file)) {
+            if (existsSync(file)) {
                 files[file] = value;
             }
         }

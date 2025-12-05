@@ -1,4 +1,4 @@
-import path from "path";
+import * as path from "path";
 
 type Node = {
     isVisible: boolean;

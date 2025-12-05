@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 import { DeviceID, ProjectEnv } from "../env";
-import path from "path";
+import * as path from "path";
 
 export class SimulatorFocus {
     private deviceID?: DeviceID;

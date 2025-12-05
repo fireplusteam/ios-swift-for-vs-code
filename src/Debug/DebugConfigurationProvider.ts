@@ -14,7 +14,7 @@ import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import { CommandContext, UserTerminatedError } from "../CommandManagement/CommandContext";
 import { checkWorkspace } from "../commands";
 import { XCTestRunInspector } from "./XCTestRunInspector";
-import path from "path";
+import * as path from "path";
 import { WorkspaceContext } from "../LSP/WorkspaceContext";
 import { handleValidationErrors } from "../extension";
 

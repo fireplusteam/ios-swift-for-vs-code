@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import { _private } from "../../../src/ProblemDiagnosticResolver";
 import * as fs from "fs";
-import path from "path";
+import * as path from "path";
 
 const cwd = __dirname;
 function location(filePath: string) {
@@ -22,19 +22,19 @@ function location(filePath: string) {
 suite("Problem Diagnostic Resolver: Parser", () => {
     test("Test 1: Empty", () => {
         const output = fs.readFileSync(location("build_log_empty.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0);
+        const result = _private.parseBuildLog("build.log", output, 0, () => true);
         assert.deepStrictEqual(result, {});
     });
 
     test("Test 2: Success", () => {
         const output = fs.readFileSync(location("build_log_success.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0);
+        const result = _private.parseBuildLog("build.log", output, 0, () => true);
         assert.deepStrictEqual(result, {});
     });
 
     test("Test 3: Errors", () => {
         const output = fs.readFileSync(location("build_log_with_errors.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0);
+        const result = _private.parseBuildLog("build.log", output, 0, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({
@@ -64,7 +64,7 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 
     test("Test 4: Errors", () => {
         const output = fs.readFileSync(location("build_log_with_linker_errors.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0);
+        const result = _private.parseBuildLog("build.log", output, 0, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({
@@ -92,9 +92,116 @@ suite("Problem Diagnostic Resolver: Parser", () => {
         );
     });
 
-    test("Test 5: Success With Warnings", () => {
+    test("Test 5: Macro Errors", () => {
+        const output = fs.readFileSync(location("build_log_with_macro_errors.txt")).toString();
+        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        assert.deepStrictEqual(
+            JSON.stringify(result),
+            JSON.stringify({
+                "@__swiftmacro_20Completion07ProfileB0V4Core7ReducerfMe_.swift": [
+                    {
+                        severity: "Error",
+                        message:
+                            "conformance of 'ProfileCompletion.Core' to protocol 'Reducer' crosses into main actor-isolated code and can cause data races",
+                        range: [
+                            { line: 0, character: 57 },
+                            { line: 0, character: 57 },
+                        ],
+                        source: "xcodebuild",
+                    },
+                    {
+                        severity: "Information",
+                        message: "isolate this conformance to the main actor with '@MainActor'",
+                        range: [
+                            { line: 0, character: 57 },
+                            { line: 0, character: 57 },
+                        ],
+                        source: "xcodebuild",
+                    },
+                    {
+                        severity: "Information",
+                        message: "turn data races into runtime errors with '@preconcurrency'",
+                        range: [
+                            { line: 0, character: 57 },
+                            { line: 0, character: 57 },
+                        ],
+                        source: "xcodebuild",
+                    },
+                ],
+                "/Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Completion/Sources/UI/Scenes/Composition/ProfileCompletionReducer.swift":
+                    [
+                        {
+                            severity: "Information",
+                            message: "in expansion of macro 'Reducer' on struct 'Core' here",
+                            range: [
+                                { line: 9, character: 4 },
+                                { line: 9, character: 11 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                        {
+                            severity: "Information",
+                            message: "in expansion of macro 'Reducer' on struct 'Core' here",
+                            range: [
+                                { line: 9, character: 4 },
+                                { line: 9, character: 11 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                        {
+                            severity: "Information",
+                            message: "in expansion of macro 'Reducer' on struct 'Core' here",
+                            range: [
+                                { line: 9, character: 4 },
+                                { line: 9, character: 11 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                        {
+                            severity: "Information",
+                            message: "in expansion of macro 'Reducer' on struct 'Core' here",
+                            range: [
+                                { line: 9, character: 4 },
+                                { line: 9, character: 11 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                        {
+                            severity: "Information",
+                            message: "in expansion of macro 'Reducer' on struct 'Core' here",
+                            range: [
+                                { line: 9, character: 4 },
+                                { line: 9, character: 11 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                        {
+                            severity: "Information",
+                            message: "in expansion of macro 'Reducer' on struct 'Core' here",
+                            range: [
+                                { line: 9, character: 4 },
+                                { line: 9, character: 11 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                        {
+                            severity: "Information",
+                            message:
+                                "main actor-isolated instance method 'reduce(into:action:)' cannot satisfy nonisolated requirement",
+                            range: [
+                                { line: 17, character: 13 },
+                                { line: 17, character: 13 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                    ],
+            })
+        );
+    });
+
+    test("Test 6: Success With Warnings", () => {
         const output = fs.readFileSync(location("build_log_success_with_warnings.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0);
+        const result = _private.parseBuildLog("build.log", output, 0, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({

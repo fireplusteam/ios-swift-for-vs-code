@@ -1,7 +1,7 @@
 import { checkWorkspace } from "./commands";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { getBuildRootPath } from "./env";
-import path from "path";
+import * as path from "path";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { BuildManager } from "./Services/BuildManager";
 import { ExecutorMode } from "./Executor";

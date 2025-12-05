@@ -1,12 +1,10 @@
-import path from "path";
+import * as path from "path";
 import { getWorkspacePath } from "./env";
-import fs, { existsSync } from "fs";
-import find from "find-process";
-import treeKill from "tree-kill";
-import psTree from "ps-tree";
+import * as fs from "fs";
+import * as treeKill from "tree-kill";
+import * as psTree from "ps-tree";
 import { lock, unlock } from "lockfile";
 import { exec } from "child_process";
-
 export class CustomError implements Error {
     name: string = "Cancel";
     message: string;
@@ -41,7 +39,30 @@ export function promiseWithTimeout<T>(ms: number, promise: () => Promise<T>): Pr
 
 export async function killSpawnLaunchedProcesses(deviceID: string) {
     try {
-        const processList = await find("name", `simctl`);
+        const processList = await new Promise<Array<{ pid: number; cmd: string }>>(
+            (resolve, reject) => {
+                exec("ps aux | grep 'simctl'", (error, stdout) => {
+                    try {
+                        if (error) {
+                            resolve([]);
+                            return;
+                        }
+                        const lines = stdout
+                            .split("\n")
+                            .filter(line => line.trim() !== "" && !line.includes("grep"));
+                        const processes = lines.map(line => {
+                            const parts = line.trim().split(/\s+/);
+                            const pid = parseInt(parts[1]);
+                            const cmd = parts.slice(10).join(" ");
+                            return { pid, cmd };
+                        });
+                        resolve(processes);
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+        );
         const cmdTarget = `spawn ${deviceID} log stream`;
         for (const process of processList) {
             console.log(`process is still running ${process.cmd}`);
@@ -196,7 +217,7 @@ export function isFileMoved(oldFile: string, newFile: string) {
 
 export async function createFifo(fifoPath: string) {
     return new Promise<void>((resolve, reject) => {
-        if (!existsSync(fifoPath)) {
+        if (!fs.existsSync(fifoPath)) {
             const fileDir = fifoPath.split(path.sep).slice(0, -1).join(path.sep);
             fs.mkdirSync(fileDir, { recursive: true });
             exec(`mkfifo "${fifoPath}"`, error => {
