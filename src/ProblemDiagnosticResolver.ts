@@ -231,7 +231,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         for (const error of errors) {
             const message = error["message"] || "";
             let sourceURL: string = error["sourceURL"] || "";
-            // Example: file:///var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_20CNFProfileCompletion07ProfileB0V4Core7ReducerfMe_.swift#EndingColumnNumber=57&EndingLineNumber=0&StartingColumnNumber=57&StartingLineNumber=0&Timestamp=786622174.129034
+            // Example: file:///var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_20CNF07ProfileB0V47ReducerfMe_.swift#EndingColumnNumber=57&EndingLineNumber=0&StartingColumnNumber=57&StartingLineNumber=0&Timestamp=786622174.129034
             sourceURL = sourceURL.replace("file:///", "/private/").replace(/#.*$/, "");
             if (sourceURL.includes("@__swiftmacro_")) {
                 console.log(`Macro source URL: ${sourceURL}`);
@@ -240,7 +240,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                     /// Example content:
                     // Some swift Code here
                     //
-                    //  original-source-range: /Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/CNFProfileCompletion/Sources/UI/Scenes/Composition/ProfileCompletionReducer.swift:259:2-259:2
+                    //  original-source-range: /Users/Ievgenii_Mykhalevskyi/repos/source1/Sources/UI/Scenes/Test.swift:259:2-259:2
                     const originalSourceRangePattern =
                         /original-source-range:\s(.*?):(\d+):(\d+)-(\d+):(\d+)/gm;
                     const matches = [...content.matchAll(originalSourceRangePattern)];

@@ -1,6 +1,4 @@
 
-SwiftEmitModule normal arm64 Emitting\ module\ for\ Completion (in target 'Completion' from project 'AdidasAppSuite')
-EmitSwiftModule normal arm64 (in target 'Completion' from project 'AdidasAppSuite')
     cd /Users/Ievgenii_Mykhalevskyi/repos/source1
     
 @__swiftmacro_20Completion07ProfileB0V4Core7ReducerfMe_.swift:1:58: error: conformance of 'ProfileCompletion.Core' to protocol 'Reducer' crosses into main actor-isolated code and can cause data races
@@ -36,8 +34,4 @@ extension ProfileCompletion.Core: ComposableArchitecture.Reducer {
 
 Failed frontend command:
 
-
-SwiftEmitModule normal arm64 Emitting\ module\ for\ CNFProfile (in target 'CNFProfile' from project 'AppSuite')
-
-EmitSwiftModule normal arm64 (in target 'CNFProfile' from project 'AppSuite')
-    cd /Users/Ievgenii_Mykhalevskyi/repos/source
+afadskf asdkfj asdkfj askdfja
