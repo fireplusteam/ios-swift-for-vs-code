@@ -141,43 +141,136 @@ export class TestResultProvider {
         return result;
     }
 
-    private parseExpectationFailed(rawMessage: string, attributes: string | undefined) {
-        try {
-            const expectationPattern =
-                /^(Expectation failed:) ((\((.*?→)? (.*?)\))|(.*)) == ((\((.*?→)? (.*?)\))|(.*))\)?([\s\S]*)/gm;
-            const matches = [...rawMessage.matchAll(expectationPattern)];
-            if (matches.length > 0) {
-                const varName1 = matches[0][4];
-                const varName2 = matches[0][9];
-                let value1 = matches[0][5];
-                if (value1 === undefined || value1.length === 0) {
-                    value1 = matches[0][6];
+    substringBetweenParentheses(rawMessage: string) {
+        rawMessage += " "; // add space to help with parsing
+        const stack: number[] = [];
+        let lastCloseParenIndex = -2;
+        let startOpenParentIndex = -2;
+        const openCharacters = "({[\"'";
+        const closeCharacters = ")}]\"'";
+        let isInParens = true;
+        for (let i = 0; i < rawMessage.length; i++) {
+            if (stack.length > 0 && "\"'".indexOf(rawMessage[stack.at(-1) || 0]) !== -1) {
+                // skip until we find the same closing quote
+                if (rawMessage[i] === "\\" && rawMessage[i + 1] === rawMessage[stack.at(-1) || 0]) {
+                    i += 2; // \" or \'
+                    continue;
                 }
-                let value2 = matches[0][10];
-                if (value2 === undefined || value2.length === 0) {
-                    value2 = matches[0][11];
+                if (rawMessage[i] === rawMessage[stack.at(-1) || 0]) {
+                    lastCloseParenIndex = i;
+                    lastCloseParenIndex += isInParens === false ? 1 : 0;
+                    stack.pop();
                 }
-
-                if (value1 === undefined || value2 === undefined) {
-                    return undefined;
+            } else if (openCharacters.indexOf(rawMessage[i]) !== -1) {
+                if (startOpenParentIndex === -2) {
+                    startOpenParentIndex = i;
+                    if (rawMessage[i] !== "(") {
+                        startOpenParentIndex--;
+                        isInParens = false;
+                    }
                 }
-
-                let message = matches[0][12] || rawMessage;
-                if (message.length === 0) {
-                    message = rawMessage;
+                stack.push(i);
+            } else if (closeCharacters.indexOf(rawMessage[i]) !== -1) {
+                lastCloseParenIndex = i;
+                lastCloseParenIndex += isInParens === false ? 1 : 0;
+                stack.pop();
+            }
+            if (stack.length === 0 && /\s/.test(rawMessage[i])) {
+                // found the main ==
+                if (lastCloseParenIndex === -2) {
+                    lastCloseParenIndex = i;
                 }
-
-                if (attributes) {
-                    message = `Attributes: ${attributes}\n, Failed: ${message}`;
-                }
-
-                if (varName1 === undefined || varName1.length === 0) {
-                    return vscode.TestMessage.diff(message, value1, value2);
-                }
-                if (varName2 === undefined || varName2.length === 0) {
-                    return vscode.TestMessage.diff(message, value2, value1);
+                break;
+            } else if (stack.length === 0 && /\s/.test(rawMessage[i]) === false) {
+                if (startOpenParentIndex === -2) {
+                    startOpenParentIndex = i - 1;
+                    isInParens = false;
                 }
             }
+        }
+        if (startOpenParentIndex !== -2 && lastCloseParenIndex !== -2) {
+            return {
+                rawMessage: rawMessage.substring(startOpenParentIndex + 1, lastCloseParenIndex),
+                lastCloseParenIndex,
+            };
+        }
+        if (lastCloseParenIndex !== -2) {
+            return {
+                rawMessage: rawMessage.substring(0, lastCloseParenIndex),
+                lastCloseParenIndex,
+            };
+        }
+        if (startOpenParentIndex !== -2) {
+            return {
+                rawMessage: rawMessage.substring(startOpenParentIndex + 1),
+                lastCloseParenIndex: -2,
+            };
+        }
+        return { rawMessage: undefined, lastCloseParenIndex: -2 };
+    }
+
+    private parseExpectationFailed(rawMessage: string, attributes: string | undefined) {
+        try {
+            /// Expectation failed: (value → 5) == (expected → 10)
+            /// Expectation failed: 5 == (expected → 10)
+            /// Expectation failed: (value → 5) == 10
+            /// Expectation failed: 5 == 10
+            if (!rawMessage.startsWith("Expectation failed:")) {
+                return undefined;
+            }
+            const originalRawMessage = rawMessage;
+            rawMessage = rawMessage.trimStart().replace(/^Expectation failed:\s+/, "");
+
+            const { rawMessage: leftExpression, lastCloseParenIndex: leftIndex } =
+                this.substringBetweenParentheses(rawMessage.trimStart());
+            if (leftExpression === undefined) {
+                return undefined;
+            }
+            let rightRawMessage = rawMessage.substring(leftIndex).trimStart();
+            const delimiterIndex = rightRawMessage.indexOf("==");
+            if (delimiterIndex === -1) {
+                return undefined;
+            }
+            rightRawMessage = rightRawMessage.substring(delimiterIndex + 2).trimStart();
+            if (rightRawMessage.length === 0) {
+                return undefined;
+            }
+            const { rawMessage: rightExpression, lastCloseParenIndex: rightIndex } =
+                this.substringBetweenParentheses(rightRawMessage);
+            if (rightExpression === undefined) {
+                return undefined;
+            }
+            console.log(`Left: ${leftExpression}, Right: ${rightExpression}`);
+            const leftMatched = [...leftExpression.matchAll(/(.*?→\s?)?(.*)/gm)];
+            const rightMatched = [...rightExpression.matchAll(/(.*?→\s?)?(.*)/gm)];
+            if (leftMatched.length === 0 || rightMatched.length === 0) {
+                return undefined;
+            }
+            const varName1 = leftMatched[0][1]?.trim();
+            const value1 = leftMatched[0][2]?.trim();
+            const varName2 = rightMatched[0][1]?.trim();
+            const value2 = rightMatched[0][2]?.trim();
+            let message = originalRawMessage;
+            if (rightIndex !== -1) {
+                message = rightRawMessage.substring(rightIndex + 1).trim();
+                if (message.length === 0) {
+                    message = originalRawMessage;
+                }
+            }
+
+            if (attributes) {
+                message = `Attributes: ${attributes},\n Failed: ${message}`;
+            }
+            console.log(
+                `Var1: ${varName1}, Value1: ${value1}, Var2: ${varName2}, Value2: ${value2}, message: ${message}`
+            );
+            if (varName1 === undefined || varName1.length === 0) {
+                return vscode.TestMessage.diff(message, value1, value2);
+            }
+            if (varName2 === undefined || varName2.length === 0) {
+                return vscode.TestMessage.diff(message, value2, value1);
+            }
+            return vscode.TestMessage.diff(message, value1, value2);
         } catch {
             /* empty */
         }
