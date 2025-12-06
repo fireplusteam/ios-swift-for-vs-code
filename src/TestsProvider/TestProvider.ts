@@ -215,7 +215,7 @@ export class TestProvider {
         };
 
         ctrl.refreshHandler = async () => {
-            await this.findInitialFiles(ctrl);
+            await this.findInitialFiles(ctrl, true);
         };
 
         ctrl.createRunProfile(
@@ -357,11 +357,11 @@ export class TestProvider {
         }
     }
 
-    async findInitialFiles(controller: vscode.TestController) {
+    async findInitialFiles(controller: vscode.TestController, forceUpdate = false) {
         const release = await this.initialFilesLoadingMutex.acquire();
         try {
             this.loadingState = TestProviderLoadingState.loading;
-            await this.findInitialFilesIml(controller);
+            await this.findInitialFilesIml(controller, forceUpdate);
             this.loadingState = TestProviderLoadingState.loaded;
         } catch (err) {
             this.loadingState = TestProviderLoadingState.error;
@@ -371,7 +371,10 @@ export class TestProvider {
         }
     }
 
-    async findInitialFilesIml(controller: vscode.TestController) {
+    async findInitialFilesIml(controller: vscode.TestController, forceUpdate: boolean) {
+        if (forceUpdate) {
+            controller.items.replace([]);
+        }
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;
             const { file, data } = this.context.getOrCreateTest(
@@ -395,7 +398,7 @@ export class TestProvider {
                     );
                 }
             );
-            if (!data.didResolve) {
+            if (!data.didResolve || forceUpdate) {
                 await data.updateFromDisk(controller, file);
             }
             break; // only first target

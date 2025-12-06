@@ -38,6 +38,10 @@ export class TestTreeContext {
         return vscode.Uri.file(`${projectPath?.toString() || ""}/${target}`);
     }
 
+    clear() {
+        this.ctrl.items.replace([]);
+    }
+
     getOrCreateTest(id: TestNodeId, uri: vscode.Uri, provider: () => any) {
         const uniqueId = TestTreeContext.TestID(id, uri);
         const existing = this.get(uniqueId, this.ctrl.items);
