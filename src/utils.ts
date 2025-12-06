@@ -5,6 +5,7 @@ import { lock, unlock } from "lockfile";
 import { exec } from "child_process";
 import treeKill = require("tree-kill");
 import psTree = require("ps-tree");
+import find = require("find-process");
 export class CustomError implements Error {
     name: string = "Cancel";
     message: string;
@@ -39,30 +40,7 @@ export function promiseWithTimeout<T>(ms: number, promise: () => Promise<T>): Pr
 
 export async function killSpawnLaunchedProcesses(deviceID: string) {
     try {
-        const processList = await new Promise<Array<{ pid: number; cmd: string }>>(
-            (resolve, reject) => {
-                exec("ps aux | grep 'simctl'", (error, stdout) => {
-                    try {
-                        if (error) {
-                            resolve([]);
-                            return;
-                        }
-                        const lines = stdout
-                            .split("\n")
-                            .filter(line => line.trim() !== "" && !line.includes("grep"));
-                        const processes = lines.map(line => {
-                            const parts = line.trim().split(/\s+/);
-                            const pid = parseInt(parts[1]);
-                            const cmd = parts.slice(10).join(" ");
-                            return { pid, cmd };
-                        });
-                        resolve(processes);
-                    } catch (err) {
-                        reject(err);
-                    }
-                });
-            }
-        );
+        const processList = await find("name", `simctl`);
         const cmdTarget = `spawn ${deviceID} log stream`;
         for (const process of processList) {
             console.log(`process is still running ${process.cmd}`);

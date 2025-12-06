@@ -59,8 +59,7 @@ export class RunManager {
         const deviceId = await context.projectEnv.debugDeviceID;
         if (deviceId.platform !== "macOS") {
             isSimulatorRequired = true;
-            // starting simulator is causing issues in finnishing tests, so it's disabled for now
-            // await this.prepareSimulator(context, deviceId);
+            await this.prepareSimulator(context, deviceId);
         }
 
         await this.waitDebugger(context);
