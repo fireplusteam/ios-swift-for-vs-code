@@ -130,8 +130,8 @@ export class ProjectManager {
                     try {
                         await this.projectCache.update(project);
                         await this.readAllProjects(this.projectCache.getList(project));
-                    } catch {
-                        console.log(error);
+                    } catch (error) {
+                        console.log(`Failed to load project ${project}: ${error}`);
                         wasLoadedWithError.push(fileNameFromPath(project));
                     }
                 }
@@ -716,31 +716,35 @@ export class ProjectManager {
         let relativeFileLength = Number.MAX_SAFE_INTEGER;
         const filePathComponent = filePath.split(path.sep);
         for (const project of projects) {
-            await this.projectCache.update(project);
-            const files = this.projectCache.getList(project, false);
-            for (const file of files) {
-                const fileComponent = file.split(path.sep);
-                for (
-                    let i = 0;
-                    i < Math.min(fileComponent.length, filePathComponent.length) &&
-                    fileComponent[i] === filePathComponent[i];
-                    ++i
-                ) {
-                    if (i > largestCommonPrefix) {
-                        largestCommonPrefix = i;
-                        bestFitProject.clear();
-                        bestFitProject.add(project);
-                        relativeFileLength = file.length;
-                    } else if (i === largestCommonPrefix) {
-                        if (file.length < relativeFileLength) {
+            try {
+                await this.projectCache.update(project);
+                const files = this.projectCache.getList(project, false);
+                for (const file of files) {
+                    const fileComponent = file.split(path.sep);
+                    for (
+                        let i = 0;
+                        i < Math.min(fileComponent.length, filePathComponent.length) &&
+                        fileComponent[i] === filePathComponent[i];
+                        ++i
+                    ) {
+                        if (i > largestCommonPrefix) {
+                            largestCommonPrefix = i;
                             bestFitProject.clear();
+                            bestFitProject.add(project);
                             relativeFileLength = file.length;
-                            bestFitProject.add(project);
-                        } else if (file.length === relativeFileLength) {
-                            bestFitProject.add(project);
+                        } else if (i === largestCommonPrefix) {
+                            if (file.length < relativeFileLength) {
+                                bestFitProject.clear();
+                                relativeFileLength = file.length;
+                                bestFitProject.add(project);
+                            } else if (file.length === relativeFileLength) {
+                                bestFitProject.add(project);
+                            }
                         }
                     }
                 }
+            } catch (err) {
+                console.log(`Failed to update project cache for ${project}: ${err}`);
             }
         }
         return [...bestFitProject];
