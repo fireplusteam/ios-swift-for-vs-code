@@ -240,7 +240,7 @@ export class TestResultProvider {
             if (rightExpression === undefined) {
                 return undefined;
             }
-            console.log(`Left: ${leftExpression}, Right: ${rightExpression}`);
+            // console.log(`Left: ${leftExpression}, Right: ${rightExpression}`);
             const leftMatched = [...leftExpression.matchAll(/(.*?→\s?)?(.*)/gm)];
             const rightMatched = [...rightExpression.matchAll(/(.*?→\s?)?(.*)/gm)];
             if (leftMatched.length === 0 || rightMatched.length === 0) {
@@ -261,9 +261,9 @@ export class TestResultProvider {
             if (attributes) {
                 message = `Attributes: ${attributes},\n Failed: ${message}`;
             }
-            console.log(
-                `Var1: ${varName1}, Value1: ${value1}, Var2: ${varName2}, Value2: ${value2}, message: ${message}`
-            );
+            // console.log(
+            //     `Var1: ${varName1}, Value1: ${value1}, Var2: ${varName2}, Value2: ${value2}, message: ${message}`
+            // );
             if (varName1 === undefined || varName1.length === 0) {
                 return vscode.TestMessage.diff(message, value1, value2);
             }
