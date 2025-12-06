@@ -281,6 +281,8 @@ suite("TestCaseProblemParser", () => {
             assert.ok(message instanceof vscode.MarkdownString);
             if (message instanceof vscode.MarkdownString) {
                 assert.ok(message.value.includes("vscode-ios.openFile"));
+            } else {
+                assert.fail("Message is not a MarkdownString");
             }
         });
 
@@ -299,6 +301,8 @@ suite("TestCaseProblemParser", () => {
             assert.ok(message instanceof vscode.MarkdownString);
             if (message instanceof vscode.MarkdownString) {
                 assert.strictEqual(message.isTrusted, true);
+            } else {
+                assert.fail("Message is not a MarkdownString");
             }
         });
 
@@ -310,8 +314,10 @@ suite("TestCaseProblemParser", () => {
             } as vscode.TestItem;
 
             const log = `/path/to/test.swift:10: error: Snapshot failed
-@"file:///path/to/reference.png"
-@"file:///path/to/failure.png"
+@−
+"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/Page/__Snapshots__/Tests/test_page_errorState.iPhone8.png"
+@+
+"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_page_errorState.iPhone8.png"
 To configure SnapshotTesting.diffTool
 error:`;
             const result = await parser.parseAsyncLogs(log, testItem);
@@ -320,7 +326,8 @@ error:`;
             const message = result[0].message;
             assert.ok(message instanceof vscode.MarkdownString);
             if (message instanceof vscode.MarkdownString) {
-                assert.ok(message.value.includes("vscode-ios.ksdiff"));
+                assert.ok(message.value.includes("[Compare](command:vscode-ios.ksdiff?"));
+                assert.ok(message.value.includes("test_page_errorState.iPhone8.png"));
             }
         });
 
@@ -332,12 +339,31 @@ error:`;
             } as vscode.TestItem;
 
             const log = `/path/to/test.swift:10: error: @"file:///ref.png"
-@"file:///fail.png"
-SnapshotTesting.diffTool
-error:`;
+path/to/test.swift:10
+random text
+
+path/to/another.swift:20
+@−
+"file:///fail.png"
+@+
+"file:///actual.png"
+Random end text
+error: `;
             const result = await parser.parseAsyncLogs(log, testItem);
 
             assert.ok(result.length > 0);
+            const message = result[0].message;
+            assert.ok(message instanceof vscode.MarkdownString);
+            if (message instanceof vscode.MarkdownString) {
+                assert.ok(message.value.includes("[Compare](command:vscode-ios.ksdiff?"));
+                assert.ok(message.value.includes("[View line](command:vscode-ios.openFile?"));
+                assert.ok(message.value.includes("path/to/test.swift"));
+                assert.ok(message.value.includes("path/to/another.swift"));
+                assert.ok(message.value.includes("fail.png"));
+                assert.ok(message.value.includes("actual.png"));
+            } else {
+                assert.fail("Message is not a MarkdownString");
+            }
         });
     });
 
@@ -486,12 +512,12 @@ error:`;
             } as vscode.TestItem;
 
             const log = `
-/Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/LooksListPage/Tests.swift:36: error: -[SnapshotTests.Tests test_looksListPage_errorState] : failed - Snapshot "iPhoneSe" does not match reference.
+/Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/Page/Tests.swift:36: error: -[SnapshotTests.Tests test_page_errorState] : failed - Snapshot "iPhoneSe" does not match reference.
 
 @−
-"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/LooksListPage/__Snapshots__/Tests/test_looksListPage_errorState.iPhoneSe.png"
+"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/Page/__Snapshots__/Tests/test_page_errorState.iPhoneSe.png"
 @+
-"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_looksListPage_errorState.iPhoneSe.png"
+"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_page_errorState.iPhoneSe.png"
 
 To configure output for a custom diff tool, use 'withSnapshotTesting'. For example:
 
@@ -500,12 +526,12 @@ To configure output for a custom diff tool, use 'withSnapshotTesting'. For examp
     }
 
 Actual image precision 0.94590193 is less than required 0.99
-/Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/LooksListPage/Tests.swift:36: error: -[SnapshotTests.Tests test_looksListPage_errorState] : failed - Snapshot "iPhone8" does not match reference.
+/Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/Page/Tests.swift:36: error: -[SnapshotTests.Tests test_page_errorState] : failed - Snapshot "iPhone8" does not match reference.
 
 @−
-"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/LooksListPage/__Snapshots__/Tests/test_looksListPage_errorState.iPhone8.png"
+"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/Page/__Snapshots__/Tests/test_page_errorState.iPhone8.png"
 @+
-"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_looksListPage_errorState.iPhone8.png"
+"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_page_errorState.iPhone8.png"
 
 To configure output for a custom diff tool, use 'withSnapshotTesting'. For example:
 
@@ -514,38 +540,42 @@ To configure output for a custom diff tool, use 'withSnapshotTesting'. For examp
     }
 
 Actual image precision 0.9562744 is less than required 0.99
-/Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/LooksListPage/Tests.swift:36: error: -[SnapshotTests.Tests test_looksListPage_errorState] : failed - Snapshot "iPhoneX" does not match reference.
-
+-[SnapshotTests.Tests test_page_errorState] : failed - Snapshot "iPhoneSe" does not match reference.
+/user/path/test2.swift:10:
 @−
-"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/LooksListPage/__Snapshots__/Tests/test_looksListPage_errorState.iPhoneX.png"
+"file:///Users/Ievgenii_Mykhalevskyi/repos/source1/Experiences/Styling/Tests/SnapshotTests/Page/__Snapshots__/Tests/test_page_errorState.iPhoneSe.png"
 @+
-"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_looksListPage_errorState.iPhoneX.png"
+"file:///Users/Ievgenii_Mykhalevskyi/Library/Developer/CoreSimulator/Devices/C3BB0146-6E97-45A9-880C-D7CCE4FEBD27/data/Containers/Data/Application/A777B1A4-A209-4534-AE60-F4A65C044BC7/tmp/Tests/test_page_errorState.iPhoneSe.png"
 
 To configure output for a custom diff tool, use 'withSnapshotTesting'. For example:
+/user/path/test2.swift:10:
 
     withSnapshotTesting(diffTool: .ksdiff) {
       // ...
     }
 
-Actual image precision 0.9776154 is less than required 0.99
+Actual image precision 0.94590193 is less than required 0.99
 `;
             const result = await parser.parseAsyncLogs(log, testItem);
 
-            assert.strictEqual(result.length, 3);
-            console.log(JSON.stringify(result));
+            assert.strictEqual(result.length, 2);
+            if (result[0].message instanceof vscode.MarkdownString) {
+                assert.ok(result[0].message.value.includes("command:vscode-ios.ksdiff"));
+                assert.ok(result[0].message.value.includes("test_page_errorState.iPhoneSe.png"));
+                assert.ok(!result[0].message.value.includes("test_page_errorState.iPhone8.png"));
+            } else {
+                assert.fail("Message is not a MarkdownString");
+            }
+            if (result[1].message instanceof vscode.MarkdownString) {
+                assert.ok(result[1].message.value.includes("command:vscode-ios.ksdiff"));
+                assert.ok(result[1].message.value.includes("test_page_errorState.iPhoneSe.png"));
+                assert.ok(result[1].message.value.includes("test_page_errorState.iPhone8.png"));
+            } else {
+                assert.fail("Message is not a MarkdownString");
+            }
             assert.deepStrictEqual(
                 JSON.stringify(result),
                 JSON.stringify([
-                    {
-                        message: {},
-                        location: {
-                            uri: { $mid: 1, path: "/path/to/test.swift", scheme: "file" },
-                            range: [
-                                { line: 35, character: 0 },
-                                { line: 35, character: 10000 },
-                            ],
-                        },
-                    },
                     {
                         message: {},
                         location: {

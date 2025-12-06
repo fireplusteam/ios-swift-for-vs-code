@@ -2,7 +2,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 
 const problemPattern =
-    /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)(error|warning|note):/m;
+    /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s/m;
 const diffPattern = /(XCTAssertEqual|XCTAssertNotEqual)\sfailed:\s\((.*?)\).*?\((.*?)\)/m;
 
 export class TestCaseProblemParser {
@@ -26,19 +26,10 @@ export class TestCaseProblemParser {
 
     private parseBuildLog(stdout: string, uri: vscode.Uri, testName: string) {
         const files: vscode.TestMessage[] = [];
-        stdout += "\nerror:";
+        stdout += "\n/path/random_ending_path_3456246/Tests.swift:36: error: ";
         try {
             let startIndex = 0;
-            let lastStartIndex = 0;
             while (startIndex < stdout.length) {
-                while (startIndex > lastStartIndex) {
-                    // find the start of line for the next pattern search
-                    if (stdout[startIndex] === "\n") {
-                        break;
-                    }
-                    --startIndex;
-                }
-
                 const output = stdout.slice(startIndex);
                 const match = output.match(problemPattern);
                 if (!match) {
@@ -77,12 +68,14 @@ export class TestCaseProblemParser {
 
                 files.push(diagnostic);
 
-                lastStartIndex =
-                    startIndex +
-                    (match.index || lastStartIndex) +
-                    match[0].lastIndexOf(message) +
-                    message.length;
-                startIndex += (match.index || 0) + match[0].length;
+                if (message.length === 0) {
+                    startIndex += (match.index || startIndex) + match[0].length;
+                } else {
+                    startIndex +=
+                        (match.index || startIndex) +
+                        match[0].lastIndexOf(message) +
+                        message.length;
+                }
             }
         } catch (err) {
             console.log(`TestCase parser error: ${err}`);
@@ -116,28 +109,20 @@ export class TestCaseProblemParser {
     }
 
     private markDown(message: string, name: string) {
-        const mdString = new vscode.MarkdownString("");
-        mdString.isTrusted = true;
         // replace file links to be opened
-        message = message.replaceAll(/^(.*?):(\d+):/gm, (str, p1, p2) => {
+
+        message = message.replaceAll(
+            // eslint-disable-next-line no-useless-escape
+            /^(@\−)[\s\S]*?"(file:.*?)"$[\s\S]*^(@\+)[\s\S]*?"(file:.*?)"$/gm,
+            (str, g1, g2, g3, g4) => {
+                return `\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, g2, g4]))})`;
+            }
+        );
+        message = message.replaceAll(/^(.*?):(\d+)/gm, (str, p1, p2) => {
             return `${str}\n\r[View line](command:vscode-ios.openFile?${encodeURIComponent(JSON.stringify([p1, p2]))})`;
         });
-        if (message.includes("SnapshotTesting.diffTool")) {
-            const list = message.split(/^To configure[\s\S]*?SnapshotTesting.diffTool.*"$/gm);
-
-            for (const pattern of list) {
-                const files = [...pattern.matchAll(/^@[\s\S]*?"(file:.*?)"$/gm)];
-                mdString.appendMarkdown("\n" + pattern);
-                if (files.length === 2) {
-                    mdString.appendMarkdown(
-                        `\n[Compare](command:vscode-ios.ksdiff?${encodeURIComponent(JSON.stringify([name, files[0][1], files[1][1]]))})`
-                    );
-                }
-            }
-        } else {
-            mdString.appendMarkdown(message);
-        }
-
+        const mdString = new vscode.MarkdownString(message);
+        mdString.isTrusted = true;
         return mdString;
     }
 }
