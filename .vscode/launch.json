@@ -6,6 +6,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: Active File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "DEBUG"
+            ],
+            "console": "internalConsole",
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "name": "Run Extension",
             "type": "extensionHost",
             "request": "launch",
