@@ -1,7 +1,6 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { TestResultProvider } from "../../../src/TestsProvider/TestResultProvider";
-import { off } from "process";
 
 suite("TestResultProvider", () => {
     let provider: TestResultProvider;
