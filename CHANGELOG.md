@@ -1,5 +1,15 @@
 # Change Log
 
+## 0.5.14 - 2025-12-08
+
+### Fixed
+
+-   Test syncing in test explorer
+-   Parsing testing log (in rare case it could go to infinite loop)
+-   Launch simulator on running tests because sometimes some tests can require permission which can be resolved only by a user (like Xcode does)
+-   Improved syncing of async tasks like adding/removing/changing files
+-   Added parsing of swift macros building errors
+
 ## 0.5.13 - 2025-12-03
 
 ### Fixed
