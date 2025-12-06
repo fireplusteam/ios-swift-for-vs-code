@@ -11,8 +11,10 @@ export class XcodeProjectFileProxy {
     private rl: Interface | undefined;
     private onEndRead = new vscode.EventEmitter<string[]>();
     private onEndReadWithError = new vscode.EventEmitter<any>();
+    private projectPath: string;
 
     constructor(projectPath: string) {
+        this.projectPath = projectPath;
         this.runProcess(projectPath);
     }
 
@@ -27,8 +29,14 @@ export class XcodeProjectFileProxy {
         });
         this.process.on("exit", (code, signal) => {
             this.rl = undefined;
-            console.log(`Return code: ${code}, signal: ${signal}, error: ${stderr}`);
-            this.onEndReadWithError.fire(Error(`${projectPath} file failed: ${stderr}`));
+            console.log(
+                `XcodeProjectFileProxy process exited for ${projectPath}, return code: ${code}, signal: ${signal}, error: ${stderr}`
+            );
+            this.onEndReadWithError.fire(
+                Error(
+                    `XcodeProjectFileProxy process exited for ${projectPath}, return code: ${code}, signal: ${signal}, error: ${stderr}`
+                )
+            );
             if (fs.existsSync(projectPath)) {
                 this.runProcess(projectPath);
             }
@@ -47,7 +55,9 @@ export class XcodeProjectFileProxy {
             }
             let result = [] as string[];
             if (this.rl === undefined) {
-                throw Error("Stream is undefined");
+                throw Error(
+                    `XcodeProjectFileProxy process stdout is undefined for project path: ${this.projectPath}`
+                );
             }
             for await (const line of this.rl) {
                 if (line === "EOF_REQUEST") {
@@ -71,7 +81,11 @@ export class XcodeProjectFileProxy {
             let disError: vscode.Disposable | undefined;
             const result = await new Promise<string[]>((resolve, reject) => {
                 if (this.rl === undefined) {
-                    reject(Error("Process is killed"));
+                    reject(
+                        Error(
+                            `XcodeProjectFileProxy process stdout is undefined for project path: ${this.projectPath}`
+                        )
+                    );
                 }
                 dis = this.onEndRead.event(e => {
                     dis?.dispose();
