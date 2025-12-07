@@ -74,10 +74,11 @@ end
 
 def update_file_targets(project, targets, file_path)
   file_ref = find_file(project, file_path)
-  if not file_ref.nil?
-    file_ref.remove_from_project
-    add_file_to_targets(project, targets, file_path)
+  file_ref.remove_from_project if not file_ref.nil?
+  if targets == "" # means to remove the file from all targets
+    return
   end
+  add_file_to_targets(project, targets, file_path)
 end
 
 def delete_file(project, file_path)
