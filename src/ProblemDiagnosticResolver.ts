@@ -218,57 +218,11 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         const outFileCoverageStr = await executor.execShell({
             scriptOrCommand: { command: command },
         });
-        console.log(`Build logs => outFileCoverageStr: ${outFileCoverageStr.stdout}`);
-        await this.parseSwiftMacroErrors(outFileCoverageStr.stdout);
-    }
-
-    private async parseSwiftMacroErrors(buildLogs: string) {
-        const json = JSON.parse(buildLogs);
-        const errors = json["errors"] || [];
-
-        const files: { [key: string]: vscode.Diagnostic[] } = {};
-
-        for (const error of errors) {
-            const message = error["message"] || "";
-            let sourceURL: string = error["sourceURL"] || "";
-            // Example: file:///var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_20CNF07ProfileB0V47ReducerfMe_.swift#EndingColumnNumber=57&EndingLineNumber=0&StartingColumnNumber=57&StartingLineNumber=0&Timestamp=786622174.129034
-            sourceURL = sourceURL.replace("file:///", "/private/").replace(/#.*$/, "");
-            if (sourceURL.includes("@__swiftmacro_")) {
-                console.log(`Macro source URL: ${sourceURL}`);
-                try {
-                    const content = fs.readFileSync(sourceURL, "utf-8");
-                    /// Example content:
-                    // Some swift Code here
-                    //
-                    //  original-source-range: /Users/Ievgenii_Mykhalevskyi/repos/source1/Sources/UI/Scenes/Test.swift:259:2-259:2
-                    const originalSourceRangePattern =
-                        /original-source-range:\s(.*?):(\d+):(\d+)-(\d+):(\d+)/gm;
-                    const matches = [...content.matchAll(originalSourceRangePattern)];
-                    for (const match of matches) {
-                        const file = match[1];
-                        const startLine = Number(match[2]) - 1;
-                        const startColumn = Number(match[3]) - 1;
-                        const endLine = Number(match[4]) - 1;
-                        const endColumn = Number(match[5]) - 1;
-                        const diagnostic = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(startLine, startColumn),
-                                new vscode.Position(endLine, endColumn)
-                            ),
-                            `Swift Macro Error: ${message}\n\nMACRO ERROR:\n${content}`,
-                            vscode.DiagnosticSeverity.Error
-                        );
-                        diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
-                        const value = files[file] || [];
-                        value.push(diagnostic);
-                        files[file] = value;
-                    }
-                } catch (err) {
-                    console.log(`Error reading or parsing macro source file: ${err}`);
-                }
-            }
-        }
-        this.storeProblems(files);
+        // console.log(`Build logs => outFileCoverageStr: ${outFileCoverageStr.stdout}`);
+        const problems = parseSwiftMacrosInXcodeBuildLogs(outFileCoverageStr.stdout, path => {
+            return fs.readFileSync(path, "utf8");
+        });
+        this.storeProblems(problems);
     }
 
     private isDiagnosticFromSwiftMacroError(diagnostic: vscode.Diagnostic): boolean {
@@ -330,6 +284,58 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
 const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
 const problemLinkerPattern = /^(clang):\s+(error):\s+(.*)$/gm;
 const frameworkErrorPattern = /^(error: )(.*?)$/gm;
+
+function parseSwiftMacrosInXcodeBuildLogs(
+    buildLogs: string,
+    readFileSync: (path: string) => string
+) {
+    const json = JSON.parse(buildLogs);
+    const errors = json["errors"] || [];
+
+    const files: { [key: string]: vscode.Diagnostic[] } = {};
+
+    for (const error of errors) {
+        const message = error["message"] || "";
+        let sourceURL: string = error["sourceURL"] || "";
+        // Example: file:///var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_20CNF07ProfileB0V47ReducerfMe_.swift#EndingColumnNumber=57&EndingLineNumber=0&StartingColumnNumber=57&StartingLineNumber=0&Timestamp=786622174.129034
+        sourceURL = sourceURL.replace("file:///", "/private/").replace(/#.*$/, "");
+        if (sourceURL.includes("@__swiftmacro_")) {
+            console.log(`Macro source URL: ${sourceURL}`);
+            try {
+                const content = readFileSync(sourceURL);
+                /// Example content:
+                // Some swift Code here
+                //
+                //  original-source-range: /Users/Ievgenii_Mykhalevskyi/repos/source1/Sources/UI/Scenes/Test.swift:259:2-259:2
+                const originalSourceRangePattern =
+                    /original-source-range:\s(.*?):(\d+):(\d+)-(\d+):(\d+)/gm;
+                const matches = [...content.matchAll(originalSourceRangePattern)];
+                for (const match of matches) {
+                    const file = match[1];
+                    const startLine = Number(match[2]) - 1;
+                    const startColumn = Number(match[3]) - 1;
+                    const endLine = Number(match[4]) - 1;
+                    const endColumn = Number(match[5]) - 1;
+                    const diagnostic = new vscode.Diagnostic(
+                        new vscode.Range(
+                            new vscode.Position(startLine, startColumn),
+                            new vscode.Position(endLine, endColumn)
+                        ),
+                        `Swift Macro Error: ${message}\n\nMACRO ERROR:\n${content}`,
+                        vscode.DiagnosticSeverity.Error
+                    );
+                    diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
+                    const value = files[file] || [];
+                    value.push(diagnostic);
+                    files[file] = value;
+                }
+            } catch (err) {
+                console.log(`Error reading or parsing macro source file: ${err}`);
+            }
+        }
+    }
+    return files;
+}
 
 function column(output: string, messageEnd: number) {
     let newLineCounter = 0;
@@ -464,4 +470,5 @@ function parseBuildLog(
 
 export const _private = {
     parseBuildLog,
+    parseSwiftMacrosInXcodeBuildLogs,
 };

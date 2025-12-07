@@ -1,0 +1,334 @@
+{
+  "devices" : [
+    {
+      "architecture" : "arm64",
+      "deviceId" : "C3BB0146-6E97-45A9-880C-D7CCE4FEBD27",
+      "deviceName" : "iPhone 17 Pro",
+      "modelName" : "iPhone 17 Pro",
+      "osBuildNumber" : "23A343",
+      "osVersion" : "26.0",
+      "platform" : "iOS Simulator"
+    }
+  ],
+  "testNodes" : [
+    {
+      "children" : [
+        {
+          "children" : [
+            {
+              "children" : [
+                {
+                  "name" : "Test_iosTests.swift:58: Expectation failed: (a → 0) == (b → 1)",
+                  "nodeType" : "Failure Message"
+                }
+              ],
+              "name" : "New_TEST_FRAMEWORK()",
+              "nodeIdentifier" : "New_TEST_FRAMEWORK()",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/New_TEST_FRAMEWORK()",
+              "nodeType" : "Test Case",
+              "result" : "Failed"
+            },
+            {
+              "name" : "WOW()",
+              "nodeIdentifier" : "WOW()",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/WOW()",
+              "nodeType" : "Test Case",
+              "result" : "Passed"
+            },
+            {
+              "name" : "test2()",
+              "nodeIdentifier" : "test2()",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/test2()",
+              "nodeType" : "Test Case",
+              "result" : "Passed"
+            },
+            {
+              "name" : "Test()",
+              "nodeIdentifier" : "Test()",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test()",
+              "nodeType" : "Test Case",
+              "result" : "Passed"
+            },
+            {
+              "children" : [
+                {
+                  "duration" : "0,00077s",
+                  "durationInSeconds" : 0.0007729530334472656,
+                  "name" : "test_newTest()",
+                  "nodeIdentifier" : "Test_iosTests/test_newTest()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests/test_newTest",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0,00057s",
+                  "durationInSeconds" : 0.0005660057067871094,
+                  "name" : "testbeter()",
+                  "nodeIdentifier" : "Test_iosTests/testbeter()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests/testbeter",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0,00053s",
+                  "durationInSeconds" : 0.0005340576171875,
+                  "name" : "testBEtter()",
+                  "nodeIdentifier" : "Test_iosTests/testBEtter()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests/testBEtter",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Test_iosTests.swift:24: XCTAssertFalse failed",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "duration" : "0,27s",
+                  "durationInSeconds" : 0.2697800397872925,
+                  "name" : "testExample()",
+                  "nodeIdentifier" : "Test_iosTests/testExample()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests/testExample",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "duration" : "0,00067s",
+                  "durationInSeconds" : 0.0006721019744873047,
+                  "name" : "testOpen()",
+                  "nodeIdentifier" : "Test_iosTests/testOpen()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests/testOpen",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "duration" : "0,26s",
+                  "durationInSeconds" : 0.2559159994125366,
+                  "name" : "testPerformanceExample()",
+                  "nodeIdentifier" : "Test_iosTests/testPerformanceExample()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests/testPerformanceExample",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "Test_iosTests",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Test_iosTests",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            },
+            {
+              "children" : [
+                {
+                  "children" : [
+                    {
+                      "children" : [
+                        {
+                          "name" : "Test_iosTests.swift:65: Expectation failed: \"1\" == \"2\"",
+                          "nodeType" : "Failure Message"
+                        }
+                      ],
+                      "name" : "opacha()",
+                      "nodeIdentifier" : "Suite/SuiteSubTests/opacha()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/SuiteSubTests/opacha()",
+                      "nodeType" : "Test Case",
+                      "result" : "Failed"
+                    },
+                    {
+                      "name" : "opacha2()",
+                      "nodeIdentifier" : "Suite/SuiteSubTests/opacha2()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/SuiteSubTests/opacha2()",
+                      "nodeType" : "Test Case",
+                      "result" : "Passed"
+                    }
+                  ],
+                  "name" : "SuiteSubTests",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/SuiteSubTests",
+                  "nodeType" : "Test Suite",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "children" : [
+                        {
+                          "name" : "third label",
+                          "nodeIdentifier" : "Suite/BetteNow/Third/third_test()",
+                          "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/Third/third_test()",
+                          "nodeType" : "Test Case",
+                          "result" : "Passed"
+                        }
+                      ],
+                      "name" : "Third",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/Third",
+                      "nodeType" : "Test Suite",
+                      "result" : "Passed"
+                    },
+                    {
+                      "name" : "open_test_now()",
+                      "nodeIdentifier" : "Suite/BetteNow/open_test_now()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/open_test_now()",
+                      "nodeType" : "Test Case",
+                      "result" : "Passed"
+                    },
+                    {
+                      "children" : [
+                        {
+                          "duration" : "0s",
+                          "durationInSeconds" : 0,
+                          "name" : "\"A Beach\"",
+                          "nodeType" : "Arguments",
+                          "result" : "Passed"
+                        },
+                        {
+                          "children" : [
+                            {
+                              "name" : "Test_iosTests.swift:102: Expectation failed: (a → \"By The Lake\") == \"A Beach\": This is a simple error message",
+                              "nodeType" : "Failure Message"
+                            }
+                          ],
+                          "duration" : "0s",
+                          "durationInSeconds" : 0,
+                          "name" : "\"By The Lake\"",
+                          "nodeType" : "Arguments",
+                          "result" : "Failed"
+                        },
+                        {
+                          "children" : [
+                            {
+                              "name" : "Test_iosTests.swift:102: Expectation failed: (a → \"Third Beach\") == \"A Beach\": This is a simple error message",
+                              "nodeType" : "Failure Message"
+                            }
+                          ],
+                          "duration" : "0s",
+                          "durationInSeconds" : 0,
+                          "name" : "\"Third Beach\"",
+                          "nodeType" : "Arguments",
+                          "result" : "Failed"
+                        }
+                      ],
+                      "name" : "Tag ok",
+                      "nodeIdentifier" : "Suite/BetteNow/skipped_test_now(a:)",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/skipped_test_now(a:)",
+                      "nodeType" : "Test Case",
+                      "result" : "Failed"
+                    },
+                    {
+                      "children" : [
+                        {
+                          "name" : "Test_iosTests.swift:107: Expectation failed: (b → 0) > 1: Failed",
+                          "nodeType" : "Failure Message"
+                        }
+                      ],
+                      "name" : "oneAnother()",
+                      "nodeIdentifier" : "Suite/BetteNow/oneAnother()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/oneAnother()",
+                      "nodeType" : "Test Case",
+                      "result" : "Failed"
+                    },
+                    {
+                      "children" : [
+                        {
+                          "name" : "Test_iosTests.swift:111: Expectation failed: 1 == 2",
+                          "nodeType" : "Failure Message"
+                        },
+                        {
+                          "name" : "Test_iosTests.swift:115: Expectation failed: (c → CustomStruct(a: \"Prop\\\"\\'_a\", op: 10, list: [\"F)rst\", \"Sec][{ond\"])) == (b → CustomStruct(a: \"Prop_b\", op: 10, list: [\"First\", \"Third\", \"S\\\"econd\"]))",
+                          "nodeType" : "Failure Message"
+                        },
+                        {
+                          "name" : "Test_iosTests.swift:117: Expectation failed: (c → CustomStruct(a: \"Prop\\\"\\'_a\", op: 10, list: [\"F)rst\", \"Sec][{ond\"])) == CustomStruct(a: \"Prop_b\", op: 10, list: [\"First\", \"Third\", \"Second\"])",
+                          "nodeType" : "Failure Message"
+                        }
+                      ],
+                      "name" : "multiFailed()",
+                      "nodeIdentifier" : "Suite/BetteNow/multiFailed()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/multiFailed()",
+                      "nodeType" : "Test Case",
+                      "result" : "Failed"
+                    },
+                    {
+                      "children" : [
+                        {
+                          "name" : "Test_iosTests.swift:122: Expectation failed: (a → \"afd\") == \"bsd\": Second",
+                          "nodeType" : "Failure Message"
+                        }
+                      ],
+                      "name" : "Tag ok2",
+                      "nodeIdentifier" : "Suite/BetteNow/second()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/second()",
+                      "nodeType" : "Test Case",
+                      "result" : "Failed"
+                    },
+                    {
+                      "name" : "in Name Suite.BetteNow",
+                      "nodeIdentifier" : "Suite/BetteNow/one_Day()",
+                      "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow/one_Day()",
+                      "nodeType" : "Test Case",
+                      "result" : "Passed"
+                    }
+                  ],
+                  "name" : "BetteNow",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/BetteNow",
+                  "nodeType" : "Test Suite",
+                  "result" : "Failed"
+                },
+                {
+                  "children" : [
+                    {
+                      "name" : "Test_iosTests.swift:73: Expectation failed: \"a\" == \"b\"",
+                      "nodeType" : "Failure Message"
+                    }
+                  ],
+                  "name" : "SUITED_TEST()",
+                  "nodeIdentifier" : "Suite/SUITED_TEST()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/SUITED_TEST()",
+                  "nodeType" : "Test Case",
+                  "result" : "Failed"
+                },
+                {
+                  "name" : "open()",
+                  "nodeIdentifier" : "Suite/open()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/open()",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "name" : "Display new",
+                  "nodeIdentifier" : "Suite/SUITED_TEST2()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/SUITED_TEST2()",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                },
+                {
+                  "name" : "Display new",
+                  "nodeIdentifier" : "Suite/SUITED_TEST3()",
+                  "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite/SUITED_TEST3()",
+                  "nodeType" : "Test Case",
+                  "result" : "Passed"
+                }
+              ],
+              "name" : "Suite",
+              "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests/Suite",
+              "nodeType" : "Test Suite",
+              "result" : "Failed"
+            }
+          ],
+          "name" : "Test_iosTests",
+          "nodeIdentifierURL" : "test://com.apple.xcode/Test_ios/Test_iosTests",
+          "nodeType" : "Unit test bundle",
+          "result" : "Failed"
+        }
+      ],
+      "name" : "My Test Plan",
+      "nodeType" : "Test Plan",
+      "result" : "Failed"
+    }
+  ],
+  "testPlanConfigurations" : [
+    {
+      "configurationId" : "1",
+      "configurationName" : "Configuration 1"
+    }
+  ]
+}

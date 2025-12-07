@@ -425,3 +425,34 @@ suite("Problem Diagnostic Resolver: Parser", () => {
         );
     });
 });
+
+suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
+    test("Test: isFilePathLine", () => {
+        const buildLogInput = fs.readFileSync(location("xcodebuild_building_result.json"), "utf-8");
+        const problems = _private.parseSwiftMacrosInXcodeBuildLogs(buildLogInput, filepath => {
+            assert.strictEqual(
+                filepath,
+                "/private/var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_3PLP7PLPCard7ReducerfMe_.swift"
+            );
+            return fs.readFileSync(location("@__swiftmacro_3PLP7Card7ReducerfMe_.swift"), "utf-8");
+        });
+        console.log(JSON.stringify(problems, null));
+        assert.deepStrictEqual(
+            JSON.stringify(problems),
+            JSON.stringify({
+                "/Users/Ievgenii_Mykhalevskyi/repos/source1/Sources/Card/Card+Reducer.swift": [
+                    {
+                        severity: "Error",
+                        message:
+                            "Swift Macro Error: Conformance of 'Card' to protocol 'Reducer' crosses into main actor-isolated code and can cause data races\n\nMACRO ERROR:\nextension Card: ComposableArchitecture.Reducer {}\n\n// original-source-range: /Users/Ievgenii_Mykhalevskyi/repos/source1/Sources/Card/Card+Reducer.swift:175:2-175:2\n",
+                        range: [
+                            { line: 174, character: 1 },
+                            { line: 174, character: 1 },
+                        ],
+                        source: "xcodebuild",
+                    },
+                ],
+            })
+        );
+    });
+});
