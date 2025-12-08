@@ -27,7 +27,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     private disposable: vscode.Disposable[] = [];
     private diagnosticBuildCollection: vscode.DiagnosticCollection;
 
-    private buildErrors = new Set<string>();
+    private filesWithPreviousBuildDiagnostics = new Set<string>();
 
     constructor() {
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("Xcode");
@@ -76,26 +76,30 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         newDiagnostics: vscode.Diagnostic[]
     ): void {
         // console.log(uri, isSourceKit(""), newDiagnostics);
-        const files: { [key: string]: vscode.Diagnostic[] } = {};
-        files[uri.fsPath] = newDiagnostics;
-        const errors = new Set<string>();
-        errors.add(uri.fsPath);
-        this.storeProblems(files, errors, ProblemDiagnosticResolver.isSourcekit);
+        const filesWithNewBuildDiagnostics: { [key: string]: vscode.Diagnostic[] } = {};
+        filesWithNewBuildDiagnostics[uri.fsPath] = newDiagnostics;
+        const previousBuildDiagnostics = new Set<string>();
+        previousBuildDiagnostics.add(uri.fsPath);
+        this.storeNewDiagnostics(
+            filesWithNewBuildDiagnostics,
+            previousBuildDiagnostics,
+            ProblemDiagnosticResolver.isSourcekit
+        );
     }
 
-    private clear() {
-        this.buildErrors.clear();
+    private refreshPreviousBuildDiagnostics() {
+        this.filesWithPreviousBuildDiagnostics.clear();
         this.diagnosticBuildCollection.forEach((uri, diagnostics) => {
             const newDiagnostics = diagnostics.filter(e =>
                 ProblemDiagnosticResolver.isXcodebuild(e.source || "")
             );
             if (newDiagnostics.length > 0) {
-                this.buildErrors.add(uri.fsPath);
+                this.filesWithPreviousBuildDiagnostics.add(uri.fsPath);
             }
         });
     }
 
-    private uniqueProblems(
+    private uniqueDiagnostics(
         itemsToAdd: vscode.Diagnostic[],
         existingItemsList: vscode.Diagnostic[]
     ) {
@@ -115,10 +119,10 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
             return 0;
         }
 
-        function comp(
+        function compareDiagnostics(
             a: vscode.Diagnostic,
             b: vscode.Diagnostic,
-            comp: (a: vscode.Range, b: vscode.Range) => number = compareRanges
+            compRanges: (a: vscode.Range, b: vscode.Range) => number = compareRanges
         ) {
             if (a.message.trim().toLowerCase() !== b.message.trim().toLowerCase()) {
                 return a.message.trim().toLowerCase() < b.message.trim().toLowerCase() ? -1 : 1;
@@ -127,18 +131,18 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 return a.severity - b.severity;
             }
             if (a.range.isEqual(b.range) === false) {
-                return comp(a.range, b.range);
+                return compRanges(a.range, b.range);
             }
             return 0;
         }
-        itemsToAdd.sort(comp);
+        itemsToAdd.sort(compareDiagnostics);
         const res: vscode.Diagnostic[] = [];
         for (let i = 0; i < itemsToAdd.length; ++i) {
-            if (res.length === 0 || comp(itemsToAdd[i], res[res.length - 1]) !== 0) {
+            if (res.length === 0 || compareDiagnostics(itemsToAdd[i], res[res.length - 1]) !== 0) {
                 if (
                     existingItemsList.find(v => {
                         return (
-                            comp(v, itemsToAdd[i], (a, b) => {
+                            compareDiagnostics(v, itemsToAdd[i], (a, b) => {
                                 // enough to compare only start line for existing items as the end line is likely different but if message/severity and start line are same then it's duplicate
                                 if (a.start.line !== b.start.line) {
                                     return a.start.line - b.start.line;
@@ -155,15 +159,15 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         return res;
     }
 
-    private storeProblems(
-        files: { [key: string]: vscode.Diagnostic[] },
-        buildErrors: Set<string>,
+    private storeNewDiagnostics(
+        filesWithNewBuildDiagnostics: { [key: string]: vscode.Diagnostic[] },
+        filesWithPreviousBuildDiagnostics: Set<string>,
         sourcePredicate: SourcePredicate
     ) {
-        for (const file in files) {
+        for (const file in filesWithNewBuildDiagnostics) {
             const fileUri = vscode.Uri.file(file);
             let shouldDelete = false;
-            if (buildErrors.delete(file)) {
+            if (filesWithPreviousBuildDiagnostics.delete(file)) {
                 shouldDelete = true;
             }
             const allOthers =
@@ -176,13 +180,13 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                     : this.diagnosticBuildCollection
                           .get(fileUri)
                           ?.filter(e => sourcePredicate(e.source || "")) || []),
-                ...files[file],
+                ...filesWithNewBuildDiagnostics[file],
             ];
             // console.log(
             //     `Storing problems for file: ${file}, to add: ${JSON.stringify(toAddItems)}, all others: ${JSON.stringify(allOthers)}`
             // );
             this.diagnosticBuildCollection.set(fileUri, [
-                ...this.uniqueProblems(toAddItems, allOthers),
+                ...this.uniqueDiagnostics(toAddItems, allOthers),
                 ...allOthers,
             ]);
         }
@@ -191,7 +195,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     public parseAsyncLogs(filePath: string, buildPipeEvent: vscode.Event<string>) {
         const buildLogFile = getFilePathInWorkspace(filePath);
 
-        this.clear();
+        this.refreshPreviousBuildDiagnostics();
         const rawParser = new RawBuildParser(buildLogFile);
         rawParser.watcherDisposal = buildPipeEvent(data => {
             rawParser.stdout += data;
@@ -217,7 +221,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         }
 
         if (cleanupPreviousBuildErrors) {
-            for (const file of this.buildErrors) {
+            for (const file of this.filesWithPreviousBuildDiagnostics) {
                 const newDiagnostics =
                     this.diagnosticBuildCollection
                         .get(vscode.Uri.file(file))
@@ -226,7 +230,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                 this.diagnosticBuildCollection.set(vscode.Uri.file(file), newDiagnostics);
             }
         }
-        this.buildErrors.clear();
+        this.filesWithPreviousBuildDiagnostics.clear();
 
         if (showProblemPanelOnError && rawParser.isError) {
             vscode.commands.executeCommand("workbench.action.problems.focus");
@@ -245,10 +249,17 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
             scriptOrCommand: { command: command },
         });
         // console.log(`Build logs => outFileCoverageStr: ${outFileCoverageStr.stdout}`);
-        const problems = parseSwiftMacrosInXcodeBuildLogs(outFileCoverageStr.stdout, path => {
-            return fs.readFileSync(path, "utf8");
-        });
-        this.storeProblems(problems, this.buildErrors, ProblemDiagnosticResolver.isXcodebuild);
+        const buildingDiagnosticErrors = parseSwiftMacrosInXcodeBuildLogs(
+            outFileCoverageStr.stdout,
+            path => {
+                return fs.readFileSync(path, "utf8");
+            }
+        );
+        this.storeNewDiagnostics(
+            buildingDiagnosticErrors,
+            this.filesWithPreviousBuildDiagnostics,
+            ProblemDiagnosticResolver.isXcodebuild
+        );
     }
 
     private isDiagnosticFromSwiftMacroError(diagnostic: vscode.Diagnostic): boolean {
@@ -284,7 +295,11 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                         return e.severity === vscode.DiagnosticSeverity.Error;
                     }).length > 0;
             }
-            this.storeProblems(problems, this.buildErrors, ProblemDiagnosticResolver.isXcodebuild);
+            this.storeNewDiagnostics(
+                problems,
+                this.filesWithPreviousBuildDiagnostics,
+                ProblemDiagnosticResolver.isXcodebuild
+            );
             for (let i = 0; i < lastErrorIndex + 1; ++i) {
                 rawParser.numberOfLines += rawParser.stdout[i] === "\n" ? 1 : 0;
             }
