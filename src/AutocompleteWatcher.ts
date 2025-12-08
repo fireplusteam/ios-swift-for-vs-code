@@ -6,6 +6,7 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 import { BuildManager } from "./Services/BuildManager";
+import { UserTerminatedError } from "./CommandManagement/CommandContext";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -111,11 +112,22 @@ export class AutocompleteWatcher {
                 emptyAutobuildLog();
                 const fileLog = ".logs/autocomplete.log";
                 const rawParser = this.problemResolver.parseAsyncLogs(fileLog, context.buildEvent);
+                let shouldCleanPreviousBuildErrors = true; // by default, clean previous errors
                 try {
                     const buildManager = new BuildManager();
                     await buildManager.buildAutocomplete(context, fileLog);
+                } catch (error) {
+                    if (error === UserTerminatedError) {
+                        shouldCleanPreviousBuildErrors = false; // do not clean previous errors if user terminated (like when a user edits a file again)
+                    }
+                    throw error;
                 } finally {
-                    await this.problemResolver.end(context.bundle, rawParser, false);
+                    await this.problemResolver.end(
+                        context.bundle,
+                        rawParser,
+                        false,
+                        shouldCleanPreviousBuildErrors
+                    );
                 }
             });
         } catch (err) {
