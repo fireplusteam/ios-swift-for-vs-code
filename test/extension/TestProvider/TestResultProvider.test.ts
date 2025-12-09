@@ -374,6 +374,14 @@ suite("TestResultProvider", () => {
 
             assert.ok(result);
         });
+
+        test("should not parse non-equality expectations", () => {
+            const rawMessage =
+                "Expectation failed: false: Video 'By the Lake' does not mention all continent";
+            const result = provider["parseExpectationFailed"](rawMessage, undefined);
+
+            assert.strictEqual(result, undefined);
+        });
     });
 
     suite("Json Test Parsing", () => {
