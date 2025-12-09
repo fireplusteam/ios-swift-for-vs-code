@@ -1,4 +1,4 @@
-# Improve Build Time
+# Improve Build Time if you use Xcode below 26
 
 xcodebuild CLI tool is slower than Xcode. This section provides a workaround to improve the build time.
 
