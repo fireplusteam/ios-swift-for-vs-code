@@ -266,7 +266,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         return diagnostic.message.startsWith("Swift Macro Error:");
     }
 
-    private parseStdout(rawParser: RawBuildParser, shouldEnd: boolean) {
+    private parseStdout(rawParser: RawBuildParser, shouldEnd: boolean, existsSync = fs.existsSync) {
         let lastErrorIndex = -1;
         for (let i = rawParser.firstIndex; i < rawParser.stdout.length; ++i) {
             if (rawParser.stdout[i] === rawParser.triggerCharacter) {
@@ -286,7 +286,8 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
             const problems = parseBuildLog(
                 rawParser.buildLogFile,
                 rawParser.stdout.substring(0, lastErrorIndex + 1),
-                rawParser.numberOfLines
+                rawParser.numberOfLines,
+                existsSync
             );
             for (const problem in problems) {
                 rawParser.isError =

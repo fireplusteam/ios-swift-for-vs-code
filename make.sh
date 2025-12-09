@@ -8,6 +8,7 @@ npm install --save @types/lockfile
 npm install vscode-languageserver-protocol
 npm install vscode-languageclient
 npm install @vscode/test-cli
+npm install --save-dev sinon @types/sinon
 
 pip install psutil
 pyinstaller --onefile src/XCBBuildServiceProxy/XCBBuildService.py

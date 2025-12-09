@@ -1,7 +1,13 @@
 import * as assert from "assert";
-import { _private } from "../../../src/ProblemDiagnosticResolver";
 import * as fs from "fs";
 import * as path from "path";
+import * as vscode from "vscode";
+import * as sinon from "sinon";
+import {
+    ProblemDiagnosticResolver,
+    RawBuildParser,
+    _private,
+} from "../../../src/ProblemDiagnosticResolver";
 
 const cwd = __dirname;
 function location(filePath: string) {
@@ -454,5 +460,202 @@ suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
                 ],
             })
         );
+    });
+});
+suite("ProblemDiagnosticResolver Class Tests", () => {
+    let resolver: ProblemDiagnosticResolver;
+    let diagnosticCollection: vscode.DiagnosticCollection;
+    let sandbox: sinon.SinonSandbox;
+
+    setup(() => {
+        sandbox = sinon.createSandbox();
+        diagnosticCollection = {
+            set: sandbox.stub(),
+            get: sandbox.stub().returns([]),
+            delete: sandbox.stub(),
+            clear: sandbox.stub(),
+            forEach: sandbox.stub(),
+            dispose: sandbox.stub(),
+            name: "Xcode",
+            has: sandbox.stub().returns(false),
+        } as any;
+
+        sandbox.stub(vscode.languages, "createDiagnosticCollection").returns(diagnosticCollection);
+        sandbox
+            .stub(vscode.workspace, "onDidChangeTextDocument")
+            .returns({ dispose: () => {} } as any);
+        sandbox
+            .stub(vscode.workspace, "onDidCloseTextDocument")
+            .returns({ dispose: () => {} } as any);
+        sandbox.stub(vscode.workspace, "onDidDeleteFiles").returns({ dispose: () => {} } as any);
+
+        resolver = new ProblemDiagnosticResolver();
+    });
+
+    teardown(() => {
+        sandbox.restore();
+    });
+
+    test("isSourcekit predicate returns true for non-xcodebuild sources", () => {
+        assert.strictEqual(ProblemDiagnosticResolver.isSourcekit("sourcekit"), true);
+        assert.strictEqual(ProblemDiagnosticResolver.isSourcekit("other"), true);
+        assert.strictEqual(ProblemDiagnosticResolver.isSourcekit("xcodebuild"), false);
+    });
+
+    test("isXcodebuild predicate returns true for xcodebuild source", () => {
+        assert.strictEqual(ProblemDiagnosticResolver.isXcodebuild("xcodebuild"), true);
+        assert.strictEqual(ProblemDiagnosticResolver.isXcodebuild("sourcekit"), false);
+        assert.strictEqual(ProblemDiagnosticResolver.isXcodebuild(""), false);
+    });
+
+    test("handleDiagnostics stores diagnostics correctly", () => {
+        const uri = vscode.Uri.file("/test/file.swift");
+        const diagnostic = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "Test error",
+            vscode.DiagnosticSeverity.Error
+        );
+        diagnostic.source = "sourcekit";
+
+        resolver.handleDiagnostics(uri, ProblemDiagnosticResolver.isSourcekit, [diagnostic]);
+
+        assert.ok((diagnosticCollection.set as sinon.SinonStub).called);
+    });
+
+    test("isDiagnosticFromSwiftMacroError identifies macro errors", () => {
+        const macroError = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "Swift Macro Error: some error",
+            vscode.DiagnosticSeverity.Error
+        );
+        const normalError = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "Normal error",
+            vscode.DiagnosticSeverity.Error
+        );
+
+        assert.strictEqual((resolver as any).isDiagnosticFromSwiftMacroError(macroError), true);
+        assert.strictEqual((resolver as any).isDiagnosticFromSwiftMacroError(normalError), false);
+    });
+
+    test("parseStdout processes build output correctly", () => {
+        const rawParser = new RawBuildParser("/test/build.log");
+        rawParser.stdout = "/test/file.swift:10:5: error: test error\n^\n";
+
+        (resolver as any).parseStdout(rawParser, false, () => true);
+
+        assert.strictEqual(rawParser.triggerCharacter, "^");
+        assert.ok((diagnosticCollection.set as sinon.SinonStub).called);
+    });
+
+    test("parseStdout handles shouldEnd flag", () => {
+        const rawParser = new RawBuildParser("/test/build.log");
+        rawParser.stdout = "/test/file.swift:10:5: error: incomplete";
+
+        (resolver as any).parseStdout(rawParser, true, () => true);
+
+        assert.ok((diagnosticCollection.set as sinon.SinonStub).called);
+    });
+
+    test("parseStdout sets isError flag when errors are present", () => {
+        const rawParser = new RawBuildParser("/test/build.log");
+        rawParser.stdout = "/test/file.swift:10:5: error: test error\n^\n";
+        rawParser.isError = false;
+
+        (resolver as any).parseStdout(rawParser, false, () => true);
+
+        assert.strictEqual(rawParser.isError, true);
+    });
+
+    test("parseStdout does not set isError flag for warnings", () => {
+        const rawParser = new RawBuildParser("/test/build.log");
+        rawParser.stdout = "/test/file.swift:10:5: warning: test warning\n^\n";
+        rawParser.isError = false;
+
+        (resolver as any).parseStdout(rawParser, false, () => true);
+
+        assert.strictEqual(rawParser.isError, false);
+    });
+
+    test("uniqueDiagnostics removes duplicate diagnostics", () => {
+        const diag1 = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "duplicate error",
+            vscode.DiagnosticSeverity.Error
+        );
+        const diag2 = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "duplicate error",
+            vscode.DiagnosticSeverity.Error
+        );
+        const diag3 = new vscode.Diagnostic(
+            new vscode.Range(1, 0, 1, 10),
+            "different error",
+            vscode.DiagnosticSeverity.Error
+        );
+
+        const result = (resolver as any).uniqueDiagnostics([diag1, diag2, diag3], []);
+
+        assert.strictEqual(result.length, 2);
+    });
+
+    test("uniqueDiagnostics filters against existing items", () => {
+        const existing = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "existing error",
+            vscode.DiagnosticSeverity.Error
+        );
+        const duplicate = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 15),
+            "existing error",
+            vscode.DiagnosticSeverity.Error
+        );
+        const newItem = new vscode.Diagnostic(
+            new vscode.Range(1, 0, 1, 10),
+            "new error",
+            vscode.DiagnosticSeverity.Error
+        );
+
+        const result = (resolver as any).uniqueDiagnostics([duplicate, newItem], [existing]);
+
+        assert.strictEqual(result.length, 1);
+        assert.strictEqual(result[0].message, "new error");
+    });
+
+    test("refreshPreviousBuildDiagnostics clears and rebuilds tracking set", () => {
+        const uri1 = vscode.Uri.file("/test/file1.swift");
+        const uri2 = vscode.Uri.file("/test/file2.swift");
+
+        const diag1 = new vscode.Diagnostic(
+            new vscode.Range(0, 0, 0, 10),
+            "error",
+            vscode.DiagnosticSeverity.Error
+        );
+        diag1.source = "xcodebuild";
+
+        (diagnosticCollection.forEach as sinon.SinonStub).callsFake((callback: any) => {
+            callback(uri1, [diag1]);
+            callback(uri2, []);
+        });
+
+        (resolver as any).refreshPreviousBuildDiagnostics();
+
+        assert.ok((diagnosticCollection.forEach as sinon.SinonStub).called);
+        assert.ok((resolver as any).filesWithPreviousBuildDiagnostics.has("/test/file1.swift"));
+        assert.ok(!(resolver as any).filesWithPreviousBuildDiagnostics.has("/test/file2.swift"));
+    });
+});
+
+suite("RawBuildParser Tests", () => {
+    test("RawBuildParser initializes with correct defaults", () => {
+        const parser = new RawBuildParser("/test/build.log");
+
+        assert.strictEqual(parser.firstIndex, 0);
+        assert.strictEqual(parser.triggerCharacter, "^");
+        assert.strictEqual(parser.isError, false);
+        assert.strictEqual(parser.numberOfLines, 0);
+        assert.strictEqual(parser.stdout, "");
+        assert.strictEqual(parser.buildLogFile, "/test/build.log");
+        assert.strictEqual(parser.watcherDisposal, undefined);
     });
 });
