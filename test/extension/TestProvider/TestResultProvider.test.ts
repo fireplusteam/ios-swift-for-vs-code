@@ -295,6 +295,13 @@ suite("TestResultProvider", () => {
             assert.strictEqual(result, undefined);
         });
 
+        test("should not handle >= operators with == int message or string", () => {
+            const rawMessage = 'Expectation failed: 1 >= (b → "Some Test == "): Failed';
+            const result = provider["parseExpectationFailed"](rawMessage, undefined);
+
+            assert.strictEqual(result, undefined);
+        });
+
         test("should not handle Custom Struct 1", () => {
             const rawMessage = `Expectation failed: (c → CustomStruct(a: "Prop_a", op: 10, list: ["First", "Second"])) == (b → CustomStruct(a: "Prop_b", op: 10, list: ["First", "Third", "Second"]))`;
             const result = provider["parseExpectationFailed"](rawMessage, undefined);

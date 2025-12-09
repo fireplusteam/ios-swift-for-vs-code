@@ -228,7 +228,8 @@ export class TestResultProvider {
             }
             let rightRawMessage = rawMessage.substring(leftIndex).trimStart();
             const delimiterIndex = rightRawMessage.indexOf("==");
-            if (delimiterIndex === -1) {
+            // == should be after at most 2 characters
+            if (delimiterIndex === -1 || delimiterIndex >= 3) {
                 return undefined;
             }
             rightRawMessage = rightRawMessage.substring(delimiterIndex + 2).trimStart();
