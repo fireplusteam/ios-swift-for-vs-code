@@ -193,7 +193,7 @@ export class TestProvider {
                 }
             };
             // resolve all tree before start testing
-            await this.findInitialFiles(this.context.ctrl);
+            await this.findInitialFiles();
             await discoverTests(request.include ?? this.gatherTestItems(ctrl.items));
             this.context.atomicCommand
                 .userCommand(async context => {
@@ -215,7 +215,7 @@ export class TestProvider {
         };
 
         ctrl.refreshHandler = async () => {
-            await this.findInitialFiles(ctrl, true);
+            await this.findInitialFiles(true);
         };
 
         ctrl.createRunProfile(
@@ -249,7 +249,7 @@ export class TestProvider {
 
         ctrl.resolveHandler = async item => {
             if (!item) {
-                await this.findInitialFiles(ctrl);
+                await this.findInitialFiles();
                 return;
             }
 
@@ -260,7 +260,7 @@ export class TestProvider {
         };
 
         if (this.loadingState !== TestProviderLoadingState.loaded) {
-            this.findInitialFiles(this.context.ctrl);
+            this.findInitialFiles();
         }
 
         context.subscriptions.push(
@@ -322,7 +322,7 @@ export class TestProvider {
         }
 
         if (this.loadingState !== TestProviderLoadingState.loaded) {
-            await this.findInitialFiles(this.context.ctrl);
+            await this.findInitialFiles();
         }
 
         const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
@@ -353,15 +353,15 @@ export class TestProvider {
 
     initialize() {
         if (this.context.ctrl) {
-            this.findInitialFiles(this.context.ctrl);
+            this.findInitialFiles();
         }
     }
 
-    async findInitialFiles(controller: vscode.TestController, forceUpdate = false) {
+    async findInitialFiles(forceUpdate = false) {
         const release = await this.initialFilesLoadingMutex.acquire();
         try {
             this.loadingState = TestProviderLoadingState.loading;
-            await this.findInitialFilesIml(controller, forceUpdate);
+            await this.findInitialFilesIml(forceUpdate);
             this.loadingState = TestProviderLoadingState.loaded;
         } catch (err) {
             this.loadingState = TestProviderLoadingState.error;
@@ -371,9 +371,9 @@ export class TestProvider {
         }
     }
 
-    async findInitialFilesIml(controller: vscode.TestController, forceUpdate: boolean) {
+    async findInitialFilesIml(forceUpdate: boolean) {
         if (forceUpdate) {
-            controller.items.replace([]);
+            this.context.clear();
         }
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;
@@ -399,7 +399,7 @@ export class TestProvider {
                 }
             );
             if (!data.didResolve || forceUpdate) {
-                await data.updateFromDisk(controller, file);
+                await data.updateFromDisk(this.context.ctrl, file);
             }
             break; // only first target
         }

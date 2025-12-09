@@ -13,6 +13,7 @@ export class TestFile implements TestContainer {
     public didResolve = false;
     context: TestTreeContext;
     private target: string;
+    private fileContent: string | undefined;
 
     constructor(context: TestTreeContext, target: string) {
         this.context = context;
@@ -63,8 +64,11 @@ export class TestFile implements TestContainer {
     public async updateFromDisk(controller: vscode.TestController, item: vscode.TestItem) {
         try {
             const content = await getContentFromFilesystem(item.uri!);
-            item.error = undefined;
-            await this.updateFromContents(controller, content, item);
+            if (content !== this.fileContent) {
+                this.fileContent = content;
+                item.error = undefined;
+                await this.updateFromContents(controller, content, item);
+            }
         } catch (e) {
             item.error = (e as Error).stack;
         }

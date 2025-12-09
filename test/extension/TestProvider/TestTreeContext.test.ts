@@ -184,18 +184,6 @@ suite("TestTreeContext", () => {
                 context.deleteItem("non-existent-id");
             });
         });
-
-        test("should remove data from WeakMap", () => {
-            const uri = vscode.Uri.file("/test.swift");
-            const mockData: TestContainer = {} as TestContainer;
-            const result = context.getOrCreateTest("file://", uri, () => mockData);
-
-            assert.strictEqual(context.testData.get(result.file), mockData);
-
-            context.deleteItem(result.file);
-
-            assert.strictEqual(context.testData.get(result.file), undefined);
-        });
     });
 
     suite("replaceItemsChildren", () => {
@@ -233,23 +221,6 @@ suite("TestTreeContext", () => {
             context.replaceItemsChildren(root.file, []);
 
             assert.strictEqual(root.file.children.size, 0);
-        });
-
-        test("should delete test data for old children", () => {
-            const mockData: TestContainer = {} as TestContainer;
-            const root = context.getOrCreateTest(
-                "file://",
-                vscode.Uri.file("/root.swift"),
-                () => mockData
-            );
-            const oldChild = context.ctrl.createTestItem("old", "Old");
-            const oldData: TestCase = {} as TestCase;
-            context.testData.set(oldChild, oldData);
-            root.file.children.add(oldChild);
-
-            context.replaceItemsChildren(root.file, []);
-
-            assert.strictEqual(context.testData.get(oldChild), undefined);
         });
     });
 

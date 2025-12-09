@@ -46,6 +46,10 @@ export class TestTreeContext {
         const uniqueId = TestTreeContext.TestID(id, uri);
         const existing = this.get(uniqueId, this.ctrl.items);
         if (existing) {
+            if (!this.testData.has(existing)) {
+                const data = provider();
+                this.testData.set(existing, data);
+            }
             return { file: existing, data: this.testData.get(existing) };
         }
 
@@ -125,7 +129,6 @@ export class TestTreeContext {
             tree = id;
         }
         if (tree) {
-            this.testData.delete(tree);
             if (tree.parent) {
                 tree.parent.children.delete(tree.id);
             } else {
