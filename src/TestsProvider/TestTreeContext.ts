@@ -138,13 +138,6 @@ export class TestTreeContext {
     }
 
     public replaceItemsChildren(item: vscode.TestItem, itemsChildren: vscode.TestItem[]) {
-        const children: vscode.TestItem[] = [];
-        for (const child of item.children) {
-            children.push(child[1]);
-        }
-        for (const child of children) {
-            this.deleteItem(child);
-        }
         item.children.replace(itemsChildren);
     }
 
