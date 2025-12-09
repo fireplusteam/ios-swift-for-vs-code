@@ -554,7 +554,7 @@ export async function enableXCBBuildService(enabled: boolean) {
             const isInstallStr = enabled ? "INSTALL" : "DISABLED";
             const password = await vscode.window.showInputBox({
                 ignoreFocusOut: false,
-                prompt: `In order to ${isInstallStr} XCBBuildService, please enter sudo password`,
+                prompt: `In order to ${isInstallStr} XCBBuildService, please enter sudo password. This is required to grant necessary permissions to the service. (You can always disable that feature in extension settings)`,
                 password: true,
             });
             if (password === undefined) {
@@ -565,11 +565,19 @@ export async function enableXCBBuildService(enabled: boolean) {
             const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
             exec(command, error => {
                 if (error) {
-                    if (enabled) {
-                        vscode.window.showErrorMessage(`Failed to install XCBBuildService`);
-                    } else {
-                        vscode.window.showErrorMessage(`Failed to uninstall XCBBuildService`);
+                    let errorMessage = enabled
+                        ? "Failed to install XCBBuildService"
+                        : "Failed to uninstall XCBBuildService";
+                    if (
+                        error
+                            .toString()
+                            .includes("PermissionError: [Errno 1] Operation not permitted:")
+                    ) {
+                        errorMessage += `: Permission denied. Make sure the password is correct and you gave a full disk control to VSCode in System Preferences -> Security & Privacy -> Privacy -> Full Disk Access.`;
+                    } else if (error.toString().includes("Password:Sorry, try again.")) {
+                        errorMessage += `: Wrong password provided.`;
                     }
+                    vscode.window.showErrorMessage(errorMessage);
                 } else {
                     if (enabled) {
                         vscode.window.showInformationMessage(
