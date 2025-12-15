@@ -138,7 +138,7 @@ export class ProjectsCache {
         return files;
     }
 
-    async parseProjectList(files: string[]) {
+    private async parseProjectList(files: string[]) {
         const resPaths = new Set<{ path: string; isFolder: boolean }>();
         for (const file of files) {
             if (file.startsWith("group:/")) {
