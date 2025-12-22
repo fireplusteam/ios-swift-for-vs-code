@@ -16,6 +16,9 @@ pyinstaller --onefile src/XCBBuildServiceProxy/XCBBuildService.py
 npm run compile
 npm run test
 
-vsce package
+# locally package and install the extension
+vsce package --target darwin-arm64 --target darwin-x64
+code --install-extension vscode-ios-darwin-arm64-0.5.17.vsix
 
-code --install-extension vscode-ios-0.5.16.vsix
+# to publish the extension, uncomment the following line
+# vsce publish --target darwin-arm64 darwin-x64

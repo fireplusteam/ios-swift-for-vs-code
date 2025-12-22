@@ -45,12 +45,12 @@
     "recommendation": [
         "connor4312.esbuild-problem-matchers"
     ],
-    "version": "0.5.16",
+    "version": "0.5.17",
     "os": [
         "darwin"
     ],
     "engines": {
-        "vscode": "^1.88.0"
+        "vscode": "^1.99.0"
     },
     "categories": [
         "Debuggers",
@@ -467,7 +467,7 @@
         "eslint-config-prettier": "^9.1.0",
         "npm-run-all": "4.1.5",
         "prettier": "3.3.3",
-        "sinon": "^21.0.0",
+        "sinon": "^21.0.1",
         "typescript": "^5.6.2"
     },
     "dependencies": {
