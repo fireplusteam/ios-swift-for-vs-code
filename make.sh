@@ -21,4 +21,5 @@ vsce package --target darwin-arm64 --target darwin-x64
 code --install-extension vscode-ios-darwin-arm64-0.5.17.vsix
 
 # to publish the extension, uncomment the following line
+# https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
 # vsce publish --target darwin-arm64 darwin-x64
