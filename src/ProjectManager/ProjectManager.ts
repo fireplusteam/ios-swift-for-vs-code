@@ -233,6 +233,8 @@ export class ProjectManager {
                 "swift.sourcekit-lsp.disable": true,
                 "swift.disableSwiftPackageManagerIntegration": true,
                 "swift.searchSubfoldersForPackages": false,
+                "swift.sourcekit-lsp.supported-languages": [],
+                "swift.sourcekit-lsp.backgroundIndexing": "off",
             },
             extensions: {
                 // tell vs code not to recommend it as it interfere with this extension
