@@ -27,10 +27,11 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Features
 
--   Supports iOS/MacOS/WatchOS/VisionOS/TvOS/Package.swift
+-   Supports iOS/MacOS/WatchOS/VisionOS/TvOS
+-   Supports Package.swift via tuist project generation
 -   Swift/Objective-C/C++ autocompletion
 -   Compatibility with CodeLLDB/lldb-dap
--   Debug/Run app on Simulators
+-   Debug/Run app on Simulators (physical device is currently is not supported)
 -   Debug/Run unit/snapshot/UI tests. Support running single/multiple tests for a class/target/set of classes
 -   Support code coverage
 -   Run an application on multiple simulator with a single command
@@ -126,6 +127,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.5.10
+### 0.6.0
 
 It's still under development, so you can face some bugs

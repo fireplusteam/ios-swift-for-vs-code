@@ -27,6 +27,7 @@ import { CommandContext } from "./CommandManagement/CommandContext";
 import { RunManager } from "./Services/RunManager";
 import { BuildManager } from "./Services/BuildManager";
 import { TestPlanIsNotConfigured } from "./Services/ProjectSettingsProvider";
+import { PackageWorkspaceGenerator } from "./ProjectManager/PackageWorkspaceGenerator";
 
 function filterDevices(
     devices: { [name: string]: string }[],
@@ -166,7 +167,11 @@ export async function generateXcodeWorkspaceForPackage(
     commandContext: CommandContext,
     packageSwiftPath: string
 ) {
-    const folder = packageSwiftPath.split(path.sep).slice(0, -1).join(path.sep);
+    const workspaceGenerator = new PackageWorkspaceGenerator();
+    workspaceGenerator.generateDummyWorkspaceSwiftFile(packageSwiftPath);
+    const workspaceFilePath = workspaceGenerator.workspaceDummyFile;
+
+    const folder = workspaceFilePath.split(path.sep).slice(0, -1).join(path.sep);
     await commandContext.execShellWithOptions({
         scriptOrCommand: {
             command: `tuist install`,
