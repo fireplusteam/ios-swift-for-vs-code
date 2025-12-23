@@ -70,19 +70,6 @@ export class ProjectManager {
     }
 
     async listTargetsForFile(file: string, project: string | undefined = undefined) {
-        const schemeType = getProjectType(await getProjectFileName());
-        if (schemeType === "-package") {
-            return await new Promise<string[]>(resolve => {
-                const pathParts = file.split(path.sep);
-                for (let i = pathParts.length - 1; i >= 0; --i) {
-                    if (pathParts[i] === "Sources" || pathParts[i] === "Tests") {
-                        resolve([pathParts[i + 1]]);
-                        return;
-                    }
-                }
-                resolve([]);
-            });
-        }
         const projects = project === undefined ? this.projectCache.getProjects() : [project];
         for (const project of projects) {
             if (this.projectCache.getList(project).has(file)) {
@@ -477,25 +464,13 @@ export class ProjectManager {
     }
 
     async getProjectTargets() {
-        const schemeType = getProjectType(await getProjectFileName());
-        if (schemeType === "-package") {
-            return await getTargets(await getProjectFileName(), getWorkspacePath());
-        } else {
-            for (const proj of await this.getProjects()) {
-                return await getProjectTargets(getFilePathInWorkspace(proj));
-            }
-            return [];
+        for (const proj of await this.getProjects()) {
+            return await getProjectTargets(getFilePathInWorkspace(proj));
         }
+        return [];
     }
 
     async getFilesForTarget(targetName: string) {
-        const schemeType = getProjectType(await getProjectFileName());
-        if (schemeType === "-package") {
-            const path = targetName.endsWith("Tests") ? "Tests" : `Sources`;
-            return (await vscode.workspace.findFiles(`${path}/${targetName}/**/*.swift`)).map(e => {
-                return e.fsPath;
-            });
-        }
         for (const proj of await this.getProjects()) {
             return await listFilesFromTarget(getFilePathInWorkspace(proj), targetName);
         }
@@ -899,47 +874,4 @@ async function listTargetsForFile(projectFile: string, file: string) {
 
 async function saveProject(projectFile: string) {
     return await executeRuby(projectFile, "save");
-}
-
-/// helpers using xcodebuild as Package
-
-function getProjectType(projectFile: string): string {
-    if (projectFile.includes(".xcodeproj")) {
-        return "-project";
-    }
-    if (projectFile.includes("Package.swift")) {
-        return "-package";
-    }
-    return "-workspace";
-}
-
-async function getTargets(projectFile: string, cwd: string) {
-    const command = ["xcodebuild", "-list"];
-    const schemeType = getProjectType(projectFile);
-    if (schemeType !== "-package") {
-        command.push(schemeType);
-        command.push(projectFile);
-    }
-
-    return new Promise<string[]>((resolve, reject) => {
-        exec(command.join(" "), { encoding: "utf-8", cwd: cwd }, (error, stdout) => {
-            if (error !== null) {
-                reject(error);
-                return;
-            }
-            const schemes: string[] = [];
-            let isTail = false;
-
-            for (const x of stdout.split("\n")) {
-                if (isTail && x.trim().length > 0) {
-                    schemes.push(x.trim());
-                }
-
-                if (x.includes("Schemes:")) {
-                    isTail = true;
-                }
-            }
-            resolve(schemes);
-        });
-    });
 }

@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.6.0 - 2025-12-23
+
+### Feature
+
+-   Added support of Package.swift via generating the workspace with tuist and and open that workspace with the extension
+
 ## 0.5.14 - 2025-12-08
 
 ### Fixed

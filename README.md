@@ -27,7 +27,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Features
 
--   Supports iOS/MacOS/WatchOS/VisionOS/TvOS
+-   Supports iOS/MacOS/WatchOS/VisionOS/TvOS/Package.swift
 -   Swift/Objective-C/C++ autocompletion
 -   Compatibility with CodeLLDB/lldb-dap
 -   Debug/Run app on Simulators

@@ -57,6 +57,10 @@ export class ToolsManager {
         return await this.isToolInstalled("xcbeautify");
     }
 
+    private async isTuistInstalled() {
+        return await this.isToolInstalled("tuist", "version");
+    }
+
     private async isRubyInstalled() {
         return await this.isToolInstalled("ruby", "-v");
     }
@@ -93,6 +97,10 @@ export class ToolsManager {
 
         if (!(await this.isXcbeautifyInstalled())) {
             await this.installTool("xcbeautify");
+        }
+
+        if (!(await this.isTuistInstalled())) {
+            await this.installTool("tuist");
         }
 
         if (!(await this.isRubyInstalled())) {
@@ -145,6 +153,7 @@ export class ToolsManager {
         if (
             !(await this.isHomebrewInstalled()) ||
             !(await this.isXcbeautifyInstalled()) ||
+            !(await this.isTuistInstalled()) ||
             !(await this.isRubyInstalled()) ||
             !(await this.isGemInstalled("xcodeproj")) ||
             !(await this.isLLDBStubExeCompiled())

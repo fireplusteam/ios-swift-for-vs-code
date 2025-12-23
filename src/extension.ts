@@ -15,6 +15,7 @@ import {
     checkWorkspace,
     enableXCBBuildService,
     generateXcodeServer,
+    generateXcodeWorkspaceForPackage,
     ksdiff,
     openFile,
     openXCode,
@@ -455,6 +456,26 @@ export async function activate(context: vscode.ExtensionContext) {
                 vscode.window.showErrorMessage("Project was not reloaded due to error");
             }
         })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            "vscode-ios.project.package.generate.workspace",
+            async () => {
+                atomicCommand.userCommand(async context => {
+                    let swiftPackageFile = await context.projectEnv.swiftPackageFile;
+                    if (swiftPackageFile === undefined || swiftPackageFile === "") {
+                        vscode.window.showErrorMessage(
+                            "Current project is not a Swift Package Manager project. Use 'Xcode: Select Project/Workspace/Package' command to select a Swift Package."
+                        );
+                        return;
+                    }
+                    swiftPackageFile = getFilePathInWorkspace(swiftPackageFile);
+                    await generateXcodeWorkspaceForPackage(context, swiftPackageFile);
+                    context.projectEnv.swiftPackageProjectFileGenerated = true;
+                }, "Generate Xcode Workspace for Swift Package");
+            }
+        )
     );
 
     context.subscriptions.push(

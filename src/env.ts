@@ -53,6 +53,7 @@ export interface DeviceID {
 
 export interface ProjectEnvInterface {
     projectFile: Promise<string>;
+    swiftPackageFile: Promise<string | undefined>;
     projectScheme: Promise<string>;
     projectConfiguration: Promise<string>;
     projectTestPlan: Promise<string>;
@@ -64,10 +65,11 @@ export interface ProjectEnvInterface {
     productName: Promise<string>;
 
     firstLaunchedConfigured: boolean;
+    swiftPackageProjectFileGenerated: boolean;
 }
 
 export interface SetProjectEnvInterface {
-    setProjectFile(file: string): Promise<void>;
+    setProjectFile(projectPath: string, swiftPackagePath: string | undefined): Promise<void>;
     setProjectScheme(scheme: string): Promise<void>;
     setProjectConfiguration(configuration: string): Promise<void>;
     setProjectTestPlan(testPlan: string): Promise<void>;
@@ -77,6 +79,7 @@ export interface SetProjectEnvInterface {
 
 // at this point, project file can be changed only at the start of extension, so it's safe to check it only once
 let globalFirstLaunchedConfigured = false;
+let swiftPackageProjectGenerated = false;
 
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
@@ -105,6 +108,10 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
             }
             return projectFile;
         });
+    }
+
+    get swiftPackageFile(): Promise<string | undefined> {
+        return Promise.resolve(getSwiftPackageFileName());
     }
 
     get projectScheme(): Promise<string> {
@@ -152,8 +159,20 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         globalFirstLaunchedConfigured = val;
     }
 
-    async setProjectFile(file: string): Promise<void> {
-        saveKeyToEnvList(this.configuration, "PROJECT_FILE", file);
+    get swiftPackageProjectFileGenerated(): boolean {
+        return swiftPackageProjectGenerated;
+    }
+    set swiftPackageProjectFileGenerated(val: boolean) {
+        swiftPackageProjectGenerated = val;
+    }
+
+    async setProjectFile(projectPath: string, swiftPackagePath: string | undefined): Promise<void> {
+        saveKeyToEnvList(this.configuration, "PROJECT_FILE", projectPath);
+        saveKeyToEnvList(
+            this.configuration,
+            "SWIFT_PACKAGE_FILE",
+            swiftPackagePath === undefined ? "" : swiftPackagePath
+        );
         this.notifyDidChange();
     }
     async setProjectScheme(scheme: string): Promise<void> {
@@ -238,10 +257,17 @@ function getEnvFilePath() {
     return path.join(getVSCodePath(), "xcode", "projectConfiguration.json");
 }
 
-export async function updateProject(projectEvn: ProjectEnv, projectPath: string) {
-    const relative = path.relative(getWorkspacePath(), projectPath);
+export async function updateProject(
+    projectEvn: ProjectEnv,
+    projectPath: string,
+    swiftPackagePath: string | undefined
+) {
+    const relativeProjectPath = path.relative(getWorkspacePath(), projectPath);
+    const relativeSwiftPackagePath = swiftPackagePath
+        ? path.relative(getWorkspacePath(), swiftPackagePath)
+        : undefined;
     fs.mkdirSync(getVSCodePath(), { recursive: true });
-    await projectEvn.setProjectFile(relative);
+    await projectEvn.setProjectFile(relativeProjectPath, relativeSwiftPackagePath);
 }
 
 export function getScriptPath(script: string | undefined = undefined) {
@@ -260,6 +286,15 @@ export async function getProjectFileName() {
     const val = configuration.PROJECT_FILE;
     if (val === undefined) {
         throw ProjectFileMissedError;
+    }
+    return val;
+}
+
+export async function getSwiftPackageFileName() {
+    const configuration = getEnvList();
+    const val = configuration.SWIFT_PACKAGE_FILE;
+    if (val === undefined || val === "") {
+        return undefined;
     }
     return val;
 }
@@ -458,8 +493,6 @@ async function getTargetExecutable(
     build_configuration: string
 ) {
     try {
-        // if get_project_type(list["PROJECT_FILE"]) == "-package":
-        //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
         return `${await getBuildDir(deviceID, build_configuration)}/${product_name}.app`;
     } catch {
         throw AppTargetExecutableMissedError;
@@ -473,8 +506,6 @@ export async function getProductDir() {
 
 async function getBuildDir(deviceID: DeviceID, build_configuration: string) {
     try {
-        // if get_project_type(list["PROJECT_FILE"]) == "-package":
-        //     return "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/xctest"
         const build_path = await getBuildRootPath();
         switch (deviceID.platform) {
             case "macOS":

@@ -11,6 +11,7 @@ import {
     getFilePathInWorkspace,
     getLSPWorkspacePath,
     getProjectPath,
+    getProjectType,
     getScriptPath,
     getWorkspacePath,
     getXCBBuildServicePath,
@@ -18,7 +19,7 @@ import {
     isBuildServerValid,
     updateProject,
 } from "./env";
-import { Executor } from "./Executor";
+import { Executor, ExecutorMode } from "./Executor";
 import { handleValidationErrors } from "./extension";
 import { QuickPickItem, showPicker } from "./inputPicker";
 import { CustomError, emptyAppLog, isFolder } from "./utils";
@@ -73,9 +74,9 @@ export async function selectProjectFile(
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
     const projectEnd = ".xcodeproj/project.pbxproj";
     const excludeEnd = ".xcodeproj/project.xcworkspace";
-    // const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
+    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
     // at the moment doesn't support Package.swift as this one can be used via official swift extension
-    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd}}`;
+    // const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd}}`;
     const files = await glob(include, {
         absolute: true,
         cwd: getWorkspacePath(),
@@ -136,7 +137,7 @@ export async function selectProjectFile(
         }
     }
 
-    const selection = await showPicker(
+    const selection: string | undefined = await showPicker(
         options,
         "Select Project File",
         "Please select your project file",
@@ -147,10 +148,38 @@ export async function selectProjectFile(
     if (selection === undefined || selection === "") {
         return false;
     }
-    await updateProject(commandContext.projectEnv, selection);
+    let projectPath = selection;
+    let swiftPackagePath: string | undefined = undefined;
+    if (getProjectType(selection) === "-package") {
+        // convert Swift Package to Xcode Workspace with tuist tool support
+        swiftPackagePath = selection;
+        projectPath = await generateXcodeWorkspaceForPackage(commandContext, selection);
+        commandContext.projectEnv.swiftPackageProjectFileGenerated = true;
+    }
+    await updateProject(commandContext.projectEnv, projectPath, swiftPackagePath);
     await projectManager.loadProjectFiles(true);
     await checkWorkspace(commandContext, true);
     return true;
+}
+
+export async function generateXcodeWorkspaceForPackage(
+    commandContext: CommandContext,
+    packageSwiftPath: string
+) {
+    const folder = packageSwiftPath.split(path.sep).slice(0, -1).join(path.sep);
+    await commandContext.execShellWithOptions({
+        scriptOrCommand: {
+            command: `tuist install`,
+            labelInTerminal: `Installing Tuist dependencies for Swift Package: ${packageSwiftPath}`,
+        },
+        mode: ExecutorMode.verbose,
+        cwd: folder,
+    });
+    await commandContext.execShell("tuist", {
+        command: `tuist generate --path "${folder}" --no-open`,
+        labelInTerminal: `Generating Xcode Workspace for Swift Package: ${packageSwiftPath}`,
+    });
+    return path.join(folder, "Workspace.xcworkspace");
 }
 
 export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false) {
@@ -385,11 +414,19 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             }
         }
 
-        if ((await isBuildServerValid()) === false) {
-            await generateXcodeServer(commandContext, false);
+        if (commandContext.projectEnv.swiftPackageProjectFileGenerated === false) {
+            let swiftPackageFile = await commandContext.projectEnv.swiftPackageFile;
+            if (swiftPackageFile !== undefined && swiftPackageFile !== "") {
+                swiftPackageFile = getFilePathInWorkspace(swiftPackageFile);
+                await generateXcodeWorkspaceForPackage(commandContext, swiftPackageFile);
+                commandContext.projectEnv.swiftPackageProjectFileGenerated = true;
+            }
         }
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
             await updatePackageDependencies(commandContext, false);
+        }
+        if ((await isBuildServerValid()) === false) {
+            await generateXcodeServer(commandContext, false);
         }
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {

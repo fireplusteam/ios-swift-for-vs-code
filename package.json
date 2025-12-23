@@ -40,12 +40,13 @@
         "develop",
         "run",
         "test",
-        "coverage"
+        "coverage",
+        "package"
     ],
     "recommendation": [
         "connor4312.esbuild-problem-matchers"
     ],
-    "version": "0.5.17",
+    "version": "0.6.0",
     "os": [
         "darwin"
     ],
@@ -61,6 +62,7 @@
     "activationEvents": [
         "workspaceContains:**/*.xcworkspace/contents.xcworkspacedata",
         "workspaceContains:**/*.xcodeproj/project.pbxproj",
+        "workspaceContains:**/Package.swift",
         "onDebugResolve:xcode-lldb"
     ],
     "main": "./dist/extension.js",
@@ -231,7 +233,7 @@
             },
             {
                 "command": "vscode-ios.project.select",
-                "title": "Xcode: Select Project/Workspace"
+                "title": "Xcode: Select Project/Workspace/Package"
             },
             {
                 "command": "vscode-ios.project.selectTarget",
@@ -299,6 +301,10 @@
             {
                 "command": "vscode-ios.project.file.edit.targets",
                 "title": "Xcode: Edit File Targets"
+            },
+            {
+                "command": "vscode-ios.project.package.generate.workspace",
+                "title": "Xcode: Update/Generate Xcode Workspace for Selected Swift Package"
             },
             {
                 "command": "vscode-ios.run.project.reload",

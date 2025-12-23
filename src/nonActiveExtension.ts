@@ -147,6 +147,12 @@ export function activateNotActiveExtension(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand(
+            "vscode-ios.project.package.generate.workspace",
+            showErrorOnPerformingExtensionCommand
+        )
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
             "vscode-ios.run.project.update.deps",
             showErrorOnPerformingExtensionCommand
         )

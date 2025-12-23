@@ -69,9 +69,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
             "-skipPackageUpdates",
         ];
         const projectType = await projectEnv.projectType;
-        if (projectType !== "-package") {
-            args.push(projectType, await projectEnv.projectFile);
-        }
+        args.push(projectType, await projectEnv.projectFile);
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
@@ -213,9 +211,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
 
     private async fetchXcodeList(projectFile: string) {
         const args = ["-list", "-json"];
-        if (getProjectType(projectFile) !== "-package") {
-            args.push(getProjectType(projectFile), projectFile);
-        }
+        args.push(getProjectType(projectFile), projectFile);
         const result = await this._context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
