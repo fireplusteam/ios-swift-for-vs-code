@@ -65,10 +65,16 @@ Use the following guide to install them manually if any it doesn't work for you:
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     ```
 
--   **xcbeautify** tool to prettify the building log output and :
+-   **xcbeautify** tool to prettify the building log output:
 
     ```bash
     brew install xcbeautify
+    ```
+
+-   **tuist** tool to generate Xcode workspace for Package.swift:
+
+    ```bash
+    brew install tuist
     ```
 
 -   **xcodeproj** gem library to make possible to add/delete/rename files in your Xcode project directly from vs code.
