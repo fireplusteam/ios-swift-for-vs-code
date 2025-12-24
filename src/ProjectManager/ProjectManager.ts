@@ -11,7 +11,6 @@ import {
     isActivated,
 } from "../env";
 import * as parser from "fast-xml-parser";
-import { exec } from "child_process";
 import * as path from "path";
 import { fileNameFromPath, isFileMoved, isFolder } from "../utils";
 import { ProjectTree } from "./ProjectTree";
