@@ -120,20 +120,50 @@ export class ToolsManager {
         this.terminal.show();
         try {
             await this.installTools();
-            await this.terminal.executeCommand("brew update");
-            await this.terminal.executeCommand("brew upgrade xcbeautify");
-            await this.terminal.executeCommand("brew upgrade tuist");
+            let firstError = null;
+            try {
+                await this.terminal.executeCommand("brew update");
+            } catch (error) {
+                const message = `Failed to update Homebrew: ${error}`;
+                this.log.appendLine(message);
+                firstError = message;
+            }
+            try {
+                await this.terminal.executeCommand("brew upgrade xcbeautify");
+            } catch (error) {
+                const message = `Failed to upgrade xcbeautify: ${error}`;
+                this.log.appendLine(message);
+                firstError = firstError === null ? message : `${firstError};\n${message}`;
+            }
+            try {
+                await this.terminal.executeCommand("brew upgrade tuist");
+            } catch (error) {
+                const message = `Failed to upgrade tuist: ${error}`;
+                this.log.appendLine(message);
+                firstError = firstError === null ? message : `${firstError};\n${message}`;
+            }
             try {
                 // ruby upgrade might fail on some systems due to local environment so, don't block the flow
                 await this.terminal.executeCommand("brew upgrade ruby");
-            } catch {
-                this.log.appendLine("Ruby was not updated, update it manually");
+            } catch (error) {
+                const message = `Failed to upgrade ruby: ${error}`;
+                this.log.appendLine(message);
+                firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
-            await this.terminal.executeCommand("gem install xcodeproj");
+            try {
+                await this.terminal.executeCommand("gem install xcodeproj");
+            } catch (error) {
+                const message = `Failed to install xcodeproj gem: ${error}`;
+                this.log.appendLine(message);
+                firstError = firstError === null ? message : `${firstError};\n${message}`;
+            }
+            if (firstError !== null) {
+                throw firstError;
+            }
         } catch (error) {
             this.log.appendLine(`Dependencies were not updated, error: ${error}`);
             vscode.window.showErrorMessage(
-                "Dependencies were not updated. Try again or do it manually"
+                `Dependencies were not updated. Try again or do it manually.\n Errors: ${error}`
             );
             throw error;
         }
