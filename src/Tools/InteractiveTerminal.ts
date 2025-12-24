@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { sleep } from "../extension";
 
 export class InteractiveTerminal {
     private terminal: vscode.Terminal;
@@ -44,28 +45,38 @@ export class InteractiveTerminal {
                 const command = (await this.shellIntegration()).executeCommand(installScript);
                 let dispose: vscode.Disposable | undefined = undefined;
                 const localTerminal = this.terminal;
+                let closeDisposal: vscode.Disposable | undefined;
                 dispose = vscode.window.onDidEndTerminalShellExecution(async event => {
+                    await sleep(100); // wait for read to be ready
                     if (command === event.execution) {
-                        for await (const data of event.execution.read()) {
-                            this.log.append(data);
+                        try {
+                            for await (const data of event.execution.read()) {
+                                this.log.append(data);
+                            }
+                            if (event.exitCode === 0) {
+                                this.log.appendLine("Successfully installed");
+                                resolver();
+                            } else {
+                                this.log.appendLine(`Is not installed, error: ${event.exitCode}`);
+                                reject(event.exitCode);
+                            }
+                        } catch (err) {
+                            reject(err);
+                        } finally {
+                            dispose?.dispose();
+                            dispose = undefined;
+                            closeDisposal?.dispose();
+                            closeDisposal = undefined;
                         }
-                        if (event.exitCode === 0) {
-                            this.log.appendLine("Successfully installed");
-                            resolver();
-                        } else {
-                            this.log.appendLine(`Is not installed, error: ${event.exitCode}`);
-                            reject(event.exitCode);
-                        }
-                        dispose?.dispose();
-                        dispose = undefined;
                     }
                 });
-                let closeDisposal: vscode.Disposable | undefined;
                 closeDisposal = vscode.window.onDidCloseTerminal(event => {
                     if (event === localTerminal) {
                         this.log.appendLine(`Terminal is Closed`);
                         closeDisposal?.dispose();
                         closeDisposal = undefined;
+                        dispose?.dispose();
+                        dispose = undefined;
                         reject(Error("Terminal is closed"));
                     }
                 });

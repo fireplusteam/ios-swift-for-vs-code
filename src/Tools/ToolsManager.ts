@@ -122,7 +122,13 @@ export class ToolsManager {
             await this.installTools();
             await this.terminal.executeCommand("brew update");
             await this.terminal.executeCommand("brew upgrade xcbeautify");
-            await this.terminal.executeCommand("brew upgrade ruby");
+            await this.terminal.executeCommand("brew upgrade tuist");
+            try {
+                // ruby upgrade might fail on some systems due to local environment so, don't block the flow
+                await this.terminal.executeCommand("brew upgrade ruby");
+            } catch {
+                this.log.appendLine("Ruby was not updated, update it manually");
+            }
             await this.terminal.executeCommand("gem install xcodeproj");
         } catch (error) {
             this.log.appendLine(`Dependencies were not updated, error: ${error}`);
