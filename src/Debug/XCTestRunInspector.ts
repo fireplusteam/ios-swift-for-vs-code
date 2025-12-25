@@ -115,7 +115,6 @@ export class XCTestRunInspector {
                 configurations = [{ TestTargets: testTargets }];
             }
             for (const config of configurations) {
-                console.log(config);
                 for (const testTarget of config.TestTargets) {
                     const hostPath = testTarget.TestHostPath.replace(
                         "__TESTROOT__/",

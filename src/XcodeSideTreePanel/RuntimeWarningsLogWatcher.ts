@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as vscode from "vscode";
 import { createFifo } from "../utils";
 import { getWorkspacePath } from "../env";
 import * as path from "path";
@@ -7,7 +8,6 @@ import {
     RuntimeWarningStackNode,
     RuntimeWarningsDataProvider,
 } from "./RuntimeWarningsDataProvider";
-import { error } from "console";
 import { createInterface, Interface } from "readline";
 
 export class RuntimeWarningsLogWatcher {
@@ -18,20 +18,22 @@ export class RuntimeWarningsLogWatcher {
     private stream?: fs.ReadStream;
 
     private cachedContent: string = "";
+    private log: vscode.OutputChannel;
 
     static get logPath(): string {
         return path.join(getWorkspacePath(), RuntimeWarningsLogWatcher.LogPath);
     }
 
-    constructor(panel: RuntimeWarningsDataProvider) {
+    constructor(panel: RuntimeWarningsDataProvider, log: vscode.OutputChannel) {
         this.panel = panel;
+        this.log = log;
     }
 
     public async startWatcher() {
         try {
             // await deleteFifo(RuntimeWarningsLogWatcher.logPath);
         } catch (error) {
-            console.log(`Error deleting fifo file: ${error}`);
+            this.log.appendLine(`Error deleting fifo file: ${error}`);
         }
         await createFifo(RuntimeWarningsLogWatcher.logPath);
         try {
@@ -58,7 +60,7 @@ export class RuntimeWarningsLogWatcher {
                 this.readContent(line);
             }
         } catch (error) {
-            console.log(`FIFO file for warnings log got error: ${error}`);
+            this.log.appendLine(`FIFO file for warnings log got error: ${error}`);
         }
     }
 
@@ -109,8 +111,8 @@ export class RuntimeWarningsLogWatcher {
             }
 
             this.panel.refresh(elements);
-        } catch {
-            console.log(`Error of parsing runtime errors data: ${error}`);
+        } catch (error) {
+            this.log.appendLine(`Error of parsing runtime errors data: ${error}`);
             throw error;
         } finally {
             this.cachedContent = content;

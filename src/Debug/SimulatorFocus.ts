@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { execSync } from "child_process";
 import { DeviceID, ProjectEnv } from "../env";
 import * as path from "path";
@@ -5,8 +6,11 @@ import * as path from "path";
 export class SimulatorFocus {
     private deviceID?: DeviceID;
     private productName?: string;
+    private log: vscode.OutputChannel;
 
-    constructor() {}
+    constructor(log: vscode.OutputChannel) {
+        this.log = log;
+    }
 
     async init(projectEnv: ProjectEnv, processExe: string) {
         this.deviceID = await projectEnv.debugDeviceID;
@@ -31,7 +35,7 @@ export class SimulatorFocus {
                 execSync(`open -a Simulator --args -CurrentDeviceUDID ${this.deviceID.id}`);
             }
         } catch (error) {
-            console.log(`Simulator was not focused. Error: ${error}`);
+            this.log.appendLine(`Simulator was not focused. Error: ${error}`);
         }
     }
 }

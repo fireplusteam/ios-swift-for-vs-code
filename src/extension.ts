@@ -115,7 +115,10 @@ let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
 
 const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
-const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(runtimeWarningsDataProvider);
+const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(
+    runtimeWarningsDataProvider,
+    logChannel
+);
 
 const statusBar = new StatusBar();
 
@@ -506,6 +509,11 @@ export async function handleValidationErrors<T>(
     error: unknown,
     repeatOnChange: () => Promise<T>
 ) {
+    try {
+        commandContext.log.appendLine(`HandleValidationErrors: ${JSON.stringify(error)}`);
+    } catch {
+        /* empty */
+    }
     if (typeof error === "object" && error !== null && "code" in error) {
         switch (error.code) {
             case 65: // scheme is not valid

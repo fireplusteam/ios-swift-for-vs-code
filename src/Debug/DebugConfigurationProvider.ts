@@ -210,12 +210,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                         "code" in error &&
                         error.code === 65
                     ) {
-                        // code 65 means that xcodebuild found failed tests. However we want to continue running all
+                        // code 65 means that xcodebuild found failed tests. However we want to continue running all tests
                         wasErrorThrown = error;
                     } else {
                         throw error;
                     }
-                    console.log(error);
                 }
             }
             if (wasErrorThrown) {

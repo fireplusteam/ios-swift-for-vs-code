@@ -142,7 +142,9 @@ export class RunManager {
                 pipeToDebugConsole: true,
             })
             .catch(async error => {
-                console.warn(`Session ID: ${this.sessionID}, terminated with error: ${error}}`);
+                context.log.appendLine(
+                    `Session ID: ${this.sessionID}, terminated with error: ${error}`
+                );
                 let isHandled = false;
                 if (error instanceof ExecutorTaskError) {
                     if (error.code === 3) {
@@ -182,7 +184,7 @@ export class RunManager {
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
         } catch (error) {
-            console.log("Simulator loaded");
+            context.log.appendLine(`Error on opening simulator: ${error}`);
         }
         // eslint-disable-next-line no-constant-condition
         while (true) {
@@ -237,7 +239,7 @@ export class RunManager {
                 pipeToDebugConsole: true,
             })
             .catch(error => {
-                console.log(`Error in launched app: ${error}`);
+                context.log.appendLine(`Error in launched app: ${error}`);
                 DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
             });
     }

@@ -37,16 +37,18 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillReceiveMessage(_message: any) {}
 
     onWillStopSession() {
-        console.log("Session will stop");
+        this.context.commandContext.log.appendLine("Parent session will stop");
         this.terminateCurrentSession();
     }
 
     onError(error: Error) {
-        console.log("Error:", error);
+        this.context.commandContext.log.appendLine(`Error: ${error}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        console.log(`Parent Exited with code ${code} and signal ${signal}`);
+        this.context.commandContext.log.appendLine(
+            `Parent Exited with code ${code} and signal ${signal}`
+        );
     }
 
     private async terminateCurrentSession() {

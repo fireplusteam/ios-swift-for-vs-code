@@ -141,7 +141,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 ],
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
-            console.log(result.stdout);
+            // this._context.log.appendLine(result.stdout);
             const json = JSON.parse(result.stdout);
             if (json.testPlans === null) {
                 ProjectSettingsProvider.cachedTestPlans = [scheme, []];

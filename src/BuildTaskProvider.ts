@@ -114,7 +114,6 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             // TODO: Implement resolver so a user can add tasks in his Task.json file
             //const definition: BuildTaskDefinition = <any>_task.definition;
             //return this.getTask(definition.flavor, definition.flags ? definition.flags : [], definition);
-            console.log(taskBuild);
         }
         return undefined;
     }

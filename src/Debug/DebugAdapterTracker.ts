@@ -51,7 +51,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
-        this.simulatorInteractor = new SimulatorFocus();
+        this.simulatorInteractor = new SimulatorFocus(this.context.commandContext.log);
     }
 
     private get logPath(): string {
@@ -60,7 +60,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStartSession() {
         this.simulatorInteractor.init(this.context.commandContext.projectEnv, this.processExe);
-        console.log("Session is starting");
+        this.context.commandContext.log.appendLine("Debug session is starting...");
         vscode.debug.activeDebugSession;
         this.disList.push(
             this.context.commandContext.debugConsoleEvent(std => {
@@ -77,7 +77,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
-        // console.log('Sent:', message);
+        // this.context.commandContext.log.appendLine(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
             this.simulatorInteractor.focus();
         }
@@ -107,18 +107,18 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStopSession() {
-        console.log("Session will stop");
+        this.context.commandContext.log.appendLine("Debug session is stopping...");
         if (this.debugSession.configuration.target === "app") {
             this.terminateCurrentSession(true, true);
         }
     }
 
     onError(error: Error) {
-        console.log("Error:", error);
+        this.context.commandContext.log.appendLine(`Error: ${error.message}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        console.log(`Exited with code ${code} and signal ${signal}`);
+        this.context.commandContext.log.appendLine(`Exited with code ${code} and signal ${signal}`);
     }
 
     private async terminateCurrentSession(isCancelled: boolean, isStop: boolean) {

@@ -500,7 +500,7 @@ function parseBuildLog(
             files[file] = value;
         }
     } catch (err) {
-        console.log(`Error parsing xcodebuild build logs: ${err}`);
+        log.appendLine(`Error parsing xcodebuild build logs: ${err}`);
     }
     return files;
 }

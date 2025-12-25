@@ -142,15 +142,6 @@ export class AutocompleteWatcher {
             }
         }
     }
-
-    private async getModuleNameByFileName(path: string) {
-        try {
-            return await this.projectManager.listTargetsForFile(path);
-        } catch (err) {
-            console.log(`Error on determine the file module: ${err}`);
-            return [];
-        }
-    }
 }
 
 function removeAllWhiteSpaces(str: string) {
