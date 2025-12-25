@@ -1,0 +1,31 @@
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:C3BB0146-6E97-45A9-880C-D7CCE4FEBD27, OS:26.0, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:C3BB0146-6E97-45A9-880C-D7CCE4FEBD27, OS:26.0, name:iPhone 17 Pro }
+2025-12-24 15:22:50.939 xcodebuild[33822:4666539] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2025-12-24 15:23:06.643037+0200 target[33899:4667642] [UIKit App Config] `UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+2025-12-24 15:23:11.398839+0200 target[33899:4667642] GSFont: "Denton-Regular" already exists.
+2025-12-24 15:23:11.405416+0200 target[33899:4667642] GSFont: "CGFronhausDIN-Regular" already exists.
+2025-12-24 15:23:11.406123+0200 target[33899:4667642] GSFont: "Denton-Bold" already exists.
+2025-12-24 15:23:11.406778+0200 target[33899:4667642] GSFont: "CGFronhausDIN-CnMediumItalic" already exists.
+2025-12-24 15:23:11.408203+0200 target[33899:4667642] GSFont: "CGFronhausDIN-Medium" already exists.
+2025-12-24 15:23:11.409228+0200 target[33899:4667642] GSFont: "CGFronhausDIN-Bold" already exists.
+2025-12-24 15:23:11.409790+0200 target[33899:4667642] GSFont: "Denton-Medium" already exists.
+2025-12-24 15:23:11.411225+0200 target[33899:4667642] GSFont: "prefFG-CompressedBold" already exists.
+Test Suite 'Selected tests' started at 2025-12-24 15:23:14.703.
+Test Suite 'TargetUnitTests.xctest' started at 2025-12-24 15:23:14.704.
+Test Suite 'TARGResolverTests' started at 2025-12-24 15:23:14.704.
+Test Case '-[TargetUnitTests.TARGResolverTests test_1]' started.
+Test Case '-[TargetUnitTests.TARGResolverTests test_1]' passed (0.001 seconds).
+Test Case '-[TargetUnitTests.TARGResolverTests test_2]' started.
+Test Case '-[TargetUnitTests.TARGResolverTests test_2]' passed (0.001 seconds).
+Test Case '-[TargetUnitTests.TARGResolverTests test_3]' started.
+Test Case '-[TargetUnitTests.TARGResolverTests test_3]' passed (0.002 seconds).
+Test Suite 'TARGResolverTests' passed at 2025-12-24 15:23:14.709.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+Test Suite 'TargetUnitTests.xctest' passed at 2025-12-24 15:23:14.710.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+Test Suite 'Selected tests' passed at 2025-12-24 15:23:14.710.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.004 (0.007) seconds
+2025-12-24 15:23:15.014 xcodebuild[33822:4666539] [MT] IDETestOperationsObserverDebug: 24.071 elapsed -- Testing started completed.
+2025-12-24 15:23:15.014 xcodebuild[33822:4666539] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2025-12-24 15:23:15.014 xcodebuild[33822:4666539] [MT] IDETestOperationsObserverDebug: 24.071 sec, +24.071 sec -- end

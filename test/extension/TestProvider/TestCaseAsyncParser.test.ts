@@ -1,9 +1,28 @@
 import * as assert from "assert";
+import * as fs from "fs";
 import * as vscode from "vscode";
 import {
     TestCaseAsyncParser,
     RawTestParser,
 } from "../../../src/TestsProvider/RawLogParsers/TestCaseAsyncParser";
+import path = require("path");
+
+const cwd = __dirname;
+
+function location(filePath: string) {
+    return path.join(
+        cwd,
+        "..",
+        "..",
+        "..",
+        "..",
+        "test",
+        "extension",
+        "TestProvider",
+        "mocks",
+        filePath
+    );
+}
 
 suite("TestCaseAsyncParser", () => {
     let parser: TestCaseAsyncParser;
@@ -159,6 +178,30 @@ Test Case '-[Target2.Class2 test2]' passed (0.002 seconds).`);
             assert.strictEqual(messages.length, 2);
 
             emitter.dispose();
+        });
+
+        test("parse success real logs", () => {
+            const output = fs.readFileSync(location("xcodebuild_success_tests_logs.txt"), "utf-8");
+            const emitter = new vscode.EventEmitter<string>();
+            const messages: any[] = [];
+
+            const rawParser = parser.parseAsyncLogs(emitter.event, (...args) => {
+                messages.push(args);
+            });
+            output.split(" ").forEach(line => {
+                emitter.fire(line + " ");
+            });
+            parser.end(rawParser);
+            emitter.dispose();
+
+            assert.deepStrictEqual(
+                JSON.stringify(messages),
+                JSON.stringify([
+                    ["passed", "\n", "TargetUnitTests", "TARGResolverTests", "test_1", 0.001],
+                    ["passed", "\n", "TargetUnitTests", "TARGResolverTests", "test_2", 0.001],
+                    ["passed", "\n", "TargetUnitTests", "TARGResolverTests", "test_3", 0.002],
+                ])
+            );
         });
 
         test("should handle test case with multiline error output", () => {

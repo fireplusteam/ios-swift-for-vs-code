@@ -46,7 +46,7 @@
     "recommendation": [
         "connor4312.esbuild-problem-matchers"
     ],
-    "version": "0.6.1",
+    "version": "0.6.2",
     "os": [
         "darwin"
     ],

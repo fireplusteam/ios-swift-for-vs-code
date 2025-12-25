@@ -172,6 +172,13 @@ export class ToolsManager {
     public async resolveThirdPartyTools(askUserToInstallDeps: boolean = false) {
         this.log.appendLine("Resolving Third Party Dependencies");
 
+        const hostPlatform = process.platform;
+        if (hostPlatform !== "darwin") {
+            throw Error(
+                `Xcode iOS Swift IDE extension only works on macOS, current platform is ${hostPlatform}. This extension depends on Xcode which is available only on macOS`
+            );
+        }
+
         try {
             await XCRunHelper.checkIfXCodeInstalled();
         } catch (error) {
