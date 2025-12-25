@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.6.3 - 2025-12-31
+
+### Fixed
+
+-   Improved logging system to simplify the identification of issues in a production build
+
 ## 0.6.2 - 2025-12-25
 
 ### Fixed

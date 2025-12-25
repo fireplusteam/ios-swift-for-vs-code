@@ -6,7 +6,8 @@ suite("TestCaseProblemParser", () => {
     let parser: TestCaseProblemParser;
 
     setup(() => {
-        parser = new TestCaseProblemParser();
+        const log = vscode.window.createOutputChannel("TestCaseProblemParserTest");
+        parser = new TestCaseProblemParser(log);
     });
 
     suite("parseAsyncLogs", () => {

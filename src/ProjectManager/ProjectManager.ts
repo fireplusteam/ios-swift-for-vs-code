@@ -31,11 +31,11 @@ export class ProjectManager {
     onProjectLoaded = new vscode.EventEmitter<void>();
     onUpdateDeps: (() => Promise<void>) | undefined;
 
-    constructor() {
+    constructor(private readonly log: vscode.OutputChannel) {
         this.disposable.push(
             vscode.workspace.onDidCreateFiles(async e => {
                 this.addAFileToXcodeProject([...e.files]);
-                console.log("Create a new file");
+                this.log.appendLine("Created a new files");
             })
         );
 
@@ -49,14 +49,14 @@ export class ProjectManager {
                         return f.newUri;
                     })
                 );
-                console.log("Renamed");
+                this.log.appendLine("Renamed");
             })
         );
 
         this.disposable.push(
             vscode.workspace.onDidDeleteFiles(e => {
                 this.deleteFileFromXcodeProject([...e.files]);
-                console.log("Deleted");
+                this.log.appendLine("Deleted");
             })
         );
         this.disposable.push(
@@ -98,7 +98,7 @@ export class ProjectManager {
             try {
                 await this.projectCache.preloadCacheFromFile(await this.xCodeCachePath());
             } catch (err) {
-                console.log(`Project files cache is broken ${err}`);
+                this.log.appendLine(`Project files cache is broken ${err}`);
             }
         }
 
@@ -117,7 +117,7 @@ export class ProjectManager {
                         await this.projectCache.update(project);
                         await this.readAllProjects(this.projectCache.getList(project));
                     } catch (error) {
-                        console.log(`Failed to load project ${project}: ${error}`);
+                        this.log.appendLine(`Failed to load project ${project}: ${error}`);
                         wasLoadedWithError.push(fileNameFromPath(project));
                     }
                 }
@@ -199,7 +199,7 @@ export class ProjectManager {
                             projectTree.addExcluded(file);
                         }
                     } catch (err) {
-                        console.log(`Glob pattern is configured wrong: ${err}`);
+                        this.log.appendLine(`Glob pattern is configured wrong: ${err}`);
                     }
                 }
             }
@@ -286,7 +286,7 @@ export class ProjectManager {
 
             return resFiles;
         } catch (err) {
-            console.log(err);
+            this.log.appendLine(String(err));
             return new Set<string>();
         }
     }
@@ -295,7 +295,7 @@ export class ProjectManager {
         const json = JSON.stringify(workspace, null, 4);
         return new Promise<void>(async (resolve, reject) => {
             fs.writeFile(await this.xCodeWorkspacePath(), json, async e => {
-                console.log(e);
+                this.log.appendLine(String(e));
                 try {
                     if (e === null) {
                         if (
@@ -401,7 +401,7 @@ export class ProjectManager {
                             }
                         }
                     } catch (err) {
-                        console.log(err);
+                        this.log.appendLine(String(err));
                     }
                 }
             }
@@ -450,7 +450,7 @@ export class ProjectManager {
                             );
                         }
                     } catch (err) {
-                        console.log(err);
+                        this.log.appendLine(String(err));
                     }
                 }
             }
@@ -722,7 +722,7 @@ export class ProjectManager {
                     }
                 }
             } catch (err) {
-                console.log(`Failed to update project cache for ${project}: ${err}`);
+                this.log.appendLine(`Failed to update project cache for ${project}: ${err}`);
             }
         }
         return [...bestFitProject];
@@ -757,7 +757,6 @@ export async function getProjectFiles(project: string) {
         };
         const xml = new parser.XMLParser(options);
         const jsonObj = xml.parse(xmlData);
-        console.log(jsonObj);
         const project_files: string[] = [];
 
         // eslint-disable-next-line no-inner-declarations, @typescript-eslint/no-explicit-any

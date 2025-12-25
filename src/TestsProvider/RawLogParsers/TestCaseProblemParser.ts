@@ -6,6 +6,8 @@ const problemPattern =
 const diffPattern = /(XCTAssertEqual|XCTAssertNotEqual)\sfailed:\s\((.*?)\).*?\((.*?)\)/m;
 
 export class TestCaseProblemParser {
+    constructor(private readonly log: vscode.OutputChannel) {}
+
     async parseAsyncLogs(testCase: string, testItem: vscode.TestItem) {
         if (testItem.uri) {
             const problems =
@@ -78,7 +80,7 @@ export class TestCaseProblemParser {
                 }
             }
         } catch (err) {
-            console.log(`TestCase parser error: ${err}`);
+            this.log.appendLine(`TestCase parser error: ${err}`);
         }
         return files;
     }

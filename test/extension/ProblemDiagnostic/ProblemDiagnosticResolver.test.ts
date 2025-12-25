@@ -26,21 +26,30 @@ function location(filePath: string) {
 }
 
 suite("Problem Diagnostic Resolver: Parser", () => {
+    let log: vscode.OutputChannel;
+    setup(() => {
+        log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+    });
+
+    teardown(() => {
+        log.dispose();
+    });
+
     test("Test 1: Empty", () => {
         const output = fs.readFileSync(location("build_log_empty.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        const result = _private.parseBuildLog("build.log", output, 0, log, () => true);
         assert.deepStrictEqual(result, {});
     });
 
     test("Test 2: Success", () => {
         const output = fs.readFileSync(location("build_log_success.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        const result = _private.parseBuildLog("build.log", output, 0, log, () => true);
         assert.deepStrictEqual(result, {});
     });
 
     test("Test 3: Errors", () => {
         const output = fs.readFileSync(location("build_log_with_errors.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        const result = _private.parseBuildLog("build.log", output, 0, log, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({
@@ -70,7 +79,7 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 
     test("Test 4: Errors", () => {
         const output = fs.readFileSync(location("build_log_with_linker_errors.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        const result = _private.parseBuildLog("build.log", output, 0, log, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({
@@ -100,7 +109,7 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 
     test("Test 5: Macro Errors", () => {
         const output = fs.readFileSync(location("build_log_with_macro_errors.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        const result = _private.parseBuildLog("build.log", output, 0, log, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({
@@ -207,7 +216,7 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 
     test("Test 6: Success With Warnings", () => {
         const output = fs.readFileSync(location("build_log_success_with_warnings.txt")).toString();
-        const result = _private.parseBuildLog("build.log", output, 0, () => true);
+        const result = _private.parseBuildLog("build.log", output, 0, log, () => true);
         assert.deepStrictEqual(
             JSON.stringify(result),
             JSON.stringify({
@@ -435,13 +444,21 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
     test("Test: isFilePathLine", () => {
         const buildLogInput = fs.readFileSync(location("xcodebuild_building_result.json"), "utf-8");
-        const problems = _private.parseSwiftMacrosInXcodeBuildLogs(buildLogInput, filepath => {
-            assert.strictEqual(
-                filepath,
-                "/private/var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_3PLP7PLPCard7ReducerfMe_.swift"
-            );
-            return fs.readFileSync(location("@__swiftmacro_3PLP7Card7ReducerfMe_.swift"), "utf-8");
-        });
+        const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        const problems = _private.parseSwiftMacrosInXcodeBuildLogs(
+            buildLogInput,
+            filepath => {
+                assert.strictEqual(
+                    filepath,
+                    "/private/var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_3PLP7PLPCard7ReducerfMe_.swift"
+                );
+                return fs.readFileSync(
+                    location("@__swiftmacro_3PLP7Card7ReducerfMe_.swift"),
+                    "utf-8"
+                );
+            },
+            log
+        );
         console.log(JSON.stringify(problems, null));
         assert.deepStrictEqual(
             JSON.stringify(problems),
@@ -489,7 +506,8 @@ suite("ProblemDiagnosticResolver Class Tests", () => {
             .returns({ dispose: () => {} } as any);
         sandbox.stub(vscode.workspace, "onDidDeleteFiles").returns({ dispose: () => {} } as any);
 
-        resolver = new ProblemDiagnosticResolver();
+        const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        resolver = new ProblemDiagnosticResolver(log);
     });
 
     teardown(() => {

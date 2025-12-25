@@ -52,6 +52,7 @@ export class CommandContext {
     }
 
     readonly lspClient: LSPClientContext;
+    readonly log: vscode.OutputChannel;
 
     private _terminal?: TerminalShell;
     public get terminal(): TerminalShell | undefined {
@@ -67,7 +68,8 @@ export class CommandContext {
         cancellationToken: vscode.CancellationTokenSource,
         terminal: TerminalShell | undefined,
         lspClient: LSPClientContext,
-        bundle: BundlePath
+        bundle: BundlePath,
+        log: vscode.OutputChannel
     ) {
         this.bundle = bundle;
         this._cancellationTokenSource = cancellationToken;
@@ -76,6 +78,7 @@ export class CommandContext {
         this._projectSettingsProvider.projectEnv = new WeakRef(this.projectEnv);
         this._terminal = terminal;
         this.lspClient = lspClient;
+        this.log = log;
     }
 
     private convertToExeParams(shell: CommandOptions, attachTerminal: boolean) {

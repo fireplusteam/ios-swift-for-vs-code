@@ -42,7 +42,10 @@ export class AtomicCommand {
     private userTerminal = new TerminalShell("User");
     private watcherTerminal = new TerminalShell("Watch");
 
-    constructor(private readonly lspClient: LSPClientContext) {}
+    constructor(
+        private readonly lspClient: LSPClientContext,
+        private readonly log: vscode.OutputChannel
+    ) {}
 
     async userCommandWithoutThrowingException(
         commandClosure: (commandContext: CommandContext) => Promise<void>,
@@ -80,7 +83,8 @@ export class AtomicCommand {
                 new vscode.CancellationTokenSource(),
                 this.watcherTerminal,
                 this.lspClient,
-                new BundlePath("autowatcher")
+                new BundlePath("autowatcher"),
+                this.log
             );
             this._prevCommandContext = commandContext;
             this.watcherTerminal.terminalName = "Watcher";
@@ -161,7 +165,8 @@ export class AtomicCommand {
                 new vscode.CancellationTokenSource(),
                 this.userTerminal,
                 this.lspClient,
-                new BundlePath("bundle")
+                new BundlePath("bundle"),
+                this.log
             );
             this._prevCommandContext = commandContext;
             if (taskName) {

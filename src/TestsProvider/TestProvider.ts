@@ -31,14 +31,16 @@ export class TestProvider {
     ) => Promise<boolean>;
     context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser();
-    asyncTestCaseParser = new TestCaseProblemParser();
+    asyncTestCaseParser: TestCaseProblemParser;
 
     private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialized;
     private initialFilesLoadingMutex = new Mutex();
+    private readonly log: vscode.OutputChannel;
 
     constructor(
         projectManager: ProjectManager,
         context: TestTreeContext,
+        log: vscode.OutputChannel,
         executeTests: (
             tests: string[] | undefined,
             isDebuggable: boolean,
@@ -50,6 +52,8 @@ export class TestProvider {
         this.projectManager = projectManager;
         this.context = context;
         this.executeTests = executeTests;
+        this.log = log;
+        this.asyncTestCaseParser = new TestCaseProblemParser(this.log);
     }
 
     activateTests(context: vscode.ExtensionContext) {
@@ -109,7 +113,7 @@ export class TestProvider {
                             mapTests.set(testId, { test: test, data: data });
                         } catch (error) {
                             run.failed(test, { message: "Test Case was not well parsed" });
-                            console.error(`Test was not correctly parsed: ${test}`);
+                            this.log.appendLine(`Test was not correctly parsed: ${test}`);
                         }
                     }
                 }
@@ -168,7 +172,7 @@ export class TestProvider {
                         // read testing results
                         await this.extractTestingResults(context.bundle, mapTests, run);
                     } catch (error) {
-                        console.log(`Error parsing test result logs: ${error}`);
+                        this.log.appendLine(`Error parsing test result logs: ${error}`);
                     } finally {
                         // all others are skipped
                         mapTests.forEach(item => {
@@ -186,7 +190,7 @@ export class TestProvider {
                             run.addCoverage(file);
                         }
                     } catch (error) {
-                        console.error(`Coverage data can not be obtained: ${error}`);
+                        this.log.appendLine(`Coverage data can not be obtained: ${error}`);
                     }
 
                     run.end();
@@ -207,7 +211,7 @@ export class TestProvider {
                     try {
                         await runTestQueue(context);
                     } catch (error) {
-                        console.log(`${error}`);
+                        this.log.appendLine(`${error}`);
                         throw error;
                     }
                 }, "Start Testing")

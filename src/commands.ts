@@ -472,13 +472,13 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
             scriptOrCommand: { file: "update_git_exclude_if_any.py" },
         })
         .catch(error => {
-            console.log(`Git exclude was not updated. Error: ${error}`);
+            commandContext.log.appendLine(`Git exclude was not updated. Error: ${error}`);
         });
 
     commandContext.lspClient.restart();
 }
 
-export async function openXCode(activeFile: string) {
+export async function openXCode(activeFile: string, log: vscode.OutputChannel) {
     const openExec = new Executor();
     const stdout = (
         await openExec.execShell({
@@ -486,7 +486,7 @@ export async function openXCode(activeFile: string) {
             args: [await getProjectPath()],
         })
     ).stdout;
-    console.log(stdout);
+    log.appendLine(stdout);
     if (!isFolder(activeFile)) {
         exec(`open -a Xcode ${activeFile} `);
     }

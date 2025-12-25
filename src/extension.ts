@@ -52,6 +52,7 @@ import { getReadOnlyDocumentProvider } from "./LSP/ReadOnlyDocumentProvider";
 import { XCTestRunInspector } from "./Debug/XCTestRunInspector";
 import { StatusBar } from "./StatusBar/StatusBar";
 import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectConfigurationDataProvider";
+import { LogChannel } from "./Logs/LogChannel";
 
 function shouldInjectXCBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
@@ -102,11 +103,11 @@ async function initialize(
     return true;
 }
 
-const logChannel = vscode.window.createOutputChannel("VSCode-iOS");
-const problemDiagnosticResolver = new ProblemDiagnosticResolver();
+const logChannel = new LogChannel("VSCode-iOS");
+const problemDiagnosticResolver = new ProblemDiagnosticResolver(logChannel);
 const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
 const sourceLsp = new SwiftLSPClient(workspaceContext, logChannel);
-const atomicCommand = new AtomicCommand(sourceLsp);
+const atomicCommand = new AtomicCommand(sourceLsp, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;
 let projectManager: ProjectManager | undefined;
@@ -130,12 +131,13 @@ export async function activate(context: vscode.ExtensionContext) {
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     context.subscriptions.push(logChannel);
+    logChannel.mode = context.extensionMode;
     logChannel.appendLine("Activated");
 
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
 
-    projectManager = new ProjectManager();
+    projectManager = new ProjectManager(logChannel);
     projectManager.onUpdateDeps = async () => {
         await tools.updateThirdPartyTools();
     };
@@ -227,6 +229,7 @@ export async function activate(context: vscode.ExtensionContext) {
     testProvider = new TestProvider(
         projectManager,
         new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
+        logChannel,
         async (tests, isDebuggable, testRun, context, isCoverage) => {
             return await debugConfiguration.startIOSTestsDebugger(
                 tests,
@@ -313,9 +316,12 @@ export async function activate(context: vscode.ExtensionContext) {
             "vscode-ios.env.open.xcode",
             async (contextSelection: vscode.Uri) => {
                 if (contextSelection) {
-                    openXCode(contextSelection.fsPath);
+                    openXCode(contextSelection.fsPath, logChannel);
                 } else {
-                    openXCode(vscode.window.activeTextEditor?.document.uri.fsPath || "");
+                    openXCode(
+                        vscode.window.activeTextEditor?.document.uri.fsPath || "",
+                        logChannel
+                    );
                 }
             }
         )
