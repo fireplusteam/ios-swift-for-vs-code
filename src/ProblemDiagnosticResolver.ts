@@ -21,8 +21,8 @@ export class RawBuildParser {
 
 export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolver {
     static xcodebuild = "xcodebuild";
-    static isSourcekit: SourcePredicate = source => this.xcodebuild !== source;
-    static isXcodebuild: SourcePredicate = source => this.xcodebuild === source;
+    static isSourcekit: SourcePredicate = source => ProblemDiagnosticResolver.xcodebuild !== source;
+    static isXcodebuild: SourcePredicate = source => ProblemDiagnosticResolver.xcodebuild === source;
 
     private disposable: vscode.Disposable[] = [];
     private diagnosticBuildCollection: vscode.DiagnosticCollection;

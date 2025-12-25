@@ -53,31 +53,43 @@ export class TerminalShell {
         this.terminal?.then(terminal => terminal.show());
     }
 
-    private dataToPrint(data: string) {
-        data = data.replaceAll("\n", "\n\r");
-        return data;
+    private dataToPrint(data: string): string {
+        return data.replaceAll("\n", "\n\r");
     }
 
-    public write(data: string, style = TerminalMessageStyle.default) {
-        this.terminal?.then(() => {
-            const toPrint = this.dataToPrint(data);
-            switch (style) {
-                case TerminalMessageStyle.default:
-                    this.writeEmitter?.fire(toPrint);
-                    break;
-                case TerminalMessageStyle.command:
-                    this.writeEmitter?.fire(`\x1b[100m${toPrint}\x1b[0m`);
-                    break;
-                case TerminalMessageStyle.error:
-                    this.writeEmitter?.fire(`\x1b[41m${toPrint}\x1b[0m`); // BgRed
-                    break;
-                case TerminalMessageStyle.warning:
-                    this.writeEmitter?.fire(`\x1b[43m${toPrint}\x1b[0m`); // BgYellow
-                    break;
-                case TerminalMessageStyle.success:
-                    this.writeEmitter?.fire(`\x1b[42m${toPrint}\x1b[0m`); // BgGreen
-                    break;
+    private getStyledText(text: string, style: TerminalMessageStyle): string {
+        if (style === TerminalMessageStyle.default) {
+            return text;
+        }
+
+        const styleMap: Record<TerminalMessageStyle, string> = {
+            [TerminalMessageStyle.default]: "",
+            [TerminalMessageStyle.command]: "\x1b[100m",
+            [TerminalMessageStyle.error]: "\x1b[41m",
+            [TerminalMessageStyle.warning]: "\x1b[43m",
+            [TerminalMessageStyle.success]: "\x1b[42m",
+        };
+
+        // Apply style to each line separately to prevent background bleeding
+        const lines = text.split("\n");
+        const styledLines = lines.map(line => {
+            if (!line) {
+                return line;
             }
+            return `${styleMap[style]}${line}\x1b[0m`;
+        });
+
+        return styledLines.join("\n");
+    }
+
+    public write(data: string, style = TerminalMessageStyle.default): void {
+        this.terminal?.then(() => {
+            if (!this.writeEmitter) {
+                return;
+            }
+            const toPrint = this.dataToPrint(data);
+            const styledText = this.getStyledText(toPrint, style);
+            this.writeEmitter.fire(styledText);
         });
     }
 
