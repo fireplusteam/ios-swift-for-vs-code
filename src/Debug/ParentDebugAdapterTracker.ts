@@ -46,7 +46,7 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        console.log(`Exited with code ${code} and signal ${signal}`);
+        console.log(`Parent Exited with code ${code} and signal ${signal}`);
     }
 
     private async terminateCurrentSession() {

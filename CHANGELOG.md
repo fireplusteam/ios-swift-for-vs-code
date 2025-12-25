@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.6.2 - 2025-12-25
+
+### Fixed
+
+-   Set lldb-dap in server mode to improve performance between debugging session launches
+-   Throws extension activation error on non MacOS extensions runs as Xcode tools are only available on MacOS
+
 ## 0.6.0 - 2025-12-23
 
 ### Feature

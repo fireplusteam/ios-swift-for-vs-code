@@ -234,6 +234,8 @@ export class ProjectManager {
                 "swift.searchSubfoldersForPackages": false,
                 "swift.sourcekit-lsp.supported-languages": [],
                 "swift.sourcekit-lsp.backgroundIndexing": "off",
+                "lldb-dap.serverMode": true, // use server mode for lldb-dap to improve performance on running tests and debugging multiple sessions
+                "lldb-dap.connectionTimeout": 3600, // set it to 60 minutes to allow long running debug sessions
             },
             extensions: {
                 // tell vs code not to recommend it as it interfere with this extension
