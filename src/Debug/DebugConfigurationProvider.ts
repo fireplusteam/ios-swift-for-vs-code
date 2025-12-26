@@ -27,9 +27,9 @@ function runtimeWarningsConfigStatus() {
 function runtimeWarningBreakPointCommand() {
     switch (runtimeWarningsConfigStatus()) {
         case "report":
-            return "breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning --command continue";
+            return "breakpoint set --name os_log_fault_default_callback --command print_runtime_warning --command continue";
         case "breakpoint":
-            return "breakpoint set --name os_log_fault_default_callback --command printRuntimeWarning";
+            return "breakpoint set --name os_log_fault_default_callback --command print_runtime_warning";
         default:
             return undefined;
     }
@@ -371,7 +371,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.create_target create_target",
                     "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
-                    "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
+                    "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
                     "command script add -f attach_lldb.app_log app_log",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
@@ -423,7 +423,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.create_target create_target",
                     "command script add -f attach_lldb.terminate_debugger terminate_debugger",
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
-                    "command script add -f attach_lldb.printRuntimeWarning printRuntimeWarning",
+                    "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
                     "command script add -f attach_lldb.app_log app_log",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,

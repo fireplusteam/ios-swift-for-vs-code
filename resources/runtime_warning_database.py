@@ -1,48 +1,66 @@
 #!/usr/bin/env python3
 import json
 
-data_base = dict()
-item_id = 0
+DATA_BASE = dict()
+ITEM_ID = 0
 
-storage_file = None
+STORAGE_FILE = None
 
 
 class SetEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, set) or isinstance(obj, frozenset):
+    """
+    JSON encoder for set and frozenset types.
+    """
+
+    def default(self, o):
+        if isinstance(o, set) or isinstance(o, frozenset):
             data = dict()
-            for key, value in obj:
+            for key, value in o:
                 data[key] = value
             return data
-        return json.JSONEncoder.default(self, obj)
-
+        return json.JSONEncoder.default(self, o)
 
 
 def dump_database():
-    global data_base
-    global storage_file
-    if storage_file is None:
-        storage_file = open(f".vscode/xcode/fifo/.app_runtime_warnings.fifo", "w", 1, encoding="utf-8") 
-    str = json.dumps(data_base,cls=SetEncoder)
-    storage_file.write(f"{str}\n")
+    """
+    Dumps the runtime warning database to a FIFO file.
+    """
+    global STORAGE_FILE
+    if STORAGE_FILE is None:
+        STORAGE_FILE = open(
+            ".vscode/xcode/fifo/.app_runtime_warnings.fifo", "w", 1, encoding="utf-8"
+        )
+    json_str = json.dumps(DATA_BASE, cls=SetEncoder)
+    STORAGE_FILE.write(f"{json_str}\n")
+
+
+class MessageInDatabaseError(Exception):
+    pass
 
 
 def store_runtime_warning(error_message: str, data: tuple):
-    global data_base
-    global item_id
+    """
+    Stores a runtime warning in the database.
 
-    for key, value in data_base.items():
+    :param error_message: The error message.
+    :type error_message: str
+    :param data: The associated data.
+    :type data: tuple
+    """
+    global ITEM_ID
+
+    for _, value in DATA_BASE.items():
         if value["data"] == data:
             value["count"] += 1
             dump_database()
-            raise Exception("Message is already in database")
-    
-    data_base[f"element_{str(item_id)}"] = { 
-                                              "message": error_message,
-                                              "count": 1,
-                                              "data": data
-                                              }
+            raise MessageInDatabaseError("Message is already in database")
 
-    item_id += 1
-         
+    DATA_BASE[f"element_{str(ITEM_ID)}"] = {
+        "message": error_message,
+        "count": 1,
+        "data": data,
+    }
+
+    ITEM_ID += 1
+
     dump_database()
