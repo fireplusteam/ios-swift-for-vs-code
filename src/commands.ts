@@ -172,6 +172,26 @@ export async function generateXcodeWorkspaceForPackage(
     const workspaceFilePath = workspaceGenerator.workspaceDummyFile;
 
     const folder = workspaceFilePath.split(path.sep).slice(0, -1).join(path.sep);
+    const gitFolder = packageSwiftPath.split(path.sep).slice(0, -1).join(path.sep);
+    if (!fs.existsSync(path.join(gitFolder, ".git"))) {
+        const selection = await vscode.window.showInformationMessage(
+            `Workspace can not be generated without .git folder initialized. Do you want to initialize git repository for Tuist in folder: ${gitFolder}?`,
+            { modal: true },
+            "Yes",
+            "No"
+        );
+        if (selection === "Yes") {
+            await commandContext.execShellWithOptions({
+                scriptOrCommand: {
+                    command: `xcrun git init`,
+                    labelInTerminal: `Initializing git for Tuist`,
+                },
+                mode: ExecutorMode.verbose,
+                cwd: gitFolder,
+            });
+        }
+    }
+
     await commandContext.execShellWithOptions({
         scriptOrCommand: {
             command: `tuist install`,
@@ -180,9 +200,13 @@ export async function generateXcodeWorkspaceForPackage(
         mode: ExecutorMode.verbose,
         cwd: folder,
     });
-    await commandContext.execShell("tuist", {
-        command: `tuist generate --path "${folder}" --no-open`,
-        labelInTerminal: `Generating Xcode Workspace for Swift Package: ${packageSwiftPath}`,
+    await commandContext.execShellWithOptions({
+        scriptOrCommand: {
+            command: `tuist generate --no-open`,
+            labelInTerminal: `Generating Xcode Workspace for Swift Package: ${packageSwiftPath}`,
+        },
+        mode: ExecutorMode.verbose,
+        cwd: folder,
     });
     return path.join(folder, "Workspace.xcworkspace");
 }

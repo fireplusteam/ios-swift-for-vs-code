@@ -442,7 +442,7 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 });
 
 suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
-    test("Test: isFilePathLine", () => {
+    test("Test: Macro Error Parser when macro file exists", () => {
         const buildLogInput = fs.readFileSync(location("xcodebuild_building_result.json"), "utf-8");
         const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
         const problems = _private.parseSwiftMacrosInXcodeBuildLogs(
@@ -459,7 +459,6 @@ suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
             },
             log
         );
-        console.log(JSON.stringify(problems, null));
         assert.deepStrictEqual(
             JSON.stringify(problems),
             JSON.stringify({
@@ -475,6 +474,36 @@ suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
                         source: "xcodebuild",
                     },
                 ],
+            })
+        );
+    });
+
+    test("Test: File Path, Swift Macro Errors, but macro file doesn't exist", () => {
+        const buildLogInput = fs.readFileSync(location("xcodebuild_building_result.json"), "utf-8");
+        const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        const problems = _private.parseSwiftMacrosInXcodeBuildLogs(
+            buildLogInput,
+            () => {
+                throw new Error("File doesn't exist");
+            },
+            log
+        );
+        assert.deepStrictEqual(
+            JSON.stringify(problems),
+            JSON.stringify({
+                "/private/var/folders/cf/szyj4d9j2j5dkh0ctxhh_djc0000gn/T/swift-generated-sources/@__swiftmacro_3PLP7PLPCard7ReducerfMe_.swift":
+                    [
+                        {
+                            severity: "Error",
+                            message:
+                                "Conformance of 'Card' to protocol 'Reducer' crosses into main actor-isolated code and can cause data races",
+                            range: [
+                                { line: 0, character: 0 },
+                                { line: 0, character: 0 },
+                            ],
+                            source: "xcodebuild",
+                        },
+                    ],
             })
         );
     });

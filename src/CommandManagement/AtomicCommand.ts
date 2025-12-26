@@ -181,6 +181,13 @@ export class AtomicCommand {
 
             return result;
         } catch (err) {
+            try {
+                this.log.appendLine(
+                    `AtomicCommand: Error during executing user command ${taskName}, error: ${JSON.stringify(err)}`
+                );
+            } catch {
+                /**/
+            }
             if (err !== UserCommandIsExecuting && taskName) {
                 if (UserTerminatedError.isEqual(err)) {
                     this.userTerminal.cancel();

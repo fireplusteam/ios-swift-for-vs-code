@@ -366,6 +366,16 @@ function parseSwiftMacrosInXcodeBuildLogs(
                     files[file] = value;
                 }
             } catch (err) {
+                const file = sourceURL;
+                const diagnostic = new vscode.Diagnostic(
+                    new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
+                    message,
+                    vscode.DiagnosticSeverity.Error
+                );
+                diagnostic.source = ProblemDiagnosticResolver.xcodebuild;
+                const value = files[file] || [];
+                value.push(diagnostic);
+                files[file] = value;
                 log.appendLine(`Error reading or parsing macro source file: ${err}`);
             }
         }

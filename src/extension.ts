@@ -82,7 +82,9 @@ async function initialize(
                 return false;
             }
         } catch (error) {
-            vscode.window.showErrorMessage("Project was not loaded due to error");
+            vscode.window.showErrorMessage(
+                `Project was not loaded due to error: ${JSON.stringify(error)}`
+            );
             return false;
         }
     }
