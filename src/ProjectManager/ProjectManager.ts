@@ -254,7 +254,7 @@ export class ProjectManager {
             },
             extensions: {
                 // tell vs code not to recommend it as it interfere with this extension
-                unwantedRecommendations: ["sswg.swift-lang"],
+                unwantedRecommendations: ["sswg.swift-lang", "swiftlang.swift-vscode"],
             },
         };
         const buildRootPath = await getBuildRootPath();
