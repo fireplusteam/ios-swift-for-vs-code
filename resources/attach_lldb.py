@@ -171,15 +171,16 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 kill_codelldb(debugger)
                 return
 
-            new_list = helper.get_list_of_pids(process_name)
-            new_list = [x for x in new_list if not x in existing_pids]
+            new_pids = helper.get_list_of_pids(process_name)
+            new_pids = [x for x in new_pids if not x in existing_pids]
+            # log_message(f"New pids found: {','.join(new_pids)}")
 
-            if len(new_list) > 0:
+            if len(new_pids) > 0:
                 threading.Thread(
                     target=wait_for_exit, args=(debugger, session_id)
                 ).start()
 
-                pid = new_list.pop()
+                pid = new_pids.pop()
                 log_message(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
                 perform_debugger_command(debugger, attach_command)
@@ -206,7 +207,6 @@ def watch_new_process(debugger, command, result, internal_dict):
     :param internal_dict: Description
     """
     log_message("Debugger: " + str(debugger))
-    global existing_pids
 
     log_message(f"Watching command: {command}")
     commands = command.split(" ")
@@ -217,7 +217,11 @@ def watch_new_process(debugger, command, result, internal_dict):
         return
 
     process_name = os.getenv("PROCESS_EXE")
+    log_message(f"Process name to watch: {process_name}")
     existing_pids = helper.get_list_of_pids(process_name)
+    log_message(
+        f"Existing pids {','.join(existing_pids)} for Process name {process_name}, session id: {session_id}"
+    )
     helper.update_debugger_launch_config(session_id, "status", "launched")
     wait_for_process(process_name, debugger, existing_pids, session_id)
 
