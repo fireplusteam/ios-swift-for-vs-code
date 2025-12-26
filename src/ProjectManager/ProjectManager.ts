@@ -123,10 +123,9 @@ export class ProjectManager {
                         message: fileNameFromPath(project),
                     });
                     try {
-                        await this.projectCache.update(
-                            project,
-                            this.rubyProjectFilesManager.listFilesFromProject
-                        );
+                        await this.projectCache.update(project, projectFile => {
+                            return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
+                        });
                         await this.readAllProjects(this.projectCache.getList(project));
                     } catch (error) {
                         this.log.appendLine(`Failed to load project ${project}: ${error}`);
@@ -159,10 +158,9 @@ export class ProjectManager {
             if (file.endsWith(".xcodeproj")) {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
                 if (
-                    await this.projectCache.update(
-                        relativeProjectPath,
-                        this.rubyProjectFilesManager.listFilesFromProject
-                    )
+                    await this.projectCache.update(relativeProjectPath, projectFile => {
+                        return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
+                    })
                 ) {
                     await this.readAllProjects(this.projectCache.getList(relativeProjectPath));
                 }
@@ -724,10 +722,9 @@ export class ProjectManager {
         const filePathComponent = filePath.split(path.sep);
         for (const project of projects) {
             try {
-                await this.projectCache.update(
-                    project,
-                    this.rubyProjectFilesManager.listFilesFromProject
-                );
+                await this.projectCache.update(project, projectFile => {
+                    return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
+                });
                 const files = this.projectCache.getList(project, false);
                 for (const file of files) {
                     const fileComponent = file.split(path.sep);
