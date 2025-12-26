@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
-import { listFilesFromProject } from "./ProjectManager";
 import { watch } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
@@ -52,11 +51,29 @@ function mapReviver(key: any, value: any) {
     }
     return value;
 }
-export class ProjectsCache {
+
+export interface ProjectCacheInterface {
+    onProjectChanged: vscode.EventEmitter<void>;
+
+    clear(): void;
+    preloadCacheFromFile(filePath: string): Promise<void>;
+    saveCacheToFile(filePath: string): Promise<void>;
+    has(project: string): boolean;
+    getList(project: string, onlyFiles?: boolean): Set<string>;
+    getProjects(): string[];
+    files(isFolder?: boolean): string[];
+    update(
+        projectPath: string,
+        listFilesFromProject: (projectFile: string) => Promise<string[]>,
+        contentFile?: Buffer
+    ): Promise<boolean>;
+}
+
+export class ProjectsCache implements ProjectCacheInterface {
     private cache = new Map<string, ProjFile>();
     private watcher = new Map<string, { watcher: fs.FSWatcher; content: Buffer }>();
 
-    onProjectChanged = new vscode.EventEmitter<void>();
+    readonly onProjectChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
 
     constructor() {}
 
@@ -152,7 +169,11 @@ export class ProjectsCache {
         return resPaths;
     }
 
-    async update(projectPath: string, contentFile: Buffer | undefined = undefined) {
+    async update(
+        projectPath: string,
+        listFilesFromProject: (projectFile: string) => Promise<string[]>,
+        contentFile: Buffer | undefined = undefined
+    ) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
         let updated = false;
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
@@ -176,7 +197,7 @@ export class ProjectsCache {
                 if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
                     this.watcher.get(projectPath)?.watcher.close();
                     this.watcher.delete(projectPath);
-                    await this.update(projectPath, contentFile);
+                    await this.update(projectPath, listFilesFromProject, contentFile);
                     return;
                 }
                 this.watcher.get(projectPath)?.watcher.close();
@@ -185,7 +206,7 @@ export class ProjectsCache {
                     this.cache.delete(projectPath);
                     return;
                 }
-                await this.update(projectPath);
+                await this.update(projectPath, listFilesFromProject);
                 this.onProjectChanged.fire();
             });
             const contentProjectFile =

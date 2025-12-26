@@ -15,23 +15,29 @@ import * as path from "path";
 import { fileNameFromPath, isFileMoved, isFolder } from "../utils";
 import { ProjectTree } from "./ProjectTree";
 import { glob } from "glob";
-import { ProjectsCache } from "./ProjectsCache";
+import { ProjectCacheInterface, ProjectsCache } from "./ProjectsCache";
 import { error } from "console";
 import { QuickPickItem, showPicker } from "../inputPicker";
-import { XcodeProjectFileProxy } from "./XcodeProjectFileProxy";
 import { Mutex } from "async-mutex";
+import {
+    RubyProjectFilesManager,
+    RubyProjectFilesManagerInterface,
+} from "./RubyProjectFilesManager";
 
 export class ProjectManager {
-    private disposable: vscode.Disposable[] = [];
+    private readonly disposable: vscode.Disposable[] = [];
 
-    private projectCache = new ProjectsCache();
-    private projectFileEditMutex = new Mutex();
+    private readonly projectFileEditMutex = new Mutex();
 
-    onProjectUpdate = new vscode.EventEmitter<void>();
-    onProjectLoaded = new vscode.EventEmitter<void>();
+    readonly onProjectUpdate = new vscode.EventEmitter<void>();
+    readonly onProjectLoaded = new vscode.EventEmitter<void>();
     onUpdateDeps: (() => Promise<void>) | undefined;
 
-    constructor(private readonly log: vscode.OutputChannel) {
+    constructor(
+        private readonly log: vscode.OutputChannel,
+        private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface = new RubyProjectFilesManager(),
+        private readonly projectCache: ProjectCacheInterface = new ProjectsCache()
+    ) {
         this.disposable.push(
             vscode.workspace.onDidCreateFiles(async e => {
                 this.addAFileToXcodeProject([...e.files]);
@@ -72,11 +78,14 @@ export class ProjectManager {
         const projects = project === undefined ? this.projectCache.getProjects() : [project];
         for (const project of projects) {
             if (this.projectCache.getList(project).has(file)) {
-                return (await listTargetsForFile(getFilePathInWorkspace(project), file)).filter(
-                    e => {
-                        return e.length > 0;
-                    }
-                );
+                return (
+                    await this.rubyProjectFilesManager.listTargetsForFile(
+                        getFilePathInWorkspace(project),
+                        file
+                    )
+                ).filter(e => {
+                    return e.length > 0;
+                });
             }
         }
         return [];
@@ -114,7 +123,10 @@ export class ProjectManager {
                         message: fileNameFromPath(project),
                     });
                     try {
-                        await this.projectCache.update(project);
+                        await this.projectCache.update(
+                            project,
+                            this.rubyProjectFilesManager.listFilesFromProject
+                        );
                         await this.readAllProjects(this.projectCache.getList(project));
                     } catch (error) {
                         this.log.appendLine(`Failed to load project ${project}: ${error}`);
@@ -146,7 +158,12 @@ export class ProjectManager {
         for (const file of files) {
             if (file.endsWith(".xcodeproj")) {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
-                if (await this.projectCache.update(relativeProjectPath)) {
+                if (
+                    await this.projectCache.update(
+                        relativeProjectPath,
+                        this.rubyProjectFilesManager.listFilesFromProject
+                    )
+                ) {
                     await this.readAllProjects(this.projectCache.getList(relativeProjectPath));
                 }
             }
@@ -373,13 +390,13 @@ export class ProjectManager {
                         if (isFolder(file.fsPath)) {
                             // rename folder
                             if (isFileMoved(oldFile.fsPath, file.fsPath)) {
-                                await moveFolderToProject(
+                                await this.rubyProjectFilesManager.moveFolderToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
                                 );
                             } else {
-                                await renameFolderToProject(
+                                await this.rubyProjectFilesManager.renameFolderToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
@@ -387,13 +404,13 @@ export class ProjectManager {
                             }
                         } else {
                             if (isFileMoved(oldFile.fsPath, file.fsPath)) {
-                                await moveFileToProject(
+                                await this.rubyProjectFilesManager.moveFileToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
                                 );
                             } else {
-                                await renameFileToProject(
+                                await this.rubyProjectFilesManager.renameFileToProject(
                                     getFilePathInWorkspace(project),
                                     oldFile.fsPath,
                                     file.fsPath
@@ -407,7 +424,7 @@ export class ProjectManager {
             }
         } finally {
             for (const project of modifiedProjects) {
-                await saveProject(getFilePathInWorkspace(project));
+                await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
             }
             release();
         }
@@ -438,13 +455,13 @@ export class ProjectManager {
                     try {
                         const list = this.projectCache.getList(project);
                         if (list.has(file.fsPath)) {
-                            await deleteFileFromProject(
+                            await this.rubyProjectFilesManager.deleteFileFromProject(
                                 getFilePathInWorkspace(project),
                                 file.fsPath
                             );
                         } else {
                             // folder
-                            await deleteFolderFromProject(
+                            await this.rubyProjectFilesManager.deleteFolderFromProject(
                                 getFilePathInWorkspace(project),
                                 file.fsPath
                             );
@@ -456,7 +473,7 @@ export class ProjectManager {
             }
         } finally {
             for (const project of modifiedProjects) {
-                await saveProject(getFilePathInWorkspace(project));
+                await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
             }
             release();
         }
@@ -468,14 +485,19 @@ export class ProjectManager {
 
     async getProjectTargets() {
         for (const proj of await this.getProjects()) {
-            return await getProjectTargets(getFilePathInWorkspace(proj));
+            return await this.rubyProjectFilesManager.getProjectTargets(
+                getFilePathInWorkspace(proj)
+            );
         }
         return [];
     }
 
     async getFilesForTarget(targetName: string) {
         for (const proj of await this.getProjects()) {
-            return await listFilesFromTarget(getFilePathInWorkspace(proj), targetName);
+            return await this.rubyProjectFilesManager.listFilesFromTarget(
+                getFilePathInWorkspace(proj),
+                targetName
+            );
         }
         return [];
     }
@@ -493,11 +515,13 @@ export class ProjectManager {
             return;
         }
 
-        const fileTargets = await listTargetsForFile(
+        const fileTargets = await this.rubyProjectFilesManager.listTargetsForFile(
             getFilePathInWorkspace(selectedProject[0]),
             file.fsPath
         );
-        const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject[0]));
+        const targets = await this.rubyProjectFilesManager.getProjectTargets(
+            getFilePathInWorkspace(selectedProject[0])
+        );
         const items: QuickPickItem[] = sortTargets(targets, fileTargets);
         let selectedTargets = await showPicker(
             items,
@@ -514,12 +538,12 @@ export class ProjectManager {
 
         selectedTargets = selectedTargets.join(",");
 
-        await updateFileToProject(
+        await this.rubyProjectFilesManager.updateFileToProject(
             getFilePathInWorkspace(selectedProject[0]),
             selectedTargets,
             file.fsPath
         );
-        await saveProject(getFilePathInWorkspace(selectedProject[0]));
+        await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(selectedProject[0]));
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
@@ -606,7 +630,9 @@ export class ProjectManager {
                     [...filesToAdd][0],
                     selectedProject
                 );
-                const targets = await getProjectTargets(getFilePathInWorkspace(selectedProject));
+                const targets = await this.rubyProjectFilesManager.getProjectTargets(
+                    getFilePathInWorkspace(selectedProject)
+                );
                 const items = sortTargets(targets, proposedTargets);
                 const selectedTargetsArray = await showPicker(
                     items,
@@ -623,18 +649,21 @@ export class ProjectManager {
             }
 
             for (const folder of foldersToAdd) {
-                await addFolderToProject(getFilePathInWorkspace(selectedProject), folder);
+                await this.rubyProjectFilesManager.addFolderToProject(
+                    getFilePathInWorkspace(selectedProject),
+                    folder
+                );
             }
 
             for (const file of filesToAdd) {
-                await addFileToProject(
+                await this.rubyProjectFilesManager.addFileToProject(
                     getFilePathInWorkspace(selectedProject),
                     selectedTargets || "",
                     file
                 );
             }
 
-            await saveProject(getFilePathInWorkspace(selectedProject));
+            await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(selectedProject));
         } finally {
             release();
         }
@@ -676,7 +705,7 @@ export class ProjectManager {
                 if (file.fsPath === filePath) {
                     continue;
                 }
-                const targets = await listTargetsForFile(
+                const targets = await this.rubyProjectFilesManager.listTargetsForFile(
                     getFilePathInWorkspace(project),
                     file.fsPath
                 );
@@ -695,7 +724,10 @@ export class ProjectManager {
         const filePathComponent = filePath.split(path.sep);
         for (const project of projects) {
             try {
-                await this.projectCache.update(project);
+                await this.projectCache.update(
+                    project,
+                    this.rubyProjectFilesManager.listFilesFromProject
+                );
                 const files = this.projectCache.getList(project, false);
                 for (const file of files) {
                     const fileComponent = file.split(path.sep);
@@ -809,71 +841,4 @@ export async function getProjectFiles(project: string) {
     } else {
         return [path.relative(getWorkspacePath(), project)];
     }
-}
-
-/// Ruby scripts
-
-const xcodeProjects = new Map<string, XcodeProjectFileProxy>();
-
-async function executeRuby(projectPath: string, command: string): Promise<string[]> {
-    if (!xcodeProjects.has(projectPath)) {
-        xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath));
-    }
-    return (await xcodeProjects.get(projectPath)?.request(command)) || [];
-}
-
-async function getProjectTargets(projectFile: string) {
-    return await executeRuby(projectFile, `list_targets`);
-}
-
-async function addFileToProject(projectFile: string, target: string, file: string) {
-    return await executeRuby(projectFile, `add_file|^|^|${target}|^|^|${file}`);
-}
-
-async function addFolderToProject(projectFile: string, folder: string) {
-    return await executeRuby(projectFile, `add_group|^|^|${folder}`);
-}
-
-async function updateFileToProject(projectFile: string, target: string, file: string) {
-    return await executeRuby(projectFile, `update_file_targets|^|^|${target}|^|^|${file}`);
-}
-
-async function renameFileToProject(projectFile: string, oldFile: string, file: string) {
-    return await executeRuby(projectFile, `rename_file|^|^|${oldFile}|^|^|${file}`);
-}
-
-async function moveFileToProject(projectFile: string, oldFile: string, file: string) {
-    return await executeRuby(projectFile, `move_file|^|^|${oldFile}|^|^|${file}`);
-}
-
-async function renameFolderToProject(projectFile: string, oldFolder: string, newFolder: string) {
-    return await executeRuby(projectFile, `rename_group|^|^|${oldFolder}|^|^|${newFolder}`);
-}
-
-async function moveFolderToProject(projectFile: string, oldFolder: string, newFolder: string) {
-    return await executeRuby(projectFile, `move_group|^|^|${oldFolder}|^|^|${newFolder}`);
-}
-
-export async function listFilesFromProject(projectFile: string) {
-    return await executeRuby(projectFile, `list_files|^|^|`);
-}
-
-export async function listFilesFromTarget(projectFile: string, targetName: string) {
-    return await executeRuby(projectFile, `list_files_for_target|^|^|${targetName}`);
-}
-
-async function deleteFileFromProject(projectFile: string, file: string) {
-    return await executeRuby(projectFile, `delete_file|^|^|${file}`);
-}
-
-async function deleteFolderFromProject(projectFile: string, folder: string) {
-    return await executeRuby(projectFile, `delete_group|^|^|${folder}`);
-}
-
-async function listTargetsForFile(projectFile: string, file: string) {
-    return await executeRuby(projectFile, `list_targets_for_file|^|^|${file}`);
-}
-
-async function saveProject(projectFile: string) {
-    return await executeRuby(projectFile, "save");
 }
