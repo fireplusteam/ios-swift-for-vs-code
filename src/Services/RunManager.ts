@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { DeviceID } from "../env";
-import { sleep } from "../extension";
+import { sleep } from "../utils";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
 import { ExecutorMode, ExecutorTaskError } from "../Executor";

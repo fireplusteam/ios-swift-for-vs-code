@@ -10,7 +10,7 @@ import { activatePeekDocuments } from "./peekDocuments";
 import { activateGetReferenceDocument } from "./getReferenceDocument";
 import { DefinitionProvider } from "./DefinitionProvider";
 
-import { sleep } from "../extension";
+import { sleep } from "../utils";
 import { exec } from "child_process";
 import { kill } from "process";
 import { Mutex } from "async-mutex";

@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { getWorkspaceFolder, isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
-import { sleep } from "./extension";
+import { sleep } from "./utils";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";

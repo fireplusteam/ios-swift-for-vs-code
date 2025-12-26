@@ -122,10 +122,6 @@ const runtimeWarningLogWatcher = new RuntimeWarningsLogWatcher(
 
 const statusBar = new StatusBar();
 
-export function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {

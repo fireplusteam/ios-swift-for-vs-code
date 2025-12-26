@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { sleep } from "../extension";
+import { sleep } from "../utils";
 
 export class InteractiveTerminal {
     private terminal: vscode.Terminal;
