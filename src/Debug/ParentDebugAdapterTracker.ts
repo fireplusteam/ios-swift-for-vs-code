@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
-import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
+import {
+    DebugConfigurationContextBinderType,
+    DebugConfigurationProvider,
+} from "./DebugConfigurationProvider";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
 
 export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
@@ -9,8 +12,8 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get sessionID(): string {
         return this.debugSession.configuration.sessionId;
     }
-    private get context() {
-        return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
+    private get context(): DebugConfigurationContextBinderType | undefined {
+        return DebugConfigurationProvider.getContextForSession(this.sessionID);
     }
 
     private dis?: vscode.Disposable;
@@ -21,9 +24,11 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStartSession() {
         try {
-            this.dis = this.context.commandContext.cancellationToken.onCancellationRequested(() => {
-                this.terminateCurrentSession();
-            });
+            this.dis = this.context!.commandContext.cancellationToken.onCancellationRequested(
+                () => {
+                    this.terminateCurrentSession();
+                }
+            );
         } catch {
             /* empty */
             this.terminateCurrentSession();
@@ -37,16 +42,16 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillReceiveMessage(_message: any) {}
 
     onWillStopSession() {
-        this.context.commandContext.log.appendLine("Parent session will stop");
+        this.context?.commandContext.log.appendLine("Parent session will stop");
         this.terminateCurrentSession();
     }
 
     onError(error: Error) {
-        this.context.commandContext.log.appendLine(`Error: ${error}`);
+        this.context?.commandContext.log.appendLine(`Error: ${error}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        this.context.commandContext.log.appendLine(
+        this.context?.commandContext.log.appendLine(
             `Parent Exited with code ${code} and signal ${signal}`
         );
     }
@@ -62,7 +67,7 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         } finally {
             try {
-                this.context.commandContext.cancel();
+                this.context?.commandContext.cancel();
             } catch {
                 /* empty */
             }

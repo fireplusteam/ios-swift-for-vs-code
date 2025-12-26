@@ -5,7 +5,10 @@ import { runAndDebugTests, runApp } from "../commands";
 import { Executor, ExecutorMode } from "../Executor";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { askIfBuild } from "../inputPicker";
-import { DebugConfigurationProvider } from "./DebugConfigurationProvider";
+import {
+    DebugConfigurationContextBinderType,
+    DebugConfigurationProvider,
+} from "./DebugConfigurationProvider";
 import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
 import { SimulatorFocus } from "./SimulatorFocus";
@@ -36,8 +39,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private get processExe(): string {
         return this.debugSession.configuration.processExe;
     }
-    private get context() {
-        return DebugConfigurationProvider.getContextForSession(this.sessionID)!;
+    private get context(): DebugConfigurationContextBinderType | undefined {
+        return DebugConfigurationProvider.getContextForSession(this.sessionID);
     }
 
     private get isDebuggable(): boolean {
@@ -51,7 +54,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
-        this.simulatorInteractor = new SimulatorFocus(this.context.commandContext.log);
+        this.simulatorInteractor = new SimulatorFocus(this.context?.commandContext.log);
     }
 
     private get logPath(): string {
@@ -59,16 +62,16 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStartSession() {
-        this.simulatorInteractor.init(this.context.commandContext.projectEnv, this.processExe);
-        this.context.commandContext.log.appendLine("Debug session is starting...");
+        this.simulatorInteractor.init(this.context!.commandContext.projectEnv, this.processExe);
+        this.context!.commandContext.log.appendLine("Debug session is starting...");
         vscode.debug.activeDebugSession;
         this.disList.push(
-            this.context.commandContext.debugConsoleEvent(std => {
+            this.context!.commandContext.debugConsoleEvent(std => {
                 this._stream.write(std);
             })
         );
         this.disList.push(
-            this.context.commandContext.cancellationToken.onCancellationRequested(() => {
+            this.context!.commandContext.cancellationToken.onCancellationRequested(() => {
                 this.terminateCurrentSession(false, false);
             })
         );
@@ -77,7 +80,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
-        // this.context.commandContext.log.appendLine(`Sent: ${JSON.stringify(message)}`);
+        this.context?.commandContext.log.appendLine(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
             this.simulatorInteractor.focus();
         }
@@ -107,18 +110,20 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStopSession() {
-        this.context.commandContext.log.appendLine("Debug session is stopping...");
+        this.context?.commandContext.log.appendLine("Debug session is stopping...");
         if (this.debugSession.configuration.target === "app") {
             this.terminateCurrentSession(true, true);
         }
     }
 
     onError(error: Error) {
-        this.context.commandContext.log.appendLine(`Error: ${error.message}`);
+        this.context?.commandContext.log.appendLine(`Error: ${error.message}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        this.context.commandContext.log.appendLine(`Exited with code ${code} and signal ${signal}`);
+        this.context?.commandContext.log.appendLine(
+            `Exited with code ${code} and signal ${signal}`
+        );
     }
 
     private async terminateCurrentSession(isCancelled: boolean, isStop: boolean) {
@@ -135,7 +140,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             try {
                 killSpawnLaunchedProcesses(this.deviceID);
                 if (isCancelled) {
-                    this.context.commandContext.cancel();
+                    this.context?.commandContext.cancel();
                 }
             } catch {
                 /* empty */
@@ -166,16 +171,16 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
             (await this.checkBuildBeforeLaunch(this.debugSession.configuration))
         ) {
             await DebugAdapterTracker.updateStatus(this.sessionID, "building");
-            this.context.commandContext.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
-            await buildCommand(this.context.commandContext);
+            this.context!.commandContext.terminal!.terminalName = `Building for ${this.isDebuggable ? "Debug" : "Run"}`;
+            await buildCommand(this.context!.commandContext);
         }
         await DebugAdapterTracker.updateStatus(this.sessionID, "launching");
-        await runCommandClosure(this.context.commandContext);
+        await runCommandClosure(this.context!.commandContext);
     }
 
     private async checkBuildBeforeLaunch(dbgConfig: vscode.DebugConfiguration) {
-        const deviceID = await this.context.commandContext.projectEnv.debugDeviceID;
-        const exe = await this.context.commandContext.projectEnv.appExecutablePath(deviceID);
+        const deviceID = await this.context!.commandContext.projectEnv.debugDeviceID;
+        const exe = await this.context!.commandContext.projectEnv.appExecutablePath(deviceID);
         if (!fs.existsSync(exe)) {
             return true;
         }
@@ -199,13 +204,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                         await buildSelectedTarget(context, this.problemResolver);
                     },
                     async context => {
-                        this.context.commandContext.terminal!.terminalName = `Launching For ${this.isDebuggable ? "Debug" : "Run"}`;
+                        context.terminal!.terminalName = `Launching For ${this.isDebuggable ? "Debug" : "Run"}`;
                         await runApp(context, this.sessionID, isDebuggable);
                     }
                 );
             } else if (dbgConfig.target === "tests") {
                 await this.executeAppCommand(undefined, async context => {
-                    this.context.commandContext.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
+                    context.terminal!.terminalName = `Testing: ${this.isDebuggable ? "Debug" : "Run"}`;
                     await runAndDebugTests(
                         context,
                         this.sessionID,
@@ -217,7 +222,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 });
             }
 
-            this.context.token.fire();
+            this.context!.token.fire();
             if (dbgConfig.target !== "app") {
                 try {
                     await this.terminateCurrentSession(false, true);
@@ -226,7 +231,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 }
             }
         } catch (error) {
-            this.context.rejectToken.fire(error);
+            this.context?.rejectToken.fire(error);
             await this.terminateCurrentSession(false, true);
         }
     }

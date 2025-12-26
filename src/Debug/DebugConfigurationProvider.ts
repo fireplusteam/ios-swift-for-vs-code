@@ -35,6 +35,12 @@ function runtimeWarningBreakPointCommand() {
     }
 }
 
+export interface DebugConfigurationContextBinderType {
+    commandContext: CommandContext;
+    token: vscode.EventEmitter<void>;
+    rejectToken: vscode.EventEmitter<unknown>;
+}
+
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
     static Type = "xcode-lldb";
     static RealLLDBTypeAdapter = "lldb-dap"; // lldb-dap official extension. To use the build in just change to "xcode-lldb"
@@ -46,14 +52,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         return this._counterID;
     }
 
-    private static contextBinder = new Map<
-        string,
-        {
-            commandContext: CommandContext;
-            token: vscode.EventEmitter<void>;
-            rejectToken: vscode.EventEmitter<unknown>;
-        }
-    >();
+    private static contextBinder = new Map<string, DebugConfigurationContextBinderType>();
     public static getContextForSession(session: string) {
         return this.contextBinder.get(session);
     }
