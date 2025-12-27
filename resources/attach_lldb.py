@@ -215,7 +215,7 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                         return
                 log_message(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
-                if not perform_debugger_command(debugger, attach_command):
+                if perform_debugger_command(debugger, attach_command):
 
                     log_message(f"Process attached successfully to pid: {pid}")
                     PROCESS_IS_ATTACHED = ProcessAttachState.ATTACHED
