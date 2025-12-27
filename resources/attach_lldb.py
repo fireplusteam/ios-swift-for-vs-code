@@ -48,7 +48,7 @@ def log_message(message, file_name=LOG_FILE):
             _file.flush()
 
 
-def perform_debugger_command(debugger, command):
+def perform_debugger_command(debugger, command) -> bool:
     """
     Executes a command in the LLDB debugger and logs the result.
 
@@ -67,8 +67,10 @@ def perform_debugger_command(debugger, command):
         log_message(
             f"Result Command: {str(command)}, return object: {str(return_object)}"
         )
+        return return_object.Succeeded()
     except Exception as e:
         log_message("Error executing command:" + str(e))
+        return False
 
 
 def kill_codelldb(debugger):
@@ -195,19 +197,22 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
             new_pids = helper.get_list_of_pids(process_name)
             new_pids = [x for x in new_pids if not x in existing_pids]
-            # log_message(f"New pids found: {','.join(new_pids)}")
+            log_message(f"New pids found: {','.join(new_pids)}")
 
             if len(new_pids) > 0:
-                PROCESS_IS_ATTACHED = ProcessAttachState.ATTACHED
                 pid = new_pids.pop()
                 log_message(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
-                perform_debugger_command(debugger, attach_command)
+                if perform_debugger_command(debugger, attach_command):
+                    log_message(f"Process attached successfully to pid: {pid}")
+                    PROCESS_IS_ATTACHED = ProcessAttachState.ATTACHED
 
-                helper.update_debugger_launch_config(session_id, "status", "attached")
+                    helper.update_debugger_launch_config(
+                        session_id, "status", "attached"
+                    )
 
-                threading.Thread(target=print_app_log, args=(debugger, pid)).start()
-                create_apple_runtime_warning_watch_process(debugger, pid)
+                    threading.Thread(target=print_app_log, args=(debugger, pid)).start()
+                    create_apple_runtime_warning_watch_process(debugger, pid)
 
                 return
 
