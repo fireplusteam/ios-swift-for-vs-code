@@ -39,6 +39,10 @@ def get_list_of_pids(process_name: str):
     return result
 
 
+class ProcessError(Exception):
+    pass
+
+
 class Process:
     """
     Represents a system process identified by its PID.
@@ -65,6 +69,11 @@ class Process:
             text=True,
             check=True,
         )
+        if "X" in result.stdout:
+            raise ProcessError("Process is dead")
+        if "Z" in result.stdout:
+            raise ProcessError("Process is a zombie")
+
         return result.stdout.strip()
 
 

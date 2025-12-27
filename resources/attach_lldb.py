@@ -237,7 +237,7 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
 
             time.sleep(0.001)
-    except subprocess.SubprocessError as proc_e:
+    except (subprocess.SubprocessError, helper.ProcessError) as proc_e:
         log_message(
             f"Process disappeared before attaching to pid: {pid}, error: {str(proc_e)}, time: {time.time()}"
         )
