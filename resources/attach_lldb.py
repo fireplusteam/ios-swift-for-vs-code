@@ -69,7 +69,7 @@ def perform_debugger_command(debugger, command) -> bool:
         )
         return return_object.Succeeded()
     except Exception as e:
-        log_message("Error executing command:" + str(e))
+        log_message(f"Error executing command: {str(e)}, time: {time.time()}")
         return False
 
 
@@ -197,7 +197,7 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
             new_pids = helper.get_list_of_pids(process_name)
             new_pids = [x for x in new_pids if not x in existing_pids]
-            log_message(f"New pids found: {','.join(new_pids)}")
+            # log_message(f"New pids found: {','.join(new_pids)}")
 
             if len(new_pids) > 0:
                 pid = new_pids.pop()

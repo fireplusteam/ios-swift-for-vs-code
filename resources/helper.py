@@ -40,6 +40,10 @@ def get_list_of_pids(process_name: str):
 
 
 class ProcessError(Exception):
+    """
+    Exception for process-related errors (dead, zombie, etc.).
+    """
+
     pass
 
 
@@ -88,17 +92,6 @@ def get_process_by_pid(pid: str) -> Process:
     """
     process = Process(pid)
     return process
-
-
-# just get all process names (for debug purposes)
-# def get_list_of_procs():
-#     result = set()
-#     for proc in psutil.process_iter():
-#         try:
-#             result.add(proc.name())
-#         except:
-#             pass
-#     return result
 
 
 # --------GIT-------------------------------------
