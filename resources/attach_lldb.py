@@ -59,14 +59,14 @@ def perform_debugger_command(debugger, command) -> bool:
     """
     if isinstance(debugger, lldb.SBTarget):
         debugger = debugger.GetDebugger()
-    log_message("Debugger: " + str(debugger))
-    log_message("Command: " + str(command))
+    log_message(f"Debugger: {str(debugger)}, time: {time.time()}")
+    log_message(f"Command: {str(command)}, time: {time.time()}")
     try:
         interpreter = debugger.GetCommandInterpreter()
         return_object = lldb.SBCommandReturnObject()
         interpreter.HandleCommand(command, return_object)
         log_message(
-            f"Result Command: {str(command)}, return object: {str(return_object)}"
+            f"Result Command: {str(command)}, return object: {str(return_object)}, time: {time.time()}"
         )
         return return_object.Succeeded()
     except Exception as e:
@@ -213,11 +213,15 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                     if PROCESS_IS_ATTACHED == ProcessAttachState.DETACHED:
                         log_message("Process is detached, stopping wait_for_process")
                         return
-                log_message(f"Attaching to pid: {pid}")
+                log_message(
+                    f"Attaching to pid: {pid}, process status: {process.status()}, time: {time.time()}"
+                )
                 attach_command = f"process attach --pid {pid}"
                 if perform_debugger_command(debugger, attach_command):
 
-                    log_message(f"Process attached successfully to pid: {pid}")
+                    log_message(
+                        f"Process attached successfully to pid: {pid}, time: {time.time()}"
+                    )
                     PROCESS_IS_ATTACHED = ProcessAttachState.ATTACHED
 
                     helper.update_debugger_launch_config(
@@ -226,14 +230,20 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
 
                     threading.Thread(target=print_app_log, args=(debugger, pid)).start()
                     create_apple_runtime_warning_watch_process(debugger, pid)
+                else:
+                    log_message(
+                        f"Failed to attach to process with pid: {pid}, status: {process.status()} time: {time.time()}"
+                    )
 
                 return
 
             time.sleep(0.001)
     except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
-        log_message(f"Process disappeared before attaching to pid: {pid}")
+        log_message(
+            f"Process disappeared before attaching to pid: {pid}, time: {time.time()}"
+        )
     except Exception as e:
-        log_message(str(e))
+        log_message(f"{str(e)}, pid: {pid}, time: {time.time()}")
 
 
 def watch_new_process(debugger, command, result, internal_dict):
