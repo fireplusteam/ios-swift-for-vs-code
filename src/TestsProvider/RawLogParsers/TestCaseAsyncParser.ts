@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 // eslint-disable-next-line no-useless-escape
 const testCaseRe =
-    /^(Test Case\s'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)^((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm;
+    /^(Test Case\s'-\[)(.*)?\.(.*)?\s(.*)?\](.*)?(started\.)([\s\S]*?)((Test Suite)|(Test session results)|(Test Case).*?(failed|passed).*\((.*)? .*.$)/gm;
 
 export class RawTestParser {
     stdout: string;

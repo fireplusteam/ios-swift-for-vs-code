@@ -90,6 +90,29 @@ Test Case '-[MyTarget.MyTests testExample]' passed (0.001 seconds).`;
             emitter.dispose();
         });
 
+        test("should parse passed test case which is not the start of line", () => {
+            const emitter = new vscode.EventEmitter<string>();
+            const messages: any[] = [];
+
+            const rawParser = parser.parseAsyncLogs(emitter.event, (...args) => {
+                messages.push(args);
+            });
+
+            const testLog = `Test Case '-[MyTarget.MyTests testExample]' started. Some random text beforeTest Case '-[MyTarget.MyTests testExample]' passed (0.001 seconds).`;
+
+            emitter.fire(testLog);
+            parser.end(rawParser);
+
+            assert.strictEqual(messages.length, 1);
+            assert.strictEqual(messages[0][0], "passed");
+            assert.strictEqual(messages[0][2], "MyTarget");
+            assert.strictEqual(messages[0][3], "MyTests");
+            assert.strictEqual(messages[0][4], "testExample");
+            assert.strictEqual(messages[0][5], 0.001);
+
+            emitter.dispose();
+        });
+
         test("should parse failed test case", () => {
             const emitter = new vscode.EventEmitter<string>();
             const messages: any[] = [];
