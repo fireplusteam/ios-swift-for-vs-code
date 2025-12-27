@@ -3,7 +3,8 @@
 import json
 import os
 import time
-import fileLock
+
+import lib.filelock as fileLock
 
 # to update psutil: cd resources && pip install -t lib/ psutil
 import lib.psutil as psutil
@@ -86,6 +87,7 @@ def update_git_exclude(file_to_exclude):
 
 # ---------DEBUGGER--------------------------------
 DEBUGGER_CONFIG_FILE = ".vscode/xcode/debugger.launching"
+DEBUGGER_CONFIG_FILE_LOCK = ".vscode/xcode/debugger.launching.lock"
 
 
 def wait_debugger_to_action(session_id, actions: list[str]):
@@ -97,7 +99,7 @@ def wait_debugger_to_action(session_id, actions: list[str]):
     :type actions: list[str]
     """
     while True:
-        with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE_LOCK):
             with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
                 config = json.load(file)
         if config is not None and not session_id in config:
@@ -118,7 +120,7 @@ def is_debug_session_valid(session_id) -> bool:
     :rtype: bool
     """
     try:
-        with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE_LOCK):
             with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
                 config = json.load(file)
             if not session_id in config:
@@ -138,7 +140,7 @@ def get_debugger_launch_config(session_id, key):
     :param session_id: Debugger session identifier
     :param key: Configuration key
     """
-    with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+    with fileLock.FileLock(DEBUGGER_CONFIG_FILE_LOCK):
         with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
             config = json.load(file)
             if config is not None and not session_id in config:
@@ -158,7 +160,7 @@ def update_debugger_launch_config(session_id, key, value):
     """
     config = {}
     try:
-        with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE_LOCK):
             if os.path.exists(DEBUGGER_CONFIG_FILE):
                 try:
                     with open(DEBUGGER_CONFIG_FILE, "r+", encoding="utf-8") as file:
