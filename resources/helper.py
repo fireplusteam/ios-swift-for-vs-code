@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-# import subprocess
+import subprocess
 import json
 import os
 import time
+import signal
 
 # to update psutil: cd resources && pip install -t lib/ filelock
 import lib.filelock as fileLock
-
-# to update psutil: cd resources && pip install -t lib/ psutil
-import lib.psutil as psutil
 
 
 def get_list_of_pids(process_name: str):
@@ -18,30 +16,69 @@ def get_list_of_pids(process_name: str):
     :param process_name: process name to search for
     :type process_name: str
     """
+    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True, check=True)
+
+    # print(proc.stdout)
+
+    # Split the output into lines
+    lines = proc.stdout.split("\n")
+
     result = set()
-    for proc in psutil.process_iter():
-        try:
-            if process_name == proc.name():
-                result.add(str(proc.pid))
-        except:
-            pass
+
+    for line in lines[1:]:  # Skip the header line
+        columns = line.split()
+        if len(line) == 0:
+            break
+
+        proc_start = line.find(columns[9]) + len(columns[9])
+        proc_line = line[proc_start:].strip()
+        if len(columns) >= 2 and process_name in proc_line:
+            pid = columns[1]
+            result.add(pid)
+
     return result
 
 
-def get_process_by_pid(pid: int) -> psutil.Process:
+class Process:
+    """
+    Represents a system process identified by its PID.
+    """
+
+    def __init__(self, pid: str):
+        self.pid = pid
+
+    def suspend(self):
+        """
+        Suspend the process.
+        """
+        os.kill(int(self.pid), signal.SIGSTOP)
+
+    def resume(self):
+        """Resume the process."""
+        os.kill(int(self.pid), signal.SIGCONT)
+
+    def status(self) -> str:
+        """get process status"""
+        result = subprocess.run(
+            ["ps", "-o", "state=", "-p", str(self.pid)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+
+
+def get_process_by_pid(pid: str) -> Process:
     """
     get Process object by PID
 
     :param pid: process identifier
-    :type pid: int
+    :type pid: str
     :return: Process object or None if not found
     :rtype: Process
     """
-    try:
-        process = psutil.Process(pid)
-        return process
-    except psutil.NoSuchProcess:
-        return None
+    process = Process(pid)
+    return process
 
 
 # just get all process names (for debug purposes)

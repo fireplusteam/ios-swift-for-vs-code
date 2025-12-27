@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 from enum import Enum
 import fcntl
-import lldb
 import time
 import subprocess
-import helper
 import threading
-from app_log import AppLogger
 import os
+import helper
+import lldb
+from app_log import AppLogger
 import runtime_warning_database
-import lib.psutil as psutil
 
 LOG_DEBUG = 0
 
@@ -198,23 +197,23 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
             new_pids = helper.get_list_of_pids(process_name)
             new_pids = [x for x in new_pids if not x in existing_pids]
-            # log_message(f"New pids found: {','.join(new_pids)}")
-            # log_message(f"Process names: {helper.get_list_of_procs()}")
+            log_message(f"New pids found: {','.join(new_pids)}")
 
             if len(new_pids) > 0:
                 pid = new_pids.pop()
-                process = helper.get_process_by_pid(int(pid))
+                process = helper.get_process_by_pid(pid)
 
                 # process attach command sometimes fails to stop the process, so we try to do it manually before attaching
                 # if we can not do it either way, process would be detached from debugger silently and all status of tests would not be lost
-                while process.status() != psutil.STATUS_STOPPED:
+                while "T" not in process.status():
                     process.suspend()
                     time.sleep(0.001)
                     if PROCESS_IS_ATTACHED == ProcessAttachState.DETACHED:
                         log_message("Process is detached, stopping wait_for_process")
                         return
+
                 log_message(
-                    f"Attaching to pid: {pid}, process status: {process.status()}, time: {time.time()}"
+                    f"Attaching to pid: {pid}, process status: {str(process.status())}, time: {time.time()}"
                 )
                 attach_command = f"process attach --pid {pid}"
                 if perform_debugger_command(debugger, attach_command):
@@ -238,12 +237,14 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
 
             time.sleep(0.001)
-    except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+    except subprocess.SubprocessError as proc_e:
         log_message(
-            f"Process disappeared before attaching to pid: {pid}, time: {time.time()}"
+            f"Process disappeared before attaching to pid: {pid}, error: {str(proc_e)}, time: {time.time()}"
         )
     except Exception as e:
-        log_message(f"{str(e)}, pid: {pid}, time: {time.time()}")
+        log_message(
+            f"Error on waiting for process: {str(e)}, pid: {pid}, time: {time.time()}"
+        )
 
 
 def watch_new_process(debugger, command, result, internal_dict):

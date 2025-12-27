@@ -308,11 +308,10 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         if (process_name?.endsWith(".app")) {
             process_name = process_name.slice(0, -".app".length);
         }
-        return process_name;
-        // if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
-        //     return `${process_name}.app/Contents/MacOS/${process_name}`;
-        // }
-        // return `${process_name}.app/${process_name}`;
+        if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
+            return `${process_name}.app/Contents/MacOS/${process_name}`;
+        }
+        return `${process_name}.app/${process_name}`;
     }
 
     private async debugSession(
