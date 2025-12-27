@@ -26,6 +26,22 @@ def get_list_of_pids(process_name: str):
     return result
 
 
+def get_process_by_pid(pid: int) -> psutil.Process:
+    """
+    get Process object by PID
+
+    :param pid: process identifier
+    :type pid: int
+    :return: Process object or None if not found
+    :rtype: Process
+    """
+    try:
+        process = psutil.Process(pid)
+        return process
+    except psutil.NoSuchProcess:
+        return None
+
+
 # just get all process names (for debug purposes)
 # def get_list_of_procs():
 #     result = set()

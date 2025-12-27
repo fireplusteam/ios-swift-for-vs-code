@@ -9,6 +9,7 @@ import threading
 from app_log import AppLogger
 import os
 import runtime_warning_database
+import lib.psutil as psutil
 
 LOG_DEBUG = 0
 
@@ -202,9 +203,18 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
 
             if len(new_pids) > 0:
                 pid = new_pids.pop()
+                process = helper.get_process_by_pid(int(pid))
+
+                # process attach command sometimes fails to stop the process, so we try to do it manually before attaching
+                # if we can not do it either way, process would be detached from debugger silently and all status of tests would not be lost
+                while process.status() != psutil.STATUS_STOPPED:
+                    process.suspend()
+                    time.sleep(0.001)
+
                 log_message(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
-                if perform_debugger_command(debugger, attach_command):
+                if not perform_debugger_command(debugger, attach_command):
+
                     log_message(f"Process attached successfully to pid: {pid}")
                     PROCESS_IS_ATTACHED = ProcessAttachState.ATTACHED
 
@@ -218,6 +228,8 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
 
             time.sleep(0.001)
+    except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+        log_message(f"Process disappeared before attaching to pid: {pid}")
     except Exception as e:
         log_message(str(e))
 
