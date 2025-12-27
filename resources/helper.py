@@ -1,39 +1,51 @@
 #!/usr/bin/env python3
-import subprocess
+# import subprocess
 import json
 import os
 import time
 import fileLock
 
+# to update psutil: cd resources && pip install -t lib/ psutil
+import lib.psutil as psutil
+
 
 def get_list_of_pids(process_name: str):
-    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True, check=True)
+    """
+    Get list of PIDs for the given process name.
 
-    # print(proc.stdout)
-
-    # Split the output into lines
-    lines = proc.stdout.split("\n")
-
-    # get list of pids by process name
+    :param process_name: process name to search for
+    :type process_name: str
+    """
     result = set()
-    for line in lines[1:]:  # Skip the header line
-        columns = line.split()
-        if len(line) == 0:
-            break
-
-        proc_start = line.find(columns[9]) + len(columns[9])
-        proc_line = line[proc_start:].strip()
-        if len(columns) >= 2 and process_name in proc_line:
-            pid = columns[1]
-            result.add(pid)
-
+    for proc in psutil.process_iter():
+        try:
+            if process_name == proc.name():
+                result.add(str(proc.pid))
+        except:
+            pass
     return result
+
+
+# just get all process names (for debug purposes)
+# def get_list_of_procs():
+#     result = set()
+#     for proc in psutil.process_iter():
+#         try:
+#             result.add(proc.name())
+#         except:
+#             pass
+#     return result
 
 
 # --------GIT-------------------------------------
 
 
 def update_git_exclude(file_to_exclude):
+    """
+    Update .git/info/exclude to add the given file to be ignored by git.
+
+    :param file_to_exclude: file path to exclude
+    """
     if not os.path.exists(".git"):
         return
     os.makedirs(".git/info", exist_ok=True)
@@ -57,13 +69,20 @@ def update_git_exclude(file_to_exclude):
 
 
 # ---------DEBUGGER--------------------------------
-debugger_config_file = ".vscode/xcode/debugger.launching"
+DEBUGGER_CONFIG_FILE = ".vscode/xcode/debugger.launching"
 
 
 def wait_debugger_to_action(session_id, actions: list[str]):
+    """
+    Wait until the debugger session reaches one of the given actions.
+
+    :param session_id: Debugger session identifier
+    :param actions: List of actions to wait for
+    :type actions: list[str]
+    """
     while True:
-        with fileLock.FileLock(debugger_config_file):
-            with open(debugger_config_file, "r") as file:
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+            with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
                 config = json.load(file)
         if config is not None and not session_id in config:
             break
@@ -75,9 +94,16 @@ def wait_debugger_to_action(session_id, actions: list[str]):
 
 
 def is_debug_session_valid(session_id) -> bool:
+    """
+    Checks if the debug session with the given session ID is valid. A session is considered invalid if it is marked as "stopped" in the debugger configuration file.
+
+    :param session_id: Debugger session identifier
+    :return: True if the session is valid, False otherwise
+    :rtype: bool
+    """
     try:
-        with fileLock.FileLock(debugger_config_file):
-            with open(debugger_config_file, "r") as file:
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+            with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
                 config = json.load(file)
             if not session_id in config:
                 return False
@@ -90,8 +116,14 @@ def is_debug_session_valid(session_id) -> bool:
 
 
 def get_debugger_launch_config(session_id, key):
-    with fileLock.FileLock(debugger_config_file):
-        with open(debugger_config_file, "r") as file:
+    """
+    Get the debugger launch configuration for the given session ID and key.
+
+    :param session_id: Debugger session identifier
+    :param key: Configuration key
+    """
+    with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+        with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
             config = json.load(file)
             if config is not None and not session_id in config:
                 return None
@@ -101,12 +133,19 @@ def get_debugger_launch_config(session_id, key):
 
 
 def update_debugger_launch_config(session_id, key, value):
+    """
+    Update the debugger launch configuration for the given session ID, key, and value.
+
+    :param session_id: Debugger session identifier
+    :param key: Configuration key
+    :param value: Configuration value
+    """
     config = {}
     try:
-        with fileLock.FileLock(debugger_config_file):
-            if os.path.exists(debugger_config_file):
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE):
+            if os.path.exists(DEBUGGER_CONFIG_FILE):
                 try:
-                    with open(debugger_config_file, "r+") as file:
+                    with open(DEBUGGER_CONFIG_FILE, "r+", encoding="utf-8") as file:
                         config = json.load(file)
                 except:
                     pass
@@ -124,7 +163,7 @@ def update_debugger_launch_config(session_id, key, value):
                 config[session_id] = {}
                 config[session_id][key] = value
 
-            with open(debugger_config_file, "w+") as file:
+            with open(DEBUGGER_CONFIG_FILE, "w+", encoding="utf-8") as file:
                 json.dump(config, file, indent=2)
     except:
         pass  # config is empty
@@ -137,6 +176,12 @@ if __name__ == "__main__":
 
 
 def binary_readline(file, newline=b"\r\n"):
+    """
+    Read a line from a binary file until the specified newline sequence.
+
+    :param file: Binary file object
+    :param newline: Newline sequence to read until
+    """
     line = bytearray()
     while True:
         x = file.read(1)
