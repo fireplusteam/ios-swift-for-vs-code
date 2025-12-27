@@ -198,7 +198,7 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 return
             new_pids = helper.get_list_of_pids(process_name)
             new_pids = [x for x in new_pids if not x in existing_pids]
-            log_message(f"New pids found: {','.join(new_pids)}")
+            # log_message(f"New pids found: {','.join(new_pids)}")
             # log_message(f"Process names: {helper.get_list_of_procs()}")
 
             if len(new_pids) > 0:
@@ -210,7 +210,9 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 while process.status() != psutil.STATUS_STOPPED:
                     process.suspend()
                     time.sleep(0.001)
-
+                    if PROCESS_IS_ATTACHED == ProcessAttachState.DETACHED:
+                        log_message("Process is detached, stopping wait_for_process")
+                        return
                 log_message(f"Attaching to pid: {pid}")
                 attach_command = f"process attach --pid {pid}"
                 if not perform_debugger_command(debugger, attach_command):
@@ -256,9 +258,9 @@ def watch_new_process(debugger, command, result, internal_dict):
     process_name = os.getenv("PROCESS_EXE")
     log_message(f"Process name to watch: {process_name}")
     existing_pids = helper.get_list_of_pids(process_name)
-    log_message(
-        f"Existing pids {','.join(existing_pids)} for Process name {process_name}, session id: {session_id}"
-    )
+    # log_message(
+    #     f"Existing pids {','.join(existing_pids)} for Process name {process_name}, session id: {session_id}"
+    # )
     threading.Thread(target=wait_for_exit, args=(debugger, session_id)).start()
     helper.update_debugger_launch_config(session_id, "status", "launched")
     wait_for_process(process_name, debugger, existing_pids, session_id)
