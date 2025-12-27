@@ -4,6 +4,7 @@ import json
 import os
 import time
 
+# to update psutil: cd resources && pip install -t lib/ filelock
 import lib.filelock as fileLock
 
 # to update psutil: cd resources && pip install -t lib/ psutil
