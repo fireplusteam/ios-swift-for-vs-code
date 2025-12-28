@@ -127,7 +127,7 @@ def update_git_exclude(file_to_exclude):
 
 # ---------DEBUGGER--------------------------------
 DEBUGGER_CONFIG_FILE = ".vscode/xcode/debugger.launching"
-DEBUGGER_CONFIG_FILE_LOCK = ".vscode/xcode/debugger.launching.lock"
+DEBUGGER_CONFIG_FILE_LOCK = f"{DEBUGGER_CONFIG_FILE}.lock"
 
 
 def wait_debugger_to_action(session_id, actions: list[str]):
