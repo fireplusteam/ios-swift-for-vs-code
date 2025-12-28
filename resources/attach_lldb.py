@@ -85,41 +85,6 @@ def kill_codelldb(debugger):
     perform_debugger_command(debugger, f"process attach --pid {process.pid}")
 
 
-class ProcessAttachState(Enum):
-    """
-    Enum representing the state of process attachment.
-    """
-
-    NOT_ATTACHED = 0
-    ATTACHED = 1
-    DETACHED = 2
-
-
-PROCESS_IS_ATTACHED = ProcessAttachState.NOT_ATTACHED
-
-
-def wait_for_exit(debugger, session_id):
-    """
-    Waits for the debug session to become invalid and detaches the debugger.
-
-    :param debugger: debugger instance
-    :param session_id: debug session identifier
-    """
-    global PROCESS_IS_ATTACHED
-    log_message("Waiting for exit")
-
-    while True:
-        if not helper.is_debug_session_valid(session_id):
-            if PROCESS_IS_ATTACHED == ProcessAttachState.ATTACHED:
-                PROCESS_IS_ATTACHED = ProcessAttachState.DETACHED
-                perform_debugger_command(debugger, "process detach")
-            else:
-                PROCESS_IS_ATTACHED = ProcessAttachState.DETACHED
-                kill_codelldb(debugger)
-            return
-        time.sleep(0.5)
-
-
 runtime_warning_process: subprocess.Popen = None
 
 
@@ -187,14 +152,33 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
     :param existing_pids: List of existing process IDs
     :param session_id: debug session identifier
     """
-    global PROCESS_IS_ATTACHED
+
+    class ProcessAttachState(Enum):
+        """
+        Enum representing the state of process attachment.
+        """
+
+        NOT_ATTACHED = 0
+        ATTACHING = 1
+        ATTACHED = 2
+        DETACHED = 3
+
     try:
         log_message(f"Waiting for process: {process_name}")
         log_message(f"Session_id: {session_id}")
+        check_debug_session_last_time = time.time()
+        process_attach_state = ProcessAttachState.NOT_ATTACHED
         while True:
-            if PROCESS_IS_ATTACHED == ProcessAttachState.DETACHED:
-                log_message("Process is detached, stopping wait_for_process")
-                return
+            if check_debug_session_last_time + 1.5 < time.time():
+                if not helper.is_debug_session_valid(session_id):
+                    process_attach_state = ProcessAttachState.DETACHED
+                    kill_codelldb(debugger)
+                    log_message(
+                        "Debug session is no longer valid, stopping wait_for_process"
+                    )
+                    return
+                check_debug_session_last_time = time.time()
+
             new_pids = helper.get_list_of_pids(process_name)
             new_pids = [x for x in new_pids if not x in existing_pids]
             # log_message(f"New pids found: {','.join(new_pids)}")
@@ -205,23 +189,42 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
 
                 # process attach command sometimes fails to stop the process, so we try to do it manually before attaching
                 # if we can not do it either way, process would be detached from debugger silently and all status of tests would not be lost
-                while "T" not in process.status():
-                    process.suspend()
-                    time.sleep(0.001)
-                    if PROCESS_IS_ATTACHED == ProcessAttachState.DETACHED:
-                        log_message("Process is detached, stopping wait_for_process")
-                        return
+                process.suspend()
+
+                def suspending():
+                    try:
+                        while process_attach_state == ProcessAttachState.ATTACHING:
+                            process.suspend()
+                            time.sleep(0.001)
+                    except Exception as e:
+                        log_message(
+                            f"Error on suspending process pid: {pid}, error: {str(e)}, time: {time.time()}"
+                        )
+                    finally:
+                        process.resume()
+
+                def wait_for_exit():
+                    log_message("Waiting for exit")
+                    while True:
+                        if not helper.is_debug_session_valid(session_id):
+                            perform_debugger_command(debugger, "process detach")
+                            return
+                        time.sleep(0.5)
+
+                process_attach_state = ProcessAttachState.ATTACHING
+                threading.Thread(target=suspending).start()
 
                 log_message(
                     f"Attaching to pid: {pid}, process status: {str(process.status())}, time: {time.time()}"
                 )
                 attach_command = f"process attach --pid {pid}"
                 if perform_debugger_command(debugger, attach_command):
-
                     log_message(
                         f"Process attached successfully to pid: {pid}, time: {time.time()}"
                     )
-                    PROCESS_IS_ATTACHED = ProcessAttachState.ATTACHED
+                    threading.Thread(target=wait_for_exit).start()
+
+                    process_attach_state = ProcessAttachState.ATTACHED
 
                     helper.update_debugger_launch_config(
                         session_id, "status", "attached"
@@ -230,8 +233,10 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                     threading.Thread(target=print_app_log, args=(debugger, pid)).start()
                     create_apple_runtime_warning_watch_process(debugger, pid)
                 else:
+                    process_attach_state = ProcessAttachState.DETACHED
+                    kill_codelldb(debugger)
                     log_message(
-                        f"Failed to attach to process with pid: {pid}, status: {process.status()} time: {time.time()}"
+                        f"Failed to attach to process with pid: {pid}, time: {time.time()}"
                     )
 
                 return
@@ -272,7 +277,6 @@ def watch_new_process(debugger, command, result, internal_dict):
     # log_message(
     #     f"Existing pids {','.join(existing_pids)} for Process name {process_name}, session id: {session_id}"
     # )
-    threading.Thread(target=wait_for_exit, args=(debugger, session_id)).start()
     helper.update_debugger_launch_config(session_id, "status", "launched")
     wait_for_process(process_name, debugger, existing_pids, session_id)
 
