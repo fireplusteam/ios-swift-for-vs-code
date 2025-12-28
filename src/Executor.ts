@@ -155,7 +155,7 @@ export class Executor {
 
         let stdout = "";
         proc.stdout?.on("data", data => {
-            const str = data;
+            const str = data.toString();
             if (mode & ExecutorMode.stdout) {
                 if (terminal) {
                     terminal?.write(str);
@@ -168,7 +168,7 @@ export class Executor {
         });
         let stderr = "";
         proc.stderr?.on("data", data => {
-            const str = data;
+            const str = data.toString();
             stderr += str;
         });
 
