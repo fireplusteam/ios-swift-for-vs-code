@@ -7,6 +7,7 @@
 -   Improved logging system to simplify the identification of issues in a production build
 -   Better support of workspace generation based on Package.swift as tuist can not generate workspace without .git folder set
 -   Better macro error parser
+-   Increase reliability of lldb debugger attaching logic to running tests
 
 ## 0.6.2 - 2025-12-25
 

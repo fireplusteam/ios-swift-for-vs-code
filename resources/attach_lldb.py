@@ -188,10 +188,12 @@ def wait_for_process(process_name, debugger, existing_pids, session_id):
                 process = helper.get_process_by_pid(pid)
 
                 # process attach command sometimes fails to stop the process, so we try to do it manually before attaching
-                # if we can not do it either way, process would be detached from debugger silently and all status of tests would not be lost
+                # if we can not do it either way, process would be detached from debugger silently and all status of tests would be lost
                 process.suspend()
 
                 def suspending():
+                    # repeatly suspend the process until it's fully attached as lldb only sunspends it once during attach but process can not react in all cases
+                    # so we keep suspending it until it's fully attached
                     try:
                         while process_attach_state == ProcessAttachState.ATTACHING:
                             process.suspend()
