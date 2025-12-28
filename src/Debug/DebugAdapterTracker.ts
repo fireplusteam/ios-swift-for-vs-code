@@ -83,33 +83,67 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
-        this.log?.appendLine(`Sent: ${JSON.stringify(message)}`);
+        // this can be very verbose, so commented out
+        // this.log?.appendLine(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
             this.simulatorInteractor.focus();
         }
     }
 
-    private refreshBreakpoints = true; // with new lldb-dap this is not needed anymore, so default to true. If you face issues with breakpoints set to false
+    private refreshBreakpoints = new Map<string, { time: number }>();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
-        this.log?.appendLine(`Received: ${JSON.stringify(message)}`);
-        if (
-            message.command === "disconnect" &&
-            (message.arguments === undefined || message.arguments.terminateDebuggee === true)
-        ) {
-            this.terminateCurrentSession(true, false);
-        } else if (message.command === "continue" && this.refreshBreakpoints === false) {
-            // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
-            this.refreshBreakpoints = true;
+        // can be very verbose, so commented out
+        // this.log?.appendLine(`Received: ${JSON.stringify(message)}`);
+        if (message.command === "breakpointLocations") {
+            // example of getting breakpointLocations request
+            // Received: {"command":"breakpointLocations","arguments":{"source":{"name":"ShopController.swift","path":"/path/UI/ShopController.swift"},"line":11},"type":"request","seq":51
             if (
                 this.debugSession.configuration.type ===
                 DebugConfigurationProvider.RealLLDBTypeAdapter
             ) {
+                // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
+                const sourcePath = `${message.arguments.source.path}, name: ${
+                    message.arguments.source.name
+                }, line: ${message.arguments.line}`;
+                const value = this.refreshBreakpoints.get(sourcePath);
+                if (value === undefined) {
+                    this.refreshBreakpoints.set(sourcePath, { time: Date.now() });
+                    return;
+                }
+                if (Date.now() - value.time < 1000) {
+                    return;
+                }
+                /// update the map to not refresh again until next breakpointLocations
+                value.time = Date.now();
+
                 const breakpoints = vscode.debug.breakpoints;
-                vscode.debug.removeBreakpoints(breakpoints);
-                vscode.debug.addBreakpoints(breakpoints);
+                // get vscode breakpoints by source and line
+                let breakpointFound = false;
+                for (const bp of breakpoints) {
+                    if (
+                        bp instanceof vscode.SourceBreakpoint &&
+                        bp.location.uri.fsPath === message.arguments.source.path &&
+                        bp.location.range.start.line + 1 === message.arguments.line
+                    ) {
+                        breakpointFound = true;
+                        this.log?.appendLine(
+                            `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
+                        );
+                        vscode.debug.removeBreakpoints([bp]);
+                        vscode.debug.addBreakpoints([bp]);
+                    }
+                }
+                if (!breakpointFound) {
+                    this.refreshBreakpoints.delete(sourcePath);
+                }
             }
+        } else if (
+            message.command === "disconnect" &&
+            (message.arguments === undefined || message.arguments.terminateDebuggee === true)
+        ) {
+            this.terminateCurrentSession(true, false);
         }
     }
 
