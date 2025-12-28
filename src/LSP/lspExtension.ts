@@ -18,13 +18,6 @@ export interface HandleProblemDiagnosticResolver {
     ) => void;
 }
 
-// Definitions for non-standard requests used by sourcekit-lsp
-
-/** Language client errors */
-export const enum LanguageClientError {
-    LanguageClientUnavailable = "Language Client Unavailable",
-}
-
 export function getTestIDComponents(id: string) {
     const dotIndex = id.indexOf(".");
     let target = "";
