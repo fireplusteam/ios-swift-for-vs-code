@@ -43,6 +43,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         return DebugConfigurationProvider.getContextForSession(this.sessionID);
     }
 
+    private log?: vscode.OutputChannel;
+
     private get isDebuggable(): boolean {
         return this.debugSession.configuration.noDebug === true
             ? false
@@ -54,7 +56,8 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
-        this.simulatorInteractor = new SimulatorFocus(this.context?.commandContext.log);
+        this.log = this.context?.commandContext.log;
+        this.simulatorInteractor = new SimulatorFocus(this.log);
     }
 
     private get logPath(): string {
@@ -63,7 +66,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStartSession() {
         this.simulatorInteractor.init(this.context!.commandContext.projectEnv, this.processExe);
-        this.context!.commandContext.log.appendLine("Debug session is starting...");
+        this.log?.appendLine("Debug session is starting...");
         vscode.debug.activeDebugSession;
         this.disList.push(
             this.context!.commandContext.debugConsoleEvent(std => {
@@ -80,7 +83,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
-        this.context?.commandContext.log.appendLine(`Sent: ${JSON.stringify(message)}`);
+        this.log?.appendLine(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
             this.simulatorInteractor.focus();
         }
@@ -90,6 +93,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
+        this.log?.appendLine(`Received: ${JSON.stringify(message)}`);
         if (
             message.command === "disconnect" &&
             (message.arguments === undefined || message.arguments.terminateDebuggee === true)
@@ -110,20 +114,18 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStopSession() {
-        this.context?.commandContext.log.appendLine("Debug session is stopping...");
+        this.log?.appendLine("Debug session is stopping...");
         if (this.debugSession.configuration.target === "app") {
             this.terminateCurrentSession(true, true);
         }
     }
 
     onError(error: Error) {
-        this.context?.commandContext.log.appendLine(`Error: ${error.message}`);
+        this.log?.appendLine(`Error: ${error.message}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        this.context?.commandContext.log.appendLine(
-            `Exited with code ${code} and signal ${signal}`
-        );
+        this.log?.appendLine(`Exited with code ${code} and signal ${signal}`);
     }
 
     private async terminateCurrentSession(isCancelled: boolean, isStop: boolean) {

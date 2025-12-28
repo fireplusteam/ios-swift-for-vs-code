@@ -16,10 +16,13 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
         return DebugConfigurationProvider.getContextForSession(this.sessionID);
     }
 
+    private log?: vscode.OutputChannel;
+
     private dis?: vscode.Disposable;
 
     constructor(debugSession: vscode.DebugSession) {
         this.debugSession = debugSession;
+        this.log = this.context?.commandContext.log;
     }
 
     onWillStartSession() {
@@ -42,18 +45,16 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillReceiveMessage(_message: any) {}
 
     onWillStopSession() {
-        this.context?.commandContext.log.appendLine("Parent session will stop");
+        this.log?.appendLine("Parent session will stop");
         this.terminateCurrentSession();
     }
 
     onError(error: Error) {
-        this.context?.commandContext.log.appendLine(`Error: ${error}`);
+        this.log?.appendLine(`Error: ${error}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        this.context?.commandContext.log.appendLine(
-            `Parent Exited with code ${code} and signal ${signal}`
-        );
+        this.log?.appendLine(`Parent Exited with code ${code} and signal ${signal}`);
     }
 
     private async terminateCurrentSession() {
