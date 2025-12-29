@@ -425,10 +425,13 @@ export class ProjectManager {
                 }
             }
         } finally {
-            for (const project of modifiedProjects) {
-                await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+            try {
+                for (const project of modifiedProjects) {
+                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                }
+            } finally {
+                release();
             }
-            release();
         }
     }
 
@@ -474,10 +477,13 @@ export class ProjectManager {
                 }
             }
         } finally {
-            for (const project of modifiedProjects) {
-                await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+            try {
+                for (const project of modifiedProjects) {
+                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                }
+            } finally {
+                release();
             }
-            release();
         }
     }
 
