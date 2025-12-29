@@ -508,7 +508,7 @@ export async function handleValidationErrors<T>(
     repeatOnChange: () => Promise<T>
 ) {
     try {
-        commandContext.log.appendLine(`HandleValidationErrors: ${JSON.stringify(error)}`);
+        commandContext.log.error(`HandleValidationErrors: ${JSON.stringify(error)}`);
     } catch {
         /* empty */
     }

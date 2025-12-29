@@ -12,6 +12,7 @@ import { CommandContext } from "../CommandManagement/CommandContext";
 import { BundlePath } from "../CommandManagement/BundlePath";
 import * as path from "path";
 import { Mutex } from "async-mutex";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -35,12 +36,12 @@ export class TestProvider {
 
     private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialized;
     private initialFilesLoadingMutex = new Mutex();
-    private readonly log: vscode.OutputChannel;
+    private readonly log: LogChannelInterface;
 
     constructor(
         projectManager: ProjectManager,
         context: TestTreeContext,
-        log: vscode.OutputChannel,
+        log: LogChannelInterface,
         executeTests: (
             tests: string[] | undefined,
             isDebuggable: boolean,
@@ -113,7 +114,7 @@ export class TestProvider {
                             mapTests.set(testId, { test: test, data: data });
                         } catch (error) {
                             run.failed(test, { message: "Test Case was not well parsed" });
-                            this.log.appendLine(`Test was not correctly parsed: ${test}`);
+                            this.log.error(`Test was not correctly parsed: ${test}`);
                         }
                     }
                 }
@@ -172,7 +173,7 @@ export class TestProvider {
                         // read testing results
                         await this.extractTestingResults(context.bundle, mapTests, run);
                     } catch (error) {
-                        this.log.appendLine(`Error parsing test result logs: ${error}`);
+                        this.log.error(`Error parsing test result logs: ${error}`);
                     } finally {
                         // all others are skipped
                         mapTests.forEach(item => {
@@ -190,7 +191,7 @@ export class TestProvider {
                             run.addCoverage(file);
                         }
                     } catch (error) {
-                        this.log.appendLine(`Coverage data can not be obtained: ${error}`);
+                        this.log.error(`Coverage data can not be obtained: ${error}`);
                     }
 
                     run.end();
@@ -211,7 +212,7 @@ export class TestProvider {
                     try {
                         await runTestQueue(context);
                     } catch (error) {
-                        this.log.appendLine(`${error}`);
+                        this.log.error(`${error}`);
                         throw error;
                     }
                 }, "Start Testing")

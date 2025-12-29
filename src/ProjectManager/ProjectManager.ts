@@ -23,6 +23,7 @@ import {
     RubyProjectFilesManager,
     RubyProjectFilesManagerInterface,
 } from "./RubyProjectFilesManager";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class ProjectManager {
     private readonly disposable: vscode.Disposable[] = [];
@@ -34,14 +35,14 @@ export class ProjectManager {
     onUpdateDeps: (() => Promise<void>) | undefined;
 
     constructor(
-        private readonly log: vscode.OutputChannel,
+        private readonly log: LogChannelInterface,
         private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface = new RubyProjectFilesManager(),
         private readonly projectCache: ProjectCacheInterface = new ProjectsCache()
     ) {
         this.disposable.push(
             vscode.workspace.onDidCreateFiles(async e => {
                 this.addAFileToXcodeProject([...e.files]);
-                this.log.appendLine("Created a new files");
+                this.log.debug("Created a new files: " + e.files.map(f => f.fsPath).join(", "));
             })
         );
 
@@ -55,14 +56,17 @@ export class ProjectManager {
                         return f.newUri;
                     })
                 );
-                this.log.appendLine("Renamed");
+                this.log.debug(
+                    "Renamed: " +
+                        e.files.map(f => `${f.oldUri.fsPath} -> ${f.newUri.fsPath}`).join(", ")
+                );
             })
         );
 
         this.disposable.push(
             vscode.workspace.onDidDeleteFiles(e => {
                 this.deleteFileFromXcodeProject([...e.files]);
-                this.log.appendLine("Deleted");
+                this.log.debug("Deleted: " + e.files.map(f => f.fsPath).join(", "));
             })
         );
         this.disposable.push(
@@ -107,7 +111,7 @@ export class ProjectManager {
             try {
                 await this.projectCache.preloadCacheFromFile(await this.xCodeCachePath());
             } catch (err) {
-                this.log.appendLine(`Project files cache is broken ${err}`);
+                this.log.error(`Project files cache is broken ${err}`);
             }
         }
 
@@ -128,7 +132,7 @@ export class ProjectManager {
                         });
                         await this.readAllProjects(this.projectCache.getList(project));
                     } catch (error) {
-                        this.log.appendLine(`Failed to load project ${project}: ${error}`);
+                        this.log.error(`Failed to load project ${project}: ${error}`);
                         wasLoadedWithError.push(fileNameFromPath(project));
                     }
                 }
@@ -214,7 +218,7 @@ export class ProjectManager {
                             projectTree.addExcluded(file);
                         }
                     } catch (err) {
-                        this.log.appendLine(`Glob pattern is configured wrong: ${err}`);
+                        this.log.error(`Glob pattern is configured wrong: ${err}`);
                     }
                 }
             }
@@ -301,7 +305,7 @@ export class ProjectManager {
 
             return resFiles;
         } catch (err) {
-            this.log.appendLine(String(err));
+            this.log.error(`Failed to get additional included files: ${String(err)}`);
             return new Set<string>();
         }
     }
@@ -310,7 +314,7 @@ export class ProjectManager {
         const json = JSON.stringify(workspace, null, 4);
         return new Promise<void>(async (resolve, reject) => {
             fs.writeFile(await this.xCodeWorkspacePath(), json, async e => {
-                this.log.appendLine(String(e));
+                this.log.error(`Save workspace error: ${String(e)}`);
                 try {
                     if (e === null) {
                         if (
@@ -416,7 +420,7 @@ export class ProjectManager {
                             }
                         }
                     } catch (err) {
-                        this.log.appendLine(String(err));
+                        this.log.error(`Failed to rename file in project: ${String(err)}`);
                     }
                 }
             }
@@ -465,7 +469,7 @@ export class ProjectManager {
                             );
                         }
                     } catch (err) {
-                        this.log.appendLine(String(err));
+                        this.log.error(`Failed to delete file from project: ${String(err)}`);
                     }
                 }
             }
@@ -751,7 +755,7 @@ export class ProjectManager {
                     }
                 }
             } catch (err) {
-                this.log.appendLine(`Failed to update project cache for ${project}: ${err}`);
+                this.log.error(`Failed to update project cache for ${project}: ${err}`);
             }
         }
         return [...bestFitProject];

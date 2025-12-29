@@ -4,6 +4,7 @@ import { HandleProblemDiagnosticResolver, SourcePredicate } from "./LSP/lspExten
 import { getFilePathInWorkspace } from "./env";
 import { Executor } from "./Executor";
 import { BundlePath } from "./CommandManagement/BundlePath";
+import { LogChannelInterface } from "./Logs/LogChannel";
 
 export class RawBuildParser {
     firstIndex = 0;
@@ -29,9 +30,9 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     private diagnosticBuildCollection: vscode.DiagnosticCollection;
 
     private filesWithPreviousBuildDiagnostics = new Set<string>();
-    private log: vscode.OutputChannel;
+    private log: LogChannelInterface;
 
-    constructor(log: vscode.OutputChannel) {
+    constructor(log: LogChannelInterface) {
         this.log = log;
         this.diagnosticBuildCollection = vscode.languages.createDiagnosticCollection("Xcode");
 
@@ -185,9 +186,9 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                           ?.filter(e => sourcePredicate(e.source || "")) || []),
                 ...filesWithNewBuildDiagnostics[file],
             ];
-            // console.log(
-            //     `Storing problems for file: ${file}, to add: ${JSON.stringify(toAddItems)}, all others: ${JSON.stringify(allOthers)}`
-            // );
+            this.log.debug(
+                `Storing problems for file: ${file}, to add: ${JSON.stringify(toAddItems)}, all others: ${JSON.stringify(allOthers)}`
+            );
             this.diagnosticBuildCollection.set(fileUri, [
                 ...this.uniqueDiagnostics(toAddItems, allOthers),
                 ...allOthers,
@@ -220,7 +221,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         try {
             await this.enumerateBuildResults(bundle);
         } catch (err) {
-            this.log.appendLine(`Error enumerating build results: ${err}`);
+            this.log.error(`Error enumerating build results: ${err}`);
         }
 
         if (cleanupPreviousBuildErrors) {
@@ -251,7 +252,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
         const outFileCoverageStr = await executor.execShell({
             scriptOrCommand: { command: command },
         });
-        // this.log.appendLine(`Build logs => outFileCoverageStr: ${outFileCoverageStr.stdout}`);
+        this.log.debug(`Build logs => outFileCoverageStr: ${outFileCoverageStr.stdout}`);
         const buildingDiagnosticErrors = parseSwiftMacrosInXcodeBuildLogs(
             outFileCoverageStr.stdout,
             path => {
@@ -324,7 +325,7 @@ const frameworkErrorPattern = /^(error: )(.*?)$/gm;
 function parseSwiftMacrosInXcodeBuildLogs(
     buildLogs: string,
     readFileSync: (path: string) => string,
-    log: vscode.OutputChannel
+    log: LogChannelInterface
 ) {
     const json = JSON.parse(buildLogs);
     const errors = json["errors"] || [];
@@ -376,7 +377,7 @@ function parseSwiftMacrosInXcodeBuildLogs(
                 const value = files[file] || [];
                 value.push(diagnostic);
                 files[file] = value;
-                log.appendLine(`Error reading or parsing macro source file: ${err}`);
+                log.error(`Error reading or parsing macro source file: ${err}`);
             }
         }
     }
@@ -422,7 +423,7 @@ function parseBuildLog(
     buildLogFile: string,
     output: string,
     numberOfLines: number,
-    log: vscode.OutputChannel,
+    log: LogChannelInterface,
     existsSync = fs.existsSync
 ) {
     const files: { [key: string]: vscode.Diagnostic[] } = {};
@@ -510,7 +511,7 @@ function parseBuildLog(
             files[file] = value;
         }
     } catch (err) {
-        log.appendLine(`Error parsing xcodebuild build logs: ${err}`);
+        log.error(`Error parsing xcodebuild build logs: ${err}`);
     }
     return files;
 }

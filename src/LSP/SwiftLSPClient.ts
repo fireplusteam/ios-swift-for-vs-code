@@ -14,6 +14,7 @@ import { sleep } from "../utils";
 import { exec } from "child_process";
 import { kill } from "process";
 import { Mutex } from "async-mutex";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 function useLspForCFamilyFiles(folder: vscode.Uri) {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");
@@ -45,7 +46,7 @@ export class SwiftLSPClient implements vscode.Disposable {
 
     constructor(
         private readonly workspaceContext: WorkspaceContext,
-        private readonly logs: vscode.OutputChannel
+        private readonly logs: vscode.OutputChannel & LogChannelInterface
     ) {
         this.definitionProvider = new DefinitionProvider(this);
         this.startMonitorMemoryUsage();
@@ -78,7 +79,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             // start it again
             await this.start();
         } catch (error) {
-            this.logs.appendLine(`${error}`);
+            this.logs.error(`${error}`);
             if (error instanceof Error && error.message === "Stopping the server timed out") {
                 await this.start(); // start a new one
             }
@@ -277,7 +278,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             this.peekDocuments = activatePeekDocuments(client);
             this.getReferenceDocument = activateGetReferenceDocument(client);
         } catch (reason) {
-            this.logs.appendLine(`${reason}`);
+            this.logs.error(`${reason}`);
             this.languageClient?.stop();
             this.languageClient = undefined;
             throw reason;

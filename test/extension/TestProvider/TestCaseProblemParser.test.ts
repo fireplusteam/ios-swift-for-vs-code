@@ -1,12 +1,13 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
 import { TestCaseProblemParser } from "../../../src/TestsProvider/RawLogParsers/TestCaseProblemParser";
+import { LogChannel } from "../../../src/Logs/LogChannel";
 
 suite("TestCaseProblemParser", () => {
     let parser: TestCaseProblemParser;
 
     setup(() => {
-        const log = vscode.window.createOutputChannel("TestCaseProblemParserTest");
+        const log = new LogChannel("TestCaseProblemParserTest");
         parser = new TestCaseProblemParser(log);
     });
 

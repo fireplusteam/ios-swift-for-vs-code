@@ -371,6 +371,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
                     "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
                     "command script add -f attach_lldb.app_log app_log",
+                    "command script add -f attach_lldb.set_debug_level set_debug_level",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
@@ -379,6 +380,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var PROCESS_EXE=!!=${processExe}`,
                     `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
 
+                    `set_debug_level ${context.log.logLevel}`,
                     `create_target ${sessionID}`,
 
                     ...lldbCommands,
@@ -423,6 +425,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     "command script add -f attach_lldb.watch_new_process watch_new_process",
                     "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
                     "command script add -f attach_lldb.app_log app_log",
+                    "command script add -f attach_lldb.set_debug_level set_debug_level",
 
                     `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
                     `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
@@ -431,6 +434,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `set_environmental_var PROCESS_EXE=!!=${processExe}`,
                     `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
 
+                    `set_debug_level ${context.log.logLevel}`,
                     `create_target ${sessionID}`,
                 ],
                 processCreateCommands: [

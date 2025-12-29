@@ -4,12 +4,13 @@ import * as vscode from "vscode";
 import { InteractiveTerminal } from "./InteractiveTerminal";
 import { getScriptPath } from "../env";
 import { XCRunHelper } from "./XCRunHelper";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class ToolsManager {
-    private log: vscode.OutputChannel;
+    private log: LogChannelInterface;
     private terminal: InteractiveTerminal;
 
-    constructor(log: vscode.OutputChannel) {
+    constructor(log: LogChannelInterface) {
         this.log = log;
         this.terminal = new InteractiveTerminal(log, "Install Dependencies");
     }
@@ -17,13 +18,13 @@ export class ToolsManager {
     private async isToolInstalled(name: string, version = "--version"): Promise<boolean> {
         return new Promise(resolve => {
             const command = `${name} ${version}`;
-            this.log.appendLine(command);
+            this.log.info(command);
             exec(command, (error, stdout, stderr) => {
                 if (error) {
-                    this.log.appendLine(stderr);
+                    this.log.info(stderr);
                     resolve(false);
                 } else {
-                    this.log.appendLine(stdout);
+                    this.log.info(stdout);
                     resolve(true);
                 }
             });
@@ -34,10 +35,10 @@ export class ToolsManager {
         // return new Promise(resolve => { resolve(false) });
         return new Promise(resolve => {
             const command = `gem list ^${gemName}$ -i`;
-            this.log.appendLine(command);
+            this.log.info(command);
             exec(command, (error, stdout, stderr) => {
-                this.log.appendLine(`stderr: ${stderr}`);
-                this.log.appendLine(`stdout: ${stdout}`);
+                this.log.info(`stderr: ${stderr}`);
+                this.log.info(`stdout: ${stdout}`);
                 if (error) {
                     resolve(false);
                 } else {
@@ -125,21 +126,21 @@ export class ToolsManager {
                 await this.terminal.executeCommand("brew update");
             } catch (error) {
                 const message = `Failed to update Homebrew: ${error}`;
-                this.log.appendLine(message);
+                this.log.error(message);
                 firstError = message;
             }
             try {
                 await this.terminal.executeCommand("brew upgrade xcbeautify");
             } catch (error) {
                 const message = `Failed to upgrade xcbeautify: ${error}`;
-                this.log.appendLine(message);
+                this.log.error(message);
                 firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
             try {
                 await this.terminal.executeCommand("brew upgrade tuist");
             } catch (error) {
                 const message = `Failed to upgrade tuist: ${error}`;
-                this.log.appendLine(message);
+                this.log.error(message);
                 firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
             try {
@@ -147,21 +148,21 @@ export class ToolsManager {
                 await this.terminal.executeCommand("brew upgrade ruby");
             } catch (error) {
                 const message = `Failed to upgrade ruby: ${error}`;
-                this.log.appendLine(message);
+                this.log.error(message);
                 firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
             try {
                 await this.terminal.executeCommand("gem install xcodeproj");
             } catch (error) {
                 const message = `Failed to install xcodeproj gem: ${error}`;
-                this.log.appendLine(message);
+                this.log.error(message);
                 firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
             if (firstError !== null) {
                 throw firstError;
             }
         } catch (error) {
-            this.log.appendLine(`Dependencies were not updated, error: ${error}`);
+            this.log.error(`Dependencies were not updated, error: ${error}`);
             vscode.window.showErrorMessage(
                 `Dependencies were not updated. Try again or do it manually.\n Errors: ${error}`
             );
@@ -170,8 +171,7 @@ export class ToolsManager {
     }
 
     public async resolveThirdPartyTools(askUserToInstallDeps: boolean = false) {
-        this.log.appendLine("Resolving Third Party Dependencies");
-
+        this.log.info("Resolving Third Party Dependencies");
         const hostPlatform = process.platform;
         if (hostPlatform !== "darwin") {
             throw Error(
@@ -213,9 +213,9 @@ export class ToolsManager {
                 try {
                     // install extensions
                     await this.installTools();
-                    this.log.appendLine("All dependencies are installed. You are ready to go");
+                    this.log.info("All dependencies are installed. You are ready to go");
                 } catch (err) {
-                    this.log.appendLine(
+                    this.log.error(
                         `Dependencies were not installed: ${err}.\r\n This extensions would not be working as expected!`
                     );
                     throw Error(
@@ -223,7 +223,7 @@ export class ToolsManager {
                     );
                 }
             } else {
-                this.log.appendLine(
+                this.log.critical(
                     "Dependencies are not installed. This extensions would not be working as expected!"
                 );
                 throw Error(
@@ -231,7 +231,7 @@ export class ToolsManager {
                 );
             }
         } else {
-            this.log.appendLine("All dependencies are installed. You are ready to go");
+            this.log.info("All dependencies are installed. You are ready to go");
         }
     }
 }

@@ -13,6 +13,7 @@ import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
 import { ProjectEnv } from "../env";
 import { BundlePath } from "./BundlePath";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -52,7 +53,7 @@ export class CommandContext {
     }
 
     readonly lspClient: LSPClientContext;
-    readonly log: vscode.OutputChannel;
+    readonly log: LogChannelInterface;
 
     private _terminal?: TerminalShell;
     public get terminal(): TerminalShell | undefined {
@@ -69,7 +70,7 @@ export class CommandContext {
         terminal: TerminalShell | undefined,
         lspClient: LSPClientContext,
         bundle: BundlePath,
-        log: vscode.OutputChannel
+        log: LogChannelInterface
     ) {
         this.bundle = bundle;
         this._cancellationTokenSource = cancellationToken;

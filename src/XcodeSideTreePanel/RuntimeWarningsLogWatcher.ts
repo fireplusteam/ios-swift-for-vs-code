@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as vscode from "vscode";
 import { createFifo } from "../utils";
 import { getWorkspacePath } from "../env";
 import * as path from "path";
@@ -9,6 +8,7 @@ import {
     RuntimeWarningsDataProvider,
 } from "./RuntimeWarningsDataProvider";
 import { createInterface, Interface } from "readline";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class RuntimeWarningsLogWatcher {
     private static LogPath = ".vscode/xcode/fifo/.app_runtime_warnings.fifo";
@@ -18,13 +18,13 @@ export class RuntimeWarningsLogWatcher {
     private stream?: fs.ReadStream;
 
     private cachedContent: string = "";
-    private log: vscode.OutputChannel;
+    private log: LogChannelInterface;
 
     static get logPath(): string {
         return path.join(getWorkspacePath(), RuntimeWarningsLogWatcher.LogPath);
     }
 
-    constructor(panel: RuntimeWarningsDataProvider, log: vscode.OutputChannel) {
+    constructor(panel: RuntimeWarningsDataProvider, log: LogChannelInterface) {
         this.panel = panel;
         this.log = log;
     }
@@ -33,7 +33,7 @@ export class RuntimeWarningsLogWatcher {
         try {
             // await deleteFifo(RuntimeWarningsLogWatcher.logPath);
         } catch (error) {
-            this.log.appendLine(`Error deleting fifo file: ${error}`);
+            this.log.error(`Error deleting fifo file: ${error}`);
         }
         await createFifo(RuntimeWarningsLogWatcher.logPath);
         try {
@@ -60,7 +60,7 @@ export class RuntimeWarningsLogWatcher {
                 this.readContent(line);
             }
         } catch (error) {
-            this.log.appendLine(`FIFO file for warnings log got error: ${error}`);
+            this.log.error(`FIFO file for warnings log got error: ${error}`);
         }
     }
 
@@ -112,7 +112,7 @@ export class RuntimeWarningsLogWatcher {
 
             this.panel.refresh(elements);
         } catch (error) {
-            this.log.appendLine(`Error of parsing runtime errors data: ${error}`);
+            this.log.error(`Error of parsing runtime errors data: ${error}`);
             throw error;
         } finally {
             this.cachedContent = content;

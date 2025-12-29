@@ -25,9 +25,18 @@ def create_app_logger():
 app_logger = create_app_logger()
 
 LOG_FILE = ".logs/lldb.log"
-if LOG_DEBUG != 0:
-    with open(LOG_FILE, "w", encoding="utf-8") as file:
-        file.write("")
+
+
+def initialize_log_file():
+    """
+    Initializes the log file by clearing its contents if debugging is enabled.
+    """
+    if LOG_DEBUG != 0:
+        with open(LOG_FILE, "w", encoding="utf-8") as file:
+            file.write("")
+
+
+initialize_log_file()
 
 
 log_mutex = threading.Lock()
@@ -395,6 +404,26 @@ def set_environmental_var(debugger, command, result, internal_dict):
     """
     key, value = command.split("=!!=")
     os.environ.setdefault(key, value)
+
+
+def set_debug_level(debugger, command, result, internal_dict):
+    """
+    Sets the debug level for logging.
+
+    :param debugger: debugger instance
+    :param command: The command string.
+    :param result: Description
+    :param internal_dict: Description
+    """
+    global LOG_DEBUG
+
+    if command == "debug":
+        if LOG_DEBUG == 0:
+            LOG_DEBUG = 1
+            initialize_log_file()
+    else:
+        LOG_DEBUG = 0
+    log_message(f"Setting debug level to: {command}")
 
 
 def create_target(debugger, command, result, internal_dict):

@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
 import { sleep } from "../utils";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class InteractiveTerminal {
     private terminal: vscode.Terminal;
-    private log: vscode.OutputChannel;
+    private log: LogChannelInterface;
     private closeDisposal: vscode.Disposable;
 
     private async shellIntegration(): Promise<vscode.TerminalShellIntegration> {
@@ -24,7 +25,7 @@ export class InteractiveTerminal {
         });
     }
 
-    constructor(log: vscode.OutputChannel, name: string) {
+    constructor(log: LogChannelInterface, name: string) {
         this.log = log;
         this.terminal = vscode.window.createTerminal({ name: name, hideFromUser: true });
         this.closeDisposal = vscode.window.onDidCloseTerminal(event => {
@@ -39,7 +40,7 @@ export class InteractiveTerminal {
     }
 
     async executeCommand(installScript: string): Promise<void> {
-        this.log.appendLine(installScript);
+        this.log.info(installScript);
         return new Promise(async (resolver, reject) => {
             try {
                 const command = (await this.shellIntegration()).executeCommand(installScript);
@@ -51,13 +52,13 @@ export class InteractiveTerminal {
                     if (command === event.execution) {
                         try {
                             for await (const data of event.execution.read()) {
-                                this.log.append(data);
+                                this.log.info(data);
                             }
                             if (event.exitCode === 0) {
-                                this.log.appendLine("Successfully installed");
+                                this.log.info("Successfully installed");
                                 resolver();
                             } else {
-                                this.log.appendLine(`Is not installed, error: ${event.exitCode}`);
+                                this.log.error(`Is not installed, error: ${event.exitCode}`);
                                 reject(event.exitCode);
                             }
                         } catch (err) {
@@ -72,7 +73,7 @@ export class InteractiveTerminal {
                 });
                 closeDisposal = vscode.window.onDidCloseTerminal(event => {
                     if (event === localTerminal) {
-                        this.log.appendLine(`Terminal is Closed`);
+                        this.log.info(`Terminal is Closed`);
                         closeDisposal?.dispose();
                         closeDisposal = undefined;
                         dispose?.dispose();
@@ -81,6 +82,7 @@ export class InteractiveTerminal {
                     }
                 });
             } catch (err) {
+                this.log.error(`Error executing command ${installScript} with error: ${err}`);
                 reject(err);
             }
         });

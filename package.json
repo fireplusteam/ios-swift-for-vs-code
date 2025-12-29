@@ -187,6 +187,26 @@
                     "title": "Enable lsp on C/C++ files",
                     "description": "if Enabled, sourcekit-lsp provide suggestions for C/C++ files. Turn it off if you want to use another lsp extension provider.",
                     "scope": "resource"
+                },
+                "vscode-ios.log.level": {
+                    "type": "string",
+                    "default": "info",
+                    "enum": [
+                        "debug",
+                        "info",
+                        "warning",
+                        "error",
+                        "critical"
+                    ],
+                    "description": "Set the log level of the extension",
+                    "enumDescriptions": [
+                        "Debug level logging, includes all messages",
+                        "Info level logging, includes informational messages, warnings, errors, and critical messages",
+                        "Warning level logging, includes warnings, errors, and critical messages",
+                        "Error level logging, includes errors and critical messages",
+                        "Critical level logging, includes only critical messages"
+                    ],
+                    "scope": "machine"
                 }
             }
         },

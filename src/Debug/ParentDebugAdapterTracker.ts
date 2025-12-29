@@ -4,6 +4,7 @@ import {
     DebugConfigurationProvider,
 } from "./DebugConfigurationProvider";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -16,7 +17,7 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
         return DebugConfigurationProvider.getContextForSession(this.sessionID);
     }
 
-    private log?: vscode.OutputChannel;
+    private log?: LogChannelInterface;
 
     private dis?: vscode.Disposable;
 
@@ -45,16 +46,16 @@ export class ParentDebugAdapterTracker implements vscode.DebugAdapterTracker {
     onWillReceiveMessage(_message: any) {}
 
     onWillStopSession() {
-        this.log?.appendLine("Parent session will stop");
+        this.log?.info("Parent session will stop");
         this.terminateCurrentSession();
     }
 
     onError(error: Error) {
-        this.log?.appendLine(`Error: ${error}`);
+        this.log?.error(`Error: ${error}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        this.log?.appendLine(`Parent Exited with code ${code} and signal ${signal}`);
+        this.log?.info(`Parent Exited with code ${code} and signal ${signal}`);
     }
 
     private async terminateCurrentSession() {

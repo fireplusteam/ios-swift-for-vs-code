@@ -8,6 +8,7 @@ import {
     RawBuildParser,
     _private,
 } from "../../../src/ProblemDiagnosticResolver";
+import { LogChannel } from "../../../src/Logs/LogChannel";
 
 const cwd = __dirname;
 function location(filePath: string) {
@@ -26,9 +27,9 @@ function location(filePath: string) {
 }
 
 suite("Problem Diagnostic Resolver: Parser", () => {
-    let log: vscode.OutputChannel;
+    let log: LogChannel;
     setup(() => {
-        log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        log = new LogChannel("ProblemDiagnosticResolverTest");
     });
 
     teardown(() => {
@@ -444,7 +445,7 @@ suite("Problem Diagnostic Resolver: Parser", () => {
 suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
     test("Test: Macro Error Parser when macro file exists", () => {
         const buildLogInput = fs.readFileSync(location("xcodebuild_building_result.json"), "utf-8");
-        const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        const log = new LogChannel("ProblemDiagnosticResolverTest");
         const problems = _private.parseSwiftMacrosInXcodeBuildLogs(
             buildLogInput,
             filepath => {
@@ -480,7 +481,7 @@ suite("Problem Diagnostic Xcode build Output Parser Logic Tests", async () => {
 
     test("Test: File Path, Swift Macro Errors, but macro file doesn't exist", () => {
         const buildLogInput = fs.readFileSync(location("xcodebuild_building_result.json"), "utf-8");
-        const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        const log = new LogChannel("ProblemDiagnosticResolverTest");
         const problems = _private.parseSwiftMacrosInXcodeBuildLogs(
             buildLogInput,
             () => {
@@ -535,7 +536,7 @@ suite("ProblemDiagnosticResolver Class Tests", () => {
             .returns({ dispose: () => {} } as any);
         sandbox.stub(vscode.workspace, "onDidDeleteFiles").returns({ dispose: () => {} } as any);
 
-        const log = vscode.window.createOutputChannel("ProblemDiagnosticResolverTest");
+        const log = new LogChannel("ProblemDiagnosticResolverTest");
         resolver = new ProblemDiagnosticResolver(log);
     });
 

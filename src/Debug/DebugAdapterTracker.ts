@@ -13,6 +13,7 @@ import * as fs from "fs";
 import { getFilePathInWorkspace } from "../env";
 import { SimulatorFocus } from "./SimulatorFocus";
 import { killSpawnLaunchedProcesses } from "../utils";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     private debugSession: vscode.DebugSession;
@@ -43,7 +44,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         return DebugConfigurationProvider.getContextForSession(this.sessionID);
     }
 
-    private log?: vscode.OutputChannel;
+    private log?: LogChannelInterface;
 
     private get isDebuggable(): boolean {
         return this.debugSession.configuration.noDebug === true
@@ -66,7 +67,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStartSession() {
         this.simulatorInteractor.init(this.context!.commandContext.projectEnv, this.processExe);
-        this.log?.appendLine("Debug session is starting...");
+        this.log?.info("Debug session is starting...");
         vscode.debug.activeDebugSession;
         this.disList.push(
             this.context!.commandContext.debugConsoleEvent(std => {
@@ -83,8 +84,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
-        // this can be very verbose, so commented out
-        // this.log?.appendLine(`Sent: ${JSON.stringify(message)}`);
+        this.log?.debug(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
             this.simulatorInteractor.focus();
         }
@@ -94,8 +94,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
-        // can be very verbose, so commented out
-        // this.log?.appendLine(`Received: ${JSON.stringify(message)}`);
+        this.log?.debug(`Received: ${JSON.stringify(message)}`);
         if (message.command === "breakpointLocations") {
             // example of getting breakpointLocations request
             // Received: {"command":"breakpointLocations","arguments":{"source":{"name":"ShopController.swift","path":"/path/UI/ShopController.swift"},"line":11},"type":"request","seq":51
@@ -129,7 +128,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                         bp.location.range.start.line + 1 === message.arguments.line
                     ) {
                         breakpointFound = true;
-                        this.log?.appendLine(
+                        this.log?.debug(
                             `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
                         );
                         vscode.debug.removeBreakpoints([bp]);
@@ -149,18 +148,18 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
 
     onWillStopSession() {
-        this.log?.appendLine("Debug session is stopping...");
+        this.log?.info("Debug session is stopping...");
         if (this.debugSession.configuration.target === "app") {
             this.terminateCurrentSession(true, true);
         }
     }
 
     onError(error: Error) {
-        this.log?.appendLine(`Error: ${error.message}`);
+        this.log?.error(`Error: ${error.message}`);
     }
 
     onExit(code: number | undefined, signal: string | undefined) {
-        this.log?.appendLine(`Exited with code ${code} and signal ${signal}`);
+        this.log?.info(`Exited with code ${code} and signal ${signal}`);
     }
 
     private async terminateCurrentSession(isCancelled: boolean, isStop: boolean) {

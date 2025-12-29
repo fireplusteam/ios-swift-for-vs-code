@@ -1,12 +1,13 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { LogChannelInterface } from "../../Logs/LogChannel";
 
 const problemPattern =
     /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+([\s\S]*?)^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s/m;
 const diffPattern = /(XCTAssertEqual|XCTAssertNotEqual)\sfailed:\s\((.*?)\).*?\((.*?)\)/m;
 
 export class TestCaseProblemParser {
-    constructor(private readonly log: vscode.OutputChannel) {}
+    constructor(private readonly log: LogChannelInterface) {}
 
     async parseAsyncLogs(testCase: string, testItem: vscode.TestItem) {
         if (testItem.uri) {
@@ -80,7 +81,7 @@ export class TestCaseProblemParser {
                 }
             }
         } catch (err) {
-            this.log.appendLine(`TestCase parser error: ${err}`);
+            this.log.error(`TestCase parser error: ${err}`);
         }
         return files;
     }

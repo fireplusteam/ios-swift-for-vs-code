@@ -7,6 +7,7 @@ import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
 import { getWorkspaceFolder } from "../env";
 import { BundlePath } from "./BundlePath";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -44,7 +45,7 @@ export class AtomicCommand {
 
     constructor(
         private readonly lspClient: LSPClientContext,
-        private readonly log: vscode.OutputChannel
+        private readonly log: LogChannelInterface
     ) {}
 
     async userCommandWithoutThrowingException(
@@ -182,7 +183,7 @@ export class AtomicCommand {
             return result;
         } catch (err) {
             try {
-                this.log.appendLine(
+                this.log.error(
                     `AtomicCommand: Error during executing user command ${taskName}, error: ${JSON.stringify(err)}`
                 );
             } catch {

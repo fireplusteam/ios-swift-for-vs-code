@@ -28,6 +28,7 @@ import { RunManager } from "./Services/RunManager";
 import { BuildManager } from "./Services/BuildManager";
 import { TestPlanIsNotConfigured } from "./Services/ProjectSettingsProvider";
 import { PackageWorkspaceGenerator } from "./ProjectManager/PackageWorkspaceGenerator";
+import { LogChannelInterface } from "./Logs/LogChannel";
 
 function filterDevices(
     devices: { [name: string]: string }[],
@@ -496,13 +497,13 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
             scriptOrCommand: { file: "update_git_exclude_if_any.py" },
         })
         .catch(error => {
-            commandContext.log.appendLine(`Git exclude was not updated. Error: ${error}`);
+            commandContext.log.error(`Git exclude was not updated. Error: ${error}`);
         });
 
     commandContext.lspClient.restart();
 }
 
-export async function openXCode(activeFile: string, log: vscode.OutputChannel) {
+export async function openXCode(activeFile: string, log: LogChannelInterface) {
     const openExec = new Executor();
     const stdout = (
         await openExec.execShell({
@@ -510,7 +511,7 @@ export async function openXCode(activeFile: string, log: vscode.OutputChannel) {
             args: [await getProjectPath()],
         })
     ).stdout;
-    log.appendLine(stdout);
+    log.info(stdout);
     if (!isFolder(activeFile)) {
         exec(`open -a Xcode ${activeFile} `);
     }

@@ -1,14 +1,14 @@
-import * as vscode from "vscode";
 import { execSync } from "child_process";
 import { DeviceID, ProjectEnv } from "../env";
 import * as path from "path";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class SimulatorFocus {
     private deviceID?: DeviceID;
     private productName?: string;
-    private log: vscode.OutputChannel | undefined;
+    private log: LogChannelInterface | undefined;
 
-    constructor(log: vscode.OutputChannel | undefined) {
+    constructor(log: LogChannelInterface | undefined) {
         this.log = log;
     }
 
@@ -35,7 +35,7 @@ export class SimulatorFocus {
                 execSync(`open -a Simulator --args -CurrentDeviceUDID ${this.deviceID.id}`);
             }
         } catch (error) {
-            this.log?.appendLine(`Simulator was not focused. Error: ${error}`);
+            this.log?.error(`Simulator was not focused. Error: ${error}`);
         }
     }
 }
