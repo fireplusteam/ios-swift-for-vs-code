@@ -230,9 +230,13 @@ export class RunManager {
             context.terminal.terminalName = "App Running";
         }
 
+        const productPath = exePath.endsWith(".app")
+            ? `${exePath}/Contents/MacOS/${productName}`
+            : exePath;
+
         context
             .execShellParallel({
-                scriptOrCommand: { command: `${exePath}/Contents/MacOS/${productName}` },
+                scriptOrCommand: { command: productPath },
                 args: ["--wait-for-debugger"],
                 pipeToDebugConsole: true,
             })

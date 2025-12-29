@@ -493,7 +493,11 @@ async function getTargetExecutable(
     build_configuration: string
 ) {
     try {
-        return `${await getBuildDir(deviceID, build_configuration)}/${product_name}.app`;
+        const path = `${await getBuildDir(deviceID, build_configuration)}/${product_name}`;
+        if (fs.existsSync(`${path}.app`)) {
+            return `${path}.app`;
+        }
+        return path;
     } catch {
         throw AppTargetExecutableMissedError;
     }
