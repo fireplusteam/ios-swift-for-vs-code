@@ -305,6 +305,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
     private async processName(context: CommandContext, exe: string) {
         let process_name = exe.split(path.sep).at(-1);
+        if (process_name === "xctest" || process_name === "swiftpm-testing-helper") {
+            return process_name; // special case for debugging Package.swift tests
+        }
         if (process_name?.endsWith(".app")) {
             process_name = process_name.slice(0, -".app".length);
         }
