@@ -511,7 +511,7 @@ export async function openXCode(activeFile: string, log: LogChannelInterface) {
             args: [await getProjectPath()],
         })
     ).stdout;
-    log.info(stdout);
+    log.info(`open Xcode script stdout: ${stdout}`);
     if (!isFolder(activeFile)) {
         exec(`open -a Xcode ${activeFile} `);
     }
