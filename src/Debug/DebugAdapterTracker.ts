@@ -109,7 +109,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 const value = this.refreshBreakpoints.get(sourcePath);
                 if (value === undefined) {
                     // first time seeing this breakpoint location, it's coming from starting the debug session, so no need to refresh yet
-                    this.refreshBreakpoints.set(sourcePath, { time: Date.now() });
+                    this.refreshBreakpoints.set(sourcePath, { time: 0 });
                     return;
                 }
                 if (Date.now() - value.time < 1000) {
