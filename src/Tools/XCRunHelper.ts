@@ -14,6 +14,10 @@ export class XCRunHelper {
         });
     }
 
+    public static async getXcodePath(): Promise<string> {
+        return this.getStdOut("xcode-select -p");
+    }
+
     public static async getSdkPath(): Promise<string> {
         return this.getStdOut("xcrun --show-sdk-path");
     }

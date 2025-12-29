@@ -306,18 +306,18 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     private async processName(context: CommandContext, exe: string) {
         let process_name = exe.split(path.sep).at(-1);
         if (process_name === "xctest" || process_name === "swiftpm-testing-helper") {
-            return process_name; // special case for debugging Package.swift tests
+            return "/Agents/xctest"; // special case for debugging Package.swift tests
         }
         if (process_name?.endsWith(".app")) {
             process_name = process_name.slice(0, -".app".length);
         }
         if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
             if (exe.endsWith(".app")) {
-                return `${process_name}.app/Contents/MacOS/${process_name}`;
+                return `/${process_name}.app/Contents/MacOS/${process_name}`;
             }
-            return process_name; // console app on macOS will be just the executable name without .app
+            return `/${process_name}`; // console app on macOS will be just the executable name without .app
         }
-        return `${process_name}.app/${process_name}`;
+        return `/${process_name}.app/${process_name}`;
     }
 
     private async debugSession(

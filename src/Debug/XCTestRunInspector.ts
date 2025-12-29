@@ -116,10 +116,12 @@ export class XCTestRunInspector {
             }
             for (const config of configurations) {
                 for (const testTarget of config.TestTargets) {
+                    // __TESTROOT__ needs to be replaced with the product dir, for tests built for products
+                    // __PLATFORMS__ needs to be replaced with the Xcode platforms path, for Package.swift based tests as it runs with xctest
                     const hostPath = testTarget.TestHostPath.replace(
                         "__TESTROOT__/",
                         await getProductDir()
-                    );
+                    ).replace("__PLATFORMS__", `${await XCRunHelper.getXcodePath()}/Platforms`);
 
                     result.push({
                         target: testTarget.BlueprintName,
