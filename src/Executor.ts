@@ -154,8 +154,9 @@ export class Executor {
         console.log(debugCommand);
 
         let stdout = "";
+        const textDecoder = new TextDecoder();
         proc.stdout?.on("data", data => {
-            const str = data.toString();
+            const str = textDecoder.decode(data);
             if (mode & ExecutorMode.stdout) {
                 if (terminal) {
                     terminal?.write(str);
@@ -168,7 +169,7 @@ export class Executor {
         });
         let stderr = "";
         proc.stderr?.on("data", data => {
-            const str = data.toString();
+            const str = textDecoder.decode(data);
             stderr += str;
         });
 

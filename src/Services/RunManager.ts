@@ -129,17 +129,12 @@ export class RunManager {
             context.terminal.terminalName = "App Running";
         }
 
+        const bundleAppName = await context.projectEnv.bundleAppName;
+
         context
             .execShellParallel({
                 scriptOrCommand: { command: "xcrun" },
-                args: [
-                    "simctl",
-                    "launch",
-                    "--console-pty",
-                    deviceId.id,
-                    await context.projectEnv.bundleAppName,
-                    "--wait-for-debugger",
-                ],
+                args: ["simctl", "launch", "--console-pty", deviceId.id, bundleAppName],
                 pipeToDebugConsole: true,
             })
             .catch(async error => {
@@ -237,7 +232,7 @@ export class RunManager {
         context
             .execShellParallel({
                 scriptOrCommand: { command: productPath },
-                args: ["--wait-for-debugger"],
+                args: [],
                 pipeToDebugConsole: true,
             })
             .catch(error => {

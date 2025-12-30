@@ -9,14 +9,16 @@ import signal
 import lib.filelock as fileLock
 
 
-def get_list_of_pids(process_name: str):
+def get_list_of_pids(process_name: str) -> set[str]:
     """
     Get list of PIDs for the given process name.
 
     :param process_name: process name to search for
     :type process_name: str
     """
-    proc = subprocess.run(["ps", "aux"], capture_output=True, text=True, check=True)
+    proc = subprocess.run(
+        ["ps", "-eo", "pid,command"], capture_output=True, text=True, check=True
+    )
 
     # print(proc.stdout)
 
@@ -44,10 +46,10 @@ def get_list_of_pids(process_name: str):
         if len(line) == 0:
             break
 
-        proc_start = line.find(columns[9]) + len(columns[9])
-        proc_line = line[proc_start:].strip()
+        command_start = line.find(columns[0]) + len(columns[0])
+        proc_line = line[command_start:].strip()
         if len(columns) >= 2 and has_process_name(proc_line):
-            pid = columns[1]
+            pid = columns[0]
             result.add(pid)
 
     return result
