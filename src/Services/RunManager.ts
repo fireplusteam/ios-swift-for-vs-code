@@ -6,6 +6,7 @@ import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
 import { ExecutorMode, ExecutorTaskError } from "../Executor";
 import { BuildManager } from "./BuildManager";
+import { XCRunHelper } from "../Tools/XCRunHelper";
 
 export class RunManager {
     private sessionID: string;
@@ -175,8 +176,7 @@ export class RunManager {
         try {
             await context.execShellWithOptions({
                 scriptOrCommand: {
-                    command:
-                        "open /Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/",
+                    command: `open '${await XCRunHelper.getXcodePath()}/Applications/Simulator.app/'`,
                     labelInTerminal: "Opening Simulator",
                 },
                 mode: ExecutorMode.onlyCommandNameAndResult,

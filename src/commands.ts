@@ -513,7 +513,7 @@ export async function openXCode(activeFile: string, log: LogChannelInterface) {
     ).stdout;
     log.info(`open Xcode script stdout: ${stdout}`);
     if (!isFolder(activeFile)) {
-        exec(`open -a Xcode ${activeFile} `);
+        exec(`open -a Xcode '${activeFile}'`);
     }
 }
 
