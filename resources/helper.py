@@ -25,6 +25,20 @@ def get_list_of_pids(process_name: str):
 
     result = set()
 
+    def has_process_name(line: str) -> bool:
+        index = 0
+        while index < len(line):
+            index = line.find(process_name, index)
+            if index == -1:
+                return False
+            if index + len(process_name) == len(line) or (
+                index + len(process_name) < len(line)
+                and line[index + len(process_name)] in " \t"
+            ):  # end of line or followed by whitespace
+                return True
+            index += len(process_name)
+        return False
+
     for line in lines[1:]:  # Skip the header line
         columns = line.split()
         if len(line) == 0:
@@ -32,7 +46,7 @@ def get_list_of_pids(process_name: str):
 
         proc_start = line.find(columns[9]) + len(columns[9])
         proc_line = line[proc_start:].strip()
-        if len(columns) >= 2 and process_name in proc_line:
+        if len(columns) >= 2 and has_process_name(proc_line):
             pid = columns[1]
             result.add(pid)
 
