@@ -274,6 +274,74 @@ def wait_for_process(
         )
 
 
+def launch_new_process(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
+    """
+    Launches a new process and attaches the debugger to it.
+
+    :param debugger: debugger instance
+    :param command: The command string.
+    :param result: Description
+    :param internal_dict: Description
+    """
+
+    def wait_until_build_for_launch(debugger: lldb.SBDebugger, session_id):
+        while True:
+            if not helper.is_debug_session_valid(session_id):
+                perform_debugger_command(debugger, "process detach")
+                return "stopped"
+            status = helper.get_debugger_launch_config(session_id, "status")
+            if status == "launching" or status == "launched":
+                return status
+            time.sleep(0.3)
+
+    def wait_for_exit_imp():
+        log_message("Waiting for exit")
+        while True:
+            if not helper.is_debug_session_valid(session_id):
+                perform_debugger_command(debugger, "process detach")
+                return
+            time.sleep(0.5)
+
+    try:
+        session_id = command
+        log_message(
+            f"Waiting for build for session id: {session_id}, time: {time.time()}"
+        )
+        status = wait_until_build_for_launch(debugger, session_id)
+        if status == "stopped":
+            return
+
+        log_message(
+            f"Creating Session with session id: {session_id}, time: {time.time()}"
+        )
+        result.AppendMessage(f"Environment: {list}")
+
+        executable = os.getenv("APP_EXE")
+        log_message(f"Exe: {executable}")
+
+        helper.update_debugger_launch_config(session_id, "status", "launched")
+
+        if perform_debugger_command(debugger, f"process launch -s -- '{executable}'"):
+            # get process pid
+            process = debugger.GetSelectedTarget().GetProcess()
+            pid = process.GetProcessID()
+            log_message(f"Process launched with pid: {pid}, time: {time.time()}")
+
+            threading.Thread(target=wait_for_exit_imp).start()
+            helper.update_debugger_launch_config(session_id, "status", "attached")
+            create_apple_runtime_warning_watch_process(debugger, str(pid))
+        else:
+            helper.update_debugger_launch_config(session_id, "status", "stopped")
+    except Exception as e:
+        log_message(f"{str(e)}, time: {time.time()}")
+        helper.update_debugger_launch_config(session_id, "status", "stopped")
+
+
 def watch_new_process(
     debugger: lldb.SBDebugger,
     command: str,

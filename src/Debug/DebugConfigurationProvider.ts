@@ -388,16 +388,15 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const importScripts = [
             // import scripts
             `command script import '${getScriptPath()}/attach_lldb.py'`,
-            `command script import '${getScriptPath()}/launch_lldb.py'`,
             // launch commands
-            "command script add -f launch_lldb.set_debug_level_launch set_debug_level_launch",
-            "command script add -f launch_lldb.launch_new_process launch_new_process",
+            "command script add -f attach_lldb.launch_new_process launch_new_process",
 
             // attach commands
-            "command script add -f attach_lldb.set_environmental_var set_environmental_var",
             "command script add -f attach_lldb.create_target create_target",
-            "command script add -f attach_lldb.terminate_debugger terminate_debugger",
             "command script add -f attach_lldb.watch_new_process watch_new_process",
+            // rest commands
+            "command script add -f attach_lldb.set_environmental_var set_environmental_var",
+            "command script add -f attach_lldb.terminate_debugger terminate_debugger",
             "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
             "command script add -f attach_lldb.app_log app_log",
             "command script add -f attach_lldb.set_debug_level set_debug_level",
@@ -413,7 +412,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
             // log level
             `set_debug_level ${context.log.logLevel}`,
-            `set_debug_level_launch ${context.log.logLevel}`,
         ];
         const isLaunchingApp = dbgConfig.target === "app" && deviceID.platform === "macOS";
         if (lldExePath) {
