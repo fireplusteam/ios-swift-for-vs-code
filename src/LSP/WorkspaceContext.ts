@@ -3,7 +3,8 @@ import { Executor } from "../Executor";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { HandleProblemDiagnosticResolver } from "./lspExtension";
 import * as vscode from "vscode";
-
+import * as fs from "fs/promises";
+import * as path from "path";
 export interface WorkspaceContext {
     readonly workspaceFolder: Promise<vscode.Uri>;
     readonly problemDiagnosticResolver: HandleProblemDiagnosticResolver;
@@ -86,17 +87,79 @@ export class WorkspaceContextImp implements WorkspaceContext {
 }
 
 async function getLLDBLibPath() {
-    const executable = await XCRunHelper.lldbBinPath();
-    const statement = `print('<!' + lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeLLDBShlibDir).fullpath + '!>')`;
-    const args = ["-b", "-O", `script ${statement}`];
-    const result = await new Executor().execShell({
-        scriptOrCommand: { command: executable },
-        args: args,
-    });
-    if (result !== null) {
-        const m = /^<!([^!]*)!>/m.exec(result.stdout);
+    let executable: string;
+    try {
+        executable = await XCRunHelper.lldbBinPath();
+    } catch (error) {
+        throw Error("LLDB executable is not found.");
+    }
+    let pathHint = await XCRunHelper.swiftToolchainPath();
+    try {
+        const statement = `print('<!' + lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeLLDBShlibDir).fullpath + '!>')`;
+        const args = ["-b", "-O", `script ${statement}`];
+        const stdout = (
+            await new Executor().execShell({
+                scriptOrCommand: { command: executable },
+                args: args,
+            })
+        ).stdout;
+
+        const m = /^<!([^!]*)!>/m.exec(stdout);
         if (m) {
-            return m[1];
+            pathHint = m[1];
+        }
+    } catch {
+        /* Ignore errors and use default path hint */
+    }
+    const lldbPath = await findLibLLDB(pathHint);
+    if (lldbPath) {
+        return lldbPath;
+    } else {
+        throw new Error("LLDB failed to provide a library path");
+    }
+}
+
+async function findLibLLDB(pathHint: string): Promise<string | undefined> {
+    const stat = await fs.stat(pathHint);
+    if (stat.isFile()) {
+        return pathHint;
+    }
+
+    let libDir;
+    let pattern;
+    if (process.platform === "linux") {
+        libDir = path.join(pathHint, "lib");
+        pattern = /liblldb.*\.so.*/;
+    } else if (process.platform === "darwin") {
+        // this extension works only with macOS LLDB
+        libDir = path.join(pathHint, "lib");
+        pattern = /liblldb\..*dylib|LLDB/;
+    } else if (process.platform === "win32") {
+        libDir = path.join(pathHint, "bin");
+        pattern = /liblldb\.dll/;
+    } else {
+        return pathHint;
+    }
+
+    for (const dir of [pathHint, libDir]) {
+        const file = await findFileByPattern(dir, pattern);
+        if (file) {
+            return path.join(dir, file);
         }
     }
+    return undefined;
+}
+
+async function findFileByPattern(path: string, pattern: RegExp): Promise<string | null> {
+    try {
+        const files = await fs.readdir(path);
+        for (const file of files) {
+            if (pattern.test(file)) {
+                return file;
+            }
+        }
+    } catch (err) {
+        // Ignore missing directories and such...
+    }
+    return null;
 }

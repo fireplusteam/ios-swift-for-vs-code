@@ -415,9 +415,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             `set_debug_level ${context.log.logLevel}`,
             `set_debug_level_launch ${context.log.logLevel}`,
         ];
-
+        const isLaunchingApp = dbgConfig.target === "app" && deviceID.platform === "macOS";
         if (lldExePath) {
-            if (deviceID.platform === "macOS" && dbgConfig.target === "app") {
+            if (isLaunchingApp) {
                 const debugSession: vscode.DebugConfiguration = {
                     type: DebugConfigurationProvider.RealLLDBTypeAdapter,
                     request: "launch",
@@ -450,6 +450,35 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 await this.workspaceContext.setLLDBVersion();
                 DebugConfigurationProvider.shouldSetCodeLLDB = false;
             }
+            const codeLLDDSettings = {
+                name: dbgConfig.name,
+                exitCommands: [],
+                sessionId: sessionID,
+                noDebug: !isDebuggable,
+                target: dbgConfig.target,
+                testsToRun: dbgConfig.testsToRun,
+                buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
+                logPath: `.logs/app_${logId}.log`,
+                deviceID: deviceID.id,
+                xctestrun: dbgConfig.xctestrun,
+                isCoverage: dbgConfig.isCoverage,
+                processExe: processExe,
+            };
+
+            if (isLaunchingApp) {
+                const debugSession: vscode.DebugConfiguration = {
+                    type: "lldb", // code lldb
+                    request: "custom",
+                    targetCreateCommands: [...importScripts, `create_target ${sessionID}`],
+                    processCreateCommands: [
+                        ...lldbCommands,
+                        `launch_new_process ${sessionID}`,
+                        "continue",
+                    ],
+                    ...codeLLDDSettings,
+                };
+                return debugSession;
+            }
 
             // old code-lldb way: deprecated
             const debugSession: vscode.DebugConfiguration = {
@@ -461,7 +490,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     `watch_new_process ${sessionID} codelldb`,
                     "continue",
                 ],
-                ...commonSettings,
+                ...codeLLDDSettings,
             };
             return debugSession;
         }
