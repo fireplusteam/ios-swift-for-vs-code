@@ -210,10 +210,10 @@ export class RunManager {
     }
 
     private async runOnMac(context: CommandContext) {
-        const exePath = await context.projectEnv.appExecutablePath(
-            await context.projectEnv.debugDeviceID
-        );
-        const productName = await context.projectEnv.productName;
+        // const exePath = await context.projectEnv.appExecutablePath(
+        //     await context.projectEnv.debugDeviceID
+        // );
+        // const productName = await context.projectEnv.productName;
 
         if (context.terminal) {
             context.terminal.terminalName = "Waiting Debugger";
@@ -225,20 +225,21 @@ export class RunManager {
             context.terminal.terminalName = "App Running";
         }
 
-        const productPath = exePath.endsWith(".app")
-            ? `${exePath}/Contents/MacOS/${productName}`
-            : exePath;
+        // for macOS we can directly run the executable via lldb launch request in DebugConfigurationsProvider
+        // const productPath = exePath.endsWith(".app")
+        //     ? `${exePath}/Contents/MacOS/${productName}`
+        //     : exePath;
 
-        context
-            .execShellParallel({
-                scriptOrCommand: { command: productPath },
-                args: [],
-                pipeToDebugConsole: true,
-            })
-            .catch(error => {
-                context.log.error(`Error in launched app: ${error}`);
-                DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
-            });
+        // context
+        //     .execShellParallel({
+        //         scriptOrCommand: { command: productPath },
+        //         args: [],
+        //         pipeToDebugConsole: true,
+        //     })
+        //     .catch(error => {
+        //         context.log.error(`Error in launched app: ${error}`);
+        //         DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
+        //     });
     }
 
     private async waitDebugger(context: CommandContext) {

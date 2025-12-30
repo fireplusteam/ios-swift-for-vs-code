@@ -364,51 +364,84 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         const logId = deviceID.id;
         emptyAppLog(logId);
 
+        const commonSettings = {
+            name: dbgConfig.name,
+            args: [],
+            env: [],
+            initCommands: [],
+            exitCommands: [],
+            cwd: getWorkspacePath(),
+            debuggerRoot: getWorkspacePath(),
+            stopOnEntry: false,
+            sessionId: sessionID,
+            noDebug: !isDebuggable,
+            target: dbgConfig.target,
+            testsToRun: dbgConfig.testsToRun,
+            buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
+            logPath: `.logs/app_${logId}.log`,
+            deviceID: deviceID.id,
+            xctestrun: dbgConfig.xctestrun,
+            isCoverage: dbgConfig.isCoverage,
+            processExe: processExe,
+        };
+
+        const importScripts = [
+            // import scripts
+            `command script import '${getScriptPath()}/attach_lldb.py'`,
+            `command script import '${getScriptPath()}/launch_lldb.py'`,
+            // launch commands
+            "command script add -f launch_lldb.set_debug_level_launch set_debug_level_launch",
+            "command script add -f launch_lldb.launch_new_process launch_new_process",
+
+            // attach commands
+            "command script add -f attach_lldb.set_environmental_var set_environmental_var",
+            "command script add -f attach_lldb.create_target create_target",
+            "command script add -f attach_lldb.terminate_debugger terminate_debugger",
+            "command script add -f attach_lldb.watch_new_process watch_new_process",
+            "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
+            "command script add -f attach_lldb.app_log app_log",
+            "command script add -f attach_lldb.set_debug_level set_debug_level",
+
+            //environmental vars
+            `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
+            `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
+            `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
+            `set_environmental_var APP_EXE=!!=${exe}`,
+            `set_environmental_var PROCESS_EXE=!!=${processExe}`,
+            `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
+            `set_environmental_var APP_EXE=!!=${exe}`,
+
+            // log level
+            `set_debug_level ${context.log.logLevel}`,
+            `set_debug_level_launch ${context.log.logLevel}`,
+        ];
+
         if (lldExePath) {
+            if (deviceID.platform === "macOS" && dbgConfig.target === "app") {
+                const debugSession: vscode.DebugConfiguration = {
+                    type: DebugConfigurationProvider.RealLLDBTypeAdapter,
+                    request: "launch",
+                    program: exe,
+                    launchCommands: [
+                        ...importScripts,
+                        `launch_new_process ${sessionID}`,
+                        ...lldbCommands,
+                    ],
+                    ...commonSettings,
+                };
+                return debugSession;
+            }
+            // simulators
             const debugSession: vscode.DebugConfiguration = {
                 type: DebugConfigurationProvider.RealLLDBTypeAdapter,
                 request: "attach",
-                name: dbgConfig.name,
                 attachCommands: [
-                    `command script import '${getScriptPath()}/attach_lldb.py'`,
-                    "command script add -f attach_lldb.set_environmental_var set_environmental_var",
-                    "command script add -f attach_lldb.create_target create_target",
-                    "command script add -f attach_lldb.terminate_debugger terminate_debugger",
-                    "command script add -f attach_lldb.watch_new_process watch_new_process",
-                    "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
-                    "command script add -f attach_lldb.app_log app_log",
-                    "command script add -f attach_lldb.set_debug_level set_debug_level",
-
-                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
-                    `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
-                    `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
-                    `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${processExe}`,
-                    `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
-
-                    `set_debug_level ${context.log.logLevel}`,
+                    ...importScripts,
                     `create_target ${sessionID}`,
-
                     ...lldbCommands,
                     `watch_new_process ${sessionID} lldb-dap`,
                 ],
-                args: [],
-                env: [],
-                initCommands: [],
-                exitCommands: [],
-                cwd: getWorkspacePath(),
-                debuggerRoot: getWorkspacePath(),
-                stopOnEntry: false,
-                sessionId: sessionID,
-                noDebug: !isDebuggable,
-                target: dbgConfig.target,
-                testsToRun: dbgConfig.testsToRun,
-                buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
-                logPath: `.logs/app_${logId}.log`,
-                deviceID: deviceID.id,
-                xctestrun: dbgConfig.xctestrun,
-                isCoverage: dbgConfig.isCoverage,
-                processExe: processExe,
+                ...commonSettings,
             };
             return debugSession;
         } else {
@@ -422,43 +455,13 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             const debugSession: vscode.DebugConfiguration = {
                 type: "lldb", // code lldb
                 request: "custom",
-                name: dbgConfig.name,
-                targetCreateCommands: [
-                    `command script import '${getScriptPath()}/attach_lldb.py'`,
-                    "command script add -f attach_lldb.set_environmental_var set_environmental_var",
-                    "command script add -f attach_lldb.create_target create_target",
-                    "command script add -f attach_lldb.terminate_debugger terminate_debugger",
-                    "command script add -f attach_lldb.watch_new_process watch_new_process",
-                    "command script add -f attach_lldb.print_runtime_warning print_runtime_warning",
-                    "command script add -f attach_lldb.app_log app_log",
-                    "command script add -f attach_lldb.set_debug_level set_debug_level",
-
-                    `set_environmental_var PROJECT_SCHEME=!!=${await context.projectEnv.projectScheme}`,
-                    `set_environmental_var DEVICE_ID=!!=${deviceID.id}`,
-                    `set_environmental_var PLATFORM=!!=${deviceID.platform}`,
-                    `set_environmental_var APP_EXE=!!=${exe}`,
-                    `set_environmental_var PROCESS_EXE=!!=${processExe}`,
-                    `set_environmental_var SCRIPT_PATH=!!=${getScriptPath()}`,
-
-                    `set_debug_level ${context.log.logLevel}`,
-                    `create_target ${sessionID}`,
-                ],
+                targetCreateCommands: [...importScripts, `create_target ${sessionID}`],
                 processCreateCommands: [
                     ...lldbCommands,
                     `watch_new_process ${sessionID} codelldb`,
                     "continue",
                 ],
-                exitCommands: [],
-                sessionId: sessionID,
-                noDebug: !isDebuggable,
-                target: dbgConfig.target,
-                testsToRun: dbgConfig.testsToRun,
-                buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
-                logPath: `.logs/app_${logId}.log`,
-                deviceID: deviceID.id,
-                xctestrun: dbgConfig.xctestrun,
-                isCoverage: dbgConfig.isCoverage,
-                processExe: processExe,
+                ...commonSettings,
             };
             return debugSession;
         }

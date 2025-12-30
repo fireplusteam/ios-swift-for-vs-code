@@ -57,7 +57,7 @@ def log_message(message, file_name=LOG_FILE):
             _file.flush()
 
 
-def perform_debugger_command(debugger, command) -> bool:
+def perform_debugger_command(debugger: lldb.SBDebugger, command: str) -> bool:
     """
     Executes a command in the LLDB debugger and logs the result.
 
@@ -82,7 +82,7 @@ def perform_debugger_command(debugger, command) -> bool:
         return False
 
 
-def kill_codelldb(debugger):
+def kill_codelldb(debugger: lldb.SBDebugger):
     """
     Kills the codelldb stub process.
 
@@ -97,7 +97,7 @@ def kill_codelldb(debugger):
 runtime_warning_process: subprocess.Popen = None
 
 
-def create_apple_runtime_warning_watch_process(debugger, pid):
+def create_apple_runtime_warning_watch_process(debugger: lldb.SBDebugger, pid: str):
     """
     Creates a process to watch Apple runtime warnings for a given process ID.
 
@@ -132,7 +132,7 @@ def create_apple_runtime_warning_watch_process(debugger, pid):
         log_message(f"Error on watching {e}")
 
 
-def print_app_log(debugger, pid):
+def print_app_log(debugger: lldb.SBDebugger, pid: str):
     """
     Prints the application log for a given process ID.
 
@@ -153,7 +153,10 @@ def print_app_log(debugger, pid):
 
 
 def wait_for_process(
-    process_name: str, debugger, existing_pids: set[str], session_id: str
+    process_name: str,
+    debugger: lldb.SBDebugger,
+    existing_pids: set[str],
+    session_id: str,
 ):
     """
     Waits for a new process with the specified name to start and attaches the debugger to it.
@@ -271,7 +274,12 @@ def wait_for_process(
         )
 
 
-def watch_new_process(debugger, command, result, internal_dict):
+def watch_new_process(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     Watches for a new process to start and attaches the debugger to it.
 
@@ -303,7 +311,7 @@ def watch_new_process(debugger, command, result, internal_dict):
 mutex_log_runtime_error = threading.Lock()
 
 
-def log_runtime_error(debugger, json):
+def log_runtime_error(debugger: lldb.SBDebugger, json):
     """
     Logs a runtime error from the runtime warning process.
 
@@ -341,7 +349,12 @@ def log_runtime_error(debugger, json):
             log_message(f"Error logging to runtime database: {str(e)}")
 
 
-def print_runtime_warning(debugger, command, result, internal_dict):
+def print_runtime_warning(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     Prints the runtime app warning information.
 
@@ -384,7 +397,7 @@ def print_runtime_warning(debugger, command, result, internal_dict):
     log_message("Logged runtime warning")
 
 
-def wait_until_build(debugger, session_id):
+def wait_until_build(debugger: lldb.SBDebugger, session_id: str):
     """
     Waits until the build process is complete.
 
@@ -401,7 +414,12 @@ def wait_until_build(debugger, session_id):
         time.sleep(0.3)
 
 
-def set_environmental_var(debugger, command, result, internal_dict):
+def set_environmental_var(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     Sets an environmental variable.
 
@@ -414,7 +432,12 @@ def set_environmental_var(debugger, command, result, internal_dict):
     os.environ.setdefault(key, value)
 
 
-def set_debug_level(debugger, command, result, internal_dict):
+def set_debug_level(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     Sets the debug level for logging.
 
@@ -434,7 +457,12 @@ def set_debug_level(debugger, command, result, internal_dict):
     log_message(f"Setting debug level to: {command}")
 
 
-def create_target(debugger, command, result, internal_dict):
+def create_target(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     Creates a debugging target for the application.
 
@@ -477,7 +505,12 @@ def create_target(debugger, command, result, internal_dict):
         log_message(str(e))
 
 
-def app_log(debugger, command, result, internal_dict):
+def app_log(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     On/off application logging.
 
@@ -496,7 +529,12 @@ def app_log(debugger, command, result, internal_dict):
         result.AppendMessage("Valid value of app_log command is <on/off>")
 
 
-def terminate_debugger(debugger, command, result, internal_dict):
+def terminate_debugger(
+    debugger: lldb.SBDebugger,
+    command: str,
+    result: lldb.SBCommandReturnObject,
+    internal_dict,
+):
     """
     Terminates the debugger process.
 
