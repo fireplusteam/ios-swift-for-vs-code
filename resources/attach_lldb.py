@@ -319,12 +319,13 @@ def launch_new_process(
         log_message(
             f"Creating Session with session id: {session_id}, time: {time.time()}"
         )
-        result.AppendMessage(f"Environment: {list}")
+        result.AppendMessage(f"launching new instance of App, session id: {session_id}")
 
         executable = os.getenv("APP_EXE")
         log_message(f"Exe: {executable}")
 
         helper.update_debugger_launch_config(session_id, "status", "launched")
+        log_message(f"Launching process: {executable}, time: {time.time()}")
 
         if perform_debugger_command(debugger, f"process launch -s -- '{executable}'"):
             # get process pid
@@ -548,8 +549,6 @@ def create_target(
         app_logger.session_id = session_id
         log_message(f"Creating Session with session id: {session_id}")
         result.AppendMessage("Start lldb watching new instance of App")
-
-        result.AppendMessage(f"Environment: {list}")
 
         executable = os.getenv("APP_EXE")
         log_message(f"Exe: {executable}")
