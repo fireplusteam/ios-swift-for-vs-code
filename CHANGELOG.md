@@ -1,6 +1,11 @@
 # Change Log
 
-## 0.6.3 - 2025-12-31
+## 0.6.4 - 2025-12-31
+
+-   Improved attach debugger to debuggable process reliability
+-   Bug fixes and improved stability
+
+## 0.6.3 - 2025-12-29
 
 ### Fixed
 

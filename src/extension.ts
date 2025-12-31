@@ -99,6 +99,7 @@ async function initialize(
         // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
     }
     lsp.start();
+    fs.mkdir(getFilePathInWorkspace(".logs"), () => {});
     await enableXCBBuildService(shouldInjectXCBBuildService());
     await projectManager.loadProjectFiles();
     autocompleteWatcher.triggerIncrementalBuild();
@@ -127,8 +128,6 @@ const statusBar = new StatusBar();
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-    fs.mkdir(getFilePathInWorkspace(".logs"), () => {});
-
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
     context.subscriptions.push(logChannel);
