@@ -30,9 +30,8 @@ def get_list_of_pids(process_name: str) -> set[str]:
 
     ps_command = ["ps", "-eo", "pid,command"]
     if CAN_RUN_HIGH_PRIORITY_SUBPROCESS:
-        high_nice_value = -20
         try:
-            proc = call_ps(["nice", "-n", str(high_nice_value)] + ps_command)
+            proc = call_ps(["nice", "-n", "-20"] + ps_command)
         except PermissionError:
             CAN_RUN_HIGH_PRIORITY_SUBPROCESS = False
             proc = call_ps(ps_command)

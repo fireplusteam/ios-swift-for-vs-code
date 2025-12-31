@@ -89,7 +89,7 @@ def kill_codelldb(debugger: lldb.SBDebugger):
     :param debugger: debugger instance
     """
     script_path = os.getenv("SCRIPT_PATH")
-    perform_debugger_command(debugger, f"target create {script_path}/lldb_exe_stub")
+    perform_debugger_command(debugger, f"target create '{script_path}/lldb_exe_stub'")
     process = subprocess.Popen(f"{script_path}/lldb_exe_stub")
     perform_debugger_command(debugger, f"process attach --pid {process.pid}")
 
@@ -179,89 +179,94 @@ def wait_for_process(
 
     process_attach_state = ProcessAttachState.NOT_ATTACHED
     try:
-        log_message(f"Waiting for process: {process_name}")
-        log_message(f"Session_id: {session_id}")
-        check_debug_session_last_time = time.time()
-        while True:
-            if check_debug_session_last_time + 1.5 < time.time():
+        log_message(
+            f"Waiting for process: {process_name}, session id: {session_id}, time: {time.time()}"
+        )
+
+        python_script_command = [
+            "python3",
+            f"{os.getenv('SCRIPT_PATH')}/waiting_for_attach_proc.py",
+            session_id,
+            process_name + "._exe",  # to not to attach to itself
+            ",".join(existing_pids) if len(existing_pids) > 0 else "",
+        ]
+        try:
+            proc = subprocess.run(
+                [
+                    "nice",
+                    "-n",
+                    "-20",
+                ]
+                + python_script_command,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+        except PermissionError:  # no permission to set high priority
+            proc = subprocess.run(
+                python_script_command,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+        pid = proc.stdout.strip()
+        log_message(f"New process detected with pid: {pid}, time: {time.time()}")
+
+        process = helper.get_process_by_pid(pid)
+
+        # process attach command sometimes fails to stop the process, so we try to do it manually before attaching
+        # if we can not do it either way, process would be detached from debugger silently and all status of tests would be lost
+        process.suspend()
+
+        def suspending():
+            # repeatly suspend the process until it's fully attached as lldb only sunspends it once during attach but process can not react in all cases
+            # so we keep suspending it until it's fully attached
+            try:
+                while process_attach_state == ProcessAttachState.ATTACHING:
+                    process.suspend()
+                    time.sleep(0.001)
+            except Exception as e:
+                log_message(
+                    f"Error on suspending process pid: {pid}, error: {str(e)}, time: {time.time()}"
+                )
+            finally:
+                process.resume()
+
+        def wait_for_exit():
+            log_message("Waiting for exit")
+            while True:
                 if not helper.is_debug_session_valid(session_id):
-                    process_attach_state = ProcessAttachState.DETACHED
-                    kill_codelldb(debugger)
-                    log_message(
-                        "Debug session is no longer valid, stopping wait_for_process"
-                    )
+                    perform_debugger_command(debugger, "process detach")
                     return
-                check_debug_session_last_time = time.time()
+                time.sleep(0.5)
 
-            new_pids = [
-                x
-                for x in helper.get_list_of_pids(process_name)
-                if x not in existing_pids
-            ]
-            # log_message(f"New pids found: {','.join(new_pids)}")
+        process_attach_state = ProcessAttachState.ATTACHING
+        threading.Thread(target=suspending).start()
 
-            if len(new_pids) > 0:
-                pid = new_pids.pop()
-                process = helper.get_process_by_pid(pid)
+        if LOG_DEBUG != 0:
+            log_message(
+                f"Attaching to pid: {pid}, process status: {str(process.status())}, time: {time.time()}"
+            )
+        attach_command = f"process attach --pid {pid}"
+        if perform_debugger_command(debugger, attach_command):
+            log_message(
+                f"Process attached successfully to pid: {pid}, time: {time.time()}"
+            )
+            threading.Thread(target=wait_for_exit).start()
 
-                # process attach command sometimes fails to stop the process, so we try to do it manually before attaching
-                # if we can not do it either way, process would be detached from debugger silently and all status of tests would be lost
-                process.suspend()
+            process_attach_state = ProcessAttachState.ATTACHED
 
-                def suspending():
-                    # repeatly suspend the process until it's fully attached as lldb only sunspends it once during attach but process can not react in all cases
-                    # so we keep suspending it until it's fully attached
-                    try:
-                        while process_attach_state == ProcessAttachState.ATTACHING:
-                            process.suspend()
-                            time.sleep(0.001)
-                    except Exception as e:
-                        log_message(
-                            f"Error on suspending process pid: {pid}, error: {str(e)}, time: {time.time()}"
-                        )
-                    finally:
-                        process.resume()
+            helper.update_debugger_launch_config(session_id, "status", "attached")
 
-                def wait_for_exit():
-                    log_message("Waiting for exit")
-                    while True:
-                        if not helper.is_debug_session_valid(session_id):
-                            perform_debugger_command(debugger, "process detach")
-                            return
-                        time.sleep(0.5)
+            threading.Thread(target=print_app_log, args=(debugger, pid)).start()
+            create_apple_runtime_warning_watch_process(debugger, pid)
+        else:
+            process_attach_state = ProcessAttachState.DETACHED
+            kill_codelldb(debugger)
+            log_message(
+                f"Failed to attach to process with pid: {pid}, time: {time.time()}"
+            )
 
-                process_attach_state = ProcessAttachState.ATTACHING
-                threading.Thread(target=suspending).start()
-
-                if LOG_DEBUG != 0:
-                    log_message(
-                        f"Attaching to pid: {pid}, process status: {str(process.status())}, time: {time.time()}"
-                    )
-                attach_command = f"process attach --pid {pid}"
-                if perform_debugger_command(debugger, attach_command):
-                    log_message(
-                        f"Process attached successfully to pid: {pid}, time: {time.time()}"
-                    )
-                    threading.Thread(target=wait_for_exit).start()
-
-                    process_attach_state = ProcessAttachState.ATTACHED
-
-                    helper.update_debugger_launch_config(
-                        session_id, "status", "attached"
-                    )
-
-                    threading.Thread(target=print_app_log, args=(debugger, pid)).start()
-                    create_apple_runtime_warning_watch_process(debugger, pid)
-                else:
-                    process_attach_state = ProcessAttachState.DETACHED
-                    kill_codelldb(debugger)
-                    log_message(
-                        f"Failed to attach to process with pid: {pid}, time: {time.time()}"
-                    )
-
-                return
-
-            time.sleep(0.001)
     except (subprocess.SubprocessError, helper.ProcessError) as proc_e:
         process_attach_state = ProcessAttachState.DETACHED
         log_message(
