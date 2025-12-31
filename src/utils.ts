@@ -1,5 +1,5 @@
 import * as path from "path";
-import { getWorkspacePath } from "./env";
+import { getLogPath, getWorkspacePath, LogFile } from "./env";
 import * as fs from "fs";
 import { lock, unlock } from "lockfile";
 import { exec } from "child_process";
@@ -134,21 +134,16 @@ export function deleteLockFile(filePath: string, fileName: string) {
     deleteFile(lockFilePath);
 }
 
-export function emptyBuildLog(fileName: string) {
-    emptyFile(getWorkspacePath(), fileName);
-    deleteLockFile(getWorkspacePath(), fileName);
-}
-
 export function emptyTestsLog() {
-    const fileName = ".logs/tests.log";
-    emptyFile(getWorkspacePath(), fileName);
-    deleteLockFile(getWorkspacePath(), fileName);
+    const fileName: LogFile = "tests.log";
+    emptyFile(getLogPath(), fileName);
+    deleteLockFile(getLogPath(), fileName);
 }
 
 export function emptyAutobuildLog() {
-    const fileName = ".logs/autocomplete.log";
-    emptyFile(getWorkspacePath(), fileName);
-    deleteLockFile(getWorkspacePath(), fileName);
+    const fileName: LogFile = "autocomplete.log";
+    emptyFile(getLogPath(), fileName);
+    deleteLockFile(getLogPath(), fileName);
 }
 
 export function fileNameFromPath(filePath: string) {
@@ -157,14 +152,14 @@ export function fileNameFromPath(filePath: string) {
 }
 
 export function getAppLog(deviceId: string) {
-    const fileName = `.logs/app_${deviceId}.log`;
+    const fileName = `app_${deviceId}.log`;
     return fileName;
 }
 
 export function emptyAppLog(deviceId: string) {
     const fileName = getAppLog(deviceId);
-    emptyFile(getWorkspacePath(), fileName);
-    deleteLockFile(getWorkspacePath(), fileName);
+    emptyFile(getLogPath(), fileName);
+    deleteLockFile(getLogPath(), fileName);
 }
 
 export function emptyLog(filePath: string) {

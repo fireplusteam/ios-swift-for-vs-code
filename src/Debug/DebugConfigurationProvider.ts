@@ -1,12 +1,13 @@
 import * as vscode from "vscode";
 import {
+    getLogRelativePath,
     getScriptPath,
     getWorkspaceFolder,
     getWorkspacePath,
     isActivated,
     ProjectFileMissedError,
 } from "../env";
-import { emptyAppLog, getSessionId } from "../utils";
+import { emptyAppLog, getAppLog, getSessionId } from "../utils";
 import { RuntimeWarningsLogWatcher } from "../XcodeSideTreePanel/RuntimeWarningsLogWatcher";
 import { LLDBDapDescriptorFactory } from "./LLDBDapDescriptorFactory";
 import { DebugAdapterTracker } from "./DebugAdapterTracker";
@@ -378,7 +379,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             target: dbgConfig.target,
             testsToRun: dbgConfig.testsToRun,
             buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
-            logPath: `.logs/app_${logId}.log`,
+            logPath: getLogRelativePath(getAppLog(logId)),
             deviceID: deviceID.id,
             xctestrun: dbgConfig.xctestrun,
             isCoverage: dbgConfig.isCoverage,
@@ -456,7 +457,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 target: dbgConfig.target,
                 testsToRun: dbgConfig.testsToRun,
                 buildBeforeLaunch: dbgConfig.buildBeforeLaunch,
-                logPath: `.logs/app_${logId}.log`,
+                logPath: getLogRelativePath(getAppLog(logId)),
                 deviceID: deviceID.id,
                 xctestrun: dbgConfig.xctestrun,
                 isCoverage: dbgConfig.isCoverage,

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { DeviceID } from "../env";
+import { DeviceID, getLogRelativePath } from "../env";
 import { sleep } from "../utils";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
@@ -54,7 +54,7 @@ export class RunManager {
         isCoverage: boolean
     ) {
         context.bundle.generateNext();
-        const logFilePath = ".logs/tests.log";
+        const logFilePath = getLogRelativePath("tests.log");
 
         let isSimulatorRequired = false;
         const deviceId = await context.projectEnv.debugDeviceID;

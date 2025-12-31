@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import {
     DebugDeviceIDMissedError,
     getFilePathInWorkspace,
+    getLogPath,
     isActivated,
     isWorkspaceOpened,
     ProjectConfigurationMissedError,
@@ -99,7 +100,7 @@ async function initialize(
         // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
     }
     lsp.start();
-    fs.mkdir(getFilePathInWorkspace(".logs"), () => {});
+    fs.mkdir(getLogPath(), () => {});
     await enableXCBBuildService(shouldInjectXCBBuildService());
     await projectManager.loadProjectFiles();
     autocompleteWatcher.triggerIncrementalBuild();

@@ -257,6 +257,19 @@ function getEnvFilePath() {
     return path.join(getVSCodePath(), "xcode", "projectConfiguration.json");
 }
 
+export type LogFile = "build.log" | "tests.log" | "autocomplete.log" | string;
+
+export function getLogRelativePath(logFile: LogFile | undefined = undefined) {
+    if (logFile !== undefined) {
+        return path.join(".vscode", "xcode", "logs", logFile);
+    }
+    return ".vscode/xcode/logs";
+}
+
+export function getLogPath(logFile: LogFile | undefined = undefined) {
+    return path.join(getWorkspacePath(), getLogRelativePath(logFile));
+}
+
 export async function updateProject(
     projectEvn: ProjectEnv,
     projectPath: string,

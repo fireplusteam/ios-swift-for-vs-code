@@ -79,7 +79,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             // start it again
             await this.start();
         } catch (error) {
-            this.logs.error(`${error}`);
+            this.logs.error(`Swift LSP Client restarted with error ${error}`);
             if (error instanceof Error && error.message === "Stopping the server timed out") {
                 await this.start(); // start a new one
             }
@@ -278,7 +278,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             this.peekDocuments = activatePeekDocuments(client);
             this.getReferenceDocument = activateGetReferenceDocument(client);
         } catch (reason) {
-            this.logs.error(`${reason}`);
+            this.logs.error(`Swift LSP Client started with error ${reason}`);
             this.languageClient?.stop();
             this.languageClient = undefined;
             throw reason;

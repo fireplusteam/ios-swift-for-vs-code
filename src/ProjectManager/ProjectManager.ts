@@ -3,6 +3,7 @@ import * as fs from "fs";
 import {
     getBuildRootPath,
     getFilePathInWorkspace,
+    getLogPath,
     getProjectFileName,
     getProjectFolderPath,
     getProjectPath,
@@ -186,7 +187,7 @@ export class ProjectManager {
             projectTree.addIncluded(folder, true);
         }
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
-        projectTree.addIncluded(getFilePathInWorkspace(".logs"));
+        projectTree.addIncluded(getLogPath());
         projectTree.addIncluded(getFilePathInWorkspace((await this.getProjects()).at(0) || ""));
 
         // now try to go over all subfolder and exclude every single file which is not in the project files

@@ -24,7 +24,7 @@ def create_app_logger():
 # GLOBAL
 app_logger = create_app_logger()
 
-LOG_FILE = ".logs/lldb.log"
+LOG_FILE = ".vscode/xcode/logs/lldb.log"
 
 
 def initialize_log_file():
@@ -146,7 +146,7 @@ def print_app_log(debugger: lldb.SBDebugger, pid: str):
         device = os.getenv("DEVICE_ID").strip('"')
         platform = os.getenv("PLATFORM").strip('"')
         log_message(f"SCHEME: {scheme}, device: {device}, platform: {platform}")
-        app_logger.file_path = f".logs/app_{device}.log"
+        app_logger.file_path = f".vscode/xcode/logs/app_{device}.log"
         app_logger.watch_app_log()
     except Exception as e:
         print(f"Printer crashed: {str(e)}")

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { getWorkspaceFolder, isActivated } from "./env";
+import { getLogRelativePath, getWorkspaceFolder, isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./utils";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
@@ -110,7 +110,7 @@ export class AutocompleteWatcher {
                 }
 
                 emptyAutobuildLog();
-                const fileLog = ".logs/autocomplete.log";
+                const fileLog = getLogRelativePath("autocomplete.log");
                 const rawParser = this.problemResolver.parseAsyncLogs(fileLog, context.buildEvent);
                 let shouldCleanPreviousBuildErrors = true; // by default, clean previous errors
                 try {

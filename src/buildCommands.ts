@@ -1,15 +1,13 @@
 import { checkWorkspace } from "./commands";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { getBuildRootPath } from "./env";
-import * as path from "path";
+import { getBuildRootPath, getLogRelativePath } from "./env";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { BuildManager } from "./Services/BuildManager";
 import { ExecutorMode } from "./Executor";
 import { handleValidationErrors } from "./extension";
 
 export function getFileNameLog() {
-    const fileName = path.join(".logs", "build.log");
-    return fileName;
+    return getLogRelativePath("build.log");
 }
 
 export async function cleanDerivedData(context: CommandContext) {
