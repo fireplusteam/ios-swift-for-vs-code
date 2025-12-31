@@ -8,6 +8,8 @@ import signal
 # to update psutil: cd resources && pip install -t lib/ filelock
 import lib.filelock as fileLock
 
+CAN_RUN_HIGH_PRIORITY_SUBPROCESS = True
+
 
 def get_list_of_pids(process_name: str) -> set[str]:
     """
@@ -16,15 +18,28 @@ def get_list_of_pids(process_name: str) -> set[str]:
     :param process_name: process name to search for
     :type process_name: str
     """
-    proc = subprocess.run(
-        ["ps", "-eo", "pid,command"], capture_output=True, text=True, check=True
-    )
+    global CAN_RUN_HIGH_PRIORITY_SUBPROCESS
 
-    # print(proc.stdout)
+    def call_ps(command: list[str]) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
-    # Split the output into lines
+    ps_command = ["ps", "-eo", "pid,command"]
+    if CAN_RUN_HIGH_PRIORITY_SUBPROCESS:
+        high_nice_value = -20
+        try:
+            proc = call_ps(["nice", "-n", str(high_nice_value)] + ps_command)
+        except PermissionError:
+            CAN_RUN_HIGH_PRIORITY_SUBPROCESS = False
+            proc = call_ps(ps_command)
+    else:
+        proc = call_ps(ps_command)
+
     lines = proc.stdout.split("\n")
-
     result = set()
 
     def has_process_name(line: str) -> bool:

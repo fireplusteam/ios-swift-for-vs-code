@@ -65,39 +65,43 @@ export class RunManager {
 
         await this.waitDebugger(context);
 
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToDebugConsole: true,
-            args: [
-                "test-without-building",
-                ...tests.map(test => {
-                    return `-only-testing:${test}`;
-                }),
-                "-xctestrun",
-                xctestrun,
-                ...(await BuildManager.commonArgs(context.projectEnv, context.bundle)),
-                "-parallel-testing-enabled",
-                "NO",
-                ...(isSimulatorRequired ? ["-destination", `id=${deviceId.id}`] : []),
-                "-enableCodeCoverage",
-                isCoverage ? "YES" : "NO",
-                // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676
-                // "./vscode/testrun_example.xctestrun",
-            ],
-            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: [logFilePath],
-                mode: ExecutorMode.none,
+        try {
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                pipeToDebugConsole: true,
+                args: [
+                    "test-without-building",
+                    ...tests.map(test => {
+                        return `-only-testing:${test}`;
+                    }),
+                    "-xctestrun",
+                    xctestrun,
+                    ...(await BuildManager.commonArgs(context.projectEnv, context.bundle)),
+                    "-parallel-testing-enabled",
+                    "NO",
+                    ...(isSimulatorRequired ? ["-destination", `id=${deviceId.id}`] : []),
+                    "-enableCodeCoverage",
+                    isCoverage ? "YES" : "NO",
+                    // "-xctestrun", // use https://medium.com/xcblog/speed-up-ios-ci-using-test-without-building-xctestrun-and-fastlane-a982b0060676
+                    // "./vscode/testrun_example.xctestrun",
+                ],
+                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
                 pipe: {
-                    scriptOrCommand: {
-                        command: "xcbeautify",
-                        labelInTerminal: "Run Tests",
+                    scriptOrCommand: { command: "tee" },
+                    args: [logFilePath],
+                    mode: ExecutorMode.none,
+                    pipe: {
+                        scriptOrCommand: {
+                            command: "xcbeautify",
+                            labelInTerminal: "Run Tests",
+                        },
+                        mode: ExecutorMode.stdout,
                     },
-                    mode: ExecutorMode.stdout,
                 },
-            },
-        });
+            });
+        } finally {
+            DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
+        }
     }
 
     private async runOnSimulator(
@@ -131,6 +135,7 @@ export class RunManager {
 
         const bundleAppName = await context.projectEnv.bundleAppName;
 
+        let isHandled = false;
         context
             .execShellParallel({
                 scriptOrCommand: { command: "xcrun" },
@@ -139,7 +144,6 @@ export class RunManager {
             })
             .catch(async error => {
                 context.log.error(`Session ID: ${this.sessionID}, terminated with error: ${error}`);
-                let isHandled = false;
                 if (error instanceof ExecutorTaskError) {
                     if (error.code === 3) {
                         //simulator is not responding
@@ -150,6 +154,8 @@ export class RunManager {
                         }
                     }
                 }
+            })
+            .finally(() => {
                 if (!isHandled) {
                     DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
                 }
