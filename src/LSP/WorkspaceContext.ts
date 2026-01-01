@@ -1,12 +1,14 @@
-import { getLSPWorkspacePath, getWorkspaceFolder } from "../env";
+import { getFilePathInWorkspace, getLSPWorkspacePath, getWorkspaceFolder } from "../env";
 import { Executor } from "../Executor";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { HandleProblemDiagnosticResolver } from "./lspExtension";
 import * as vscode from "vscode";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { getRootProjectFilePath } from "../ProjectManager/ProjectManager";
 export interface WorkspaceContext {
     readonly workspaceFolder: Promise<vscode.Uri>;
+    readonly rootProjectFile: Promise<vscode.Uri | undefined>;
     readonly problemDiagnosticResolver: HandleProblemDiagnosticResolver;
     setLLDBVersion: () => Promise<void>;
 }
@@ -14,6 +16,24 @@ export interface WorkspaceContext {
 export class WorkspaceContextImp implements WorkspaceContext {
     get workspaceFolder(): Promise<vscode.Uri> {
         return getLSPWorkspacePath();
+    }
+    get rootProjectFile(): Promise<vscode.Uri | undefined> {
+        return new Promise(resolve => {
+            getRootProjectFilePath()
+                .then(file => {
+                    if (file) {
+                        const filePath = getFilePathInWorkspace(
+                            file.split(path.sep).slice(0, -1).join(path.sep)
+                        );
+                        resolve(vscode.Uri.file(filePath));
+                    } else {
+                        resolve(undefined);
+                    }
+                })
+                .catch(() => {
+                    resolve(undefined);
+                });
+        });
     }
     readonly problemDiagnosticResolver: HandleProblemDiagnosticResolver;
     constructor(problemDiagnosticResolver: HandleProblemDiagnosticResolver) {

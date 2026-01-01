@@ -787,6 +787,14 @@ function sortTargets(targets: string[], fileTargets: string[]): QuickPickItem[] 
         });
 }
 
+export async function getRootProjectFilePath() {
+    const projects = await getProjectFiles(await getProjectPath());
+    if (projects.length > 0) {
+        return projects[0];
+    }
+    return undefined;
+}
+
 export async function getProjectFiles(project: string) {
     if (project.indexOf(".xcworkspace") !== -1) {
         const xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), "utf-8");

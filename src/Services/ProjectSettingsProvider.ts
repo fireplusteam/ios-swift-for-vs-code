@@ -1,13 +1,7 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
-import {
-    getProjectPath,
-    getProjectType,
-    isPlatformValid,
-    ProjectEnv,
-    ProjectFileMissedError,
-} from "../env";
+import { getProjectType, isPlatformValid, ProjectEnv, ProjectFileMissedError } from "../env";
 import { ExecutorMode } from "../Executor";
-import { getProjectFiles } from "../ProjectManager/ProjectManager";
+import { getRootProjectFilePath } from "../ProjectManager/ProjectManager";
 import { CustomError } from "../utils";
 
 export interface XCodeSettings {
@@ -47,7 +41,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
     }
 
     async fetchConfigurations(): Promise<string[]> {
-        const projectFile = (await getProjectFiles(await getProjectPath())).at(0);
+        const projectFile = await getRootProjectFilePath();
         if (projectFile === undefined) {
             throw ProjectFileMissedError;
         }
