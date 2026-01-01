@@ -1,9 +1,10 @@
 # Change Log
 
-## 0.6.4 - 2025-12-31
+## 0.6.4 - 2026-01-01
 
 -   Improved attach debugger to debuggable process reliability
 -   Bug fixes and improved stability
+-   Better support of Package.swift
 
 ## 0.6.3 - 2025-12-29
 
