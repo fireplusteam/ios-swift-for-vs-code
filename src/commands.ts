@@ -76,7 +76,8 @@ export async function selectProjectFile(
     const workspaceEnd = ".xcworkspace/contents.xcworkspacedata";
     const projectEnd = ".xcodeproj/project.pbxproj";
     const excludeEnd = ".xcodeproj/project.xcworkspace";
-    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift}`;
+    // includes workspace/project/package.swift but exclude .vscode/xcode folder
+    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift,!.vscode/xcode/**}`;
     // at the moment doesn't support Package.swift as this one can be used via official swift extension
     // const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd}}`;
     const files = await glob(include, {
@@ -156,7 +157,7 @@ export async function selectProjectFile(
         // convert Swift Package to Xcode Workspace with tuist tool support
         swiftPackagePath = selection;
         projectPath = await generateXcodeWorkspaceForPackage(commandContext, selection);
-        commandContext.projectEnv.swiftPackageProjectFileGenerated = true;
+        await commandContext.projectEnv.setSwiftPackageProjectFileGenerated();
     }
     await updateProject(commandContext.projectEnv, projectPath, swiftPackagePath);
     await projectManager.loadProjectFiles(true);
@@ -444,14 +445,8 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             }
         }
 
-        if (commandContext.projectEnv.swiftPackageProjectFileGenerated === false) {
-            let swiftPackageFile = await commandContext.projectEnv.swiftPackageFile;
-            if (swiftPackageFile !== undefined && swiftPackageFile !== "") {
-                swiftPackageFile = getFilePathInWorkspace(swiftPackageFile);
-                await generateXcodeWorkspaceForPackage(commandContext, swiftPackageFile);
-                commandContext.projectEnv.swiftPackageProjectFileGenerated = true;
-            }
-        }
+        await checkSwiftPackageWorkspace(commandContext);
+
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
             await updatePackageDependencies(commandContext, false);
         }
@@ -462,6 +457,17 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         await handleValidationErrors(commandContext, error, async () => {
             return await checkWorkspace(commandContext, ignoreFocusOut);
         });
+    }
+}
+
+export async function checkSwiftPackageWorkspace(commandContext: CommandContext) {
+    if ((await commandContext.projectEnv.swiftPackageProjectFileGenerated) === false) {
+        let swiftPackageFile = await commandContext.projectEnv.swiftPackageFile;
+        if (swiftPackageFile !== undefined && swiftPackageFile !== "") {
+            swiftPackageFile = getFilePathInWorkspace(swiftPackageFile);
+            await generateXcodeWorkspaceForPackage(commandContext, swiftPackageFile);
+            await commandContext.projectEnv.setSwiftPackageProjectFileGenerated();
+        }
     }
 }
 

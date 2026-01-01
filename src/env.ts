@@ -65,7 +65,8 @@ export interface ProjectEnvInterface {
     productName: Promise<string>;
 
     firstLaunchedConfigured: boolean;
-    swiftPackageProjectFileGenerated: boolean;
+    get swiftPackageProjectFileGenerated(): Promise<boolean>;
+    setSwiftPackageProjectFileGenerated(val: boolean): Promise<void>;
 }
 
 export interface SetProjectEnvInterface {
@@ -79,7 +80,8 @@ export interface SetProjectEnvInterface {
 
 // at this point, project file can be changed only at the start of extension, so it's safe to check it only once
 let globalFirstLaunchedConfigured = false;
-let swiftPackageProjectGenerated = false;
+// data of package file to know if Package.swift file was changed and project file need to be regenerated
+let swiftPackageProjectGeneratedData: string | undefined = undefined;
 
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
@@ -159,11 +161,41 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         globalFirstLaunchedConfigured = val;
     }
 
-    get swiftPackageProjectFileGenerated(): boolean {
-        return swiftPackageProjectGenerated;
+    get swiftPackageProjectFileGenerated(): Promise<boolean> {
+        if (swiftPackageProjectGeneratedData === undefined) {
+            return Promise.resolve(false);
+        }
+        return new Promise<boolean>(resolve => {
+            this.swiftPackageFile
+                .then(swiftPackageFile => {
+                    if (swiftPackageFile === undefined) {
+                        resolve(false);
+                        return;
+                    }
+                    getSwiftPackageFileContent(swiftPackageFile).then(content => {
+                        if (content === swiftPackageProjectGeneratedData) {
+                            resolve(true);
+                        } else {
+                            resolve(false);
+                        }
+                    });
+                })
+                .catch(() => {
+                    resolve(false);
+                });
+        });
     }
-    set swiftPackageProjectFileGenerated(val: boolean) {
-        swiftPackageProjectGenerated = val;
+    async setSwiftPackageProjectFileGenerated(): Promise<void> {
+        try {
+            const swiftPackageFile = await this.swiftPackageFile;
+            if (swiftPackageFile === undefined) {
+                swiftPackageProjectGeneratedData = undefined;
+                return;
+            }
+            swiftPackageProjectGeneratedData = await getSwiftPackageFileContent(swiftPackageFile);
+        } catch {
+            swiftPackageProjectGeneratedData = undefined;
+        }
     }
 
     async setProjectFile(projectPath: string, swiftPackagePath: string | undefined): Promise<void> {
@@ -214,6 +246,20 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     static onDidChangeProjectEnv(on: (projectEnv: ProjectEnv) => Promise<void>) {
         return this.onDidChangeEmitter.event(on);
     }
+}
+
+async function getSwiftPackageFileContent(swiftPackageFile: string) {
+    if (swiftPackageFile === undefined) {
+        return "";
+    }
+    return new Promise<string>(resolve => {
+        fs.readFile(getFilePathInWorkspace(swiftPackageFile), "utf-8", (err, data) => {
+            if (err) {
+                resolve("");
+            }
+            resolve(data.toString());
+        });
+    });
 }
 
 export function getWorkspaceFolder() {

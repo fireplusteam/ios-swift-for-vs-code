@@ -3,7 +3,6 @@ import { getLogRelativePath, getWorkspaceFolder, isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./utils";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 import { BuildManager } from "./Services/BuildManager";
 import { UserTerminatedError } from "./CommandManagement/CommandContext";
@@ -15,18 +14,13 @@ export class AutocompleteWatcher {
     private disposable: vscode.Disposable[] = [];
     private atomicCommand: AtomicCommand;
     private problemResolver: ProblemDiagnosticResolver;
-    private projectManager: ProjectManager;
 
     private terminatingExtension: boolean = false;
     private changedFiles = new Map<string, string>();
 
     private buildId = 0;
 
-    constructor(
-        atomicCommand: AtomicCommand,
-        problemResolver: ProblemDiagnosticResolver,
-        projectManager: ProjectManager
-    ) {
+    constructor(atomicCommand: AtomicCommand, problemResolver: ProblemDiagnosticResolver) {
         this.atomicCommand = atomicCommand;
         this.disposable.push(
             vscode.workspace.onDidOpenTextDocument(doc => {
@@ -58,7 +52,6 @@ export class AutocompleteWatcher {
             })
         );
         this.problemResolver = problemResolver;
-        this.projectManager = projectManager;
     }
 
     async triggerIncrementalBuild() {
@@ -87,6 +80,10 @@ export class AutocompleteWatcher {
     }
 
     private isValidFile(filePath: string | undefined) {
+        // Exclude Package.swift from triggering autocomplete watcher builds, as it requires to regenerate workspace which is heavy operation
+        if (filePath && filePath.endsWith("Package.swift")) {
+            return false;
+        }
         if (
             filePath &&
             (filePath.endsWith(".swift") ||

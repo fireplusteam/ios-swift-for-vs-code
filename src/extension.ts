@@ -142,11 +142,7 @@ export async function activate(context: vscode.ExtensionContext) {
     projectManager.onUpdateDeps = async () => {
         await tools.updateThirdPartyTools();
     };
-    autocompleteWatcher = new AutocompleteWatcher(
-        atomicCommand,
-        problemDiagnosticResolver,
-        projectManager
-    );
+    autocompleteWatcher = new AutocompleteWatcher(atomicCommand, problemDiagnosticResolver);
 
     // initialise code
     context.subscriptions.push(sourceLsp);
@@ -479,7 +475,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     }
                     swiftPackageFile = getFilePathInWorkspace(swiftPackageFile);
                     await generateXcodeWorkspaceForPackage(context, swiftPackageFile);
-                    context.projectEnv.swiftPackageProjectFileGenerated = true;
+                    await context.projectEnv.setSwiftPackageProjectFileGenerated();
                 }, "Generate Xcode Workspace for Swift Package");
             }
         )
