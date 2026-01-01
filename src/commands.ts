@@ -450,7 +450,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
             await updatePackageDependencies(commandContext, false);
         }
-        if ((await isBuildServerValid()) === false) {
+        if ((await isBuildServerValid(commandContext.projectEnv)) === false) {
             await generateXcodeServer(commandContext, false);
         }
     } catch (error) {

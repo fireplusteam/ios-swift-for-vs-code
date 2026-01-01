@@ -513,7 +513,7 @@ export async function getBuildRootPath() {
     }
 }
 
-export async function isBuildServerValid() {
+export async function isBuildServerValid(projectEnv: ProjectEnvInterface) {
     try {
         const buildServer = await getBuildServerJson();
         if (
@@ -536,6 +536,9 @@ export async function isBuildServerValid() {
         if (configuration.build_root === getWorkspaceFolder()) {
             return false; // build folder can not be the same as workspace
         }
+        if (buildServer.scheme !== (await projectEnv.projectScheme)) {
+            return false;
+        }
         let isValid = false;
         for (const arg of buildServer.argv) {
             const path = getXCodeBuildServerPath();
@@ -546,6 +549,7 @@ export async function isBuildServerValid() {
         if (!isValid) {
             return false;
         }
+
         return true;
     } catch {
         return false;
