@@ -54,8 +54,8 @@ export class ProjectConfigurationDataProvider implements vscode.TreeDataProvider
         }
 
         try {
-            const swiftPackageFile = await projectEnv.swiftPackageFile;
-            if (swiftPackageFile !== undefined && swiftPackageFile !== "") {
+            if ((await projectEnv.workspaceType()) === "package") {
+                const swiftPackageFile = await projectEnv.swiftPackageFile;
                 const packageNode = `Refresh Workspace for Swift Package: ${swiftPackageFile}`;
                 this.config.push(
                     new ProjectConfigurationNode(

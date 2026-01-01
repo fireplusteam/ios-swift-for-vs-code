@@ -24,13 +24,17 @@ export class BuildManager {
         ];
     }
 
-    static async args(projectEnv: ProjectEnv, bundle: BundlePath) {
+    static async args(
+        projectEnv: ProjectEnv,
+        bundle: BundlePath,
+        scheme: string | undefined = undefined
+    ) {
         return [
             ...(await BuildManager.commonArgs(projectEnv, bundle)),
             await projectEnv.projectType,
             await projectEnv.projectFile,
             "-scheme",
-            await projectEnv.projectScheme,
+            scheme === undefined ? await projectEnv.projectScheme : scheme,
         ];
     }
 
@@ -128,6 +132,11 @@ export class BuildManager {
             extraArguments.push(...["-enableCodeCoverage", "YES"]);
         }
 
+        let scheme: string | undefined = undefined;
+        if ((await context.projectEnv.workspaceType()) === "package") {
+            scheme = "Workspace-Workspace"; // for swift package, use this scheme as it builds all tests targets
+        }
+
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
@@ -136,7 +145,7 @@ export class BuildManager {
                 ...tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
-                ...(await BuildManager.args(context.projectEnv, context.bundle)),
+                ...(await BuildManager.args(context.projectEnv, context.bundle, scheme)),
                 ...extraArguments,
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,

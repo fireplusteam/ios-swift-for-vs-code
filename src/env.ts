@@ -61,12 +61,14 @@ export interface ProjectEnvInterface {
     multipleDeviceID: Promise<DeviceID[]>;
     bundleAppName: Promise<string>;
     appExecutablePath: (deviceID: DeviceID) => Promise<string>;
-    projectType: Promise<"-workspace" | "-project" | "-package">;
+    projectType: Promise<"-workspace" | "-project">;
     productName: Promise<string>;
 
     firstLaunchedConfigured: boolean;
     get swiftPackageProjectFileGenerated(): Promise<boolean>;
     setSwiftPackageProjectFileGenerated(val: boolean): Promise<void>;
+
+    workspaceType(): Promise<"xcodeProject" | "package">;
 }
 
 export interface SetProjectEnvInterface {
@@ -90,6 +92,14 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     constructor(settings: XCodeSettings) {
         this.settingsProvider = settings;
         this.configuration = getEnvList();
+    }
+
+    async workspaceType(): Promise<"xcodeProject" | "package"> {
+        const swiftPackageFile = await this.swiftPackageFile;
+        if (swiftPackageFile !== undefined && swiftPackageFile.length > 0) {
+            return Promise.resolve("package");
+        }
+        return Promise.resolve("xcodeProject");
     }
 
     get productName(): Promise<string> {
@@ -148,9 +158,15 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         });
     }
 
-    get projectType(): Promise<"-workspace" | "-project" | "-package"> {
+    get projectType(): Promise<"-workspace" | "-project"> {
         return this.projectFile.then(value => {
-            return getProjectType(value);
+            const type = getProjectType(value);
+            if (type === "-package") {
+                throw new CustomError(
+                    "Somthing went wrong. Package type is not supported as project file"
+                );
+            }
+            return type;
         });
     }
 
