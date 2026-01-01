@@ -131,6 +131,9 @@ This extension contributes the following settings:
     gem install xcodeproj
     ```
 
+-   If you use Xcode workspace make sure that workspace and root project which is used for building is in the same folder, otherwise LSP client can work incorrectly
+-   Make sure that Package.swift file is in root workspace folder and you open root folder, otherwise LSP client may work incorrectly
+
 ## Release Notes
 
 ### 0.6.0

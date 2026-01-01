@@ -5,6 +5,7 @@
 -   Improved attach debugger to debuggable process reliability
 -   Bug fixes and improved stability
 -   Better support of Package.swift
+-   LSP client was not configured right for Package.swift causing issues with autocomplete
 
 ## 0.6.3 - 2025-12-29
 
