@@ -232,14 +232,6 @@ def wait_for_process(
             finally:
                 process.resume()
 
-        def wait_for_exit():
-            log_message("Waiting for exit")
-            while True:
-                if not helper.is_debug_session_valid(session_id):
-                    perform_debugger_command(debugger, "process detach")
-                    return
-                time.sleep(0.5)
-
         process_attach_state = ProcessAttachState.ATTACHING
         threading.Thread(target=suspending).start()
 
@@ -252,7 +244,7 @@ def wait_for_process(
             log_message(
                 f"Process attached successfully to pid: {pid}, time: {time.time()}"
             )
-            threading.Thread(target=wait_for_exit).start()
+            threading.Thread(target=wait_for_exit, args=(debugger, session_id)).start()
 
             process_attach_state = ProcessAttachState.ATTACHED
 
@@ -294,30 +286,12 @@ def launch_new_process(
     :param internal_dict: Description
     """
 
-    def wait_until_build_for_launch(debugger: lldb.SBDebugger, session_id):
-        while True:
-            if not helper.is_debug_session_valid(session_id):
-                kill_codelldb(debugger)
-                return "stopped"
-            status = helper.get_debugger_launch_config(session_id, "status")
-            if status == "launching" or status == "launched":
-                return status
-            time.sleep(0.3)
-
-    def wait_for_exit_imp():
-        log_message("Waiting for exit")
-        while True:
-            if not helper.is_debug_session_valid(session_id):
-                perform_debugger_command(debugger, "process detach")
-                return
-            time.sleep(0.5)
-
     try:
         session_id = command
         log_message(
             f"Waiting for build for session id: {session_id}, time: {time.time()}"
         )
-        status = wait_until_build_for_launch(debugger, session_id)
+        status = wait_until_build(debugger, session_id)
         if status == "stopped":
             return
 
@@ -338,7 +312,7 @@ def launch_new_process(
             pid = process.GetProcessID()
             log_message(f"Process launched with pid: {pid}, time: {time.time()}")
 
-            threading.Thread(target=wait_for_exit_imp).start()
+            threading.Thread(target=wait_for_exit, args=(debugger, session_id)).start()
             helper.update_debugger_launch_config(session_id, "status", "attached")
             create_apple_runtime_warning_watch_process(debugger, str(pid))
         else:
@@ -469,6 +443,23 @@ def print_runtime_warning(
     except Exception as e:
         log_message("---------------Runtime warning error:\n" + str(e))
     log_message("Logged runtime warning")
+
+
+def wait_for_exit(debugger: lldb.SBDebugger, session_id: str):
+    """
+    Waits for the debug session to exit.
+
+    :param debugger: debugger instance
+    :type debugger: lldb.SBDebugger
+    :param session_id: session identifier
+    :type session_id: str
+    """
+    log_message("Waiting for exit")
+    while True:
+        if not helper.is_debug_session_valid(session_id):
+            perform_debugger_command(debugger, "process detach")
+            return
+        time.sleep(0.5)
 
 
 def wait_until_build(debugger: lldb.SBDebugger, session_id: str):
