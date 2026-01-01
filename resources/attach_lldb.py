@@ -297,7 +297,7 @@ def launch_new_process(
     def wait_until_build_for_launch(debugger: lldb.SBDebugger, session_id):
         while True:
             if not helper.is_debug_session_valid(session_id):
-                perform_debugger_command(debugger, "process detach")
+                kill_codelldb(debugger)
                 return "stopped"
             status = helper.get_debugger_launch_config(session_id, "status")
             if status == "launching" or status == "launched":
