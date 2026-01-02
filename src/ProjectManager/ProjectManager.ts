@@ -177,18 +177,22 @@ export class ProjectManager {
         const projectTree = new ProjectTree();
 
         // add all project first as they are visible
+        for (const file of [...this.projectCache.files(true)]) {
+            projectTree.addIncluded(file, true);
+        }
         for (const file of [
-            ...this.projectCache.files(),
+            ...this.projectCache.files(false),
             ...(await this.getAdditionalIncludedFiles()),
         ]) {
-            projectTree.addIncluded(file);
+            projectTree.addIncluded(file, false);
         }
+
         for (const folder of [...this.projectCache.files(true)]) {
             projectTree.addIncluded(folder, true);
         }
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getLogPath());
-        projectTree.addIncluded(getFilePathInWorkspace((await this.getProjects()).at(0) || ""));
+        projectTree.addIncluded(getFilePathInWorkspace((await getRootProjectFilePath()) || ""));
 
         // now try to go over all subfolder and exclude every single file which is not in the project files
         const visitedFolders = new Set<string>();
