@@ -103,7 +103,11 @@ export class BuildManager {
             pipeToParseBuildErrors: true,
             args: [
                 buildCommand,
-                ...(await BuildManager.args(context.projectEnv, context.bundle)),
+                ...(await BuildManager.args(
+                    context.projectEnv,
+                    context.bundle,
+                    await context.projectEnv.autoCompleteScheme
+                )),
                 "-skipUnavailableActions", // for autocomplete, skip if it fails
                 "-jobs",
                 "4",
@@ -132,11 +136,6 @@ export class BuildManager {
             extraArguments.push(...["-enableCodeCoverage", "YES"]);
         }
 
-        let scheme: string | undefined = undefined;
-        if ((await context.projectEnv.workspaceType()) === "package") {
-            scheme = "Workspace-Workspace"; // for swift package, use this scheme as it builds all tests targets
-        }
-
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
@@ -145,7 +144,11 @@ export class BuildManager {
                 ...tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
-                ...(await BuildManager.args(context.projectEnv, context.bundle, scheme)),
+                ...(await BuildManager.args(
+                    context.projectEnv,
+                    context.bundle,
+                    await context.projectEnv.autoCompleteScheme
+                )),
                 ...extraArguments,
             ],
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,

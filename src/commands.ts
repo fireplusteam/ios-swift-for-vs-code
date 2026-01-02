@@ -495,7 +495,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
     await commandContext.execShellWithOptions({
         scriptOrCommand: { command: getXCodeBuildServerPath() },
         cwd: lspFolder.fsPath,
-        args: ["config", "-scheme", await env.projectScheme, projectType, relativeProjectPath],
+        args: ["config", "-scheme", await env.autoCompleteScheme, projectType, relativeProjectPath],
     });
 
     await commandContext

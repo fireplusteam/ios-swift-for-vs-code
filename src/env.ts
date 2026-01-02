@@ -56,6 +56,7 @@ export interface ProjectEnvInterface {
     projectFile: Promise<string>;
     swiftPackageFile: Promise<string | undefined>;
     projectScheme: Promise<string>;
+    autoCompleteScheme: Promise<string>;
     projectConfiguration: Promise<string>;
     projectTestPlan: Promise<string>;
     debugDeviceID: Promise<DeviceID>;
@@ -129,6 +130,20 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
 
     get projectScheme(): Promise<string> {
         return Promise.resolve(getProjectScheme(this.configuration));
+    }
+    get autoCompleteScheme(): Promise<string> {
+        return new Promise<string>(async (resolve, reject) => {
+            try {
+                const workspaceType = await this.workspaceType();
+                if (workspaceType === "package") {
+                    resolve("Workspace-Workspace"); // for swift package, use this scheme as it builds all tests targets
+                    return;
+                }
+                resolve(await this.projectScheme);
+            } catch (error) {
+                reject(error);
+            }
+        });
     }
     get projectConfiguration(): Promise<string> {
         return Promise.resolve(getProjectConfiguration(this.configuration));
@@ -545,7 +560,7 @@ export async function isBuildServerValid(projectEnv: ProjectEnvInterface) {
         if (configuration.build_root === getWorkspaceFolder()) {
             return false; // build folder can not be the same as workspace
         }
-        if (buildServer.scheme !== (await projectEnv.projectScheme)) {
+        if (buildServer.scheme !== (await projectEnv.autoCompleteScheme)) {
             return false;
         }
         let isValid = false;
