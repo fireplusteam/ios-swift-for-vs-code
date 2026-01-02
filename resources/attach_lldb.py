@@ -191,24 +191,31 @@ def wait_for_process(
             ",".join(existing_pids) if len(existing_pids) > 0 else "",
         ]
         try:
-            proc = subprocess.run(
-                [
-                    "nice",
-                    "-n",
-                    "-20",
-                ]
-                + python_script_command,
-                text=True,
-                capture_output=True,
-                check=True,
+            try:
+                proc = subprocess.run(
+                    [
+                        "nice",
+                        "-n",
+                        "-20",
+                    ]
+                    + python_script_command,
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+            except PermissionError:  # no permission to set high priority
+                proc = subprocess.run(
+                    python_script_command,
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+        except:
+            kill_codelldb(debugger)
+            log_message(
+                f"Failed to wait for process: {process_name}, session id: {session_id}, time: {time.time()}"
             )
-        except PermissionError:  # no permission to set high priority
-            proc = subprocess.run(
-                python_script_command,
-                text=True,
-                capture_output=True,
-                check=True,
-            )
+            return
         pid = proc.stdout.strip()
         log_message(f"New process detected with pid: {pid}, time: {time.time()}")
 
