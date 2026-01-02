@@ -11,9 +11,17 @@ export function getFileNameLog() {
 }
 
 export async function cleanDerivedData(context: CommandContext) {
+    await checkWorkspace(context);
+
+    const buildRootPath = await getBuildRootPath();
+    // Safety check to avoid deleting arbitrary folders
+    if (!buildRootPath.includes("/Library/Developer/Xcode/DerivedData/")) {
+        throw new Error("Can only clean DerivedData folder");
+    }
+
     await context.execShellWithOptions({
         scriptOrCommand: { command: "rm" },
-        args: ["-rf", await getBuildRootPath()],
+        args: ["-rf", buildRootPath],
         mode: ExecutorMode.onlyCommandNameAndResult,
     });
 }

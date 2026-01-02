@@ -545,8 +545,7 @@ export async function isBuildServerValid(projectEnv: ProjectEnvInterface) {
         ) {
             return false;
         }
-        const configuration = getEnvList();
-        if ((await getProjectScheme(configuration)) !== buildServer.scheme) {
+        if (buildServer.scheme !== (await projectEnv.autoCompleteScheme)) {
             return false;
         }
         if (
@@ -557,12 +556,11 @@ export async function isBuildServerValid(projectEnv: ProjectEnvInterface) {
         ) {
             return false;
         }
+        const configuration = getEnvList();
         if (configuration.build_root === getWorkspaceFolder()) {
             return false; // build folder can not be the same as workspace
         }
-        if (buildServer.scheme !== (await projectEnv.autoCompleteScheme)) {
-            return false;
-        }
+
         let isValid = false;
         for (const arg of buildServer.argv) {
             const path = getXCodeBuildServerPath();

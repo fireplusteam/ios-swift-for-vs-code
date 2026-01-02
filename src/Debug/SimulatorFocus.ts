@@ -14,7 +14,7 @@ export class SimulatorFocus {
 
     async init(projectEnv: ProjectEnv, processExe: string) {
         this.deviceID = await projectEnv.debugDeviceID;
-        this.productName = processExe.split(path.sep).at(0);
+        this.productName = processExe.split(path.sep).at(-1);
         if (this.productName === undefined) {
             this.productName = await projectEnv.productName;
         } else if (this.productName.endsWith(".app")) {
