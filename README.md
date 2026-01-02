@@ -28,7 +28,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 ## Features
 
 -   Supports iOS/MacOS/WatchOS/VisionOS/TvOS
--   Supports Package.swift via tuist project generation
+-   Supports Package.swift via tuist project generation (only Package.swift in the root folder is supported)
 -   Swift/Objective-C/C++ autocompletion
 -   Compatibility with CodeLLDB/lldb-dap
 -   Debug/Run app on Simulators (physical device is currently is not supported)
