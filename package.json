@@ -62,7 +62,7 @@
     "activationEvents": [
         "workspaceContains:**/*.xcworkspace/contents.xcworkspacedata",
         "workspaceContains:**/*.xcodeproj/project.pbxproj",
-        "workspaceContains:**/Package.swift",
+        "workspaceContains:Package.swift",
         "onDebugResolve:xcode-lldb"
     ],
     "main": "./dist/extension.js",

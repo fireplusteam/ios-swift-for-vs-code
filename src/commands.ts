@@ -77,9 +77,7 @@ export async function selectProjectFile(
     const projectEnd = ".xcodeproj/project.pbxproj";
     const excludeEnd = ".xcodeproj/project.xcworkspace";
     // includes workspace/project/package.swift but exclude .vscode/xcode folder
-    const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd},Package.swift,!.vscode/xcode/**}`;
-    // at the moment doesn't support Package.swift as this one can be used via official swift extension
-    // const include: vscode.GlobPattern = `**/{*${workspaceEnd},*${projectEnd}}`;
+    const include: vscode.GlobPattern = `{**/{*${workspaceEnd},*${projectEnd}},Package.swift,!.vscode/xcode/**}`;
     const files = await glob(include, {
         absolute: true,
         cwd: getWorkspacePath(),
