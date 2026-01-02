@@ -116,7 +116,7 @@ export class ProjectManager {
             }
         }
 
-        const projects = await getProjectFiles(await getProjectPath());
+        const projects = await this.getProjects();
 
         const wasLoadedWithError = [] as string[];
         await vscode.window.withProgress(
@@ -131,7 +131,7 @@ export class ProjectManager {
                         await this.projectCache.update(project, projectFile => {
                             return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
                         });
-                        await this.readAllProjects(this.projectCache.getList(project));
+                        await this.readAllProjects(this.projectCache.getList(project, false));
                     } catch (error) {
                         this.log.error(`Failed to load project ${project}: ${error}`);
                         wasLoadedWithError.push(fileNameFromPath(project));
@@ -167,7 +167,9 @@ export class ProjectManager {
                         return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
                     })
                 ) {
-                    await this.readAllProjects(this.projectCache.getList(relativeProjectPath));
+                    await this.readAllProjects(
+                        this.projectCache.getList(relativeProjectPath, false)
+                    );
                 }
             }
         }

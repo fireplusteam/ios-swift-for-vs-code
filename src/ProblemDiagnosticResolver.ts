@@ -319,7 +319,7 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
 }
 
 const problemPattern = /^(.*?):(\d+)(?::(\d+))?:\s+(warning|error|note):\s+(.*)$/gm;
-const problemLinkerPattern = /^(clang):\s+(error):\s+(.*)$/gm;
+const problemLinkerPattern = /^(clang\+?\+?):\s+(error):\s+(.*)$/gm;
 const frameworkErrorPattern = /^(error: )(.*?)$/gm;
 
 function parseSwiftMacrosInXcodeBuildLogs(

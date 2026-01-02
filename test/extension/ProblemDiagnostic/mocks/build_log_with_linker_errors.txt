@@ -8,5 +8,7 @@ ok, this is working well
 
 clang: error: failed to link. Firebase.framework is not not found
 
+clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+
 
 some random text

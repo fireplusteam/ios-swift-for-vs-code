@@ -96,6 +96,16 @@ suite("Problem Diagnostic Resolver: Parser", () => {
                     },
                     {
                         severity: "Error",
+                        message:
+                            "linker command failed with exit code 1 (use -v to see invocation)",
+                        range: [
+                            { line: 10, character: 0 },
+                            { line: 10, character: 0 },
+                        ],
+                        source: "xcodebuild",
+                    },
+                    {
+                        severity: "Error",
                         message: "TCA.framework library is not found.",
                         range: [
                             { line: 4, character: 0 },
