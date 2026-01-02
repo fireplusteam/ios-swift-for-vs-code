@@ -176,28 +176,22 @@ export class ProjectManager {
     private async generateWorkspace() {
         const projectTree = new ProjectTree();
 
+        projectTree.addIncluded(getFilePathInWorkspace((await getRootProjectFilePath()) || ""));
+        projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
+        projectTree.addIncluded(getLogPath());
+
         // add all project first as they are visible
-        for (const file of [
-            ...this.projectCache.files(false),
-            ...(await this.getAdditionalIncludedFiles()),
-        ]) {
+        for (const file of this.projectCache.allFiles()) {
+            projectTree.addIncluded(file.path, file.includeSubfolders);
+        }
+        for (const file of [...(await this.getAdditionalIncludedFiles())]) {
+            // this.log.debug("Including file: " + file);
             projectTree.addIncluded(file, false);
         }
 
-        for (const folder of [...this.projectCache.files(true)]) {
-            projectTree.addIncluded(folder, true);
-        }
-        projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
-        projectTree.addIncluded(getLogPath());
-        projectTree.addIncluded(getFilePathInWorkspace((await getRootProjectFilePath()) || ""));
-
         // now try to go over all subfolder and exclude every single file which is not in the project files
         const visitedFolders = new Set<string>();
-        for (const file of [
-            getWorkspacePath(),
-            ...this.projectCache.files(),
-            ...this.projectCache.files(true),
-        ]) {
+        for (const file of [getWorkspacePath(), ...this.projectCache.allFiles().map(f => f.path)]) {
             const relative = path.relative(getWorkspacePath(), file);
             if (relative.startsWith("..")) {
                 continue;
@@ -209,15 +203,16 @@ export class ProjectManager {
                 if (!visitedFolders.has(compPath)) {
                     visitedFolders.add(compPath);
                     try {
-                        const files = await glob("*", {
+                        const excludedFiles = await glob("*", {
                             absolute: true,
                             cwd: path.join(getWorkspacePath(), compPath),
                             dot: true,
                             nodir: false,
                             ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
                         });
-                        for (const file of files) {
-                            projectTree.addExcluded(file);
+                        for (const excludeFile of excludedFiles) {
+                            projectTree.addExcluded(excludeFile);
+                            // this.log.debug("Excluding file: " + excludeFile);
                         }
                     } catch (err) {
                         this.log.error(`Glob pattern is configured wrong: ${err}`);

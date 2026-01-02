@@ -8,10 +8,16 @@ import { isFolder } from "../utils";
 type ProjFilePath = {
     path: string;
     isFolder: boolean;
+    includeAllSubfolders: boolean;
 };
 
 function isProjFilePath(obj: any): obj is ProjFilePath {
-    return obj && typeof obj.path === "string" && typeof obj.isFolder === "boolean";
+    return (
+        obj &&
+        typeof obj.path === "string" &&
+        typeof obj.isFolder === "boolean" &&
+        typeof obj.includeAllSubfolders === "boolean"
+    );
 }
 
 type ProjFile = {
@@ -62,7 +68,7 @@ export interface ProjectCacheInterface {
     has(project: string): boolean;
     getList(project: string, onlyFiles?: boolean): Set<string>;
     getProjects(): string[];
-    files(isFolder?: boolean): string[];
+    allFiles(): { path: string; includeSubfolders: boolean }[];
     update(
         projectPath: string,
         listFilesFromProject: (projectFile: string) => Promise<string[]>,
@@ -144,20 +150,26 @@ export class ProjectsCache implements ProjectCacheInterface {
         return projects;
     }
 
-    files(isFolder = false) {
-        const files: string[] = [];
+    allFiles(): { path: string; isFolder: boolean; includeSubfolders: boolean }[] {
+        const files: { path: string; isFolder: boolean; includeSubfolders: boolean }[] = [];
         for (const [, value] of this.cache) {
             for (const file of value.list) {
-                if (file.isFolder === isFolder) {
-                    files.push(file.path);
-                }
+                files.push({
+                    path: file.path,
+                    isFolder: file.isFolder,
+                    includeSubfolders: file.includeAllSubfolders,
+                });
             }
         }
         return files;
     }
 
     private async parseProjectList(files: string[]) {
-        const resPaths = new Set<{ path: string; isFolder: boolean }>();
+        const resPaths = new Set<{
+            path: string;
+            isFolder: boolean;
+            includeAllSubfolders: boolean;
+        }>();
         const isFolderImp = (filePath: string) => {
             try {
                 return isFolder(filePath);
@@ -171,10 +183,22 @@ export class ProjectsCache implements ProjectCacheInterface {
                 resPaths.add({
                     path: filePath,
                     isFolder: isFolderImp(filePath),
+                    includeAllSubfolders: false,
                 });
             } else if (file.startsWith("file:/")) {
                 const filePath = file.substring("file:".length);
-                resPaths.add({ path: filePath, isFolder: isFolderImp(filePath) });
+                resPaths.add({
+                    path: filePath,
+                    isFolder: isFolderImp(filePath),
+                    includeAllSubfolders: false,
+                });
+            } else if (file.startsWith("folder:/")) {
+                const filePath = file.substring("folder:".length);
+                resPaths.add({
+                    path: filePath,
+                    isFolder: isFolderImp(filePath),
+                    includeAllSubfolders: true,
+                });
             } else {
                 console.log(`unsupported file ${file}`);
             }

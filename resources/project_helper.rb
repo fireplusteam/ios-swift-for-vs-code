@@ -144,10 +144,17 @@ def list_targets(project)
   project.targets.each { |target| puts target.name }
 end
 
+def is_folder_reference(file)
+    return file.last_known_file_type == "folder" || file.last_known_file_type == "folder.assetcatalog"
+end
+
 def print_all_group_paths(project, group = project.main_group)
   puts "group:#{get_real_path(group, project)}"
   group.children.each do |child|
-    if child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
+    # if child is a file reference with folder type, print it as folder reference
+    if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) && is_folder_reference(child)
+      puts "folder:#{get_real_path(child, project)}"
+    elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
       print_all_group_paths(project, child)
     end
   end
@@ -155,8 +162,9 @@ end
 
 def list_files(project)
   project.files.each do |file|
-    puts "file:#{get_real_path(file, project)}"
-    #puts file.path.to_s
+    if !is_folder_reference(file)
+      puts "file:#{get_real_path(file, project)}"
+    end
   end
   print_all_group_paths(project)
 end
