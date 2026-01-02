@@ -3,6 +3,7 @@ import { getFilePathInWorkspace } from "../env";
 import { watch } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { isFolder } from "../utils";
 
 type ProjFilePath = {
     path: string;
@@ -157,11 +158,23 @@ export class ProjectsCache implements ProjectCacheInterface {
 
     private async parseProjectList(files: string[]) {
         const resPaths = new Set<{ path: string; isFolder: boolean }>();
+        const isFolderImp = (filePath: string) => {
+            try {
+                return isFolder(filePath);
+            } catch {
+                return false;
+            }
+        };
         for (const file of files) {
             if (file.startsWith("group:/")) {
-                resPaths.add({ path: file.substring("group:".length), isFolder: true });
+                const filePath = file.substring("group:".length);
+                resPaths.add({
+                    path: filePath,
+                    isFolder: isFolderImp(filePath),
+                });
             } else if (file.startsWith("file:/")) {
-                resPaths.add({ path: file.substring("file:".length), isFolder: false });
+                const filePath = file.substring("file:".length);
+                resPaths.add({ path: filePath, isFolder: isFolderImp(filePath) });
             } else {
                 console.log(`unsupported file ${file}`);
             }

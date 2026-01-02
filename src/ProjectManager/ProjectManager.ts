@@ -177,9 +177,6 @@ export class ProjectManager {
         const projectTree = new ProjectTree();
 
         // add all project first as they are visible
-        for (const file of [...this.projectCache.files(true)]) {
-            projectTree.addIncluded(file, true);
-        }
         for (const file of [
             ...this.projectCache.files(false),
             ...(await this.getAdditionalIncludedFiles()),
