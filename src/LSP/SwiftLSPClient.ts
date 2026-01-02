@@ -36,11 +36,7 @@ export class SwiftLSPClient implements vscode.Disposable {
         const release = await this.mutex.acquire();
         try {
             if (this.languageClient === undefined) {
-                // let rootFolder = await this.workspaceContext.rootProjectFile;
-                // if (rootFolder === undefined) {
                 const rootFolder = await this.workspaceContext.workspaceFolder;
-                // }
-
                 await this.setupLanguageClient(rootFolder);
             }
             return this.languageClient!;

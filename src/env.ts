@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import { CustomError, emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
+import { getRootProjectFilePath } from "./ProjectManager/ProjectManager";
 
 export const ProjectFileMissedError = new CustomError(
     "Project File is not set in .vscode/xcode/projectConfiguration.json file. Please select project or workspace Xcode file"
@@ -286,7 +287,15 @@ export function getWorkspaceFolder() {
 export async function getLSPWorkspacePath() {
     // used to have the same folder as for project or workspace
     const lspFolder = getFilePathInWorkspace(await getProjectFolderPath());
-    return vscode.Uri.file(path.join(lspFolder));
+    const uriWorkspaceFolder = vscode.Uri.file(path.join(lspFolder));
+
+    const file = await getRootProjectFilePath();
+    if (file) {
+        const filePath = getFilePathInWorkspace(file.split(path.sep).slice(0, -1).join(path.sep));
+        return vscode.Uri.file(filePath);
+    } else {
+        return uriWorkspaceFolder;
+    }
 }
 
 export function getWorkspacePath() {
