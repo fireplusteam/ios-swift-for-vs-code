@@ -45,10 +45,11 @@ def wait_for_process(
         time.sleep(0.001)
 
 
-session_id = sys.argv[1]
-process_name = sys.argv[2].removesuffix("._exe")
-existing_pids = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else set()
+if __name__ == "__main__":
+    session_id = sys.argv[1]
+    process_name = sys.argv[2].removesuffix("._exe")
+    existing_pids = set(sys.argv[3].split(",")) if len(sys.argv) > 3 else set()
 
-result_pid = wait_for_process(process_name, existing_pids, session_id)
-print(result_pid)
-sys.stdout.flush()
+    result_pid = wait_for_process(process_name, existing_pids, session_id)
+    print(result_pid)
+    sys.stdout.flush()
