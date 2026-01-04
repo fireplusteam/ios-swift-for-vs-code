@@ -668,12 +668,15 @@ export async function enableXCBBuildService(enabled: boolean) {
 
 export async function openFile(
     filePath: string,
-    lineNumber: number,
+    lineNumber: number | undefined,
     viewColumn: vscode.ViewColumn = vscode.ViewColumn.Active
 ) {
     const fileUri = vscode.Uri.file(path.resolve(filePath));
     const document = await vscode.workspace.openTextDocument(fileUri);
     const editor = await vscode.window.showTextDocument(document, viewColumn, false);
+    if (lineNumber === undefined) {
+        return;
+    }
     editor.selection = new vscode.Selection(new vscode.Position(0, 0), new vscode.Position(0, 0));
     await vscode.commands.executeCommand("cursorMove", {
         to: "down",

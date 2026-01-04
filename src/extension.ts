@@ -488,6 +488,28 @@ export async function activate(context: vscode.ExtensionContext) {
             }, "Update Package Dependencies");
         })
     );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.switch.header.source", async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                return;
+            }
+            const document = editor.document;
+            const filePath = document.uri.fsPath;
+            const isHeader = () => {
+                return filePath.endsWith(".h") || filePath.endsWith(".hpp");
+            };
+            const fileEnds = isHeader() ? [".cpp", ".c", ".m", ".mm", ".cpp"] : [".h", ".hpp"];
+            for (const file of fileEnds) {
+                const sourceFilePath = filePath.split(".").slice(0, -1).join(".") + file;
+                if (fs.existsSync(sourceFilePath)) {
+                    openFile(sourceFilePath, undefined);
+                    return;
+                }
+            }
+        })
+    );
 }
 
 // This method is called when your extension is deactivated

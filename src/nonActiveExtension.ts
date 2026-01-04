@@ -157,4 +157,10 @@ export function activateNotActiveExtension(context: vscode.ExtensionContext) {
             showErrorOnPerformingExtensionCommand
         )
     );
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            "vscode-ios.switch.header.source",
+            showErrorOnPerformingExtensionCommand
+        )
+    );
 }

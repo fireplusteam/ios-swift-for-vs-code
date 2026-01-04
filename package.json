@@ -242,6 +242,12 @@
                 }
             }
         ],
+        "keybindings": [
+            {
+                "command": "vscode-ios.switch.header.source",
+                "key": "alt+o"
+            }
+        ],
         "commands": [
             {
                 "command": "vscode-ios.tools.install",
@@ -333,6 +339,10 @@
             {
                 "command": "vscode-ios.run.project.update.deps",
                 "title": "Xcode: Project: Update Package Dependencies"
+            },
+            {
+                "command": "vscode-ios.switch.header.source",
+                "title": "Xcode: Switch Header/Source File (C/C++/ObjC)"
             }
         ],
         "languages": [
