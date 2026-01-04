@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.6.5 - 2026-01-01
+
+-   Don't trigger autowatcher build if a project is opened with Xcode
+-   Added alt+o to switch between header to source files and vice versa
+
 ## 0.6.4 - 2026-01-01
 
 -   Improved attach debugger to debuggable process reliability

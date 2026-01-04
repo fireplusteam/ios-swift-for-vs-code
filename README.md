@@ -49,6 +49,10 @@ Instead of xCode preview you can use hot reloading [InjectionIII](https://github
 
 To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
 
+## Keybindings
+
+-   alt+o - switch between header and source files for C/C++/ObjC files like in Visual Studio
+
 ## Dependencies
 
 Before an extension is activated, there's a automatic check if those dependencies are installed and if not, it's ask a user to install them automatically.
