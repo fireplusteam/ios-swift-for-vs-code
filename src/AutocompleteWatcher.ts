@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import { getLogRelativePath, getWorkspaceFolder, isActivated } from "./env";
+import { getFilePathInWorkspace, getLogRelativePath, getWorkspaceFolder, isActivated } from "./env";
 import { emptyAutobuildLog } from "./utils";
 import { sleep } from "./utils";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 import { BuildManager } from "./Services/BuildManager";
-import { UserTerminatedError } from "./CommandManagement/CommandContext";
+import { CommandContext, UserTerminatedError } from "./CommandManagement/CommandContext";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -105,6 +105,10 @@ export class AutocompleteWatcher {
                 if (this.buildId !== buildId || (await this.isWatcherEnabledAnyFile()) === false) {
                     return;
                 }
+                if (await this.isXcodeOpenWithWorkspaceOrProject(context)) {
+                    // skip build when Xcode is open with workspace or project to avoid conflicts
+                    return;
+                }
 
                 emptyAutobuildLog();
                 const fileLog = getLogRelativePath("autocomplete.log");
@@ -139,8 +143,72 @@ export class AutocompleteWatcher {
             }
         }
     }
+    async isXcodeOpenWithWorkspaceOrProject(commandContext: CommandContext): Promise<boolean> {
+        // find all pids of Xcode processes using psaux
+        // use lsof to check there's any project or workspace which is opened with Xcode processes pid
+        try {
+            const psOut = await commandContext.execShellParallel({
+                scriptOrCommand: { command: "ps aux | grep Xcode" },
+            });
+            const xcodePids = psOut.stdout
+                .split("\n")
+                .filter(line => line.includes("/Contents/MacOS/Xcode"))
+                .map(line => line.trim().split(/\s+/).at(1) || "")
+                .filter(pid => pid !== "");
+            if (xcodePids.length === 0) {
+                return false;
+            }
+            let projectFile = getFilePathInWorkspace(await commandContext.projectEnv.projectFile);
+            if ((await commandContext.projectEnv.projectType) === "-project") {
+                projectFile += "/project.xcworkspace";
+            }
+            // const shasumOut = (
+            //     await commandContext.execShellParallel({
+            //         scriptOrCommand: {
+            //             command: `bash -c 'echo -n "${projectFile}" | shasum -a 256'`,
+            //         },
+            //     })
+            // ).stdout
+            //     .trim()
+            //     .split(" ")
+            //     .at(0);
+            const shasumOut = await getXcodeHash(projectFile);
+            if (!shasumOut) {
+                return false;
+            }
+
+            const lsofOut = await commandContext.execShellParallel({
+                scriptOrCommand: { command: `lsof -p ${xcodePids.join(",")}` },
+            });
+
+            const lsofLines = lsofOut.stdout.split("\n");
+            for (const lsofLine of lsofLines) {
+                if (lsofLine.includes(shasumOut)) {
+                    return true;
+                }
+            }
+            return false;
+        } catch {
+            return false;
+        }
+    }
 }
 
 function removeAllWhiteSpaces(str: string) {
     return str.replace(/\s/g, "");
+}
+
+async function getXcodeHash(path: string) {
+    // Encode the string into bytes (UTF-8)
+    const msgUint8 = new TextEncoder().encode(path);
+
+    // Hash the message
+    const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+
+    // Convert buffer to byte array
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+    // Convert bytes to hex string
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    return hashHex;
 }
