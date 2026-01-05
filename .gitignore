@@ -11,3 +11,5 @@ vscode-test
 !.vscode-test.mjs
 !.vscode-test.js
 !.vscodeignore
+!.nvmrc
+!package-lock.json

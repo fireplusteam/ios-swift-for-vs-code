@@ -189,8 +189,8 @@ export class AutocompleteWatcher {
                     this.triggerIncrementalBuild();
                     break;
                 }
-                await sleep(3000);
             }
+            await sleep(3000);
         }
     }
 
