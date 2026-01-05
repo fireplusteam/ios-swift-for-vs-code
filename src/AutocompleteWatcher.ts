@@ -114,22 +114,22 @@ export class AutocompleteWatcher {
                     )
                 ) {
                     // skip build when Xcode is open with workspace or project to avoid conflicts
-                    this.watchXcodeProcesses(
-                        context,
-                        await context.projectEnv.projectFile,
-                        await context.projectEnv.projectType,
-                        buildId,
-                        true
-                    );
+                    // this.watchXcodeProcesses(
+                    //     context,
+                    //     await context.projectEnv.projectFile,
+                    //     await context.projectEnv.projectType,
+                    //     buildId,
+                    //     true
+                    // );
                     return;
                 } else {
-                    this.watchXcodeProcesses(
-                        context,
-                        await context.projectEnv.projectFile,
-                        await context.projectEnv.projectType,
-                        buildId,
-                        false
-                    );
+                    // this.watchXcodeProcesses(
+                    //     context,
+                    //     await context.projectEnv.projectFile,
+                    //     await context.projectEnv.projectType,
+                    //     buildId,
+                    //     false
+                    // );
                 }
 
                 emptyAutobuildLog();
