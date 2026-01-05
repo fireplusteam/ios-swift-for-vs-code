@@ -6,6 +6,7 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 import { BuildManager } from "./Services/BuildManager";
 import { CommandContext, UserTerminatedError } from "./CommandManagement/CommandContext";
+import { Executor } from "./Executor";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -105,9 +106,30 @@ export class AutocompleteWatcher {
                 if (this.buildId !== buildId || (await this.isWatcherEnabledAnyFile()) === false) {
                     return;
                 }
-                if (await this.isXcodeOpenWithWorkspaceOrProject(context)) {
+
+                if (
+                    await this.isXcodeOpenWithWorkspaceOrProject(
+                        await context.projectEnv.projectFile,
+                        await context.projectEnv.projectType
+                    )
+                ) {
                     // skip build when Xcode is open with workspace or project to avoid conflicts
+                    this.watchXcodeProcesses(
+                        context,
+                        await context.projectEnv.projectFile,
+                        await context.projectEnv.projectType,
+                        buildId,
+                        true
+                    );
                     return;
+                } else {
+                    this.watchXcodeProcesses(
+                        context,
+                        await context.projectEnv.projectFile,
+                        await context.projectEnv.projectType,
+                        buildId,
+                        false
+                    );
                 }
 
                 emptyAutobuildLog();
@@ -143,11 +165,43 @@ export class AutocompleteWatcher {
             }
         }
     }
-    async isXcodeOpenWithWorkspaceOrProject(commandContext: CommandContext): Promise<boolean> {
+
+    async watchXcodeProcesses(
+        commandContext: CommandContext,
+        projectFile: string,
+        projectType: string,
+        buildId: number,
+        cancelledDueToXcodeOpen: boolean
+    ) {
+        while (this.buildId === buildId) {
+            if (commandContext.cancellationToken.isCancellationRequested) {
+                if (!cancelledDueToXcodeOpen) {
+                    break;
+                }
+            }
+            if ((await this.isXcodeOpenWithWorkspaceOrProject(projectFile, projectType)) === true) {
+                if (!commandContext.cancellationToken.isCancellationRequested) {
+                    cancelledDueToXcodeOpen = true;
+                    commandContext.cancel();
+                }
+            } else {
+                if (cancelledDueToXcodeOpen) {
+                    this.triggerIncrementalBuild();
+                    break;
+                }
+                await sleep(3000);
+            }
+        }
+    }
+
+    async isXcodeOpenWithWorkspaceOrProject(
+        projectFile: string,
+        projectType: string
+    ): Promise<boolean> {
         // find all pids of Xcode processes using psaux
         // use lsof to check there's any project or workspace which is opened with Xcode processes pid
         try {
-            const psOut = await commandContext.execShellParallel({
+            const psOut = await new Executor().execShell({
                 scriptOrCommand: { command: "ps aux | grep Xcode" },
             });
             const xcodePids = psOut.stdout
@@ -158,8 +212,8 @@ export class AutocompleteWatcher {
             if (xcodePids.length === 0) {
                 return false;
             }
-            let projectFile = getFilePathInWorkspace(await commandContext.projectEnv.projectFile);
-            if ((await commandContext.projectEnv.projectType) === "-project") {
+            projectFile = getFilePathInWorkspace(projectFile);
+            if (projectType === "-project") {
                 projectFile += "/project.xcworkspace";
             }
             // const shasumOut = (
@@ -177,7 +231,7 @@ export class AutocompleteWatcher {
                 return false;
             }
 
-            const lsofOut = await commandContext.execShellParallel({
+            const lsofOut = await new Executor().execShell({
                 scriptOrCommand: { command: `lsof -p ${xcodePids.join(",")}` },
             });
 
