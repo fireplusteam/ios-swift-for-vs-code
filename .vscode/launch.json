@@ -91,6 +91,21 @@
             "cwd": "/Users/Ievgenii_Mykhalevskyi/tests/Test_ios/"
         },
         {
+            "name": "Debug xcode server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/xcode-build-server/xcode-build-server",
+            "stopOnEntry": false,
+            "args": [
+                "debug",
+                "print-build-log",
+                "/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/AdidasAppSuite-dnvyirekqblvknagtchyynkmewvd/Logs/Build/2083718D-E925-416B-B079-9EF8B54F2149.xcactivitylog"
+            ],
+            "console": "internalConsole",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "/Users/Ievgenii_Mykhalevskyi/repos/source1/"
+        },
+        {
             "type": "ruby_lsp",
             "request": "launch",
             "name": "Debug Ruby program",

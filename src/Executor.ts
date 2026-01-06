@@ -84,6 +84,13 @@ export class Executor {
         return this.execShellByGettingProc(shell).result;
     }
 
+    public execShellAndProc(shell: ShellExec): {
+        proc: ChildProcess;
+        result: Promise<ShellResult>;
+    } {
+        return this.execShellByGettingProc(shell);
+    }
+
     private execShellByGettingProc(shell: ShellExec): {
         proc: ChildProcess;
         result: Promise<ShellResult>;

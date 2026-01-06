@@ -4,8 +4,11 @@ import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { CustomError } from "../utils";
 import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
+import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 
 export class BuildManager {
+    private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
+
     constructor() {}
 
     static async commonArgs(projectEnv: ProjectEnv, bundle: BundlePath) {
@@ -67,6 +70,17 @@ export class BuildManager {
     }
 
     async build(context: CommandContext, logFilePath: string) {
+        if (
+            await this.xcodeBuildExecutor.isXcodeOpenWithWorkspaceOrProject(
+                await context.projectEnv.projectFile,
+                await context.projectEnv.projectType
+            )
+        ) {
+            // at the moment build-for-testing does not work with opened Xcode workspace/project
+            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, "build");
+            return;
+        }
+
         context.bundle.generateNext();
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -86,8 +100,7 @@ export class BuildManager {
     }
 
     async buildAutocomplete(context: CommandContext, logFilePath: string) {
-        context.bundle.generateNext();
-        let buildCommand = "build-for-testing";
+        let buildCommand: "build" | "build-for-testing" = "build-for-testing";
         try {
             await context.projectSettingsProvider.testPlans;
         } catch (error) {
@@ -97,6 +110,18 @@ export class BuildManager {
                 throw error;
             }
         }
+
+        if (
+            await this.xcodeBuildExecutor.isXcodeOpenWithWorkspaceOrProject(
+                await context.projectEnv.projectFile,
+                await context.projectEnv.projectType
+            )
+        ) {
+            // at the moment build-for-testing does not work with opened Xcode workspace/project
+            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, buildCommand);
+            return;
+        }
+        context.bundle.generateNext();
 
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
@@ -130,6 +155,7 @@ export class BuildManager {
         tests: string[],
         isCoverage: boolean
     ) {
+        // TODO: build for testing is not supported when Xcode project/workspace is opened, so leave it as is for now
         context.bundle.generateNext();
         const extraArguments: string[] = [];
         if (isCoverage) {

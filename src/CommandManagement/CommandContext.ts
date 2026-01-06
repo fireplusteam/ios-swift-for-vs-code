@@ -14,6 +14,7 @@ import { CustomError } from "../utils";
 import { ProjectEnv } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import { ChildProcess } from "child_process";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -110,6 +111,14 @@ export class CommandContext {
     public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {
         const shellExe = this.convertToExeParams(shell, true);
         return await new Executor().execShell(shellExe);
+    }
+
+    public execShellWithOptionsAndProc(shell: CommandOptions): {
+        proc: ChildProcess;
+        result: Promise<ShellResult>;
+    } {
+        const shellExe = this.convertToExeParams(shell, true);
+        return new Executor().execShellAndProc(shellExe);
     }
 
     public async execShell(
