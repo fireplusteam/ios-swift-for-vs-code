@@ -199,6 +199,30 @@ def get_targets_for_file(project, file_path)
   result
 end
 
+def add_buildall_target(project)
+    # check if target already exists
+    existing_target = project.targets.find { |t| t.name == "ALL_BUILD" }
+
+    # if it exists, refresh all dependencies
+    if not existing_target.nil?
+        existing_target.dependencies.each do |dependency|
+            dependency.remove_from_project
+        end
+    else
+        # add BuildAll target and productTypeIdentifier
+        existing_target = project.new_aggregate_target("ALL_BUILD")
+        existing_target.product_name = "ALL_BUILD"
+        # existing_target.instance_variable_get(:@attributes)['productTypeIdentifier'] = 'com.apple.product-type.aggregate'
+    end
+
+    # add all deps back to the ALL_BUILD target
+    project.targets.each do |target|
+        next if target.name == "ALL_BUILD"
+
+        existing_target.add_dependency(target)
+    end
+end
+
 def save(project)
   project.save
 end
@@ -270,6 +294,11 @@ def handle_action(project, action, arg)
 
   if action == "list_targets_for_file"
     list_targets_for_file(project, arg[1])
+    return
+  end
+  
+  if action == "add_buildall_target"
+    add_buildall_target(project)
     return
   end
 end

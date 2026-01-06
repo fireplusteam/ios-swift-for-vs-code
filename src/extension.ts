@@ -93,6 +93,7 @@ async function initialize(
     emptyLog(".vscode/xcode/debugger.launching");
     try {
         await atomicCommand.userCommand(async context => {
+            // add BuildAll target root project if not exists (hide it with checkbox in settings)
             await checkWorkspace(context, true);
         }, "Initialize");
     } catch (error) {
@@ -103,6 +104,12 @@ async function initialize(
     fs.mkdir(getLogPath(), () => {});
     await enableXCBBuildService(shouldInjectXCBBuildService());
     await projectManager.loadProjectFiles();
+    await atomicCommand.userCommand(async context => {
+        if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
+            await projectManager.addBuildAllTargetToProjects();
+            context.projectEnv.buildAllTargetExists = true;
+        }
+    }, "Add BuildAll Target");
     autocompleteWatcher.triggerIncrementalBuild();
     return true;
 }
@@ -173,6 +180,7 @@ export async function activate(context: vscode.ExtensionContext) {
         activateNotActiveExtension(context);
         return;
     }
+
     statusBar.update(new ProjectEnv({ settings: Promise.resolve({}) }));
     context.subscriptions.push(
         ProjectEnv.onDidChangeProjectEnv(projectEnv => statusBar.update(projectEnv))

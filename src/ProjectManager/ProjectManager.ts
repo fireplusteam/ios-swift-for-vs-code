@@ -676,6 +676,34 @@ export class ProjectManager {
         }
     }
 
+    async addBuildAllTargetToProjects() {
+        const release = await this.projectFileEditMutex.acquire();
+        try {
+            if (!this.isAllowed()) {
+                if (await isActivated()) {
+                    this.onProjectUpdate.fire();
+                    return;
+                }
+                return;
+            }
+
+            const projectFiles = this.projectCache.getProjects();
+            const rootProject = await getRootProjectFilePath();
+            for (const project of projectFiles) {
+                if (project === rootProject) {
+                    await this.rubyProjectFilesManager.addBuildAllTarget(
+                        getFilePathInWorkspace(project)
+                    );
+                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                }
+            }
+        } catch (err) {
+            this.log.error(`Failed to add BuildAll target to projects: ${String(err)}`);
+        } finally {
+            release();
+        }
+    }
+
     private async selectBestFitProject(title: string, file: vscode.Uri, projectFiles: string[]) {
         const bestFitProject = await this.determineProjectFile(file.fsPath, projectFiles);
         let selectedProject: string | undefined;

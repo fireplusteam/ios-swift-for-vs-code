@@ -17,6 +17,7 @@ export class XcodeBuildExecutor {
     async startBuildInXcode(
         context: CommandContext,
         logFilePath: string,
+        scheme: string,
         type: "build" | "build-for-testing"
     ) {
         console.log(`Starting ${type} in Xcode for file: ${logFilePath}`);
@@ -42,7 +43,7 @@ export class XcodeBuildExecutor {
                         await context.projectEnv.projectFile,
                         await context.projectEnv.projectType
                     ),
-                    await context.projectEnv.autoCompleteScheme,
+                    scheme,
                 ],
                 mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             });

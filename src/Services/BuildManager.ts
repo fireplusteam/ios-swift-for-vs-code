@@ -77,7 +77,12 @@ export class BuildManager {
             )
         ) {
             // at the moment build-for-testing does not work with opened Xcode workspace/project
-            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, "build");
+            await this.xcodeBuildExecutor.startBuildInXcode(
+                context,
+                logFilePath,
+                await context.projectEnv.projectScheme,
+                "build"
+            );
             return;
         }
 
@@ -118,7 +123,12 @@ export class BuildManager {
             )
         ) {
             // at the moment build-for-testing does not work with opened Xcode workspace/project
-            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, buildCommand);
+            await this.xcodeBuildExecutor.startBuildInXcode(
+                context,
+                logFilePath,
+                await context.projectEnv.autoCompleteScheme,
+                buildCommand
+            );
             return;
         }
         context.bundle.generateNext();

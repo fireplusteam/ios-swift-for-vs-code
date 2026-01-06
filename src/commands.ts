@@ -161,6 +161,7 @@ export async function selectProjectFile(
     await updateProject(commandContext.projectEnv, projectPath, swiftPackagePath);
     await projectManager.loadProjectFiles(true);
     await checkWorkspace(commandContext, true);
+
     return true;
 }
 
