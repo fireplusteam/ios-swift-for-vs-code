@@ -7,6 +7,9 @@ import subprocess
 
 is_install = sys.argv[1] == "-install"
 isProxyInjected = sys.argv[1] == "-isProxyInjected"
+local_service_path = sys.argv[2]
+
+serviceName = local_service_path.split(os.path.sep)[-1]
 
 xcode_dev_path = (
     subprocess.run("xcode-select -p", shell=True, capture_output=True, check=True)
@@ -22,19 +25,21 @@ else:
 
 build_service_path = os.path.join(
     build_service_path,
-    "SharedFrameworks/XCBuild.framework/Versions/A/PlugIns/XCBBuildService.bundle/Contents/MacOS",
+    (
+        "SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/MacOS"
+        if serviceName == "SWBBuildService"
+        else "SharedFrameworks/XCBuild.framework/Versions/A/PlugIns/XCBBuildService.bundle/Contents/MacOS"
+    ),
 )
 
-service_origin_path = os.path.join(build_service_path, "XCBBuildService-origin")
-service_path = os.path.join(build_service_path, "XCBBuildService")
-
+service_origin_path = os.path.join(build_service_path, f"{serviceName}-origin")
+service_path = os.path.join(build_service_path, serviceName)
 if isProxyInjected:
     if os.path.exists(service_origin_path):
         exit(0)
     exit(1)
 
 # inject proxy server
-local_service_path = sys.argv[2]
 
 if is_install:
     if not os.path.exists(service_origin_path):

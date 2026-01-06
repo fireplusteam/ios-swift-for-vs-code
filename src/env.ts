@@ -459,6 +459,10 @@ export function getXCBBuildServicePath() {
     return path.join(__dirname, "..", "dist", "XCBBuildService");
 }
 
+export function getSWBBuildServicePath() {
+    return path.join(__dirname, "..", "dist", "SWBBuildService");
+}
+
 function readEnvFileToDict() {
     if (fs.existsSync(getEnvFilePath()) === false) {
         return {};
@@ -537,7 +541,7 @@ export async function getBuildRootPath() {
     }
 }
 
-export async function isBuildServerValid(projectEnv: ProjectEnvInterface) {
+export async function isBuildServerValid() {
     try {
         const buildServer = await getBuildServerJson();
         if (
@@ -545,7 +549,7 @@ export async function isBuildServerValid(projectEnv: ProjectEnvInterface) {
         ) {
             return false;
         }
-        if (buildServer.scheme !== (await projectEnv.autoCompleteScheme)) {
+        if (buildServer.scheme !== undefined) {
             return false;
         }
         if (

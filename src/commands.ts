@@ -13,6 +13,7 @@ import {
     getProjectPath,
     getProjectType,
     getScriptPath,
+    getSWBBuildServicePath,
     getWorkspacePath,
     getXCBBuildServicePath,
     getXCodeBuildServerPath,
@@ -448,7 +449,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
             await updatePackageDependencies(commandContext, false);
         }
-        if ((await isBuildServerValid(commandContext.projectEnv)) === false) {
+        if ((await isBuildServerValid()) === false) {
             await generateXcodeServer(commandContext, false);
         }
     } catch (error) {
@@ -493,7 +494,12 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
     await commandContext.execShellWithOptions({
         scriptOrCommand: { command: getXCodeBuildServerPath() },
         cwd: lspFolder.fsPath,
-        args: ["config", "-scheme", await env.autoCompleteScheme, projectType, relativeProjectPath],
+        // project scheme is optional but it prevents from parsing some builds and use compile flags, so better not to pass
+        args: [
+            "config",
+            /*"-scheme", await env.autoCompleteScheme,*/ projectType,
+            relativeProjectPath,
+        ],
     });
 
     await commandContext
@@ -614,54 +620,100 @@ export async function runAndDebugTests(
 }
 
 export async function enableXCBBuildService(enabled: boolean) {
-    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected`;
+    let checkSWBService: string | undefined = undefined;
+    try {
+        checkSWBService = await checkXCBuildServiceEnabled(enabled, getSWBBuildServicePath());
+    } catch {
+        // do nothing
+    }
+    let checkXCBService: string | undefined = undefined;
+    try {
+        checkXCBService = await checkXCBuildServiceEnabled(enabled, getXCBBuildServicePath());
+    } catch {
+        // do nothing
+    }
+    if (checkSWBService === undefined && checkXCBService === undefined) {
+        return;
+    }
+    const password = await requestSudoPasswordForXCBBuildService();
+    if (password === undefined) {
+        return;
+    }
+    try {
+        if (checkSWBService !== undefined) {
+            await installUninstallBuildService(enabled, password, getSWBBuildServicePath());
+        }
+        if (checkXCBService !== undefined) {
+            await installUninstallBuildService(enabled, password, getXCBBuildServicePath());
+        }
+    } catch (error) {
+        if (error instanceof Error && error.message === "Retry") {
+            return await enableXCBBuildService(enabled);
+        }
+    }
+}
 
-    return new Promise<void>(resolve => {
-        exec(checkIfInjectedCommand, async error => {
+async function checkXCBuildServiceEnabled(enabled: boolean, servicePath: string) {
+    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected ${servicePath}`;
+    return new Promise<string>((resolve, reject) => {
+        exec(checkIfInjectedCommand, error => {
             if ((enabled && error === null) || (!enabled && error !== null)) {
-                resolve();
+                reject(new Error("No need to change state"));
                 return;
             }
             const isInstallStr = enabled ? "INSTALL" : "DISABLED";
-            const password = await vscode.window.showInputBox({
-                ignoreFocusOut: false,
-                prompt: `In order to ${isInstallStr} XCBBuildService, please enter sudo password. This is required to grant necessary permissions to the service. (You can always disable that feature in extension settings)`,
-                password: true,
-            });
-            if (password === undefined) {
-                resolve();
-                return;
-            }
-            const install = enabled ? "-install" : "-uninstall";
-            const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${getXCBBuildServicePath()} `;
-            exec(command, error => {
-                if (error) {
-                    let errorMessage = enabled
-                        ? "Failed to install XCBBuildService"
-                        : "Failed to uninstall XCBBuildService";
-                    if (
-                        error
-                            .toString()
-                            .includes("PermissionError: [Errno 1] Operation not permitted:")
-                    ) {
-                        errorMessage += `: Permission denied. Make sure the password is correct and you gave a full disk control to VSCode in System Preferences -> Security & Privacy -> Privacy -> Full Disk Access.`;
-                    } else if (error.toString().includes("Password:Sorry, try again.")) {
-                        errorMessage += `: Wrong password provided.`;
-                    }
-                    vscode.window.showErrorMessage(errorMessage);
-                } else {
-                    if (enabled) {
-                        vscode.window.showInformationMessage(
-                            "XCBBuildService proxy setup successfully"
-                        );
+            resolve(isInstallStr);
+        });
+    });
+}
+
+async function requestSudoPasswordForXCBBuildService() {
+    const password = await vscode.window.showInputBox({
+        ignoreFocusOut: false,
+        prompt: `In order to install/uninstall XCBBuildService/SWBBuildService, please enter sudo password. This is required to grant necessary permissions to the service. (You can always disable that feature in extension settings)`,
+        password: true,
+    });
+    return password;
+}
+
+async function installUninstallBuildService(
+    enabled: boolean,
+    password: string,
+    servicePath: string
+) {
+    const install = enabled ? "-install" : "-uninstall";
+    const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${servicePath} `;
+    const serviceName = servicePath.split(path.sep).at(-1);
+    return new Promise<void>((resolve, reject) => {
+        exec(command, error => {
+            if (error) {
+                let errorMessage = enabled
+                    ? `Failed to install ${serviceName} proxy`
+                    : `Failed to uninstall ${serviceName} proxy`;
+                if (
+                    error.toString().includes("PermissionError: [Errno 1] Operation not permitted:")
+                ) {
+                    errorMessage += `: Permission denied. Make sure the password is correct and you gave a full disk control to VSCode in System Preferences -> Security & Privacy -> Privacy -> Full Disk Access.`;
+                } else if (error.toString().includes("Password:Sorry, try again.")) {
+                    errorMessage += `: Wrong password provided.`;
+                }
+                vscode.window.showErrorMessage(errorMessage, "Retry", "Cancel").then(selection => {
+                    if (selection === "Retry") {
+                        reject(new Error("Retry"));
                     } else {
-                        vscode.window.showInformationMessage(
-                            "XCBBuildService Proxy was uninstall successfully"
-                        );
+                        resolve();
                     }
+                });
+            } else {
+                if (enabled) {
+                    vscode.window.showInformationMessage(`${serviceName} proxy setup successfully`);
+                } else {
+                    vscode.window.showInformationMessage(
+                        `${serviceName} Proxy was uninstall successfully`
+                    );
                 }
                 resolve();
-            });
+            }
         });
     });
 }

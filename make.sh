@@ -12,6 +12,7 @@ npm install --save-dev sinon @types/sinon
 
 pip install psutil
 pyinstaller --onefile src/XCBBuildServiceProxy/XCBBuildService.py
+pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildService.py
 
 npm run compile
 npm run test
