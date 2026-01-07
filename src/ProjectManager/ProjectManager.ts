@@ -30,7 +30,11 @@ import * as touch from "touch";
 export interface ProjectManagerInterface {
     addBuildAllTargetToProjects(
         rootTargetName: string
-    ): Promise<{ scheme: string; path: string } | undefined>;
+    ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
+
+    addTestSchemeDependOnTargetToProjects(
+        rootTargetName: string
+    ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 }
 
 export class ProjectManager implements ProjectManagerInterface {
@@ -685,9 +689,14 @@ export class ProjectManager implements ProjectManagerInterface {
 
     private buildAllTargetTagCounter = 0;
 
-    async addBuildAllTargetToProjects(
-        rootTargetName: string
-    ): Promise<{ scheme: string; path: string } | undefined> {
+    async generateScheme(
+        rootTargetName: string,
+        generate: (
+            rootProjectPath: string,
+            schemeName: string,
+            rootTargetName: string
+        ) => Promise<string[]>
+    ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         const release = await this.projectFileEditMutex.acquire();
         try {
             if (!this.isAllowed()) {
@@ -708,7 +717,7 @@ export class ProjectManager implements ProjectManagerInterface {
             for (const project of projectFiles) {
                 if (project === rootProject) {
                     this.buildAllTargetTagCounter += 1;
-                    const allScheme = await this.rubyProjectFilesManager.addBuildAllTarget(
+                    const allScheme = await generate(
                         rootProjectPath,
                         `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
                         rootTargetName
@@ -716,7 +725,8 @@ export class ProjectManager implements ProjectManagerInterface {
                     if (allScheme.length === 0 || allScheme[0] === "Scheme Does not exist") {
                         throw new Error("Failed to add BuildAll target to the project");
                     }
-                    touch.sync(path.join(rootProjectPath, "project.pbxproj"));
+                    const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");
+                    touch.sync(touchProjectPath);
                     return {
                         scheme: allScheme[0],
                         path: path.join(
@@ -726,6 +736,7 @@ export class ProjectManager implements ProjectManagerInterface {
                             "xcschemes",
                             `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}.xcscheme`
                         ),
+                        projectPath: touchProjectPath,
                     };
                 }
             }
@@ -734,6 +745,34 @@ export class ProjectManager implements ProjectManagerInterface {
         } finally {
             release();
         }
+    }
+
+    async addBuildAllTargetToProjects(
+        rootTargetName: string
+    ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
+        return this.generateScheme(
+            rootTargetName,
+            (rootProjectPath: string, schemeName: string, rootTargetName: string) =>
+                this.rubyProjectFilesManager.addBuildAllTarget(
+                    rootProjectPath,
+                    schemeName,
+                    rootTargetName
+                )
+        );
+    }
+
+    async addTestSchemeDependOnTargetToProjects(
+        rootTargetName: string
+    ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
+        return this.generateScheme(
+            rootTargetName,
+            (rootProjectPath: string, schemeName: string, rootTargetName: string) =>
+                this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
+                    rootProjectPath,
+                    schemeName,
+                    rootTargetName
+                )
+        );
     }
 
     private async selectBestFitProject(title: string, file: vscode.Uri, projectFiles: string[]) {

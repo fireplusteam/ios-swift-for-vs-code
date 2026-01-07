@@ -1,3 +1,4 @@
+import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProjectEnv } from "../env";
@@ -113,6 +114,7 @@ export class BuildManager {
 
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         let toDeleteSchemePath: string | null = null;
+        let touchProjectPath: string | null = null;
         try {
             try {
                 if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
@@ -122,6 +124,7 @@ export class BuildManager {
                     if (scheme) {
                         allBuildScheme = scheme.scheme;
                         toDeleteSchemePath = scheme.path;
+                        touchProjectPath = scheme.projectPath;
                     }
                 }
             } catch (error) {
@@ -167,6 +170,9 @@ export class BuildManager {
             if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
                 fs.unlinkSync(toDeleteSchemePath);
             }
+            if (touchProjectPath && fs.existsSync(touchProjectPath)) {
+                touch.sync(touchProjectPath);
+            }
         }
     }
 
@@ -176,42 +182,76 @@ export class BuildManager {
         tests: string[],
         isCoverage: boolean
     ) {
-        // TODO: build for testing is not supported when Xcode project/workspace is opened, so leave it as is for now
-        // as Xcode can not generate xcresult bundle which is required for testing
         context.bundle.generateNext();
-        const extraArguments: string[] = [];
-        if (isCoverage) {
-            extraArguments.push(...["-enableCodeCoverage", "YES"]);
-        }
 
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToParseBuildErrors: true,
-            args: [
-                "build-for-testing",
-                ...tests.map(test => {
-                    return `-only-testing:${test}`;
-                }),
-                ...(await BuildManager.args(
-                    context.projectEnv,
-                    context.bundle,
-                    await context.projectEnv.autoCompleteScheme
-                )),
-                ...extraArguments,
-            ],
-            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: [logFilePath],
-                mode: ExecutorMode.none,
+        let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+        let toDeleteSchemePath: string | null = null;
+        try {
+            try {
+                if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
+                    const scheme =
+                        await context.projectManager.addTestSchemeDependOnTargetToProjects(
+                            await context.projectEnv.projectScheme
+                        );
+                    if (scheme) {
+                        allBuildScheme = scheme.scheme;
+                        toDeleteSchemePath = scheme.path;
+                    }
+                }
+            } catch (error) {
+                // ignore errors
+            }
+
+            // can not use Xcode to build-for-testing as the purpose of such build is to produce .xctestrun files, Xcode does not support that
+            // if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+            //     // at the moment build-for-testing does not work with opened Xcode workspace/project
+            //     await this.xcodeBuildExecutor.startBuildInXcode(
+            //         context,
+            //         logFilePath,
+            //         allBuildScheme
+            //     );
+            //     return;
+            // }
+
+            const extraArguments: string[] = [];
+            if (isCoverage) {
+                extraArguments.push(...["-enableCodeCoverage", "YES"]);
+            }
+
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                pipeToParseBuildErrors: true,
+                args: [
+                    "build-for-testing",
+                    ...tests.map(test => {
+                        return `-only-testing:${test}`;
+                    }),
+                    ...(await BuildManager.args(
+                        context.projectEnv,
+                        context.bundle,
+                        allBuildScheme
+                    )),
+                    ...extraArguments,
+                ],
+                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
                 pipe: {
-                    scriptOrCommand: {
-                        command: "xcbeautify",
-                        labelInTerminal: "Build For Testing",
+                    scriptOrCommand: { command: "tee" },
+                    args: [logFilePath],
+                    mode: ExecutorMode.none,
+                    pipe: {
+                        scriptOrCommand: {
+                            command: "xcbeautify",
+                            labelInTerminal: "Build For Testing",
+                        },
+                        mode: ExecutorMode.stdout,
                     },
-                    mode: ExecutorMode.stdout,
                 },
-            },
-        });
+            });
+        } finally {
+            // delete unused scheme
+            if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
+                fs.unlinkSync(toDeleteSchemePath);
+            }
+        }
     }
 }

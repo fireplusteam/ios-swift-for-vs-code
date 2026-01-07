@@ -199,7 +199,11 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def add_buildall_target(project, scheme_name, root_target_name)
+def add_target_to_scheme(scheme, test_target, build_for_testing)
+    scheme.add_build_target(test_target)
+end
+
+def add_buildall_scheme(project, scheme_name, root_target_name, build_for_testing = false)
     # add all deps back to the ALL_BUILD target
     # write bfs to find all deps of the root_target_name target
     root_target = project.targets.find { |current|
@@ -220,6 +224,7 @@ def add_buildall_target(project, scheme_name, root_target_name)
             if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
                 next
             end
+            
             dep_graph[dep.target.name] ||= []
             dep_graph[dep.target.name] << target
         end
@@ -230,7 +235,7 @@ def add_buildall_target(project, scheme_name, root_target_name)
     visited = {root_target.name => true}
 
     scheme = Xcodeproj::XCScheme.new
-    scheme.add_build_target(root_target)
+    add_target_to_scheme(scheme, root_target, build_for_testing)
 
     while !queue.empty?
         current = queue.shift
@@ -239,10 +244,11 @@ def add_buildall_target(project, scheme_name, root_target_name)
                 if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
                     next
                 end
+
                 if !visited.key?(neighbor.name)
                     visited[neighbor.name] = true
                     queue << neighbor.name
-                    scheme.add_build_target(neighbor)
+                    add_target_to_scheme(scheme, neighbor, build_for_testing)
                 end
             end
         end
@@ -253,6 +259,13 @@ def add_buildall_target(project, scheme_name, root_target_name)
     scheme_dir.mkpath unless scheme_dir.exist?
     scheme.save_as(scheme_dir, scheme_name, false)
     puts scheme_name
+end
+
+def generate_test_scheme_depend_on_target(project, scheme_name, root_target_name)
+    add_buildall_scheme(project, scheme_name, root_target_name, true)
+    # add_buildall_scheme(project, scheme_name, root_target_name, lambda { |t|
+    #     t.test_target_type?.nil? == false
+    # })
 end
 
 def save(project)
@@ -329,8 +342,13 @@ def handle_action(project, action, arg)
     return
   end
   
-  if action == "add_buildall_target"
-    add_buildall_target(project, arg[1], arg[2])
+  if action == "add_buildall_scheme"
+    add_buildall_scheme(project, arg[1], arg[2])
+    return
+  end
+  
+  if action == "generate_test_scheme_depend_on_target"
+    generate_test_scheme_depend_on_target(project, arg[1], arg[2])
     return
   end
 end

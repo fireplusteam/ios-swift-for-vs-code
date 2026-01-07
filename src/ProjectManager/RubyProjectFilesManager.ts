@@ -25,7 +25,16 @@ export interface RubyProjectFilesManagerInterface {
     deleteFolderFromProject(projectFile: string, folder: string): Promise<string[]>;
     listTargetsForFile(projectFile: string, file: string): Promise<string[]>;
     saveProject(projectFile: string): Promise<string[]>;
-    addBuildAllTarget(projectFile: string, tag: string, rootTargetName: string): Promise<string[]>;
+    addBuildAllTarget(
+        projectFile: string,
+        schemeName: string,
+        rootTargetName: string
+    ): Promise<string[]>;
+    generateTestSchemeDependOnTarget(
+        projectFile: string,
+        schemeName: string,
+        rootTargetName: string
+    ): Promise<string[]>;
 }
 
 export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface {
@@ -102,7 +111,18 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
     async addBuildAllTarget(projectFile: string, tag: string, rootTargetName: string) {
         return await this.executeRuby(
             projectFile,
-            `add_buildall_target|^|^|${tag}|^|^|${rootTargetName}`
+            `add_buildall_scheme|^|^|${tag}|^|^|${rootTargetName}`
+        );
+    }
+
+    async generateTestSchemeDependOnTarget(
+        projectFile: string,
+        schemeName: string,
+        rootTargetName: string
+    ) {
+        return await this.executeRuby(
+            projectFile,
+            `generate_test_scheme_depend_on_target|^|^|${schemeName}|^|^|${rootTargetName}`
         );
     }
 }
