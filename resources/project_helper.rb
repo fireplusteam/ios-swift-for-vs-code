@@ -199,28 +199,60 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def add_buildall_target(project)
-    # check if target already exists
-    existing_target = project.targets.find { |t| t.name == "ALL_BUILD" }
-
-    # if it exists, refresh all dependencies
-    if not existing_target.nil?
-        existing_target.dependencies.each do |dependency|
-            dependency.remove_from_project
-        end
-    else
-        # add BuildAll target and productTypeIdentifier
-        existing_target = project.new_aggregate_target("ALL_BUILD")
-        existing_target.product_name = "ALL_BUILD"
-        # existing_target.instance_variable_get(:@attributes)['productTypeIdentifier'] = 'com.apple.product-type.aggregate'
-    end
-
+def add_buildall_target(project, root_target_name)
     # add all deps back to the ALL_BUILD target
-    project.targets.each do |target|
-        next if target.name == "ALL_BUILD"
-
-        existing_target.add_dependency(target)
+    # write bfs to find all deps of the root_target_name target
+    root_target = project.targets.find { |current|
+        if current.nil? || current.name.nil? || current.name.empty?
+            next false
+        end
+        current.name == root_target_name
+    }
+    if root_target.nil?
+        puts "Scheme Does not exist"
+        return
     end
+
+    # build inverted dependency graph
+    dep_graph = {}
+    project.targets.each do |target|
+        target.dependencies.each do |dep|
+            if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
+                next
+            end
+            dep_graph[dep.target.name] ||= []
+            dep_graph[dep.target.name] << target
+        end
+    end
+
+    # bfs to find all dependents targets of the root_target
+    queue = [root_target.name]
+    visited = {root_target.name => true}
+
+    scheme = Xcodeproj::XCScheme.new
+    scheme.add_build_target(root_target)
+
+    while !queue.empty?
+        current = queue.shift
+        if dep_graph.key?(current)
+            dep_graph[current].each do |neighbor|
+                if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
+                    next
+                end
+                if !visited.key?(neighbor.name)
+                    visited[neighbor.name] = true
+                    queue << neighbor.name
+                    scheme.add_build_target(neighbor)
+                end
+            end
+        end
+    end
+
+    # save the scheme
+    scheme_dir = project.path
+    scheme_dir.mkpath unless scheme_dir.exist?
+    scheme.save_as(scheme_dir, "VSCODE_AUTOCOMPLETE", false)
+    puts "VSCODE_AUTOCOMPLETE"
 end
 
 def save(project)
@@ -298,7 +330,7 @@ def handle_action(project, action, arg)
   end
   
   if action == "add_buildall_target"
-    add_buildall_target(project)
+    add_buildall_target(project, arg[1])
     return
   end
 end

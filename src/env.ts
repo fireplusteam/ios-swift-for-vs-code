@@ -71,9 +71,6 @@ export interface ProjectEnvInterface {
     setSwiftPackageProjectFileGenerated(val: boolean): Promise<void>;
 
     workspaceType(): Promise<"xcodeProject" | "package">;
-
-    get buildAllTargetExists(): boolean;
-    set buildAllTargetExists(val: boolean);
 }
 
 export interface SetProjectEnvInterface {
@@ -90,8 +87,6 @@ let globalFirstLaunchedConfigured = false;
 // data of package file to know if Package.swift file was changed and project file need to be regenerated
 let swiftPackageProjectGeneratedData: string | undefined = undefined;
 
-let globalBuildAllTargetExists = false;
-
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
     private configuration: { [key: string]: any };
@@ -99,12 +94,6 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     constructor(settings: XCodeSettings) {
         this.settingsProvider = settings;
         this.configuration = getEnvList();
-    }
-    get buildAllTargetExists(): boolean {
-        return globalBuildAllTargetExists;
-    }
-    set buildAllTargetExists(val: boolean) {
-        globalBuildAllTargetExists = val;
     }
 
     async workspaceType(): Promise<"xcodeProject" | "package"> {
@@ -148,9 +137,6 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
                 const workspaceType = await this.workspaceType();
                 if (workspaceType === "package") {
                     resolve("Workspace-Workspace"); // for swift package, use this scheme as it builds all tests targets
-                    return;
-                } else if (this.buildAllTargetExists) {
-                    resolve("ALL_BUILD");
                     return;
                 }
                 resolve(await this.projectScheme);

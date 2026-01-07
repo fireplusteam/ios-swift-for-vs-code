@@ -25,7 +25,7 @@ export interface RubyProjectFilesManagerInterface {
     deleteFolderFromProject(projectFile: string, folder: string): Promise<string[]>;
     listTargetsForFile(projectFile: string, file: string): Promise<string[]>;
     saveProject(projectFile: string): Promise<string[]>;
-    addBuildAllTarget(projectFile: string): Promise<string[]>;
+    addBuildAllTarget(projectFile: string, rootTargetName: string): Promise<string[]>;
 }
 
 export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface {
@@ -99,7 +99,7 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
         return await this.executeRuby(projectFile, "save");
     }
 
-    async addBuildAllTarget(projectFile: string) {
-        return await this.executeRuby(projectFile, "add_buildall_target");
+    async addBuildAllTarget(projectFile: string, rootTargetName: string) {
+        return await this.executeRuby(projectFile, `add_buildall_target|^|^|${rootTargetName}`);
     }
 }

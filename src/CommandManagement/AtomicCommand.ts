@@ -8,6 +8,7 @@ import { CustomError } from "../utils";
 import { getWorkspaceFolder } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -45,6 +46,7 @@ export class AtomicCommand {
 
     constructor(
         private readonly lspClient: LSPClientContext,
+        private readonly projectManager: ProjectManagerInterface,
         private readonly log: LogChannelInterface
     ) {}
 
@@ -84,6 +86,7 @@ export class AtomicCommand {
                 new vscode.CancellationTokenSource(),
                 this.watcherTerminal,
                 this.lspClient,
+                this.projectManager,
                 new BundlePath("autowatcher"),
                 this.log
             );
@@ -166,6 +169,7 @@ export class AtomicCommand {
                 new vscode.CancellationTokenSource(),
                 this.userTerminal,
                 this.lspClient,
+                this.projectManager,
                 new BundlePath("bundle"),
                 this.log
             );

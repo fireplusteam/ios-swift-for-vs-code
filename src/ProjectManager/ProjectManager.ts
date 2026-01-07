@@ -25,8 +25,13 @@ import {
     RubyProjectFilesManagerInterface,
 } from "./RubyProjectFilesManager";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import * as touch from "touch";
 
-export class ProjectManager {
+export interface ProjectManagerInterface {
+    addBuildAllTargetToProjects(rootTargetName: string): Promise<string | undefined>;
+}
+
+export class ProjectManager implements ProjectManagerInterface {
     private readonly disposable: vscode.Disposable[] = [];
 
     private readonly projectFileEditMutex = new Mutex();
@@ -676,7 +681,7 @@ export class ProjectManager {
         }
     }
 
-    async addBuildAllTargetToProjects() {
+    async addBuildAllTargetToProjects(rootTargetName: string): Promise<string | undefined> {
         const release = await this.projectFileEditMutex.acquire();
         try {
             if (!this.isAllowed()) {
@@ -691,10 +696,16 @@ export class ProjectManager {
             const rootProject = await getRootProjectFilePath();
             for (const project of projectFiles) {
                 if (project === rootProject) {
-                    await this.rubyProjectFilesManager.addBuildAllTarget(
-                        getFilePathInWorkspace(project)
+                    const rootProjectPath = getFilePathInWorkspace(project);
+                    const allScheme = await this.rubyProjectFilesManager.addBuildAllTarget(
+                        rootProjectPath,
+                        rootTargetName
                     );
-                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                    if (allScheme.length === 0 || allScheme[0] === "Scheme Does not exist") {
+                        throw new Error("Failed to add BuildAll target to the project");
+                    }
+                    touch.sync(rootProjectPath + "/project.pbxproj");
+                    return allScheme[0];
                 }
             }
         } catch (err) {

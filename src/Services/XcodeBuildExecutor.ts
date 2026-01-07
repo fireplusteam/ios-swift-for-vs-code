@@ -10,18 +10,24 @@ import * as path from "path";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { Executor, ExecutorMode } from "../Executor";
 import { XCRunHelper } from "../Tools/XCRunHelper";
+import { sleep } from "../utils";
 
 export class XcodeBuildExecutor {
     constructor() {}
 
-    async startBuildInXcode(
-        context: CommandContext,
-        logFilePath: string,
-        scheme: string,
-        type: "build" | "build-for-testing"
-    ) {
-        console.log(`Starting ${type} in Xcode for file: ${logFilePath}`);
+    async canStartBuildInXcode(context: CommandContext): Promise<boolean> {
+        if (
+            await this.isXcodeOpenWithWorkspaceOrProject(
+                await context.projectEnv.projectFile,
+                await context.projectEnv.projectType
+            )
+        ) {
+            return true;
+        }
+        return false;
+    }
 
+    async startBuildInXcode(context: CommandContext, logFilePath: string, scheme: string) {
         const buildWait = context.waitToCancel();
         watchXcactivitylog(
             context,
@@ -31,6 +37,7 @@ export class XcodeBuildExecutor {
             undefined,
             logFilePath
         );
+        this.watchXcodeProcesses(context);
         let build = undefined;
         try {
             build = context.execShellWithOptionsAndProc({
@@ -55,33 +62,19 @@ export class XcodeBuildExecutor {
         }
     }
 
-    // async watchXcodeProcesses(
-    //     commandContext: CommandContext,
-    //     projectFile: string,
-    //     projectType: string,
-    //     buildId: number,
-    //     cancelledDueToXcodeOpen: boolean
-    // ) {
-    // while (this.buildId === buildId) {
-    //     if (commandContext.cancellationToken.isCancellationRequested) {
-    //         if (!cancelledDueToXcodeOpen) {
-    //             break;
-    //         }
-    //     }
-    //     if ((await this.isXcodeOpenWithWorkspaceOrProject(projectFile, projectType)) === true) {
-    //         if (!commandContext.cancellationToken.isCancellationRequested) {
-    //             cancelledDueToXcodeOpen = true;
-    //             commandContext.cancel();
-    //         }
-    //     } else {
-    //         if (cancelledDueToXcodeOpen) {
-    //             this.triggerIncrementalBuild();
-    //             break;
-    //         }
-    //     }
-    //     await sleep(3000);
-    // }
-    // }
+    async watchXcodeProcesses(context: CommandContext) {
+        while (!context.cancellationToken.isCancellationRequested) {
+            if (
+                (await this.isXcodeOpenWithWorkspaceOrProject(
+                    await context.projectEnv.projectFile,
+                    await context.projectEnv.projectType
+                )) === false
+            ) {
+                context.cancel();
+            }
+            await sleep(3000);
+        }
+    }
 
     async isXcodeOpenWithWorkspaceOrProject(
         projectFile: string,

@@ -15,6 +15,7 @@ import { ProjectEnv } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ChildProcess } from "child_process";
+import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -37,6 +38,11 @@ export class CommandContext {
     private _projectSettingsProvider: ProjectSettingsProvider;
     get projectSettingsProvider(): ProjectSettingsProvider {
         return this._projectSettingsProvider;
+    }
+
+    private _projectManager: ProjectManagerInterface;
+    get projectManager(): ProjectManagerInterface {
+        return this._projectManager;
     }
 
     readonly bundle: BundlePath;
@@ -70,6 +76,7 @@ export class CommandContext {
         cancellationToken: vscode.CancellationTokenSource,
         terminal: TerminalShell | undefined,
         lspClient: LSPClientContext,
+        projectManager: ProjectManagerInterface,
         bundle: BundlePath,
         log: LogChannelInterface
     ) {
@@ -78,6 +85,7 @@ export class CommandContext {
         this._projectSettingsProvider = new ProjectSettingsProvider(this);
         this.projectEnv = new ProjectEnv(this._projectSettingsProvider);
         this._projectSettingsProvider.projectEnv = new WeakRef(this.projectEnv);
+        this._projectManager = projectManager;
         this._terminal = terminal;
         this.lspClient = lspClient;
         this.log = log;

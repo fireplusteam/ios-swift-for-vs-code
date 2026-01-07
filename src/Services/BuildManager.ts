@@ -70,18 +70,12 @@ export class BuildManager {
     }
 
     async build(context: CommandContext, logFilePath: string) {
-        if (
-            await this.xcodeBuildExecutor.isXcodeOpenWithWorkspaceOrProject(
-                await context.projectEnv.projectFile,
-                await context.projectEnv.projectType
-            )
-        ) {
+        if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
             // at the moment build-for-testing does not work with opened Xcode workspace/project
             await this.xcodeBuildExecutor.startBuildInXcode(
                 context,
                 logFilePath,
-                await context.projectEnv.projectScheme,
-                "build"
+                await context.projectEnv.projectScheme
             );
             return;
         }
@@ -116,19 +110,22 @@ export class BuildManager {
             }
         }
 
-        if (
-            await this.xcodeBuildExecutor.isXcodeOpenWithWorkspaceOrProject(
-                await context.projectEnv.projectFile,
-                await context.projectEnv.projectType
-            )
-        ) {
+        let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+        try {
+            if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
+                const scheme = await context.projectManager.addBuildAllTargetToProjects(
+                    await context.projectEnv.projectScheme
+                );
+                if (scheme) {
+                    allBuildScheme = scheme;
+                }
+            }
+        } catch (error) {
+            // ignore errors
+        }
+        if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
             // at the moment build-for-testing does not work with opened Xcode workspace/project
-            await this.xcodeBuildExecutor.startBuildInXcode(
-                context,
-                logFilePath,
-                await context.projectEnv.autoCompleteScheme,
-                buildCommand
-            );
+            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, allBuildScheme);
             return;
         }
         context.bundle.generateNext();
@@ -138,11 +135,7 @@ export class BuildManager {
             pipeToParseBuildErrors: true,
             args: [
                 buildCommand,
-                ...(await BuildManager.args(
-                    context.projectEnv,
-                    context.bundle,
-                    await context.projectEnv.autoCompleteScheme
-                )),
+                ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),
                 "-skipUnavailableActions", // for autocomplete, skip if it fails
                 "-jobs",
                 "4",
@@ -166,6 +159,7 @@ export class BuildManager {
         isCoverage: boolean
     ) {
         // TODO: build for testing is not supported when Xcode project/workspace is opened, so leave it as is for now
+        // as Xcode can not generate xcresult bundle which is required for testing
         context.bundle.generateNext();
         const extraArguments: string[] = [];
         if (isCoverage) {

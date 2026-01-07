@@ -104,12 +104,6 @@ async function initialize(
     fs.mkdir(getLogPath(), () => {});
     await enableXCBBuildService(shouldInjectXCBBuildService());
     await projectManager.loadProjectFiles();
-    await atomicCommand.userCommand(async context => {
-        if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
-            await projectManager.addBuildAllTargetToProjects();
-            context.projectEnv.buildAllTargetExists = true;
-        }
-    }, "Add BuildAll Target");
     autocompleteWatcher.triggerIncrementalBuild();
     return true;
 }
@@ -118,10 +112,10 @@ const logChannel = new LogChannel("VSCode-iOS");
 const problemDiagnosticResolver = new ProblemDiagnosticResolver(logChannel);
 const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
 const sourceLsp = new SwiftLSPClient(workspaceContext, logChannel);
-const atomicCommand = new AtomicCommand(sourceLsp, logChannel);
+const projectManager = new ProjectManager(logChannel);
+const atomicCommand = new AtomicCommand(sourceLsp, projectManager, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;
-let projectManager: ProjectManager | undefined;
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
 
@@ -145,7 +139,6 @@ export async function activate(context: vscode.ExtensionContext) {
     const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
 
-    projectManager = new ProjectManager(logChannel);
     projectManager.onUpdateDeps = async () => {
         await tools.updateThirdPartyTools();
     };
