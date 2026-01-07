@@ -12,15 +12,22 @@ function run(argv) {
         console.log(
             [
                 `Usage: osascript -l JavaScript build.js <path_to_workspace> [scheme]`,
-                "",
+                "or",
+                `osascript -l JavaScript build.js <path_to_workspace> -tapReplaceDialog `,
                 "path_to_workspace, scheme can use . as current",
             ].join("\n")
         );
         return;
     }
+    var path = argv[0];
+
+    if (argv.length > 1 && argv[1] === "-tapReplaceDialog") {
+        waitForReplaceDialog(path);
+        return;
+    }
+
     var xcode = Application("Xcode");
     xcode.includeStandardAdditions = true;
-    var path = argv[0];
     var workspace;
     if (path === ".") {
         console.log("get active workspace");
@@ -54,12 +61,27 @@ function run(argv) {
         console.log(`active scheme is ${scheme.name()}`);
     } else {
         console.log(`get scheme by ${scheme}`);
-        scheme = workspace.schemes.byName(scheme);
-        if (!scheme.exists()) {
-            console.log("scheme not exist in workspace");
-            //var schemes = workspace.schemes()
-            //console.log(`available is ${Automation.getDisplayString(schemes)}`)
-            return;
+        let hasScheme = false;
+        // wait for scheme to appear
+        const originalScheme = scheme;
+        for (let cnt = 0; cnt < 12; ++cnt) {
+            try {
+                scheme = workspace.schemes.byName(originalScheme);
+                if (scheme && scheme.exists()) {
+                    hasScheme = true;
+                    break;
+                }
+            } catch (e) {
+                // ignore
+            }
+            delay(0.5);
+        }
+        if (!hasScheme) {
+            throw new Error(`scheme ${originalScheme} not exist in workspace ${path}`);
+            // console.log("scheme not exist in workspace");
+            // //var schemes = workspace.schemes()
+            // //console.log(`available is ${Automation.getDisplayString(schemes)}`)
+            // return;
         }
         console.log(`active scheme ${scheme.name()}`);
         workspace.activeScheme = scheme;
@@ -70,9 +92,8 @@ function run(argv) {
     workspace.build();
 
     console.log("build started");
-
-    waitForReplaceDialog(path);
-    // TODO: query build status //
+    console.log("active scheme is:");
+    console.log(workspace.activeScheme.name());
 }
 
 function waitForReplaceDialog(filePath) {
@@ -88,12 +109,7 @@ function waitForReplaceDialog(filePath) {
     const fileName = filePath.toLowerCase().split("/").at(-1);
     console.log(`file name to match: ${fileName}`);
     // eslint-disable-next-line no-constant-condition
-    while (true) {
-        // check if it's killed
-        if (!xcodeProcess.exists()) {
-            console.log("Xcode process not exist, seems killed");
-            return;
-        }
+    while (xcodeProcess.exists()) {
         console.log("wait replace dialog", xcodeProcess.name());
         const windows = xcodeProcess.windows();
         if (windows.length === 0) {
@@ -105,7 +121,7 @@ function waitForReplaceDialog(filePath) {
             const w = windows[i];
             console.log(`window ${i} name: ${w.name()}`);
             const windowsName = w.name().toLowerCase();
-            if (windowsName === undefined || !windowsName.includes(fileName)) {
+            if (windowsName === undefined || !windowsName.includes(fileName.split(".").at(0))) {
                 console.log(`window ${i} name not match file path`);
                 continue;
             }

@@ -2,9 +2,10 @@ import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
-import { CustomError, sleep } from "../utils";
+import { CustomError } from "../utils";
 import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
+import * as fs from "fs";
 
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
@@ -111,46 +112,62 @@ export class BuildManager {
         }
 
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+        let toDeleteSchemePath: string | null = null;
         try {
-            if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
-                const scheme = await context.projectManager.addBuildAllTargetToProjects(
-                    await context.projectEnv.projectScheme
-                );
-                if (scheme) {
-                    allBuildScheme = scheme;
+            try {
+                if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
+                    const scheme = await context.projectManager.addBuildAllTargetToProjects(
+                        await context.projectEnv.projectScheme
+                    );
+                    if (scheme) {
+                        allBuildScheme = scheme.scheme;
+                        toDeleteSchemePath = scheme.path;
+                    }
                 }
+            } catch (error) {
+                // ignore errors
             }
-        } catch (error) {
-            // ignore errors
-        }
-        if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
-            await sleep(1500); // wait a bit to let Xcode register the new scheme
-            // at the moment build-for-testing does not work with opened Xcode workspace/project
-            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, allBuildScheme);
-            return;
-        }
-        context.bundle.generateNext();
+            if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+                // at the moment build-for-testing does not work with opened Xcode workspace/project
+                await this.xcodeBuildExecutor.startBuildInXcode(
+                    context,
+                    logFilePath,
+                    allBuildScheme
+                );
+                return;
+            }
+            context.bundle.generateNext();
 
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToParseBuildErrors: true,
-            args: [
-                buildCommand,
-                ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),
-                "-skipUnavailableActions", // for autocomplete, skip if it fails
-                "-jobs",
-                "4",
-            ],
-            env: {
-                continueBuildingAfterErrors: "True", // build even if there's an error triggered
-            },
-            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: [logFilePath],
-                mode: ExecutorMode.none,
-            },
-        });
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                pipeToParseBuildErrors: true,
+                args: [
+                    buildCommand,
+                    ...(await BuildManager.args(
+                        context.projectEnv,
+                        context.bundle,
+                        allBuildScheme
+                    )),
+                    "-skipUnavailableActions", // for autocomplete, skip if it fails
+                    "-jobs",
+                    "4",
+                ],
+                env: {
+                    continueBuildingAfterErrors: "True", // build even if there's an error triggered
+                },
+                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                pipe: {
+                    scriptOrCommand: { command: "tee" },
+                    args: [logFilePath],
+                    mode: ExecutorMode.none,
+                },
+            });
+        } finally {
+            // delete unused scheme
+            if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
+                fs.unlinkSync(toDeleteSchemePath);
+            }
+        }
     }
 
     async buildForTestingWithTests(

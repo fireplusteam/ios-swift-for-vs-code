@@ -29,18 +29,24 @@ export class XcodeBuildExecutor {
 
     async startBuildInXcode(context: CommandContext, logFilePath: string, scheme: string) {
         const buildWait = context.waitToCancel();
+
+        const derivedPath = await getBuildRootPath();
+        const previousLogs =
+            (await allLogsPath(`${derivedPath}/Logs/Build/LogStoreManifest.plist`, scheme)) || [];
+
         watchXcactivitylog(
             context,
+            previousLogs.map(log => log.path),
             buildWait.token,
             buildWait.rejectToken,
-            await getBuildRootPath(),
-            undefined,
+            derivedPath,
+            scheme,
             logFilePath
         );
         this.watchXcodeProcesses(context);
-        let build = undefined;
+        let xcodeBuild = undefined;
         try {
-            build = context.execShellWithOptionsAndProc({
+            xcodeBuild = context.execShellWithOptionsAndProc({
                 scriptOrCommand: { command: "osascript" },
                 args: [
                     "-l",
@@ -54,10 +60,30 @@ export class XcodeBuildExecutor {
                 ],
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
+            xcodeBuild.result
+                .then(async () => {
+                    context.execShellWithOptions({
+                        scriptOrCommand: { command: "osascript" },
+                        args: [
+                            "-l",
+                            "JavaScript",
+                            getScriptPath("xcode_build.js"),
+                            projectWorkspace(
+                                await context.projectEnv.projectFile,
+                                await context.projectEnv.projectType
+                            ),
+                            "-tapReplaceDialog",
+                        ],
+                        mode: ExecutorMode.onlyCommandNameAndResult,
+                    });
+                })
+                .catch(error => {
+                    buildWait.rejectToken.fire(error);
+                });
             await buildWait.wait;
         } finally {
-            if (build?.proc && build.proc.connected) {
-                build.proc.kill("SIGKILL");
+            if (xcodeBuild?.proc && xcodeBuild.proc.connected) {
+                xcodeBuild.proc.kill("SIGKILL");
             }
         }
     }
@@ -129,6 +155,7 @@ export class XcodeBuildExecutor {
 
 async function watchXcactivitylog(
     context: CommandContext,
+    previousLogs: string[],
     success: vscode.EventEmitter<void>,
     error: vscode.EventEmitter<unknown>,
     derivedPath: string,
@@ -136,10 +163,13 @@ async function watchXcactivitylog(
     logFilePath: string
 ) {
     // watch DerivedData/Logs/xcactivitylog to update index
-    const status = fs.watch(`${derivedPath}/Logs/Build/LogStoreManifest.plist`, {
+    const status = await fs.watch(`${derivedPath}/Logs/Build/LogStoreManifest.plist`, {
         recursive: false,
     });
     for await (const event of status) {
+        if (event.eventType !== "rename") {
+            continue;
+        }
         if (context.cancellationToken.isCancellationRequested) {
             break;
         }
@@ -150,13 +180,17 @@ async function watchXcactivitylog(
                 scheme
             );
             console.log(`Newest log path: ${newestLog}`);
-            if (newestLog) {
+            if (newestLog && newestLog.path && newestLog.path.length > 0) {
                 // read logs
+                if (previousLogs.indexOf(newestLog.path) !== -1) {
+                    // the old log, skip
+                    continue;
+                }
                 try {
                     await context.execShellWithOptions({
                         scriptOrCommand: { command: getXCodeBuildServerPath() },
                         pipeToParseBuildErrors: true,
-                        args: ["debug", "print-build-log", newestLog],
+                        args: ["debug", "print-build-log", newestLog.path],
                         mode: ExecutorMode.onlyCommandNameAndResult,
                         pipe: {
                             scriptOrCommand: { command: "tee" },
@@ -164,19 +198,37 @@ async function watchXcactivitylog(
                             mode: ExecutorMode.none,
                         },
                     });
+                    if (newestLog.hasError) {
+                        throw new Error("Build has errors");
+                    }
                 } catch (buildError) {
                     error.fire(buildError);
                     return;
                 }
                 success.fire();
+                return;
             } else {
-                error.fire(new Error("Cannot find newest xcactivitylog"));
+                console.log(`No newest log path found for scheme: ${scheme}`);
             }
         }
     }
 }
 
-async function newestLogpath(metapath: string, scheme?: string): Promise<string | null> {
+async function newestLogpath(
+    metapath: string,
+    scheme?: string
+): Promise<{ path: string; hasError: boolean } | null> {
+    const logs = await allLogsPath(metapath, scheme);
+    if (logs === null || logs.length === 0) {
+        return null;
+    }
+    return logs[0];
+}
+
+async function allLogsPath(
+    metapath: string,
+    scheme?: string
+): Promise<{ path: string; hasError: boolean }[] | null> {
     // Read and parse the plist file
     let meta: any;
     try {
@@ -195,7 +247,10 @@ async function newestLogpath(metapath: string, scheme?: string): Promise<string 
     }
 
     logs.sort((a, b) => b.timeStoppedRecording - a.timeStoppedRecording);
-    return path.join(path.dirname(metapath), logs[0].fileName);
+    return logs.map(log => ({
+        path: path.join(path.dirname(metapath), log.fileName),
+        hasError: log.primaryObservable.totalNumberOfErrors > 0,
+    }));
 }
 
 function projectWorkspace(projectFile: string, projectType: string) {

@@ -28,7 +28,9 @@ import { LogChannelInterface } from "../Logs/LogChannel";
 import * as touch from "touch";
 
 export interface ProjectManagerInterface {
-    addBuildAllTargetToProjects(rootTargetName: string): Promise<string | undefined>;
+    addBuildAllTargetToProjects(
+        rootTargetName: string
+    ): Promise<{ scheme: string; path: string } | undefined>;
 }
 
 export class ProjectManager implements ProjectManagerInterface {
@@ -681,7 +683,11 @@ export class ProjectManager implements ProjectManagerInterface {
         }
     }
 
-    async addBuildAllTargetToProjects(rootTargetName: string): Promise<string | undefined> {
+    private buildAllTargetTagCounter = 0;
+
+    async addBuildAllTargetToProjects(
+        rootTargetName: string
+    ): Promise<{ scheme: string; path: string } | undefined> {
         const release = await this.projectFileEditMutex.acquire();
         try {
             if (!this.isAllowed()) {
@@ -692,20 +698,35 @@ export class ProjectManager implements ProjectManagerInterface {
                 return;
             }
 
-            const projectFiles = this.projectCache.getProjects();
             const rootProject = await getRootProjectFilePath();
+            if (rootProject === undefined) {
+                throw new Error("No project files found to add BuildAll target");
+            }
+            const rootProjectPath = getFilePathInWorkspace(rootProject);
+
+            const projectFiles = this.projectCache.getProjects();
             for (const project of projectFiles) {
                 if (project === rootProject) {
-                    const rootProjectPath = getFilePathInWorkspace(project);
+                    this.buildAllTargetTagCounter += 1;
                     const allScheme = await this.rubyProjectFilesManager.addBuildAllTarget(
                         rootProjectPath,
+                        `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
                         rootTargetName
                     );
                     if (allScheme.length === 0 || allScheme[0] === "Scheme Does not exist") {
                         throw new Error("Failed to add BuildAll target to the project");
                     }
-                    touch.sync(rootProjectPath + "/project.pbxproj");
-                    return allScheme[0];
+                    touch.sync(path.join(rootProjectPath, "project.pbxproj"));
+                    return {
+                        scheme: allScheme[0],
+                        path: path.join(
+                            rootProjectPath,
+                            "xcuserdata",
+                            `${process.env.USER}.xcuserdatad`,
+                            "xcschemes",
+                            `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}.xcscheme`
+                        ),
+                    };
                 }
             }
         } catch (err) {

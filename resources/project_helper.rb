@@ -199,7 +199,7 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def add_buildall_target(project, root_target_name)
+def add_buildall_target(project, scheme_name, root_target_name)
     # add all deps back to the ALL_BUILD target
     # write bfs to find all deps of the root_target_name target
     root_target = project.targets.find { |current|
@@ -251,8 +251,8 @@ def add_buildall_target(project, root_target_name)
     # save the scheme
     scheme_dir = project.path
     scheme_dir.mkpath unless scheme_dir.exist?
-    scheme.save_as(scheme_dir, "VSCODE_AUTOCOMPLETE", false)
-    puts "VSCODE_AUTOCOMPLETE"
+    scheme.save_as(scheme_dir, scheme_name, false)
+    puts scheme_name
 end
 
 def save(project)
@@ -330,7 +330,7 @@ def handle_action(project, action, arg)
   end
   
   if action == "add_buildall_target"
-    add_buildall_target(project, arg[1])
+    add_buildall_target(project, arg[1], arg[2])
     return
   end
 end
