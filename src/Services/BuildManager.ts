@@ -2,7 +2,7 @@ import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
-import { CustomError } from "../utils";
+import { CustomError, sleep } from "../utils";
 import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 
@@ -124,6 +124,7 @@ export class BuildManager {
             // ignore errors
         }
         if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+            await sleep(1500); // wait a bit to let Xcode register the new scheme
             // at the moment build-for-testing does not work with opened Xcode workspace/project
             await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, allBuildScheme);
             return;

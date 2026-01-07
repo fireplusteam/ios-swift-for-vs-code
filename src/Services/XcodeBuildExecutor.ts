@@ -52,7 +52,7 @@ export class XcodeBuildExecutor {
                     ),
                     scheme,
                 ],
-                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                mode: ExecutorMode.onlyCommandNameAndResult,
             });
             await buildWait.wait;
         } finally {
@@ -157,8 +157,7 @@ async function watchXcactivitylog(
                         scriptOrCommand: { command: getXCodeBuildServerPath() },
                         pipeToParseBuildErrors: true,
                         args: ["debug", "print-build-log", newestLog],
-                        mode:
-                            ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                        mode: ExecutorMode.onlyCommandNameAndResult,
                         pipe: {
                             scriptOrCommand: { command: "tee" },
                             args: [logFilePath],
