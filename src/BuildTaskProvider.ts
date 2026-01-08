@@ -93,8 +93,8 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             def,
             vscode.TaskScope.Workspace,
             title,
-            "xcode",
-            this.customExecution(`Xcode: ${title}`, commandClosure, undefined)
+            "Xcode",
+            this.customExecution(title, commandClosure, undefined)
         );
         buildTask.group = group;
         buildTask.presentationOptions = {
@@ -130,7 +130,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                 task.name,
                 task.source,
                 this.customExecution(
-                    `${task.name}`,
+                    task.name,
                     async context => {
                         switch (taskDefinition.command) {
                             case "buildSelectedTarget":
@@ -156,7 +156,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
     }
 
     private customExecution(
-        successMessage: string,
+        title: string,
         commandClosure: (context: CommandContext) => Promise<void>,
         token: vscode.CancellationToken | undefined
     ) {
@@ -169,7 +169,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                     async context => {
                         await commandClosure(context);
                     },
-                    undefined,
+                    title,
                     {
                         shouldRunFromTask: true,
                         onSudoTerminalCreated: terminal => {

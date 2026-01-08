@@ -32,9 +32,6 @@ export class AtomicCommand {
     };
     private _prevCommandContext?: CommandContext;
 
-    private userTerminal = new TerminalShell("User");
-    private watcherTerminal = new TerminalShell("Watch");
-
     constructor(
         private readonly lspClient: LSPClientContext,
         private readonly projectManager: ProjectManagerInterface,
@@ -71,6 +68,8 @@ export class AtomicCommand {
     }
 
     async autoWatchCommand(commandClosure: (commandContext: CommandContext) => Promise<void>) {
+        const watcherTerminal = new TerminalShell("Watcher");
+
         if (this.latestOperationID.type === "user") {
             throw UserCommandIsExecuting;
         }
@@ -93,7 +92,7 @@ export class AtomicCommand {
             this._executingCommand = "autowatcher";
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
-                this.watcherTerminal,
+                watcherTerminal,
                 this.lspClient,
                 this.projectManager,
                 new BundlePath("autowatcher"),
@@ -109,8 +108,6 @@ export class AtomicCommand {
                 command: "xcodeAgent",
             };
 
-            this.userTerminal.terminalName = "Watcher";
-
             // execute as vscode task to have better terminal integration
             const task = new vscode.Task(
                 taskDefinition,
@@ -118,10 +115,10 @@ export class AtomicCommand {
                 "Watcher",
                 "Xcode",
                 new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
-                    return this.watcherTerminal.createSudoTerminal(async () => {
+                    return watcherTerminal.createSudoTerminal(async () => {
                         // Your command logic here
                         await promiseResult;
-                        this.watcherTerminal.success();
+                        watcherTerminal.success();
                     });
                 })
             );
@@ -131,11 +128,11 @@ export class AtomicCommand {
         } catch (error) {
             if (error !== UserCommandIsExecuting) {
                 if (UserTerminatedError.isEqual(error)) {
-                    this.watcherTerminal.cancel();
+                    watcherTerminal.cancel();
                 } else if (UserTerminalCloseError.isEqual(error) === false) {
-                    this.watcherTerminal.error();
+                    watcherTerminal.error();
                 }
-                this.watcherTerminal.write(`${error}\n`, TerminalMessageStyle.error);
+                watcherTerminal.write(`${error}\n`, TerminalMessageStyle.error);
             }
             throw error;
         } finally {
@@ -155,6 +152,9 @@ export class AtomicCommand {
             onSudoTerminalCreated: (terminal: vscode.Pseudoterminal) => void;
         } = { shouldRunFromTask: false, onSudoTerminalCreated: () => {} }
     ) {
+        const terminalName = taskName ? taskName : "Xcode";
+        const userTerminal = new TerminalShell(terminalName);
+
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
@@ -170,25 +170,26 @@ export class AtomicCommand {
             this._executingCommand = "user";
             const commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
-                this.userTerminal,
+                userTerminal,
                 this.lspClient,
                 this.projectManager,
                 new BundlePath("bundle"),
                 this.log
             );
             this._prevCommandContext = commandContext;
-            const terminalName = taskName ? `User: ${taskName}` : "Xcode";
 
             const promiseResult = this.withCancellation(async () => {
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
 
+            userTerminal.terminalName = terminalName;
+
             if (runFromTask.shouldRunFromTask) {
-                const pseudoTerminal = await this.userTerminal.createSudoTerminal(async () => {
+                const pseudoTerminal = await userTerminal.createSudoTerminal(async () => {
                     // Your command logic here
                     await promiseResult;
                     if (taskName) {
-                        this.userTerminal.success();
+                        userTerminal.success();
                     }
                 });
                 runFromTask.onSudoTerminalCreated(pseudoTerminal);
@@ -200,8 +201,6 @@ export class AtomicCommand {
                 command: "xcodeAgent",
             };
 
-            this.userTerminal.terminalName = terminalName;
-
             // execute as vscode task to have better terminal integration
             await vscode.tasks.executeTask(
                 new vscode.Task(
@@ -210,11 +209,11 @@ export class AtomicCommand {
                     terminalName,
                     "Xcode",
                     new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
-                        return this.userTerminal.createSudoTerminal(async () => {
+                        return userTerminal.createSudoTerminal(async () => {
                             // Your command logic here
                             await promiseResult;
                             if (taskName) {
-                                this.userTerminal.success();
+                                userTerminal.success();
                             }
                         });
                     })
@@ -231,10 +230,10 @@ export class AtomicCommand {
             }
             if (err !== UserCommandIsExecuting && taskName) {
                 if (UserTerminatedError.isEqual(err)) {
-                    this.userTerminal.cancel();
+                    userTerminal.cancel();
                 } else if (UserTerminalCloseError.isEqual(err) === false) {
-                    this.userTerminal.error();
-                    this.userTerminal.write(`${err}\n`, TerminalMessageStyle.error);
+                    userTerminal.error();
+                    userTerminal.write(`${err}\n`, TerminalMessageStyle.error);
                 }
             }
 
