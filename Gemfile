@@ -2,13 +2,16 @@
 
 source 'https://rubygems.org'
 
-ruby File.read(File.join(__dir__, '.ruby-version')).strip
+# ruby File.read(File.join(__dir__, '.ruby-version')).strip
 
 git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 gem 'pathname'
 gem 'xcodeproj'
 
+gem 'sorbet-runtime'
+
 group :development do
+  gem 'sorbet', require: false
   # linter
   #gem 'rubocop', require: false
   # formatter

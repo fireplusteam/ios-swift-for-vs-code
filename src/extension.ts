@@ -104,6 +104,7 @@ async function initialize(
     fs.mkdir(getLogPath(), () => {});
     await enableXCBBuildService(shouldInjectXCBBuildService());
     await projectManager.loadProjectFiles();
+    await projectManager.cleanAutocompleteSchemes();
     autocompleteWatcher.triggerIncrementalBuild();
     return true;
 }

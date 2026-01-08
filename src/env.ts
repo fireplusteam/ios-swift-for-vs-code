@@ -71,6 +71,8 @@ export interface ProjectEnvInterface {
     setSwiftPackageProjectFileGenerated(val: boolean): Promise<void>;
 
     workspaceType(): Promise<"xcodeProject" | "package">;
+
+    buildScheme(): { scheme: string; path: string } | undefined;
 }
 
 export interface SetProjectEnvInterface {
@@ -80,6 +82,8 @@ export interface SetProjectEnvInterface {
     setProjectTestPlan(testPlan: string): Promise<void>;
     setDebugDeviceID(deviceID: DeviceID | null): Promise<void>;
     setMultipleDeviceID(multiId: DeviceID[]): Promise<void>;
+
+    setBuildScheme(target: { scheme: string; path: string; projectPath: string } | undefined): void;
 }
 
 // at this point, project file can be changed only at the start of extension, so it's safe to check it only once
@@ -90,10 +94,21 @@ let swiftPackageProjectGeneratedData: string | undefined = undefined;
 export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     private settingsProvider: XCodeSettings;
     private configuration: { [key: string]: any };
+    private _buildScheme: { scheme: string; path: string; projectPath: string } | undefined =
+        undefined;
 
     constructor(settings: XCodeSettings) {
         this.settingsProvider = settings;
         this.configuration = getEnvList();
+    }
+
+    setBuildScheme(
+        target: { scheme: string; path: string; projectPath: string } | undefined
+    ): void {
+        this._buildScheme = target;
+    }
+    buildScheme(): { scheme: string; path: string; projectPath: string } | undefined {
+        return this._buildScheme;
     }
 
     async workspaceType(): Promise<"xcodeProject" | "package"> {

@@ -1,3 +1,14 @@
+# typed: true
+if LSP = ENV["SORBETSILENCE"]
+  require "sorbet-runtime"
+else
+  begin
+    require "sorbet-runtime"
+  rescue LoadError
+    # Do nothing if sorbet-runtime is not available
+  end
+end
+
 require "xcodeproj"
 require "pathname"
 
@@ -145,14 +156,18 @@ def list_targets(project)
 end
 
 def is_folder_reference(file)
-    return file.last_known_file_type == "folder" || file.last_known_file_type == "folder.assetcatalog"
+  return(
+    file.last_known_file_type == "folder" ||
+      file.last_known_file_type == "folder.assetcatalog"
+  )
 end
 
 def print_all_group_paths(project, group = project.main_group)
   puts "group:#{get_real_path(group, project)}"
   group.children.each do |child|
     # if child is a file reference with folder type, print it as folder reference
-    if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) && is_folder_reference(child)
+    if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
+         is_folder_reference(child)
       puts "folder:#{get_real_path(child, project)}"
     elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
       print_all_group_paths(project, child)
@@ -162,9 +177,7 @@ end
 
 def list_files(project)
   project.files.each do |file|
-    if !is_folder_reference(file)
-      puts "file:#{get_real_path(file, project)}"
-    end
+    puts "file:#{get_real_path(file, project)}" if !is_folder_reference(file)
   end
   print_all_group_paths(project)
 end
@@ -199,73 +212,113 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def add_target_to_scheme(scheme, test_target, build_for_testing)
+def add_target_to_scheme(
+  scheme,
+  test_target,
+  build_for_testing,
+  allowed_targets
+)
+  if scheme.is_a?(Xcodeproj::XCScheme) == false
+    raise "scheme should be of type Xcodeproj::XCScheme"
+  end
+  if allowed_targets.empty? == true ||
+       allowed_targets.include?(test_target.name)
     scheme.add_build_target(test_target)
+    if build_for_testing
+      test_action = scheme.test_action
+      testable_reference =
+        Xcodeproj::XCScheme::TestAction::TestableReference.new(test_target)
+      test_action.add_testable(testable_reference)
+    end
+  end
 end
 
-def add_buildall_scheme(project, scheme_name, root_target_name, build_for_testing = false)
-    # add all deps back to the ALL_BUILD target
-    # write bfs to find all deps of the root_target_name target
-    root_target = project.targets.find { |current|
-        if current.nil? || current.name.nil? || current.name.empty?
-            next false
-        end
-        current.name == root_target_name
-    }
-    if root_target.nil?
-        puts "Scheme Does not exist"
-        return
+def generate_scheme_depend_on_target(
+  project,
+  scheme_name,
+  root_target_name,
+  build_for_testing = false,
+  allowed_targets = []
+)
+  # add all deps back to the ALL_BUILD target
+  # write bfs to find all deps of the root_target_name target
+  root_target =
+    project.targets.find do |current|
+      next false if current.nil? || current.name.nil? || current.name.empty?
+      current.name == root_target_name
     end
+  if root_target.nil?
+    puts "Scheme Does not exist"
+    return
+  end
 
-    # build inverted dependency graph
-    dep_graph = {}
-    project.targets.each do |target|
-        target.dependencies.each do |dep|
-            if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
-                next
-            end
-            
-            dep_graph[dep.target.name] ||= []
-            dep_graph[dep.target.name] << target
-        end
+  # build inverted dependency graph
+  dep_graph = {}
+  project.targets.each do |target|
+    target.dependencies.each do |dep|
+      next if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
+
+      dep_graph[dep.target.name] ||= []
+      dep_graph[dep.target.name] << target
     end
+  end
 
-    # bfs to find all dependents targets of the root_target
-    queue = [root_target.name]
-    visited = {root_target.name => true}
+  # bfs to find all dependents targets of the root_target
+  queue = [root_target.name]
+  visited = { root_target.name => true }
 
-    scheme = Xcodeproj::XCScheme.new
-    add_target_to_scheme(scheme, root_target, build_for_testing)
+  scheme = Xcodeproj::XCScheme.new
 
-    while !queue.empty?
-        current = queue.shift
-        if dep_graph.key?(current)
-            dep_graph[current].each do |neighbor|
-                if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
-                    next
-                end
+  add_target_to_scheme(scheme, root_target, build_for_testing, allowed_targets)
 
-                if !visited.key?(neighbor.name)
-                    visited[neighbor.name] = true
-                    queue << neighbor.name
-                    add_target_to_scheme(scheme, neighbor, build_for_testing)
-                end
-            end
+  while !queue.empty?
+    current = queue.shift
+    if dep_graph.key?(current)
+      dep_graph[current].each do |neighbor|
+        next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
+
+        if !visited.key?(neighbor.name)
+          visited[neighbor.name] = true
+          queue << neighbor.name
+          add_target_to_scheme(
+            scheme,
+            neighbor,
+            build_for_testing,
+            allowed_targets
+          )
         end
+      end
     end
+  end
 
-    # save the scheme
-    scheme_dir = project.path
-    scheme_dir.mkpath unless scheme_dir.exist?
-    scheme.save_as(scheme_dir, scheme_name, false)
-    puts scheme_name
+  # save the scheme
+  scheme_dir = project.path
+  scheme_dir.mkpath unless scheme_dir.exist?
+  scheme.save_as(scheme_dir, scheme_name, false)
+  puts scheme_name
 end
 
-def generate_test_scheme_depend_on_target(project, scheme_name, root_target_name)
-    add_buildall_scheme(project, scheme_name, root_target_name, true)
-    # add_buildall_scheme(project, scheme_name, root_target_name, lambda { |t|
-    #     t.test_target_type?.nil? == false
-    # })
+def generate_test_scheme_depend_on_target(
+  project,
+  scheme_name,
+  root_target_name,
+  test_targets
+)
+  test_targets_list = test_targets.split(",")
+  test_targets_list = [] if test_targets == "include_all_tests_targets"
+
+  scheme = Xcodeproj::XCScheme.new
+
+  project.targets.each do |current|
+    # puts "current target: #{current.name}, #{current.product_name}"
+    add_target_to_scheme(scheme, current, true, test_targets_list)
+  end
+
+  # save the scheme
+  scheme_dir = project.path
+  scheme_dir.mkpath unless scheme_dir.exist?
+  scheme.save_as(scheme_dir, scheme_name, false)
+  puts scheme_name
 end
 
 def save(project)
@@ -341,14 +394,14 @@ def handle_action(project, action, arg)
     list_targets_for_file(project, arg[1])
     return
   end
-  
-  if action == "add_buildall_scheme"
-    add_buildall_scheme(project, arg[1], arg[2])
+
+  if action == "generate_scheme_depend_on_target"
+    generate_scheme_depend_on_target(project, arg[1], arg[2])
     return
   end
-  
+
   if action == "generate_test_scheme_depend_on_target"
-    generate_test_scheme_depend_on_target(project, arg[1], arg[2])
+    generate_test_scheme_depend_on_target(project, arg[1], arg[2], arg[3])
     return
   end
 end

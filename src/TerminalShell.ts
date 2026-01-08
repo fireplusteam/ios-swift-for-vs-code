@@ -16,17 +16,48 @@ export class TerminalShell {
     private exitEmitter = new vscode.EventEmitter<void>();
     private _terminalName: string;
 
+    private bindWriteEmitters: vscode.EventEmitter<string>[] = [];
+    private bindChangeNameEmitters: vscode.EventEmitter<string>[] = [];
+
+    private canCreateTerminal: boolean;
+
+    public bindToOutputEmitter(emitter: vscode.EventEmitter<string>) {
+        this.bindWriteEmitters.push(emitter);
+    }
+
+    public bindToNameChangeEmitter(emitter: vscode.EventEmitter<string>) {
+        this.bindChangeNameEmitters.push(emitter);
+    }
+
+    private fireData(data: string) {
+        this.writeEmitter?.fire(data);
+        this.bindWriteEmitters.forEach(emitter => {
+            emitter.fire(data);
+        });
+    }
+
+    private fireNameChange(name: string) {
+        this.changeNameEmitter?.fire(name);
+        this.bindChangeNameEmitters.forEach(emitter => {
+            emitter.fire(name);
+        });
+    }
+
     set terminalName(name: string) {
         this._terminalName = name;
-        this.terminal = this.getTerminal(name);
+        if (this.canCreateTerminal) {
+            this.terminal = this.getTerminal(name);
+        }
+        this.fireNameChange(`${name}`);
     }
 
     public get onExitEvent(): vscode.Event<void> {
         return this.exitEmitter.event;
     }
 
-    constructor(terminalName: string) {
+    constructor(terminalName: string, canCreateTerminal: boolean = true) {
         this._terminalName = terminalName;
+        this.canCreateTerminal = canCreateTerminal;
     }
 
     error() {
@@ -83,13 +114,18 @@ export class TerminalShell {
     }
 
     public write(data: string, style = TerminalMessageStyle.default): void {
-        this.terminal?.then(() => {
-            if (!this.writeEmitter) {
-                return;
-            }
+        const writeData = () => {
             const toPrint = this.dataToPrint(data);
             const styledText = this.getStyledText(toPrint, style);
-            this.writeEmitter.fire(styledText);
+            this.fireData(styledText);
+        };
+        if (this.canCreateTerminal === false) {
+            writeData();
+            return;
+        }
+
+        this.terminal?.then(() => {
+            writeData();
         });
     }
 
@@ -100,7 +136,7 @@ export class TerminalShell {
         // start the animation
         const animationInterval = setInterval(() => {
             currentIndex = (currentIndex + 1) % steps.length;
-            this.changeNameEmitter?.fire(`${steps[currentIndex]} ${terminalId}`);
+            this.fireNameChange(`${steps[currentIndex]} ${terminalId}`);
         }, 1000); // Change this to control animation speed
         return animationInterval;
     }
@@ -115,7 +151,6 @@ export class TerminalShell {
         clearInterval(this.animationInterval);
         this.animationInterval = this.createTitleAnimation(terminalId);
         if (this.terminal) {
-            this.changeNameEmitter?.fire(`${terminalId}`);
             return this.terminal;
         }
 
@@ -127,7 +162,7 @@ export class TerminalShell {
                 onDidWrite: this.writeEmitter.event,
                 onDidChangeName: this.changeNameEmitter.event,
                 open: () => {
-                    this.writeEmitter?.fire(`\x1b[42m${terminalId}:\x1b[0m\r\n`);
+                    this.fireData(`\x1b[42m${terminalId}:\x1b[0m\r\n`);
                     if (terminal) {
                         resolve(terminal);
                     } else {

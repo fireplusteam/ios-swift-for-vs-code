@@ -230,14 +230,19 @@
         ],
         "taskDefinitions": [
             {
-                "type": "vscode-ios-tasks",
+                "type": "xcode",
                 "required": [
-                    "taskBuild"
+                    "command"
                 ],
                 "properties": {
-                    "taskBuild": {
+                    "command": {
                         "type": "string",
-                        "description": "The build type"
+                        "enum": [
+                            "buildSelectedTarget",
+                            "buildForAutocomplete",
+                            "cleanDerivedData"
+                        ],
+                        "description": "The command to execute, e.g., buildSelectedTarget, buildForAutocomplete, cleanDerivedData"
                     }
                 }
             }

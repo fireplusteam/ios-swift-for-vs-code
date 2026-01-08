@@ -6,6 +6,8 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 import { BuildManager } from "./Services/BuildManager";
 import { UserTerminatedError } from "./CommandManagement/CommandContext";
+import * as fs from "fs";
+import touch = require("touch");
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -114,6 +116,22 @@ export class AutocompleteWatcher {
                     const buildManager = new BuildManager();
                     await buildManager.buildAutocomplete(context, fileLog);
                 } catch (error) {
+                    // clean up build target scheme if it was created
+                    try {
+                        // delete unused scheme
+                        const toDeleteSchemePath = context.projectEnv.buildScheme()?.path;
+                        const touchProjectPath =
+                            await context.projectEnv.buildScheme()?.projectPath;
+                        if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
+                            fs.unlinkSync(toDeleteSchemePath);
+                        }
+                        if (touchProjectPath && fs.existsSync(touchProjectPath)) {
+                            touch.sync(touchProjectPath);
+                        }
+                    } catch {
+                        // ignore errors
+                    }
+
                     if (error === UserTerminatedError) {
                         shouldCleanPreviousBuildErrors = false; // do not clean previous errors if user terminated (like when a user edits a file again)
                     }

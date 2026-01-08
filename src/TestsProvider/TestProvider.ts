@@ -13,6 +13,7 @@ import { BundlePath } from "../CommandManagement/BundlePath";
 import * as path from "path";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import * as fs from "fs";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -192,6 +193,15 @@ export class TestProvider {
                         }
                     } catch (error) {
                         this.log.error(`Coverage data can not be obtained: ${error}`);
+                    }
+                    // clean up build all target scheme if it was created
+                    try {
+                        const generatedSchemePath = context.projectEnv.buildScheme()?.path;
+                        if (generatedSchemePath && fs.existsSync(generatedSchemePath)) {
+                            fs.unlinkSync(generatedSchemePath);
+                        }
+                    } catch {
+                        // ignore errors
                     }
 
                     run.end();

@@ -67,6 +67,10 @@ export class CommandContext {
         return this._terminal;
     }
 
+    public setTerminal(terminal: TerminalShell) {
+        this._terminal = terminal;
+    }
+
     private _cancellationTokenSource: vscode.CancellationTokenSource;
     public get cancellationToken(): vscode.CancellationToken {
         return this._cancellationTokenSource.token;

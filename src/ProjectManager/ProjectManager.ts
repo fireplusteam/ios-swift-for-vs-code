@@ -33,7 +33,8 @@ export interface ProjectManagerInterface {
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 
     addTestSchemeDependOnTargetToProjects(
-        rootTargetName: string
+        rootTargetName: string,
+        testTargets: string | undefined
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 }
 
@@ -689,6 +690,36 @@ export class ProjectManager implements ProjectManagerInterface {
 
     private buildAllTargetTagCounter = 0;
 
+    async cleanAutocompleteSchemes() {
+        const release = await this.projectFileEditMutex.acquire();
+        try {
+            const rootProject = await getRootProjectFilePath();
+            if (rootProject === undefined) {
+                throw new Error("No project files found to clean autocomplete schemes");
+            }
+            const rootProjectPath = getFilePathInWorkspace(rootProject);
+
+            const schemeDir = path.join(
+                rootProjectPath,
+                "xcuserdata",
+                `${process.env.USER}.xcuserdatad`,
+                "xcschemes"
+            );
+
+            if (fs.existsSync(schemeDir)) {
+                const globPattern = path.join(schemeDir, "VSCODE_AUTOCOMPLETE_TAG_*.xcscheme");
+                const files = await glob.glob(globPattern);
+                for (const file of files) {
+                    fs.unlinkSync(file);
+                }
+            }
+        } catch (err) {
+            this.log.error(`Failed to clean autocomplete schemes: ${String(err)}`);
+        } finally {
+            release();
+        }
+    }
+
     async generateScheme(
         rootTargetName: string,
         generate: (
@@ -728,7 +759,7 @@ export class ProjectManager implements ProjectManagerInterface {
                     const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");
                     touch.sync(touchProjectPath);
                     return {
-                        scheme: allScheme[0],
+                        scheme: allScheme.at(-1) || "",
                         path: path.join(
                             rootProjectPath,
                             "xcuserdata",
@@ -753,7 +784,7 @@ export class ProjectManager implements ProjectManagerInterface {
         return this.generateScheme(
             rootTargetName,
             (rootProjectPath: string, schemeName: string, rootTargetName: string) =>
-                this.rubyProjectFilesManager.addBuildAllTarget(
+                this.rubyProjectFilesManager.generateSchemeDependOnTarget(
                     rootProjectPath,
                     schemeName,
                     rootTargetName
@@ -762,7 +793,8 @@ export class ProjectManager implements ProjectManagerInterface {
     }
 
     async addTestSchemeDependOnTargetToProjects(
-        rootTargetName: string
+        rootTargetName: string,
+        testTargets: string | undefined
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         return this.generateScheme(
             rootTargetName,
@@ -770,7 +802,8 @@ export class ProjectManager implements ProjectManagerInterface {
                 this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
                     rootProjectPath,
                     schemeName,
-                    rootTargetName
+                    rootTargetName,
+                    testTargets
                 )
         );
     }

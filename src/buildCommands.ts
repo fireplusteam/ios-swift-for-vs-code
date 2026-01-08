@@ -51,6 +51,33 @@ export async function buildSelectedTarget(
     }
 }
 
+// AUTOCOMPLETE
+
+export async function buildAutocomplete(
+    context: CommandContext,
+    problemResolver: ProblemDiagnosticResolver
+) {
+    await checkWorkspace(context);
+    const buildManager = new BuildManager();
+    const filePath = getFileNameLog();
+    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
+    try {
+        const build = async () => {
+            try {
+                await buildManager.buildAutocomplete(context, filePath);
+            } catch (error) {
+                await handleValidationErrors(context, error, async () => {
+                    await checkWorkspace(context);
+                    await build();
+                });
+            }
+        };
+        await build();
+    } finally {
+        await problemResolver.end(context.bundle, rawParser);
+    }
+}
+
 // TESTS
 
 export async function buildTestsForCurrentFile(
