@@ -9,6 +9,7 @@ import { getWorkspaceFolder } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
+import { BuildTaskProvider } from "../BuildTaskProvider";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -16,16 +17,6 @@ function isShowErrorEnabled() {
     const isEnabled = vscode.workspace
         .getConfiguration("vscode-ios", getWorkspaceFolder())
         .get("show.log");
-    if (!isEnabled) {
-        return false;
-    }
-    return true;
-}
-
-function shouldAskTerminateCurrentTask() {
-    const isEnabled = vscode.workspace
-        .getConfiguration("vscode-ios", getWorkspaceFolder())
-        .get("confirm.terminate.task");
     if (!isEnabled) {
         return false;
     }
@@ -61,6 +52,24 @@ export class AtomicCommand {
         }
     }
 
+    private async withCancellation<T>(
+        closure: () => Promise<T>,
+        cancellation: vscode.CancellationToken
+    ) {
+        let dis: vscode.Disposable;
+        return new Promise<T>(async (resolve, reject) => {
+            try {
+                dis = cancellation.onCancellationRequested(() => {
+                    dis.dispose();
+                    reject(UserTerminatedError);
+                });
+                resolve(await closure());
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
     async autoWatchCommand(commandClosure: (commandContext: CommandContext) => Promise<void>) {
         if (this.latestOperationID.type === "user") {
             throw UserCommandIsExecuting;
@@ -91,11 +100,34 @@ export class AtomicCommand {
                 this.log
             );
             this._prevCommandContext = commandContext;
-            this.watcherTerminal.terminalName = "Watcher";
-            await this.withCancellation(async () => {
+            const promiseResult = this.withCancellation(async () => {
                 await commandClosure(commandContext);
             }, commandContext.cancellationToken);
-            this.watcherTerminal.success();
+
+            const taskDefinition: vscode.TaskDefinition = {
+                type: BuildTaskProvider.BuildScriptType,
+                command: "xcodeAgent",
+            };
+
+            this.userTerminal.terminalName = "Watcher";
+
+            // execute as vscode task to have better terminal integration
+            const task = new vscode.Task(
+                taskDefinition,
+                vscode.TaskScope.Workspace,
+                "Watcher",
+                "Xcode",
+                new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
+                    return this.watcherTerminal.createSudoTerminal(async () => {
+                        // Your command logic here
+                        await promiseResult;
+                        this.watcherTerminal.success();
+                    });
+                })
+            );
+            task.group = vscode.TaskGroup.Build;
+            await vscode.tasks.executeTask(task);
+            return await promiseResult;
         } catch (error) {
             if (error !== UserCommandIsExecuting) {
                 if (UserTerminatedError.isEqual(error)) {
@@ -115,50 +147,21 @@ export class AtomicCommand {
         }
     }
 
-    private async withCancellation<T>(
-        closure: () => Promise<T>,
-        cancellation: vscode.CancellationToken
-    ) {
-        let dis: vscode.Disposable;
-        return new Promise<T>(async (resolve, reject) => {
-            try {
-                dis = cancellation.onCancellationRequested(() => {
-                    dis.dispose();
-                    reject(UserTerminatedError);
-                });
-                resolve(await closure());
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
-
     async userCommand<T>(
         commandClosure: (commandContext: CommandContext) => Promise<T>,
-        taskName: string | undefined
+        taskName: string | undefined,
+        runFromTask: {
+            shouldRunFromTask: boolean;
+            onSudoTerminalCreated: (terminal: vscode.Pseudoterminal) => void;
+        } = { shouldRunFromTask: false, onSudoTerminalCreated: () => {} }
     ) {
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
-        let result: T;
         try {
             if (this._mutex.isLocked()) {
-                let choice: string | undefined;
-                if (this._executingCommand === "autowatcher" || !shouldAskTerminateCurrentTask()) {
-                    choice = "Terminate";
-                } else {
-                    choice = await vscode.window.showErrorMessage(
-                        "To execute this task you need to terminate the current task. Do you want to terminate it to continue?",
-                        "Terminate",
-                        "Cancel"
-                    );
-                }
-                if (choice === "Terminate") {
-                    this._prevCommandContext?.cancel();
-                    this._mutex.cancel();
-                } else {
-                    throw UserCommandIsExecuting;
-                }
+                this._prevCommandContext?.cancel();
+                this._mutex.cancel();
             }
             releaser = await this._mutex.acquire();
             if (currentOperationID !== this.latestOperationID) {
@@ -174,17 +177,50 @@ export class AtomicCommand {
                 this.log
             );
             this._prevCommandContext = commandContext;
-            if (taskName) {
-                this.userTerminal.terminalName = `User: ${taskName}`;
-            }
-            result = await this.withCancellation(async () => {
+            const terminalName = taskName ? `User: ${taskName}` : "Xcode";
+
+            const promiseResult = this.withCancellation(async () => {
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
-            if (taskName) {
-                this.userTerminal.success();
+
+            if (runFromTask.shouldRunFromTask) {
+                const pseudoTerminal = await this.userTerminal.createSudoTerminal(async () => {
+                    // Your command logic here
+                    await promiseResult;
+                    if (taskName) {
+                        this.userTerminal.success();
+                    }
+                });
+                runFromTask.onSudoTerminalCreated(pseudoTerminal);
+                return await promiseResult;
             }
 
-            return result;
+            const taskDefinition: vscode.TaskDefinition = {
+                type: BuildTaskProvider.BuildScriptType,
+                command: "xcodeAgent",
+            };
+
+            this.userTerminal.terminalName = terminalName;
+
+            // execute as vscode task to have better terminal integration
+            await vscode.tasks.executeTask(
+                new vscode.Task(
+                    taskDefinition,
+                    vscode.TaskScope.Workspace,
+                    terminalName,
+                    "Xcode",
+                    new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
+                        return this.userTerminal.createSudoTerminal(async () => {
+                            // Your command logic here
+                            await promiseResult;
+                            if (taskName) {
+                                this.userTerminal.success();
+                            }
+                        });
+                    })
+                )
+            );
+            return await promiseResult;
         } catch (err) {
             try {
                 this.log.error(
@@ -218,6 +254,8 @@ export class AtomicCommand {
                 // lock was cancelled: do nothing
             } else if (err === UserTerminatedError) {
                 throw err;
+            } else if (err === UserTerminalCloseError) {
+                throw err;
             } else {
                 if ((err as Error).message) {
                     vscode.window.showErrorMessage((err as Error).message);
@@ -234,6 +272,11 @@ export class AtomicCommand {
     }
 
     cancel() {
-        this._prevCommandContext?.cancel();
+        if (this._mutex.isLocked()) {
+            this._prevCommandContext?.cancel();
+            this._prevCommandContext = undefined;
+            return true;
+        }
+        return false;
     }
 }

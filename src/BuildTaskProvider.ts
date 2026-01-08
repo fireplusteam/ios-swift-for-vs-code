@@ -4,7 +4,6 @@ import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand } from "./CommandManagement/AtomicCommand";
 import { CommandContext } from "./CommandManagement/CommandContext";
-import { TerminalShell } from "./TerminalShell";
 import { sleep } from "./utils";
 
 export async function executeTask(name: string) {
@@ -95,18 +94,23 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             vscode.TaskScope.Workspace,
             title,
             "xcode",
-            this.customExecution(`Xcode: ${title}`, commandClosure, undefined, true)
+            this.customExecution(`Xcode: ${title}`, commandClosure, undefined)
         );
         buildTask.group = group;
         buildTask.presentationOptions = {
             reveal: vscode.TaskRevealKind.Never,
-            close: true,
+            close: false,
         };
         if (group === vscode.TaskGroup.Build) {
             buildTask.problemMatchers = ["$xcode"];
         } else {
             buildTask.isBackground = true;
         }
+        (buildTask.runOptions as any) = {
+            // instanceLimit: 1,
+            instancePolicy: "terminateOldest",
+            reevaluateOnRerun: true,
+        };
         return buildTask;
     }
 
@@ -116,17 +120,10 @@ export class BuildTaskProvider implements vscode.TaskProvider {
     ): Promise<vscode.Task | undefined> {
         const taskDefinition = task.definition;
         if (taskDefinition.type === BuildTaskProvider.BuildScriptType) {
-            let wasExecuting = false;
-            while (this.activeCommand.isExecuting) {
-                if (!this.activeCommand.context?.cancellationToken.isCancellationRequested) {
-                    this.activeCommand.context?.cancel();
-                }
-                wasExecuting = true;
-                await sleep(100);
+            if (this.atomicCommand.cancel()) {
+                sleep(1000); // Give some time for previous task to cancel
             }
-            if (wasExecuting) {
-                await sleep(500);
-            }
+
             const newTask = new vscode.Task(
                 task.definition,
                 task.scope ?? vscode.TaskScope.Workspace,
@@ -147,8 +144,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                                 break;
                         }
                     },
-                    token,
-                    false
+                    token
                 ),
                 task.problemMatchers
             );
@@ -159,83 +155,28 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return undefined;
     }
 
-    private activeCommand: { context: CommandContext | null; isExecuting: boolean } = {
-        context: null,
-        isExecuting: false,
-    };
-
     private customExecution(
         successMessage: string,
         commandClosure: (context: CommandContext) => Promise<void>,
-        token: vscode.CancellationToken | undefined,
-        isDefaultDefined: boolean
+        token: vscode.CancellationToken | undefined
     ) {
-        return new vscode.CustomExecution(() => {
+        return new vscode.CustomExecution((): Promise<vscode.Pseudoterminal> => {
             if (token?.isCancellationRequested) {
                 return Promise.reject("Task cancelled");
             }
-
-            return new Promise(resolved => {
-                this.activeCommand.isExecuting = true;
-
-                const writeEmitter = new vscode.EventEmitter<string>();
-                const closeEmitter = new vscode.EventEmitter<number>();
-                const didChangeNameEmitter = new vscode.EventEmitter<string>();
-                let commandContext: CommandContext | undefined = undefined;
-                let disposable: vscode.Disposable | undefined;
-                const pty: vscode.Pseudoterminal = {
-                    open: async () => {
-                        if (isDefaultDefined) {
-                            closeEmitter.fire(0); // this's a workaround to hide a task terminal as soon as possible to let executor terminal to do the main job. That has a side effect if that task would be used in a chain of tasks, then it's finished before process actually finishes
-                        }
-
-                        try {
-                            await this.atomicCommand.userCommand(
-                                async context => {
-                                    this.activeCommand.context = context;
-                                    if (!isDefaultDefined && context.terminal) {
-                                        context.setTerminal(
-                                            new TerminalShell("Build_Internal_Terminal", false)
-                                        );
-                                        context.terminal.terminalName = successMessage;
-                                        context.terminal.bindToOutputEmitter(writeEmitter);
-                                    }
-
-                                    disposable = token?.onCancellationRequested(() => {
-                                        context.cancel();
-                                        disposable?.dispose();
-                                    });
-                                    commandContext = context;
-                                    await commandClosure(context);
-                                },
-                                isDefaultDefined ? successMessage.replace("Xcode: ", "") : undefined
-                            );
-                            if (!isDefaultDefined) {
-                                closeEmitter.fire(0);
-                            }
-                        } catch (err) {
-                            /* empty */
-                            if (!isDefaultDefined) {
-                                closeEmitter.fire(1);
-                            }
-                        } finally {
-                            disposable?.dispose();
-                            this.activeCommand.isExecuting = false;
-                        }
+            return new Promise<vscode.Pseudoterminal>(resolve => {
+                this.atomicCommand.userCommand(
+                    async context => {
+                        await commandClosure(context);
                     },
-                    onDidChangeName: didChangeNameEmitter.event,
-                    onDidWrite: writeEmitter.event,
-                    onDidClose: closeEmitter.event,
-                    close: async () => {
-                        commandContext?.cancel();
-                        this.activeCommand.isExecuting = false;
-                    },
-                };
-
-                if (isDefaultDefined) {
-                    closeEmitter.fire(0); // this's a workaround to hide a task terminal as soon as possible to let executor terminal to do the main job. That has a side effect if that task would be used in a chain of tasks, then it's finished before process actually finishes
-                }
-                resolved(pty);
+                    undefined,
+                    {
+                        shouldRunFromTask: true,
+                        onSudoTerminalCreated: terminal => {
+                            resolve(terminal);
+                        },
+                    }
+                );
             });
         });
     }
