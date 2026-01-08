@@ -13,6 +13,7 @@ export class TerminalShell {
     private changeNameEmitter: vscode.EventEmitter<string> | undefined;
     private exitEmitter = new vscode.EventEmitter<void>();
     private _terminalName: string;
+    private _source: string | undefined;
 
     private fireData(data: string) {
         this.writeEmitter?.fire(data);
@@ -24,27 +25,35 @@ export class TerminalShell {
 
     set terminalName(name: string) {
         this._terminalName = name;
-        this.fireNameChange(`Xcode: ${name}`);
+        this.fireNameChange(`${this.source()}${name}`);
     }
 
     public get onExitEvent(): vscode.Event<void> {
         return this.exitEmitter.event;
     }
 
-    constructor(terminalName: string) {
+    constructor(terminalName: string, source: string) {
         this._terminalName = terminalName;
+        this._source = source;
+    }
+
+    private source() {
+        if (this._source === undefined || this._source.length === 0) {
+            return "";
+        }
+        return this._source + ": ";
     }
 
     error() {
-        this.fireNameChange("❌ " + "Xcode: " + this._terminalName);
+        this.fireNameChange("❌ " + this.source() + this._terminalName);
     }
 
     success() {
-        this.fireNameChange("✅ " + "Xcode: " + this._terminalName);
+        this.fireNameChange("✅ " + this.source() + this._terminalName);
     }
 
     cancel() {
-        this.fireNameChange("🚫 " + this._terminalName);
+        this.fireNameChange("🚫 " + this.source() + this._terminalName);
     }
 
     public show() {}

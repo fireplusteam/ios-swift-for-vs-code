@@ -144,6 +144,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                         await commandClosure(context);
                     },
                     title,
+                    "", // no source as it's running via tasks
                     {
                         shouldRunFromTask: true,
                         onSudoTerminalCreated: terminal => {

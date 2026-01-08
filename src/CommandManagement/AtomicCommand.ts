@@ -68,7 +68,7 @@ export class AtomicCommand {
     }
 
     async autoWatchCommand(commandClosure: (commandContext: CommandContext) => Promise<void>) {
-        const watcherTerminal = new TerminalShell("Watcher");
+        const watcherTerminal = new TerminalShell("Watcher", "Xcode");
 
         if (this.latestOperationID.type === "user") {
             throw UserCommandIsExecuting;
@@ -147,13 +147,14 @@ export class AtomicCommand {
     async userCommand<T>(
         commandClosure: (commandContext: CommandContext) => Promise<T>,
         taskName: string | undefined,
+        taskSource: string | undefined = undefined,
         runFromTask: {
             shouldRunFromTask: boolean;
             onSudoTerminalCreated: (terminal: vscode.Pseudoterminal) => void;
         } = { shouldRunFromTask: false, onSudoTerminalCreated: () => {} }
     ) {
         const terminalName = taskName ? taskName : "Xcode";
-        const userTerminal = new TerminalShell(terminalName);
+        const userTerminal = new TerminalShell(terminalName, taskSource ?? "Xcode");
 
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
