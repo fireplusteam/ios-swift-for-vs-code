@@ -6,32 +6,6 @@ import { AtomicCommand } from "./CommandManagement/AtomicCommand";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { sleep } from "./utils";
 
-export async function executeTask(name: string) {
-    const tasks = await vscode.tasks.fetchTasks();
-    for (const task of tasks) {
-        if (task.name === name && task.definition.type === BuildTaskProvider.BuildScriptType) {
-            let disposable: vscode.Disposable;
-            await new Promise(async (resolve, reject) => {
-                disposable = vscode.tasks.onDidEndTaskProcess(e => {
-                    if (e.execution.task.name === name) {
-                        disposable.dispose();
-                        if (e.exitCode !== 0) {
-                            reject(Error(`Task ${name} failed with ${e.exitCode}`));
-                            return;
-                        }
-                        resolve(true);
-                    }
-                });
-                try {
-                    await vscode.tasks.executeTask(task);
-                } catch (err) {
-                    reject(err);
-                }
-            });
-        }
-    }
-}
-
 export class BuildTaskProvider implements vscode.TaskProvider {
     static BuildScriptType = "xcode";
 
@@ -121,7 +95,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         const taskDefinition = task.definition;
         if (taskDefinition.type === BuildTaskProvider.BuildScriptType) {
             if (this.atomicCommand.cancel()) {
-                sleep(1000); // Give some time for previous task to cancel
+                sleep(500); // Give some time for previous task to cancel
             }
 
             const newTask = new vscode.Task(

@@ -186,11 +186,8 @@ export class AtomicCommand {
 
             if (runFromTask.shouldRunFromTask) {
                 const pseudoTerminal = await userTerminal.createSudoTerminal(async () => {
-                    // Your command logic here
                     await promiseResult;
-                    if (taskName) {
-                        userTerminal.success();
-                    }
+                    userTerminal.success();
                 });
                 runFromTask.onSudoTerminalCreated(pseudoTerminal);
                 return await promiseResult;
@@ -210,11 +207,8 @@ export class AtomicCommand {
                     "Xcode",
                     new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
                         return userTerminal.createSudoTerminal(async () => {
-                            // Your command logic here
                             await promiseResult;
-                            if (taskName) {
-                                userTerminal.success();
-                            }
+                            userTerminal.success();
                         });
                     })
                 )

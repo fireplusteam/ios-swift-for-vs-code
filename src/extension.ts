@@ -28,7 +28,7 @@ import {
     selectTestPlan,
     updatePackageDependencies,
 } from "./commands";
-import { BuildTaskProvider, executeTask } from "./BuildTaskProvider";
+import { BuildTaskProvider } from "./BuildTaskProvider";
 import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, initializeWithError, setContext } from "./inputPicker";
@@ -371,24 +371,6 @@ export async function activate(context: vscode.ExtensionContext) {
             await atomicCommand.userCommandWithoutThrowingException(async context => {
                 await generateXcodeServer(context);
             }, "Generate Xcode Build Server");
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
-            await executeTask("Clean Derived Data");
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.build.selectedTarget", async () => {
-            await executeTask("Build");
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.build.tests", async () => {
-            await executeTask("Build Tests");
         })
     );
 
