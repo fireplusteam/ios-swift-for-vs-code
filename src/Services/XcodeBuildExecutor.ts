@@ -3,7 +3,9 @@ import {
     getBuildRootPath,
     getFilePathInWorkspace,
     getScriptPath,
+    getWorkspaceFolder,
     getXCodeBuildServerPath,
+    isActivated,
 } from "../env";
 import * as fs from "fs/promises";
 import * as path from "path";
@@ -12,15 +14,26 @@ import { Executor, ExecutorMode } from "../Executor";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { sleep } from "../utils";
 
+async function buildingMode() {
+    if ((await isActivated()) === false) {
+        return "xcodebuild";
+    }
+    const mode = vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get("building.system.mode", "xcodebuild");
+    return mode;
+}
+
 export class XcodeBuildExecutor {
     constructor() {}
 
     async canStartBuildInXcode(context: CommandContext): Promise<boolean> {
         if (
-            await this.isXcodeOpenWithWorkspaceOrProject(
+            (await buildingMode()) !== "xcodebuild" &&
+            (await this.isXcodeOpenWithWorkspaceOrProject(
                 await context.projectEnv.projectFile,
                 await context.projectEnv.projectType
-            )
+            ))
         ) {
             return true;
         }

@@ -15,7 +15,6 @@ import {
     getScriptPath,
     getSWBBuildServicePath,
     getWorkspacePath,
-    getXCBBuildServicePath,
     getXCodeBuildServerPath,
     isBuildServerValid,
     updateProject,
@@ -620,23 +619,17 @@ export async function runAndDebugTests(
     await runManager.runTests(commandContext, tests, xctestrun, isCoverage);
 }
 
-export async function enableXCBBuildService(enabled: boolean) {
+export async function enableSWBBuildService(enabled: boolean) {
     let checkSWBService: string | undefined = undefined;
     try {
-        checkSWBService = await checkXCBuildServiceEnabled(enabled, getSWBBuildServicePath());
+        checkSWBService = await checkSWBBuildServiceEnabled(enabled, getSWBBuildServicePath());
     } catch {
         // do nothing
     }
-    let checkXCBService: string | undefined = undefined;
-    try {
-        checkXCBService = await checkXCBuildServiceEnabled(enabled, getXCBBuildServicePath());
-    } catch {
-        // do nothing
-    }
-    if (checkSWBService === undefined && checkXCBService === undefined) {
+    if (checkSWBService === undefined) {
         return;
     }
-    const password = await requestSudoPasswordForXCBBuildService();
+    const password = await requestSudoPasswordForSWBBuildService(enabled);
     if (password === undefined) {
         return;
     }
@@ -644,17 +637,14 @@ export async function enableXCBBuildService(enabled: boolean) {
         if (checkSWBService !== undefined) {
             await installUninstallBuildService(enabled, password, getSWBBuildServicePath());
         }
-        if (checkXCBService !== undefined) {
-            await installUninstallBuildService(enabled, password, getXCBBuildServicePath());
-        }
     } catch (error) {
         if (error instanceof Error && error.message === "Retry") {
-            return await enableXCBBuildService(enabled);
+            return await enableSWBBuildService(enabled);
         }
     }
 }
 
-async function checkXCBuildServiceEnabled(enabled: boolean, servicePath: string) {
+async function checkSWBBuildServiceEnabled(enabled: boolean, servicePath: string) {
     const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected ${servicePath}`;
     return new Promise<string>((resolve, reject) => {
         exec(checkIfInjectedCommand, error => {
@@ -668,10 +658,10 @@ async function checkXCBuildServiceEnabled(enabled: boolean, servicePath: string)
     });
 }
 
-async function requestSudoPasswordForXCBBuildService() {
+async function requestSudoPasswordForSWBBuildService(enabled: boolean) {
     const password = await vscode.window.showInputBox({
         ignoreFocusOut: false,
-        prompt: `In order to install/uninstall XCBBuildService/SWBBuildService, please enter sudo password. This is required to grant necessary permissions to the service. (You can always disable that feature in extension settings)`,
+        prompt: `In order to ${enabled ? "install" : "uninstall"} SWBBuildService, please enter sudo password. This is required to grant necessary permissions to the service. (You can always disable that feature in extension settings)`,
         password: true,
     });
     return password;
@@ -688,6 +678,7 @@ async function installUninstallBuildService(
     return new Promise<void>((resolve, reject) => {
         exec(command, error => {
             if (error) {
+                let privacyButton = undefined;
                 let errorMessage = enabled
                     ? `Failed to install ${serviceName} proxy`
                     : `Failed to uninstall ${serviceName} proxy`;
@@ -695,12 +686,24 @@ async function installUninstallBuildService(
                     error.toString().includes("PermissionError: [Errno 1] Operation not permitted:")
                 ) {
                     errorMessage += `: Permission denied. Make sure the password is correct and you gave a full disk control to VSCode in System Preferences -> Security & Privacy -> Privacy -> Full Disk Access.`;
+                    privacyButton = "Open System Preferences";
                 } else if (error.toString().includes("Password:Sorry, try again.")) {
                     errorMessage += `: Wrong password provided.`;
                 }
-                vscode.window.showErrorMessage(errorMessage, "Retry", "Cancel").then(selection => {
+                const buttons = privacyButton
+                    ? [privacyButton, "Retry", "Cancel"]
+                    : ["Retry", "Cancel"];
+                vscode.window.showErrorMessage(errorMessage, ...buttons).then(selection => {
                     if (selection === "Retry") {
                         reject(new Error("Retry"));
+                    } else if (selection === "Open System Preferences") {
+                        // open macOS settings -> security & privacy settings -> privacy -> full disk access
+                        vscode.env.openExternal(
+                            vscode.Uri.parse(
+                                "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
+                            )
+                        );
+                        resolve();
                     } else {
                         resolve();
                     }

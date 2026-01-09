@@ -108,7 +108,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             buildTask.isBackground = true;
         }
         (buildTask.runOptions as any) = {
-            // instanceLimit: 1,
+            instanceLimit: 1,
             instancePolicy: "terminateOldest",
             reevaluateOnRerun: true,
         };
@@ -126,8 +126,17 @@ export class BuildTaskProvider implements vscode.TaskProvider {
     ): Promise<vscode.Task | undefined> {
         if (this.isValidTask(task)) {
             const taskDefinition = task.definition as BuildTaskDefinition;
-            if (this.atomicCommand.cancel()) {
-                sleep(500); // Give some time for previous task to cancel
+            if (this.atomicCommand.fetchingTasks) {
+                /// atomic command is fetching tasks to get include/exclude targets for autocomplete build
+                if (taskDefinition.type === "xcode-watch") {
+                    // first task is resolved task, should be only one instance in a user config
+                    if (this.atomicCommand.watcherTaskData === undefined) {
+                        this.atomicCommand.watcherTaskData = {
+                            includeTargets: taskDefinition.includeTargets ?? [],
+                            excludeTargets: taskDefinition.excludeTargets ?? [],
+                        };
+                    }
+                }
             }
 
             const newTask = new vscode.Task(
@@ -172,6 +181,9 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         token: vscode.CancellationToken | undefined
     ) {
         return new vscode.CustomExecution((): Promise<vscode.Pseudoterminal> => {
+            if (this.atomicCommand.cancel()) {
+                sleep(1000); // Give some time for previous task to cancel
+            }
             if (token?.isCancellationRequested) {
                 return Promise.reject("Task cancelled");
             }

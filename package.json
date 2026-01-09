@@ -146,18 +146,29 @@
                     ],
                     "scope": "resource"
                 },
-                "vscode-ios.xcb.build.service": {
+                "vscode-ios.swb.build.service": {
                     "type": "boolean",
                     "default": false,
-                    "title": "Enable XCBBuildService Proxy",
-                    "description": "if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch)",
+                    "title": "Enable SWBBuildService Proxy",
+                    "description": "if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch)",
                     "scope": "machine"
                 },
-                "vscode-ios.watcher.singleModule": {
+                "vscode-ios.watcher.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "title": "Changes Watcher",
-                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes while editing",
+                    "title": "Autocomplete Watcher Mode",
+                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes for LSP client while editing.",
+                    "scope": "resource"
+                },
+                "vscode-ios.building.system.mode": {
+                    "type": "string",
+                    "enum": [
+                        "xcodebuild",
+                        "mixedWithXcode"
+                    ],
+                    "default": "xcodebuild",
+                    "title": "Autocomplete Watcher Mode",
+                    "description": "Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.",
                     "scope": "resource"
                 },
                 "vscode-ios.debug.lldb-dap": {

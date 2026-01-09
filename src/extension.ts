@@ -14,7 +14,7 @@ import {
 } from "./env";
 import {
     checkWorkspace,
-    enableXCBBuildService,
+    enableSWBBuildService,
     generateXcodeServer,
     generateXcodeWorkspaceForPackage,
     ksdiff,
@@ -55,8 +55,8 @@ import { StatusBar } from "./StatusBar/StatusBar";
 import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectConfigurationDataProvider";
 import { LogChannel } from "./Logs/LogChannel";
 
-function shouldInjectXCBBuildService() {
-    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("xcb.build.service");
+function shouldInjectSWBBuildService() {
+    const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("swb.build.service");
     if (!isEnabled) {
         return false;
     }
@@ -102,7 +102,7 @@ async function initialize(
     }
     lsp.start();
     fs.mkdir(getLogPath(), () => {});
-    await enableXCBBuildService(shouldInjectXCBBuildService());
+    await enableSWBBuildService(shouldInjectSWBBuildService());
     await projectManager.loadProjectFiles();
     await projectManager.cleanAutocompleteSchemes();
     autocompleteWatcher.triggerIncrementalBuild();

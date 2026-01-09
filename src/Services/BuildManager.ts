@@ -157,14 +157,17 @@ export class BuildManager {
 
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         try {
-            const testsTargets = tests.map(test => test.split("/").at(0));
-            const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
-                await context.projectEnv.projectScheme,
-                testsTargets.join(",")
-            );
-            context.projectEnv.setBuildScheme(scheme);
-            if (scheme) {
-                allBuildScheme = scheme.scheme;
+            // if a user runs an indidual tests, then we should ignore test plan, only run it if a user run all tests.
+            if ((await context.projectEnv.projectTestPlan).length === 0 || tests.length > 0) {
+                const testsTargets = tests.map(test => test.split("/").at(0));
+                const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
+                    await context.projectEnv.projectScheme,
+                    testsTargets.join(",")
+                );
+                context.projectEnv.setBuildScheme(scheme);
+                if (scheme) {
+                    allBuildScheme = scheme.scheme;
+                }
             }
         } catch (error) {
             // ignore errors

@@ -212,24 +212,18 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def add_target_to_scheme(
-  scheme,
-  test_target,
-  build_for_testing,
-  allowed_targets
-)
+def add_target_to_scheme(scheme, test_target, build_for_testing)
   if scheme.is_a?(Xcodeproj::XCScheme) == false
     raise "scheme should be of type Xcodeproj::XCScheme"
   end
-  if allowed_targets.empty? == true ||
-       allowed_targets.include?(test_target.name)
-    scheme.add_build_target(test_target)
-    if build_for_testing
-      test_action = scheme.test_action
-      testable_reference =
-        Xcodeproj::XCScheme::TestAction::TestableReference.new(test_target)
-      test_action.add_testable(testable_reference)
-    end
+
+  scheme.add_build_target(test_target)
+  puts "Added target to scheme: #{test_target.name}"
+  if build_for_testing
+    test_action = scheme.test_action
+    testable_reference =
+      Xcodeproj::XCScheme::TestAction::TestableReference.new(test_target)
+    test_action.add_testable(testable_reference)
   end
 end
 
@@ -237,12 +231,13 @@ def generate_scheme_depend_on_target(
   project,
   scheme_name,
   root_target_name,
-  build_for_testing = false,
   include_targets,
   exclude_targets
 )
-  include_targets_list = include_targets.split(",")
-  exclude_targets_list = exclude_targets.split(",")
+  include_targets_list =
+    include_targets.nil? == false ? include_targets.split(",") : []
+  exclude_targets_list =
+    exclude_targets.nil? == false ? exclude_targets.split(",") : []
 
   scheme = Xcodeproj::XCScheme.new
 
@@ -273,7 +268,7 @@ def generate_scheme_depend_on_target(
   queue = [root_target.name]
   visited = { root_target.name => true }
 
-  add_target_to_scheme(scheme, root_target, build_for_testing, allowed_targets)
+  add_target_to_scheme(scheme, root_target, false)
 
   while !queue.empty?
     current = queue.shift
@@ -285,12 +280,7 @@ def generate_scheme_depend_on_target(
              exclude_targets_list.include?(neighbor.name) == false
           visited[neighbor.name] = true
           queue << neighbor.name
-          add_target_to_scheme(
-            scheme,
-            neighbor,
-            build_for_testing,
-            allowed_targets
-          )
+          add_target_to_scheme(scheme, neighbor, false)
         end
       end
     end
@@ -301,7 +291,7 @@ def generate_scheme_depend_on_target(
     if visited.key?(target.name) == false &&
          include_targets_list.include?(target.name) &&
          exclude_targets_list.include?(target.name) == false
-      add_target_to_scheme(scheme, target, build_for_testing, [])
+      add_target_to_scheme(scheme, target, false)
     end
   end
 
@@ -325,7 +315,10 @@ def generate_test_scheme_depend_on_target(
 
   project.targets.each do |current|
     # puts "current target: #{current.name}, #{current.product_name}"
-    add_target_to_scheme(scheme, current, true, test_targets_list)
+    if test_targets_list.empty? == true ||
+         test_targets_list.include?(current.name)
+      add_target_to_scheme(scheme, current, true)
+    end
   end
 
   # save the scheme

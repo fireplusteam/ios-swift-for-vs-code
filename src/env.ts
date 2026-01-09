@@ -470,10 +470,6 @@ export function getXCodeBuildServerPath() {
     return path.join(__dirname, "..", "xcode-build-server", "xcode-build-server");
 }
 
-export function getXCBBuildServicePath() {
-    return path.join(__dirname, "..", "dist", "XCBBuildService");
-}
-
 export function getSWBBuildServicePath() {
     return path.join(__dirname, "..", "dist", "SWBBuildService");
 }

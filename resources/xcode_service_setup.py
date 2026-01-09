@@ -59,9 +59,10 @@ if is_install:
 
     print(process.stdout)
     print(process.stderr)
-else:
+else:  # restore original service
     if not os.path.exists(service_origin_path):
         exit(0)
+
     os.unlink(service_path)
     shutil.copy(service_origin_path, service_path)
     os.remove(service_origin_path)

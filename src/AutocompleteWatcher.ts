@@ -74,7 +74,7 @@ export class AutocompleteWatcher {
         }
         const isWatcherEnabled = vscode.workspace
             .getConfiguration("vscode-ios", getWorkspaceFolder())
-            .get("watcher.singleModule");
+            .get("watcher.enabled", true);
         if (!isWatcherEnabled || this.terminatingExtension) {
             return false;
         }

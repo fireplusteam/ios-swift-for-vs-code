@@ -23,7 +23,7 @@ MODE = 1
 # 0 - no debug files
 # 1 - read from input
 # 2 - write logs from server to input files
-DEBUG_FROM_FILE = 2
+DEBUG_FROM_FILE = 0
 
 input = None
 output = None

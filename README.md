@@ -112,6 +112,45 @@ This's just needed to override the **continueBuildingAfterError** property when 
 ]
 ```
 
+Extensions adds the tasks for clean/build/autocomplete watcher tasks which a user may override and add extra configuration as a regular vs code task:
+
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Xcode Build",
+            "type": "xcode",
+            "command": "buildSelectedTarget",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Xcode Autocomplete",
+            "type": "xcode-watch",
+            "command": "buildForAutocomplete",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "includeTargets": ["someTestTarget", ...], // add targets which you want watcher include for each run
+            "excludeTargets": ["someTargetWhichExecuteScripts", ...] // exclude targets which you want definitely exclude from building
+        },
+        {
+            "label": "Xcode Clean",
+            "type": "xcode",
+            "command": "cleanDerivedData",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        }
+    ]
+}
+```
+
 -   Also there're automatically added build tasks which can be used by pressing standard "**Cmd+Shift+B**" shortcut.
 
 -   To make autocompletion to work you may need to clean the project and build it entirely for the first time.
@@ -120,8 +159,9 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 This extension contributes the following settings:
 
--   `vscode-ios.watcher.singleModule`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file.
--   `vscode-ios.xcb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
+-   `vscode-ios.watcher.enabled`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file.
+-   `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
+-   `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
 
 ## Known Issues
 
@@ -136,6 +176,7 @@ This extension contributes the following settings:
     ```
 
 -   Make sure that Package.swift file is in root workspace folder and you open root folder, otherwise LSP client may work incorrectly
+-   When you use 'mixedWithXcode' building system mode, it may lead to some unpredictable behavior, use it on your own risk
 
 ## Release Notes
 

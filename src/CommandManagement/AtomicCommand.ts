@@ -11,6 +11,10 @@ import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
+export interface WatcherTaskData {
+    includeTargets: string[];
+    excludeTargets: string[];
+}
 export class AtomicCommand {
     private _mutex = new Mutex();
     private _executingCommand: "user" | "autowatcher" | undefined = undefined;
@@ -19,6 +23,17 @@ export class AtomicCommand {
         type: undefined,
     };
     private _prevCommandContext?: CommandContext;
+
+    private _fetchingTasks = false;
+
+    get fetchingTasks() {
+        return this._fetchingTasks;
+    }
+
+    private _watcherTaskData: WatcherTaskData | undefined = undefined;
+    set watcherTaskData(data: WatcherTaskData | undefined) {
+        this._watcherTaskData = data;
+    }
 
     constructor(
         private readonly lspClient: LSPClientContext,
@@ -94,17 +109,23 @@ export class AtomicCommand {
             );
             this._prevCommandContext = commandContext;
 
-            const userDefinedWatchTasks = await vscode.tasks.fetchTasks({ type: "xcode-watch" });
+            this._fetchingTasks = true;
+            this._watcherTaskData = undefined;
+
             const includeTargets: string[] = [];
             const excludeTargets: string[] = [];
-            if (userDefinedWatchTasks.length > 0) {
-                const fistUserDefinedWatchTask = userDefinedWatchTasks[0];
-                if (fistUserDefinedWatchTask.definition.includeTargets) {
-                    includeTargets.push(...fistUserDefinedWatchTask.definition.includeTargets);
+            try {
+                await vscode.tasks.fetchTasks({
+                    type: "xcode-watch",
+                });
+                if (this._watcherTaskData !== undefined) {
+                    // workaround for TS not recognizing that _watcherTaskData is set in BuildTaskProvider
+                    const vals = this._watcherTaskData as any;
+                    includeTargets.push(...vals.includeTargets);
+                    excludeTargets.push(...vals.excludeTargets);
                 }
-                if (fistUserDefinedWatchTask.definition.excludeTargets) {
-                    excludeTargets.push(...fistUserDefinedWatchTask.definition.excludeTargets);
-                }
+            } finally {
+                this._fetchingTasks = false;
             }
 
             const promiseResult = this.withCancellation(async () => {

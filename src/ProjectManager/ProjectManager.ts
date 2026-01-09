@@ -760,6 +760,9 @@ export class ProjectManager implements ProjectManagerInterface {
                     }
                     const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");
                     touch.sync(touchProjectPath);
+                    this.log.debug(
+                        `Generated scheme: VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}, with added targets: ${allScheme.join(", ")}`
+                    );
                     return {
                         scheme: allScheme.at(-1) || "",
                         path: path.join(
@@ -774,7 +777,7 @@ export class ProjectManager implements ProjectManagerInterface {
                 }
             }
         } catch (err) {
-            this.log.error(`Failed to add BuildAll target to projects: ${String(err)}`);
+            this.log.error(`Failed to generate Scheme target to projects: ${String(err)}`);
         } finally {
             release();
         }
