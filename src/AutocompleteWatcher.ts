@@ -103,48 +103,61 @@ export class AutocompleteWatcher {
 
     private async incrementalBuild(buildId: number): Promise<any> {
         try {
-            await this.atomicCommand.autoWatchCommand(async context => {
-                if (this.buildId !== buildId || (await this.isWatcherEnabledAnyFile()) === false) {
-                    return;
-                }
-
-                emptyAutobuildLog();
-                const fileLog = getLogRelativePath("autocomplete.log");
-                const rawParser = this.problemResolver.parseAsyncLogs(fileLog, context.buildEvent);
-                let shouldCleanPreviousBuildErrors = true; // by default, clean previous errors
-                try {
-                    const buildManager = new BuildManager();
-                    await buildManager.buildAutocomplete(context, fileLog);
-                } catch (error) {
-                    // clean up build target scheme if it was created
-                    try {
-                        // delete unused scheme
-                        const toDeleteSchemePath = context.projectEnv.buildScheme()?.path;
-                        const touchProjectPath =
-                            await context.projectEnv.buildScheme()?.projectPath;
-                        if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
-                            fs.unlinkSync(toDeleteSchemePath);
-                        }
-                        if (touchProjectPath && fs.existsSync(touchProjectPath)) {
-                            touch.sync(touchProjectPath);
-                        }
-                    } catch {
-                        // ignore errors
+            await this.atomicCommand.autoWatchCommand(
+                async (context, includeTargets, excludeTargets) => {
+                    if (
+                        this.buildId !== buildId ||
+                        (await this.isWatcherEnabledAnyFile()) === false
+                    ) {
+                        return;
                     }
 
-                    if (error === UserTerminatedError) {
-                        shouldCleanPreviousBuildErrors = false; // do not clean previous errors if user terminated (like when a user edits a file again)
-                    }
-                    throw error;
-                } finally {
-                    await this.problemResolver.end(
-                        context.bundle,
-                        rawParser,
-                        false,
-                        shouldCleanPreviousBuildErrors
+                    emptyAutobuildLog();
+                    const fileLog = getLogRelativePath("autocomplete.log");
+                    const rawParser = this.problemResolver.parseAsyncLogs(
+                        fileLog,
+                        context.buildEvent
                     );
+                    let shouldCleanPreviousBuildErrors = true; // by default, clean previous errors
+                    try {
+                        const buildManager = new BuildManager();
+                        await buildManager.buildAutocomplete(
+                            context,
+                            fileLog,
+                            includeTargets,
+                            excludeTargets
+                        );
+                    } catch (error) {
+                        // clean up build target scheme if it was created
+                        try {
+                            // delete unused scheme
+                            const toDeleteSchemePath = context.projectEnv.buildScheme()?.path;
+                            const touchProjectPath =
+                                await context.projectEnv.buildScheme()?.projectPath;
+                            if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
+                                fs.unlinkSync(toDeleteSchemePath);
+                            }
+                            if (touchProjectPath && fs.existsSync(touchProjectPath)) {
+                                touch.sync(touchProjectPath);
+                            }
+                        } catch {
+                            // ignore errors
+                        }
+
+                        if (error === UserTerminatedError) {
+                            shouldCleanPreviousBuildErrors = false; // do not clean previous errors if user terminated (like when a user edits a file again)
+                        }
+                        throw error;
+                    } finally {
+                        await this.problemResolver.end(
+                            context.bundle,
+                            rawParser,
+                            false,
+                            shouldCleanPreviousBuildErrors
+                        );
+                    }
                 }
-            });
+            );
         } catch (err) {
             if (err === UserCommandIsExecuting) {
                 await sleep(1000);

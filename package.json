@@ -225,10 +225,38 @@
                         "type": "string",
                         "enum": [
                             "buildSelectedTarget",
-                            "buildForAutocomplete",
                             "cleanDerivedData"
                         ],
-                        "description": "The command to execute, e.g., buildSelectedTarget, buildForAutocomplete, cleanDerivedData"
+                        "description": "The command to execute, e.g., buildSelectedTarget, cleanDerivedData"
+                    }
+                }
+            },
+            {
+                "type": "xcode-watch",
+                "required": [
+                    "command"
+                ],
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "enum": [
+                            "buildForAutocomplete"
+                        ],
+                        "description": "The command to execute, e.g., buildForAutocomplete"
+                    },
+                    "includeTargets": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "The list of included targets for Autocomplete which should be always watched in addition to selected target"
+                    },
+                    "excludeTargets": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "The list of excluded targets for Autocomplete which should not be watched even if they are dependencies of selected target"
                     }
                 }
             }

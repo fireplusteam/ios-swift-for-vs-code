@@ -55,7 +55,9 @@ export async function buildSelectedTarget(
 
 export async function buildAutocomplete(
     context: CommandContext,
-    problemResolver: ProblemDiagnosticResolver
+    problemResolver: ProblemDiagnosticResolver,
+    includeTargets: string[] = [],
+    excludeTargets: string[] = []
 ) {
     await checkWorkspace(context);
     const buildManager = new BuildManager();
@@ -64,7 +66,12 @@ export async function buildAutocomplete(
     try {
         const build = async () => {
             try {
-                await buildManager.buildAutocomplete(context, filePath);
+                await buildManager.buildAutocomplete(
+                    context,
+                    filePath,
+                    includeTargets,
+                    excludeTargets
+                );
             } catch (error) {
                 await handleValidationErrors(context, error, async () => {
                     await checkWorkspace(context);

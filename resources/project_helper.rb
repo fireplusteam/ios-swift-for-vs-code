@@ -238,8 +238,14 @@ def generate_scheme_depend_on_target(
   scheme_name,
   root_target_name,
   build_for_testing = false,
-  allowed_targets = []
+  include_targets,
+  exclude_targets
 )
+  include_targets_list = include_targets.split(",")
+  exclude_targets_list = exclude_targets.split(",")
+
+  scheme = Xcodeproj::XCScheme.new
+
   # add all deps back to the ALL_BUILD target
   # write bfs to find all deps of the root_target_name target
   root_target =
@@ -267,8 +273,6 @@ def generate_scheme_depend_on_target(
   queue = [root_target.name]
   visited = { root_target.name => true }
 
-  scheme = Xcodeproj::XCScheme.new
-
   add_target_to_scheme(scheme, root_target, build_for_testing, allowed_targets)
 
   while !queue.empty?
@@ -277,7 +281,8 @@ def generate_scheme_depend_on_target(
       dep_graph[current].each do |neighbor|
         next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
 
-        if !visited.key?(neighbor.name)
+        if !visited.key?(neighbor.name) &&
+             exclude_targets_list.include?(neighbor.name) == false
           visited[neighbor.name] = true
           queue << neighbor.name
           add_target_to_scheme(
@@ -288,6 +293,15 @@ def generate_scheme_depend_on_target(
           )
         end
       end
+    end
+  end
+
+  # add all other targets from include_targets_list
+  project.targets.each do |target|
+    if visited.key?(target.name) == false &&
+         include_targets_list.include?(target.name) &&
+         exclude_targets_list.include?(target.name) == false
+      add_target_to_scheme(scheme, target, build_for_testing, [])
     end
   end
 
@@ -396,7 +410,7 @@ def handle_action(project, action, arg)
   end
 
   if action == "generate_scheme_depend_on_target"
-    generate_scheme_depend_on_target(project, arg[1], arg[2])
+    generate_scheme_depend_on_target(project, arg[1], arg[2], arg[3], arg[4])
     return
   end
 

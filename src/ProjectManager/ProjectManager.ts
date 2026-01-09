@@ -29,7 +29,9 @@ import * as touch from "touch";
 
 export interface ProjectManagerInterface {
     addBuildAllTargetToProjects(
-        rootTargetName: string
+        rootTargetName: string,
+        includeTargets: string[],
+        excludeTargets: string[]
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 
     addTestSchemeDependOnTargetToProjects(
@@ -779,7 +781,9 @@ export class ProjectManager implements ProjectManagerInterface {
     }
 
     async addBuildAllTargetToProjects(
-        rootTargetName: string
+        rootTargetName: string,
+        includeTargets: string[],
+        excludeTargets: string[]
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         return this.generateScheme(
             rootTargetName,
@@ -787,7 +791,9 @@ export class ProjectManager implements ProjectManagerInterface {
                 this.rubyProjectFilesManager.generateSchemeDependOnTarget(
                     rootProjectPath,
                     schemeName,
-                    rootTargetName
+                    rootTargetName,
+                    includeTargets.join(","),
+                    excludeTargets.join(",")
                 )
         );
     }

@@ -6,13 +6,32 @@ import { AtomicCommand } from "./CommandManagement/AtomicCommand";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { sleep } from "./utils";
 
-export class BuildTaskProvider implements vscode.TaskProvider {
-    static BuildScriptType = "xcode";
+interface BuildTaskDefinition extends vscode.TaskDefinition {
+    command: string;
+}
 
+function isBuildTaskDefinition(
+    definition: vscode.TaskDefinition
+): definition is BuildTaskDefinition {
+    return (
+        definition.command !== undefined &&
+        typeof definition.command === "string" &&
+        definition.command.length > 0
+    );
+}
+
+type BuildTaskType = "xcode" | "xcode-watch";
+
+export class BuildTaskProvider implements vscode.TaskProvider {
     private problemResolver: ProblemDiagnosticResolver;
     private atomicCommand: AtomicCommand;
 
-    constructor(problemResolver: ProblemDiagnosticResolver, atomicCommand: AtomicCommand) {
+    constructor(
+        private type: BuildTaskType,
+        problemResolver: ProblemDiagnosticResolver,
+        atomicCommand: AtomicCommand
+    ) {
+        this.type = type;
         this.problemResolver = problemResolver;
         this.atomicCommand = atomicCommand;
     }
@@ -23,44 +42,52 @@ export class BuildTaskProvider implements vscode.TaskProvider {
             return [];
         }
 
-        const buildSelectedTargetTask = this.createBuildTask(
-            "Build Selected Target",
-            "buildSelectedTarget",
-            vscode.TaskGroup.Build,
-            async context => {
-                await buildSelectedTarget(context, this.problemResolver);
-            }
-        );
-
-        const buildAutocompleteTask = this.createBuildTask(
-            "Build For LSP Autocomplete",
-            "buildForAutocomplete",
-            vscode.TaskGroup.Build,
-            async context => {
-                await buildAutocomplete(context, this.problemResolver);
-            }
-        );
-
-        const cleanTask = this.createBuildTask(
-            "Clean Derived Data",
-            "cleanDerivedData",
-            vscode.TaskGroup.Clean,
-            async context => {
-                await cleanDerivedData(context);
-            }
-        );
-
-        return [buildAutocompleteTask, buildSelectedTargetTask, cleanTask];
+        switch (this.type) {
+            case "xcode":
+                return [
+                    this.createBuildTask(
+                        "Build Selected Target",
+                        "xcode",
+                        "buildSelectedTarget",
+                        vscode.TaskGroup.Build,
+                        async context => {
+                            await buildSelectedTarget(context, this.problemResolver);
+                        }
+                    ),
+                    this.createBuildTask(
+                        "Clean Derived Data",
+                        "xcode",
+                        "cleanDerivedData",
+                        vscode.TaskGroup.Clean,
+                        async context => {
+                            await cleanDerivedData(context);
+                        }
+                    ),
+                ];
+            case "xcode-watch":
+                return [
+                    this.createBuildTask(
+                        "Build For LSP Autocomplete",
+                        "xcode-watch",
+                        "buildForAutocomplete",
+                        vscode.TaskGroup.Build,
+                        async context => {
+                            await buildAutocomplete(context, this.problemResolver);
+                        }
+                    ),
+                ];
+        }
     }
 
     private createBuildTask(
         title: string,
+        type: BuildTaskType,
         command: string,
         group: vscode.TaskGroup,
         commandClosure: (context: CommandContext) => Promise<void>
     ) {
-        const def: vscode.TaskDefinition = {
-            type: BuildTaskProvider.BuildScriptType,
+        const def: BuildTaskDefinition = {
+            type: type,
             command: command,
         };
         const buildTask = new vscode.Task(
@@ -88,12 +115,17 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         return buildTask;
     }
 
+    private isValidTask(task: vscode.Task): boolean {
+        const taskDefinition = task.definition as vscode.TaskDefinition;
+        return task.definition.type === this.type && isBuildTaskDefinition(taskDefinition);
+    }
+
     public async resolveTask(
         task: vscode.Task,
         token?: vscode.CancellationToken
     ): Promise<vscode.Task | undefined> {
-        const taskDefinition = task.definition;
-        if (taskDefinition.type === BuildTaskProvider.BuildScriptType) {
+        if (this.isValidTask(task)) {
+            const taskDefinition = task.definition as BuildTaskDefinition;
             if (this.atomicCommand.cancel()) {
                 sleep(500); // Give some time for previous task to cancel
             }
@@ -111,7 +143,12 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                                 await buildSelectedTarget(context, this.problemResolver);
                                 break;
                             case "buildForAutocomplete":
-                                await buildAutocomplete(context, this.problemResolver);
+                                await buildAutocomplete(
+                                    context,
+                                    this.problemResolver,
+                                    taskDefinition.includeTargets ?? [],
+                                    taskDefinition.excludeTargets ?? []
+                                );
                                 break;
                             case "cleanDerivedData":
                                 await cleanDerivedData(context);

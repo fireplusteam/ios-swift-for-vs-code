@@ -96,12 +96,19 @@ export class BuildManager {
         });
     }
 
-    async buildAutocomplete(context: CommandContext, logFilePath: string) {
+    async buildAutocomplete(
+        context: CommandContext,
+        logFilePath: string,
+        includeTargets: string[] = [],
+        excludeTargets: string[] = []
+    ) {
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         try {
             if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
                 const scheme = await context.projectManager.addBuildAllTargetToProjects(
-                    await context.projectEnv.projectScheme
+                    await context.projectEnv.projectScheme,
+                    includeTargets,
+                    excludeTargets
                 );
                 context.projectEnv.setBuildScheme(scheme);
                 if (scheme) {

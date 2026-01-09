@@ -257,8 +257,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.tasks.registerTaskProvider(
-            BuildTaskProvider.BuildScriptType,
-            new BuildTaskProvider(problemDiagnosticResolver, atomicCommand)
+            "xcode",
+            new BuildTaskProvider("xcode", problemDiagnosticResolver, atomicCommand)
+        )
+    );
+    context.subscriptions.push(
+        vscode.tasks.registerTaskProvider(
+            "xcode-watch",
+            new BuildTaskProvider("xcode-watch", problemDiagnosticResolver, atomicCommand)
         )
     );
 

@@ -8,7 +8,6 @@ import { CustomError } from "../utils";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
-import { BuildTaskProvider } from "../BuildTaskProvider";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -56,7 +55,13 @@ export class AtomicCommand {
         });
     }
 
-    async autoWatchCommand(commandClosure: (commandContext: CommandContext) => Promise<void>) {
+    async autoWatchCommand(
+        commandClosure: (
+            commandContext: CommandContext,
+            includeTargets: string[],
+            excludeTargets: string[]
+        ) => Promise<void>
+    ) {
         const watcherTerminal = new TerminalShell("Watcher", "Xcode");
 
         if (this.latestOperationID.type === "user") {
@@ -88,12 +93,26 @@ export class AtomicCommand {
                 this.log
             );
             this._prevCommandContext = commandContext;
+
+            const userDefinedWatchTasks = await vscode.tasks.fetchTasks({ type: "xcode-watch" });
+            const includeTargets: string[] = [];
+            const excludeTargets: string[] = [];
+            if (userDefinedWatchTasks.length > 0) {
+                const fistUserDefinedWatchTask = userDefinedWatchTasks[0];
+                if (fistUserDefinedWatchTask.definition.includeTargets) {
+                    includeTargets.push(...fistUserDefinedWatchTask.definition.includeTargets);
+                }
+                if (fistUserDefinedWatchTask.definition.excludeTargets) {
+                    excludeTargets.push(...fistUserDefinedWatchTask.definition.excludeTargets);
+                }
+            }
+
             const promiseResult = this.withCancellation(async () => {
-                await commandClosure(commandContext);
+                await commandClosure(commandContext, includeTargets, excludeTargets);
             }, commandContext.cancellationToken);
 
             const taskDefinition: vscode.TaskDefinition = {
-                type: BuildTaskProvider.BuildScriptType,
+                type: "xcode",
                 command: "xcodeAgent",
             };
 
@@ -184,8 +203,8 @@ export class AtomicCommand {
             }
 
             const taskDefinition: vscode.TaskDefinition = {
-                type: BuildTaskProvider.BuildScriptType,
-                command: "xcodeAgent",
+                type: "xcode-watch",
+                command: "buildForAutocomplete",
             };
 
             // execute as vscode task to have better terminal integration
