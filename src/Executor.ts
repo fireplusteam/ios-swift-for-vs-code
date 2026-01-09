@@ -5,6 +5,7 @@ import { killAll } from "./utils";
 import { UserTerminalCloseError, UserTerminatedError } from "./CommandManagement/CommandContext";
 import { error } from "console";
 import { TerminalMessageStyle, TerminalShell } from "./TerminalShell";
+import { PassThrough } from "stream";
 
 export class ExecutorTerminated extends Error {
     public constructor(message: string) {
@@ -120,13 +121,17 @@ export class Executor {
             displayCommandName = scriptOrCommand.command;
             script = scriptOrCommand.command;
         }
-
         const proc = this.execShellImp(script, args, {
             cwd: shell.cwd || getWorkspacePath(),
             shell: true,
             env: envOptions,
             stdio: "pipe",
         });
+
+        const pipeStdoutBuffer = new PassThrough({ highWaterMark: 1024 });
+        const pipeStdErrBuffer = new PassThrough({ highWaterMark: 1024 });
+        proc.stdout?.pipe(pipeStdoutBuffer);
+        proc.stderr?.pipe(pipeStdErrBuffer);
 
         let pipeProc:
             | {
@@ -137,8 +142,8 @@ export class Executor {
         if (shell.pipe) {
             pipeProc = this.execShellByGettingProc(shell.pipe);
             if (pipeProc.proc.stdin) {
-                proc.stdout?.pipe(pipeProc.proc.stdin);
-                proc.stderr?.pipe(pipeProc.proc.stdin);
+                pipeStdoutBuffer.pipe(pipeProc.proc.stdin);
+                pipeStdErrBuffer.pipe(pipeProc.proc.stdin);
             }
         }
 
@@ -162,7 +167,7 @@ export class Executor {
 
         let stdout = "";
         const textDecoder = new TextDecoder();
-        proc.stdout?.on("data", data => {
+        pipeStdoutBuffer.on("data", data => {
             const str = textDecoder.decode(data);
             if (mode & ExecutorMode.stdout) {
                 if (terminal) {
@@ -175,7 +180,7 @@ export class Executor {
             }
         });
         let stderr = "";
-        proc.stderr?.on("data", data => {
+        pipeStdErrBuffer.on("data", data => {
             const str = textDecoder.decode(data);
             stderr += str;
         });
