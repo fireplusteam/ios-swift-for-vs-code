@@ -167,13 +167,6 @@
                     "description": "Use lldb-dap for debugging. Starting Xcode 16, it's included in swift toolchain and if enabled, extension will use it. Disable it if you want to use Code-lldb extension instead or experience any issue with it. On swift 5 it always uses Code-lldb disregard of this setting",
                     "scope": "resource"
                 },
-                "vscode-ios.show.log": {
-                    "type": "boolean",
-                    "default": true,
-                    "title": "Show Log Alert on Error?",
-                    "description": "If enabled, show error alert on task failed",
-                    "scope": "resource"
-                },
                 "vscode-ios.lsp.c_family": {
                     "type": "boolean",
                     "default": true,

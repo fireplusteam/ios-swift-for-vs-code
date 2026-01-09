@@ -5,23 +5,12 @@ import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./C
 import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
 import { CustomError } from "../utils";
-import { getWorkspaceFolder } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 import { BuildTaskProvider } from "../BuildTaskProvider";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
-
-function isShowErrorEnabled() {
-    const isEnabled = vscode.workspace
-        .getConfiguration("vscode-ios", getWorkspaceFolder())
-        .get("show.log");
-    if (!isEnabled) {
-        return false;
-    }
-    return true;
-}
 
 export class AtomicCommand {
     private _mutex = new Mutex();
@@ -115,7 +104,7 @@ export class AtomicCommand {
                 "Watcher",
                 "Xcode",
                 new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
-                    return watcherTerminal.createSudoTerminal(async () => {
+                    return watcherTerminal.createSudoTerminalForTask(async () => {
                         // Your command logic here
                         await promiseResult;
                         watcherTerminal.success();
@@ -186,7 +175,7 @@ export class AtomicCommand {
             userTerminal.terminalName = terminalName;
 
             if (runFromTask.shouldRunFromTask) {
-                const pseudoTerminal = await userTerminal.createSudoTerminal(async () => {
+                const pseudoTerminal = await userTerminal.createSudoTerminalForTask(async () => {
                     await promiseResult;
                     userTerminal.success();
                 });
@@ -207,7 +196,7 @@ export class AtomicCommand {
                     terminalName,
                     "Xcode",
                     new vscode.CustomExecution(async (): Promise<vscode.Pseudoterminal> => {
-                        return userTerminal.createSudoTerminal(async () => {
+                        return userTerminal.createSudoTerminalForTask(async () => {
                             await promiseResult;
                             userTerminal.success();
                         });
@@ -233,14 +222,6 @@ export class AtomicCommand {
             }
 
             if (err instanceof ExecutorTaskError) {
-                if (isShowErrorEnabled()) {
-                    const error = err as ExecutorTaskError;
-                    vscode.window.showErrorMessage(error.message, "Show log").then(option => {
-                        if (option === "Show log") {
-                            error.terminal?.show();
-                        }
-                    });
-                }
                 throw err;
             } else if (err instanceof ExecutorTerminated) {
                 throw err; // no need to notify as this's one is terminated by user

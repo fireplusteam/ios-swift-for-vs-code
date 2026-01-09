@@ -14,8 +14,13 @@ export class TerminalShell {
     private exitEmitter = new vscode.EventEmitter<void>();
     private _terminalName: string;
     private _source: string | undefined;
+    private buffer: string = "";
 
     private fireData(data: string) {
+        if (this.writeEmitter === undefined) {
+            this.buffer += data;
+            return;
+        }
         this.writeEmitter?.fire(data);
     }
 
@@ -56,8 +61,6 @@ export class TerminalShell {
         this.fireNameChange("🚫 " + this.source() + this._terminalName);
     }
 
-    public show() {}
-
     private dataToPrint(data: string): string {
         return data.replaceAll("\n", "\n\r");
     }
@@ -93,10 +96,14 @@ export class TerminalShell {
         this.fireData(styledText);
     }
 
-    createSudoTerminal(command: () => Promise<void>): Promise<vscode.Pseudoterminal> {
+    createSudoTerminalForTask(task: () => Promise<void>): Promise<vscode.Pseudoterminal> {
         return new Promise(resolve => {
-            this.writeEmitter = new vscode.EventEmitter<string>();
-            this.changeNameEmitter = new vscode.EventEmitter<string>();
+            if (!this.writeEmitter) {
+                this.writeEmitter = new vscode.EventEmitter<string>();
+            }
+            if (!this.changeNameEmitter) {
+                this.changeNameEmitter = new vscode.EventEmitter<string>();
+            }
             const closeEmitter = new vscode.EventEmitter<number>();
             const pty: vscode.Pseudoterminal = {
                 onDidWrite: this.writeEmitter.event,
@@ -104,7 +111,12 @@ export class TerminalShell {
                 onDidClose: closeEmitter.event,
                 open: async () => {
                     try {
-                        await command();
+                        this.terminalName = this._terminalName;
+                        if (this.buffer.length > 0) {
+                            this.fireData(this.buffer);
+                            this.buffer = "";
+                        }
+                        await task();
                         closeEmitter.fire(0);
                     } catch (err) {
                         closeEmitter.fire(1);
