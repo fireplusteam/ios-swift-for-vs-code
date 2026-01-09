@@ -12,11 +12,16 @@ export class BuildManager {
     constructor() {}
 
     static async commonArgs(projectEnv: ProjectEnv, bundle: BundlePath) {
+        const deviceid = await projectEnv.debugDeviceID;
+        let simulatorId = `id=${deviceid.id},platform=${deviceid.platform}`;
+        if (deviceid.arch) {
+            simulatorId += `,arch=${deviceid.arch}`;
+        }
         return [
             "-configuration",
             await projectEnv.projectConfiguration,
             "-destination",
-            `id=${(await projectEnv.debugDeviceID).id},platform=${(await projectEnv.debugDeviceID).platform}`,
+            simulatorId,
             "-resultBundlePath",
             bundle.bundlePath(),
             "-skipMacroValidation",
@@ -185,7 +190,13 @@ export class BuildManager {
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         try {
             // if a user runs an indidual tests, then we should ignore test plan, only run it if a user run all tests.
-            if ((await context.projectEnv.projectTestPlan).length === 0 || tests.length > 0) {
+            let testPlan: string | undefined = undefined;
+            try {
+                testPlan = await context.projectEnv.projectTestPlan;
+            } catch {
+                // ignore errors
+            }
+            if (testPlan === undefined || testPlan.length === 0 || tests.length > 0) {
                 const testsTargets = tests.map(test => test.split("/").at(0));
                 const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
                     await context.projectEnv.projectScheme,
