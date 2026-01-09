@@ -94,7 +94,7 @@ export class CommandContext {
     private convertToExeParams(shell: CommandOptions, attachTerminal: boolean) {
         const shellExe = shell as ShellExec;
         shellExe.cancellationToken = this._cancellationTokenSource.token;
-        const stdoutCallback =
+        const outputCallback =
             shell.pipeToDebugConsole === true || shell.pipeToParseBuildErrors === true
                 ? (out: string) => {
                       if (shell.pipeToDebugConsole === true) {
@@ -105,7 +105,8 @@ export class CommandContext {
                       }
                   }
                 : undefined;
-        shellExe.stdoutCallback = stdoutCallback;
+        shellExe.stdoutCallback = outputCallback;
+        shellExe.stderrCallback = outputCallback;
         if (attachTerminal) {
             shellExe.terminal = this.terminal;
         }

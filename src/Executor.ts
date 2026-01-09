@@ -63,6 +63,7 @@ export interface ShellExec {
     env?: { [name: string]: string };
     mode?: ExecutorMode;
     stdoutCallback?: (out: string) => void;
+    stderrCallback?: (err: string) => void;
     terminal?: TerminalShell;
     pipe?: ShellExec;
 }
@@ -183,6 +184,9 @@ export class Executor {
         pipeStdErrBuffer.on("data", data => {
             const str = textDecoder.decode(data);
             stderr += str;
+            if (shell.stderrCallback) {
+                shell.stderrCallback(str);
+            }
         });
 
         return {
