@@ -1,8 +1,10 @@
+import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
+import * as fs from "fs";
 
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
@@ -102,49 +104,74 @@ export class BuildManager {
         includeTargets: string[] = [],
         excludeTargets: string[] = []
     ) {
-        let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         try {
-            if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
-                const scheme = await context.projectManager.addBuildAllTargetToProjects(
-                    await context.projectEnv.projectScheme,
-                    includeTargets,
-                    excludeTargets
-                );
-                context.projectEnv.setBuildScheme(scheme);
-                if (scheme) {
-                    allBuildScheme = scheme.scheme;
+            let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+            try {
+                if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
+                    const scheme = await context.projectManager.addBuildAllTargetToProjects(
+                        await context.projectEnv.projectScheme,
+                        includeTargets,
+                        excludeTargets
+                    );
+                    context.projectEnv.setBuildScheme(scheme);
+                    if (scheme) {
+                        allBuildScheme = scheme.scheme;
+                    }
                 }
+            } catch (error) {
+                // ignore errors
             }
-        } catch (error) {
-            // ignore errors
-        }
-        if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
-            // at the moment build-for-testing does not work with opened Xcode workspace/project
-            await this.xcodeBuildExecutor.startBuildInXcode(context, logFilePath, allBuildScheme);
-            return;
-        }
-        context.bundle.generateNext();
+            if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+                // at the moment build-for-testing does not work with opened Xcode workspace/project
+                await this.xcodeBuildExecutor.startBuildInXcode(
+                    context,
+                    logFilePath,
+                    allBuildScheme
+                );
+                return;
+            }
+            context.bundle.generateNext();
 
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToParseBuildErrors: true,
-            args: [
-                "build",
-                ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),
-                "-skipUnavailableActions", // for autocomplete, skip if it fails
-                "-jobs",
-                "4",
-            ],
-            env: {
-                continueBuildingAfterErrors: "True", // build even if there's an error triggered
-            },
-            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: [logFilePath],
-                mode: ExecutorMode.none,
-            },
-        });
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                pipeToParseBuildErrors: true,
+                args: [
+                    "build",
+                    ...(await BuildManager.args(
+                        context.projectEnv,
+                        context.bundle,
+                        allBuildScheme
+                    )),
+                    "-skipUnavailableActions", // for autocomplete, skip if it fails
+                    "-jobs",
+                    "4",
+                ],
+                env: {
+                    continueBuildingAfterErrors: "True", // build even if there's an error triggered
+                },
+                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                pipe: {
+                    scriptOrCommand: { command: "tee" },
+                    args: [logFilePath],
+                    mode: ExecutorMode.none,
+                },
+            });
+        } finally {
+            // clean up build target scheme if it was created
+            try {
+                // delete unused scheme
+                const toDeleteSchemePath = context.projectEnv.buildScheme()?.path;
+                const touchProjectPath = await context.projectEnv.buildScheme()?.projectPath;
+                if (toDeleteSchemePath && fs.existsSync(toDeleteSchemePath)) {
+                    fs.unlinkSync(toDeleteSchemePath);
+                }
+                if (touchProjectPath && fs.existsSync(touchProjectPath)) {
+                    touch.sync(touchProjectPath);
+                }
+            } catch {
+                // ignore errors
+            }
+        }
     }
 
     async buildForTestingWithTests(

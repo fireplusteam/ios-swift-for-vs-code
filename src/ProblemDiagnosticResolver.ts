@@ -462,6 +462,19 @@ function parseBuildLog(
             value.push(diagnostic);
             if (existsSync(file)) {
                 files[file] = value;
+            } else {
+                // reference build log file if source file does not exist
+                let line = numberOfLines;
+                for (let i = 0; i < (match.index || 0); ++i) {
+                    line += output[i] === "\n" ? 1 : 0;
+                }
+                diagnostic.range = new vscode.Range(
+                    new vscode.Position(line, 0),
+                    new vscode.Position(line, 0)
+                );
+                const value = files[buildLogFile] || [];
+                value.push(diagnostic);
+                files[buildLogFile] = value;
             }
         }
         // parsing linker errors

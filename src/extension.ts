@@ -507,6 +507,7 @@ export async function deactivate() {
     autocompleteWatcher?.terminate();
     atomicCommand.cancel();
     runtimeWarningLogWatcher.disposeWatcher();
+    projectManager?.cleanAutocompleteSchemes();
     deleteFile(getFilePathInWorkspace(".vscode/xcode/bundles"));
 }
 
