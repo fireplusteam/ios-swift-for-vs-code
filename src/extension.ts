@@ -55,6 +55,7 @@ import { StatusBar } from "./StatusBar/StatusBar";
 import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectConfigurationDataProvider";
 import { LogChannel } from "./Logs/LogChannel";
 import { buildSelectedTarget, cleanDerivedData } from "./buildCommands";
+import { RubyProjectFilesManager } from "./ProjectManager/RubyProjectFilesManager";
 
 // SETTINGS WATCHER
 
@@ -126,7 +127,7 @@ const logChannel = new LogChannel("VSCode-iOS");
 const problemDiagnosticResolver = new ProblemDiagnosticResolver(logChannel);
 const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
 const sourceLsp = new SwiftLSPClient(workspaceContext, logChannel);
-const projectManager = new ProjectManager(logChannel);
+const projectManager = new ProjectManager(logChannel, new RubyProjectFilesManager(logChannel));
 const atomicCommand = new AtomicCommand(sourceLsp, projectManager, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;

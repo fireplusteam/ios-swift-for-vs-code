@@ -14,6 +14,14 @@ require "pathname"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
+# to support old ruby 2.6 versions
+if !File.respond_to?(:absolute_path?)
+  def File.absolute_path?(path)
+    # Check if it starts with / (Unix)
+    path.start_with?('/') 
+  end
+end
+
 def is_relative_path?(path)
   !File.absolute_path?(path)
 end

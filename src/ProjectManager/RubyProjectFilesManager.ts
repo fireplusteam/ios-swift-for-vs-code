@@ -1,5 +1,6 @@
 /// Ruby scripts
 
+import { LogChannelInterface } from "../Logs/LogChannel";
 import { XcodeProjectFileProxy } from "./XcodeProjectFileProxy";
 
 export interface RubyProjectFilesManagerInterface {
@@ -43,11 +44,11 @@ export interface RubyProjectFilesManagerInterface {
 export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface {
     private readonly xcodeProjects = new Map<string, XcodeProjectFileProxy>();
 
-    constructor() {}
+    constructor(private log: LogChannelInterface) {}
 
     private async executeRuby(projectPath: string, command: string): Promise<string[]> {
         if (!this.xcodeProjects.has(projectPath)) {
-            this.xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath));
+            this.xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath, this.log));
         }
         return (await this.xcodeProjects.get(projectPath)?.request(command)) || [];
     }

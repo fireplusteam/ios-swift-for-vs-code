@@ -20,10 +20,7 @@ import { ProjectCacheInterface, ProjectsCache } from "./ProjectsCache";
 import { error } from "console";
 import { QuickPickItem, showPicker } from "../inputPicker";
 import { Mutex } from "async-mutex";
-import {
-    RubyProjectFilesManager,
-    RubyProjectFilesManagerInterface,
-} from "./RubyProjectFilesManager";
+import { RubyProjectFilesManagerInterface } from "./RubyProjectFilesManager";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import * as touch from "touch";
 
@@ -51,7 +48,7 @@ export class ProjectManager implements ProjectManagerInterface {
 
     constructor(
         private readonly log: LogChannelInterface,
-        private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface = new RubyProjectFilesManager(),
+        private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface,
         private readonly projectCache: ProjectCacheInterface = new ProjectsCache()
     ) {
         this.disposable.push(

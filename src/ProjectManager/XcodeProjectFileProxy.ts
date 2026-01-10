@@ -4,6 +4,7 @@ import { createInterface, Interface } from "readline";
 import * as vscode from "vscode";
 import * as fs from "fs";
 import { Mutex } from "async-mutex";
+import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class XcodeProjectFileProxy {
     private process: ChildProcess | undefined;
@@ -13,7 +14,10 @@ export class XcodeProjectFileProxy {
     private onEndReadWithError = new vscode.EventEmitter<any>();
     private projectPath: string;
 
-    constructor(projectPath: string) {
+    constructor(
+        projectPath: string,
+        private log: LogChannelInterface
+    ) {
         this.projectPath = projectPath;
         this.runProcess(projectPath);
     }
@@ -29,7 +33,7 @@ export class XcodeProjectFileProxy {
         });
         this.process.on("exit", (code, signal) => {
             this.rl = undefined;
-            console.log(
+            this.log.debug(
                 `XcodeProjectFileProxy process exited for ${projectPath}, return code: ${code}, signal: ${signal}, error: ${stderr}`
             );
             this.onEndReadWithError.fire(
@@ -70,6 +74,9 @@ export class XcodeProjectFileProxy {
         } catch (error) {
             this.rl = undefined;
             process?.kill();
+            this.log.error(
+                `Error in XcodeProjectFileProxy for project path ${this.projectPath}: ${String(error)}`
+            );
             this.onEndReadWithError.fire(error);
         }
     }
