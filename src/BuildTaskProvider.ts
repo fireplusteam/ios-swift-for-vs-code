@@ -58,7 +58,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                         "Clean Derived Data",
                         "xcode",
                         "cleanDerivedData",
-                        vscode.TaskGroup.Clean,
+                        undefined,
                         async context => {
                             await cleanDerivedData(context);
                         }
@@ -83,7 +83,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
         title: string,
         type: BuildTaskType,
         command: string,
-        group: vscode.TaskGroup,
+        group: vscode.TaskGroup | undefined,
         commandClosure: (context: CommandContext) => Promise<void>
     ) {
         const def: BuildTaskDefinition = {
