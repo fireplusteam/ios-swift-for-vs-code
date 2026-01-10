@@ -54,6 +54,7 @@ import { XCTestRunInspector } from "./Debug/XCTestRunInspector";
 import { StatusBar } from "./StatusBar/StatusBar";
 import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectConfigurationDataProvider";
 import { LogChannel } from "./Logs/LogChannel";
+import { buildSelectedTarget, cleanDerivedData } from "./buildCommands";
 
 function shouldInjectSWBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("swb.build.service");
@@ -380,6 +381,21 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await cleanDerivedData(context);
+            }, "Clean Derived Data");
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand("vscode-ios.build.selectedTarget", async () => {
+            await atomicCommand.userCommandWithoutThrowingException(async context => {
+                await buildSelectedTarget(context, problemDiagnosticResolver);
+            }, "Build Selected Target");
+        })
+    );
     let multiDevicesSessionCounter = 1;
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.run.app.multiple.devices", async () => {

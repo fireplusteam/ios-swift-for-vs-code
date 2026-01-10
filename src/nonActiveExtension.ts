@@ -86,6 +86,18 @@ export function activateNotActiveExtension(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand(
+            "vscode-ios.build.clean",
+            showErrorOnPerformingExtensionCommand
+        )
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            "vscode-ios.build.selectedTarget",
+            showErrorOnPerformingExtensionCommand
+        )
+    );
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
             "vscode-ios.run.app.multiple.devices",
             showErrorOnPerformingExtensionCommand
         )

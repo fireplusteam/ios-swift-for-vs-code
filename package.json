@@ -324,6 +324,16 @@
                 "title": "Xcode: Open In Xcode"
             },
             {
+                "command": "vscode-ios.build.clean",
+                "title": "Xcode: Clean Derived Data",
+                "category": "build"
+            },
+            {
+                "command": "vscode-ios.build.selectedTarget",
+                "title": "Xcode: Build",
+                "category": "build"
+            },
+            {
                 "command": "vscode-ios.run.app.multiple.devices",
                 "title": "Xcode: Run App On Multiple Devices"
             },
