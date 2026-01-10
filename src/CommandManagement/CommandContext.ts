@@ -5,6 +5,7 @@ import {
     ShellCommand,
     ShellExec,
     ShellFileScript,
+    ShellProcessResult,
     ShellResult,
 } from "../Executor";
 import { ProjectSettingsProvider } from "../Services/ProjectSettingsProvider";
@@ -14,7 +15,6 @@ import { CustomError } from "../utils";
 import { ProjectEnv } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
-import { ChildProcess } from "child_process";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 
 export const UserTerminatedError = new CustomError("User Terminated");
@@ -122,10 +122,7 @@ export class CommandContext {
         return await new Executor().execShell(shellExe);
     }
 
-    public execShellWithOptionsAndProc(shell: CommandOptions): {
-        proc: ChildProcess;
-        result: Promise<ShellResult>;
-    } {
+    public execShellWithOptionsAndProc(shell: CommandOptions): ShellProcessResult {
         const shellExe = this.convertToExeParams(shell, true);
         return new Executor().execShellAndProc(shellExe);
     }

@@ -73,6 +73,11 @@ export interface ShellResult {
     stderr: string;
 }
 
+export interface ShellProcessResult {
+    proc: ChildProcess;
+    result: Promise<ShellResult>;
+}
+
 export class Executor {
     public constructor() {}
 
@@ -86,17 +91,11 @@ export class Executor {
         return this.execShellByGettingProc(shell).result;
     }
 
-    public execShellAndProc(shell: ShellExec): {
-        proc: ChildProcess;
-        result: Promise<ShellResult>;
-    } {
+    public execShellAndProc(shell: ShellExec): ShellProcessResult {
         return this.execShellByGettingProc(shell);
     }
 
-    private execShellByGettingProc(shell: ShellExec): {
-        proc: ChildProcess;
-        result: Promise<ShellResult>;
-    } {
+    private execShellByGettingProc(shell: ShellExec): ShellProcessResult {
         const cancellationToken = shell.cancellationToken;
         const scriptOrCommand = shell.scriptOrCommand;
         const args = shell.args || [];
@@ -183,6 +182,11 @@ export class Executor {
         let stderr = "";
         pipeStdErrBuffer.on("data", data => {
             const str = textDecoder.decode(data);
+            if (mode & ExecutorMode.stderr) {
+                if (terminal) {
+                    terminal?.write(str, TerminalMessageStyle.warning);
+                }
+            }
             stderr += str;
             if (shell.stderrCallback) {
                 shell.stderrCallback(str);
@@ -235,19 +239,12 @@ export class Executor {
                     }
 
                     if (signal !== null) {
-                        if (mode & ExecutorMode.stderr && stderr.length > 0) {
-                            terminal?.write(stderr, TerminalMessageStyle.warning);
-                        }
                         reject(
                             new ExecutorTerminated(
                                 `${displayCommandName} is terminated with SIGNAL : ${error}`
                             )
                         );
                         return;
-                    }
-
-                    if (mode & ExecutorMode.stderr && stderr.length > 0) {
-                        terminal?.write(stderr, TerminalMessageStyle.warning);
                     }
 
                     if (code !== 0) {
