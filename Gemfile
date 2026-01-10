@@ -8,6 +8,8 @@ git_source(:github) { |repo_name| "https://github.com/#{repo_name}" }
 gem 'pathname'
 gem 'xcodeproj'
 
+gem "ruby-lsp"
+
 gem 'sorbet-runtime'
 
 group :development do

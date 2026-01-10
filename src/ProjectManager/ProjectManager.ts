@@ -752,7 +752,11 @@ export class ProjectManager implements ProjectManagerInterface {
                         `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
                         rootTargetName
                     );
-                    if (allScheme.length === 0 || allScheme[0] === "Scheme Does not exist") {
+                    if (
+                        allScheme.length === 0 ||
+                        allScheme.at(-1) === "scheme_does_not_exist" ||
+                        allScheme.at(-1) === "scheme_unchanged"
+                    ) {
                         throw new Error("Failed to add BuildAll target to the project");
                     }
                     const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");

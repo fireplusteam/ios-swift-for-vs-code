@@ -5,6 +5,8 @@ import { ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
+import { CustomError } from "../utils";
+import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
 
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
@@ -110,6 +112,17 @@ export class BuildManager {
         includeTargets: string[] = [],
         excludeTargets: string[] = []
     ) {
+        let buildCommand: "build" | "build-for-testing" = "build-for-testing";
+        try {
+            await context.projectSettingsProvider.testPlans;
+        } catch (error) {
+            if (error instanceof CustomError && error.isEqual(TestPlanIsNotConfigured)) {
+                buildCommand = "build";
+            } else {
+                throw error;
+            }
+        }
+
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
             try {
@@ -142,7 +155,7 @@ export class BuildManager {
                 scriptOrCommand: { command: "xcodebuild" },
                 pipeToParseBuildErrors: true,
                 args: [
-                    "build",
+                    buildCommand,
                     ...(await BuildManager.args(
                         context.projectEnv,
                         context.bundle,

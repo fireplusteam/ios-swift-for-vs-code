@@ -11,6 +11,7 @@ end
 
 require "xcodeproj"
 require "pathname"
+require_relative "project_scheme_helper"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
@@ -18,7 +19,7 @@ require "pathname"
 if !File.respond_to?(:absolute_path?)
   def File.absolute_path?(path)
     # Check if it starts with / (Unix)
-    path.start_with?('/') 
+    path.start_with?("/")
   end
 end
 
@@ -43,27 +44,35 @@ end
 
 def find_group_by_absolute_file_path(project, path)
   groups =
-    project.groups.lazy.map do |group|
-      relative_path = path.sub(get_real_path(group, project) + "/", "")
-      relative_dir = File.dirname(relative_path)
+    project
+      .groups
+      .lazy
+      .map do |group|
+        relative_path = path.sub(get_real_path(group, project) + "/", "")
+        relative_dir = File.dirname(relative_path)
 
-      return group if get_real_path(group, project) == File.dirname(path)
+        return group if get_real_path(group, project) == File.dirname(path)
 
-      group.find_subpath(relative_dir)
-    end.reject(&:nil?)
+        group.find_subpath(relative_dir)
+      end
+      .reject(&:nil?)
 
   groups.first
 end
 
 def find_group_by_absolute_dir_path(project, path)
   groups =
-    project.groups.lazy.map do |group|
-      relative_dir = path.sub(get_real_path(group, project) + "/", "")
+    project
+      .groups
+      .lazy
+      .map do |group|
+        relative_dir = path.sub(get_real_path(group, project) + "/", "")
 
-      return group if get_real_path(group, project) == path
+        return group if get_real_path(group, project) == path
 
-      group.find_subpath(relative_dir)
-    end.reject(&:nil?)
+        group.find_subpath(relative_dir)
+      end
+      .reject(&:nil?)
 
   groups.first
 end
@@ -220,24 +229,9 @@ def get_targets_for_file(project, file_path)
   result
 end
 
-def add_target_to_scheme(scheme, test_target, build_for_testing)
-  if scheme.is_a?(Xcodeproj::XCScheme) == false
-    raise "scheme should be of type Xcodeproj::XCScheme"
-  end
-
-  scheme.add_build_target(test_target)
-  puts "Added target to scheme: #{test_target.name}"
-  if build_for_testing
-    test_action = scheme.test_action
-    testable_reference =
-      Xcodeproj::XCScheme::TestAction::TestableReference.new(test_target)
-    test_action.add_testable(testable_reference)
-  end
-end
-
 def generate_scheme_depend_on_target(
   project,
-  scheme_name,
+  generated_scheme_name,
   root_target_name,
   include_targets,
   exclude_targets
@@ -247,17 +241,26 @@ def generate_scheme_depend_on_target(
   exclude_targets_list =
     exclude_targets.nil? == false ? exclude_targets.split(",") : []
 
-  scheme = Xcodeproj::XCScheme.new
+  # root target scheme can be a scheme, load it if exists
+  scheme = load_scheme_if_exists(project, root_target_name)
+
+  all_targets = get_all_targets_from_scheme(scheme)
+  if all_targets.empty?
+    target = get_target_by_name(project, root_target_name)
+    all_targets << { name: target.name, uuid: target.uuid } unless target.nil?
+  end
 
   # add all deps back to the ALL_BUILD target
   # write bfs to find all deps of the root_target_name target
-  root_target =
-    project.targets.find do |current|
-      next false if current.nil? || current.name.nil? || current.name.empty?
-      current.name == root_target_name
-    end
-  if root_target.nil?
-    puts "Scheme Does not exist"
+  root_targets =
+    all_targets
+      .map do |target|
+        get_target_by_name(project, target[:name], target[:uuid])
+      end
+      .reject(&:nil?)
+
+  if root_targets.empty?
+    puts "scheme_does_not_exist"
     return
   end
 
@@ -273,22 +276,26 @@ def generate_scheme_depend_on_target(
   end
 
   # bfs to find all dependents targets of the root_target
-  queue = [root_target.name]
-  visited = { root_target.name => true }
-
-  add_target_to_scheme(scheme, root_target, false)
+  queue = root_targets.dup
+  visited = {}
+  queue.each { |target| visited[target.uuid] = true }
+  is_different_from_existing = false
+  root_targets.each do |target|
+    is_different_from_existing ||= add_target_to_scheme(scheme, target, false)
+  end
 
   while !queue.empty?
     current = queue.shift
-    if dep_graph.key?(current)
-      dep_graph[current].each do |neighbor|
+    if dep_graph.key?(current.name)
+      dep_graph[current.name].each do |neighbor|
         next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
 
-        if !visited.key?(neighbor.name) &&
+        if !visited.key?(neighbor.uuid) &&
              exclude_targets_list.include?(neighbor.name) == false
-          visited[neighbor.name] = true
-          queue << neighbor.name
-          add_target_to_scheme(scheme, neighbor, false)
+          visited[neighbor.uuid] = true
+          queue << neighbor
+          is_different_from_existing ||=
+            add_target_to_scheme(scheme, neighbor, false)
         end
       end
     end
@@ -296,30 +303,48 @@ def generate_scheme_depend_on_target(
 
   # add all other targets from include_targets_list
   project.targets.each do |target|
-    if visited.key?(target.name) == false &&
+    if !visited.key?(target.uuid) &&
          include_targets_list.include?(target.name) &&
          exclude_targets_list.include?(target.name) == false
-      add_target_to_scheme(scheme, target, false)
+      is_different_from_existing ||= add_target_to_scheme(scheme, target, false)
     end
   end
 
   # save the scheme
+  if is_different_from_existing == false
+    puts "scheme_unchanged"
+    return
+  end
+
   scheme_dir = project.path
   scheme_dir.mkpath unless scheme_dir.exist?
-  scheme.save_as(scheme_dir, scheme_name, false)
-  puts scheme_name
+  scheme.save_as(scheme_dir, generated_scheme_name, false)
+  puts generated_scheme_name
 end
 
 def generate_test_scheme_depend_on_target(
   project,
-  scheme_name,
+  generated_scheme_name,
   root_target_name,
   test_targets
 )
   test_targets_list = test_targets.split(",")
   test_targets_list = [] if test_targets == "include_all_tests_targets"
+  test_targets_list = test_targets_list.uniq
 
-  scheme = Xcodeproj::XCScheme.new
+  scheme = load_scheme_if_exists(project, root_target_name)
+
+  is_different_from_existing = false
+
+  all_test_targets_in_scheme = get_all_test_targets_from_scheme(scheme)
+  for to_remove_target in all_test_targets_in_scheme
+    if test_targets_list.empty? == false &&
+         !test_targets_list.include?(to_remove_target[:name])
+      if remove_target_from_scheme(scheme, to_remove_target)
+        is_different_from_existing = true
+      end
+    end
+  end
 
   project.targets.each do |current|
     # puts "current target: #{current.name}, #{current.product_name}"
@@ -329,11 +354,16 @@ def generate_test_scheme_depend_on_target(
     end
   end
 
+  if is_different_from_existing == false
+    puts "scheme_unchanged"
+    return
+  end
+
   # save the scheme
   scheme_dir = project.path
   scheme_dir.mkpath unless scheme_dir.exist?
-  scheme.save_as(scheme_dir, scheme_name, false)
-  puts scheme_name
+  scheme.save_as(scheme_dir, generated_scheme_name, false)
+  puts generated_scheme_name
 end
 
 def save(project)
@@ -419,6 +449,17 @@ def handle_action(project, action, arg)
     generate_test_scheme_depend_on_target(project, arg[1], arg[2], arg[3])
     return
   end
+end
+
+if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
+  input = ARGV[0].split("|^|^|")
+  project_path = input[0]
+  puts "Opening project at path: #{project_path}"
+  project = Xcodeproj::Project.open(project_path)
+  # rest of the input is action
+  action = input[1]
+  handle_action(project, action, input[1..-1])
+  exit 0
 end
 
 project_path = ARGV[0]
