@@ -12,4 +12,5 @@ vscode-test
 !.vscode-test.js
 !.vscodeignore
 !.nvmrc
+!.ruby-version
 !package-lock.json
