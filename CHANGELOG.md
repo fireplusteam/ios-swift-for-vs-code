@@ -3,7 +3,7 @@
 ## 0.6.5 - 2026-01-09
 
 -   Added alt+o to switch between header to source files and vice versa
--   Added support of user defined tasks for build/watcher/clean
+-   Added support of user defined tasks for build/watcher/clean, see [README.md](README.md) file for more information
 -   Added build system mode: by default it's always xcodebuild, but can be switched to mixedWithXcode which utilize Xcode to build project which can be faster but can run in some issues as it's experimental
 -   Improved watcher to build all dependent targets to selected target by a user
 -   Autodetecting targets to build for selected tests to reduce building time

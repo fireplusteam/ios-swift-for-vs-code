@@ -62,10 +62,6 @@ export class ToolsManager {
         return await this.isToolInstalled("tuist", "version");
     }
 
-    private async isRubyInstalled() {
-        return await this.isToolInstalled("ruby", "-v");
-    }
-
     private async installHomebrew() {
         const installScript = `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
         this.terminal.show();
@@ -104,10 +100,6 @@ export class ToolsManager {
             await this.installTool("tuist");
         }
 
-        if (!(await this.isRubyInstalled())) {
-            await this.installTool("ruby");
-        }
-
         if (!(await this.isGemInstalled("xcodeproj"))) {
             await this.installTool("xcodeproj", "gem");
         }
@@ -143,14 +135,7 @@ export class ToolsManager {
                 this.log.error(message);
                 firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
-            try {
-                // ruby upgrade might fail on some systems due to local environment so, don't block the flow
-                await this.terminal.executeCommand("brew upgrade ruby");
-            } catch (error) {
-                const message = `Failed to upgrade ruby: ${error}`;
-                this.log.error(message);
-                firstError = firstError === null ? message : `${firstError};\n${message}`;
-            }
+
             try {
                 await this.terminal.executeCommand("gem install xcodeproj");
             } catch (error) {
@@ -197,7 +182,6 @@ export class ToolsManager {
             !(await this.isHomebrewInstalled()) ||
             !(await this.isXcbeautifyInstalled()) ||
             !(await this.isTuistInstalled()) ||
-            !(await this.isRubyInstalled()) ||
             !(await this.isGemInstalled("xcodeproj")) ||
             !(await this.isLLDBStubExeCompiled())
         ) {

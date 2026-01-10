@@ -13,15 +13,15 @@ Develop/Build/Debug/Test your xCode projects in VS Code with your favorite exten
 
 Before use it make sure you've installed all **dependencies** required for this extension.
 
+## Extension Activation
+
+To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**.
+
 <hr/>
 
 ## ✅ Autocomplete
 
 [![Autocomplete](media/autocomplete.gif)](https://youtu.be/0dXQGY0IIEA)
-
-## 🌳 File Tree Integration
-
-[![🌳 File Tree Integration](media/project_tree.gif)](https://youtu.be/3C-abUZGkgE)
 
 ### Also check [Tricks and Tips](Tricks_and_tips.md)
 
@@ -84,7 +84,7 @@ Use the following guide to install them manually if any it doesn't work for you:
 -   **xcodeproj** gem library to make possible to add/delete/rename files in your Xcode project directly from vs code.
 
     ```bash
-    brew install ruby
+    brew install ruby # if you don't have ruby installed, but it's preinstalled on macOS
     gem install xcodeproj
     ```
 
@@ -96,7 +96,9 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 -   Once you installed all the dependencies, you can open a folder which contains the iOS project. If project or workspace is located in the local folder then an extension will ask you if you want to configure it, otherwise you need to perform command **"Xcode: Select Project/Workspace"** and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
 
--   There's ios launch configuration that can be added to `launch.json` file to run and debug ios project (there's also "Xcode: Run App & Debug" snippet)
+## Launching and Debugging
+
+-   There's ios launch configuration that can be added to `launch.json` file to run and debug ios project (there's also `Xcode: Run App & Debug` snippet)
 
 ```json
 "configurations": [
@@ -111,6 +113,18 @@ This's just needed to override the **continueBuildingAfterError** property when 
     }
 ]
 ```
+
+### Parameters:
+
+-   `target`: should be only "app"
+-   `isDebuggable`: if true, it will launch the app in debug mode, otherwise in run mode
+-   `buildBeforeLaunch`: can be
+    -   "always" to always build before launching
+    -   "never" to never build before launching
+    -   "ask" to ask a user if the build is required before launching
+-   `lldbCommands`: array of lldb commands to execute on debugger start
+
+## User Defined Tasks
 
 Extensions adds the tasks for clean/build/autocomplete watcher tasks which a user may override and add extra configuration as a regular vs code task:
 
