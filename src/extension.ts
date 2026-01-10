@@ -56,6 +56,8 @@ import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectCo
 import { LogChannel } from "./Logs/LogChannel";
 import { buildSelectedTarget, cleanDerivedData } from "./buildCommands";
 
+// SETTINGS WATCHER
+
 function shouldInjectSWBBuildService() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("swb.build.service");
     if (!isEnabled) {
@@ -63,6 +65,16 @@ function shouldInjectSWBBuildService() {
     }
     return true;
 }
+function watchSWBBuildServiceSetting() {
+    return vscode.workspace.onDidChangeConfiguration(async event => {
+        if (event.affectsConfiguration("vscode-ios.swb.build.service")) {
+            const shouldEnable = shouldInjectSWBBuildService();
+            await enableSWBBuildService(shouldEnable);
+        }
+    });
+}
+
+// INITIALIZATION CODE
 
 async function initialize(
     atomicCommand: AtomicCommand,
@@ -175,6 +187,8 @@ export async function activate(context: vscode.ExtensionContext) {
         activateNotActiveExtension(context);
         return;
     }
+
+    context.subscriptions.push(watchSWBBuildServiceSetting());
 
     statusBar.update(new ProjectEnv({ settings: Promise.resolve({}) }));
     context.subscriptions.push(

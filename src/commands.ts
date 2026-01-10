@@ -620,27 +620,34 @@ export async function runAndDebugTests(
 }
 
 export async function enableSWBBuildService(enabled: boolean) {
-    let checkSWBService: string | undefined = undefined;
     try {
-        checkSWBService = await checkSWBBuildServiceEnabled(enabled, getSWBBuildServicePath());
-    } catch {
-        // do nothing
-    }
-    if (checkSWBService === undefined) {
-        return;
-    }
-    const password = await requestSudoPasswordForSWBBuildService(enabled);
-    if (password === undefined) {
-        return;
-    }
-    try {
-        if (checkSWBService !== undefined) {
-            await installUninstallBuildService(enabled, password, getSWBBuildServicePath());
+        let checkSWBService: string | undefined = undefined;
+        try {
+            checkSWBService = await checkSWBBuildServiceEnabled(enabled, getSWBBuildServicePath());
+        } catch {
+            // do nothing
+        }
+        if (checkSWBService === undefined) {
+            return;
+        }
+        const password = await requestSudoPasswordForSWBBuildService(enabled);
+        if (password === undefined) {
+            throw new Error("User cancelled sudo password input");
+        }
+        try {
+            if (checkSWBService !== undefined) {
+                await installUninstallBuildService(enabled, password, getSWBBuildServicePath());
+            }
+        } catch (error) {
+            if (error instanceof Error && error.message === "Retry") {
+                return await enableSWBBuildService(enabled);
+            }
         }
     } catch (error) {
-        if (error instanceof Error && error.message === "Retry") {
-            return await enableSWBBuildService(enabled);
-        }
+        // rollback setting to previous value for current target configuration
+        vscode.workspace
+            .getConfiguration("vscode-ios")
+            .update("swb.build.service", !enabled, vscode.ConfigurationTarget.Global);
     }
 }
 
