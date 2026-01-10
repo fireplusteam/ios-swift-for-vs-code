@@ -85,10 +85,11 @@ export class AtomicCommand {
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "autowatcher" };
         const currentOperationID = this.latestOperationID;
         let release: MutexInterface.Releaser | undefined = undefined;
+        let commandContext: CommandContext | undefined = undefined;
         try {
             if (this._mutex.isLocked()) {
                 if (this._executingCommand === "autowatcher") {
-                    this._prevCommandContext?.cancel();
+                    this._prevCommandContext?.dispose();
                     this._mutex.cancel();
                 } else {
                     throw UserCommandIsExecuting;
@@ -99,7 +100,7 @@ export class AtomicCommand {
                 throw E_CANCELED;
             }
             this._executingCommand = "autowatcher";
-            const commandContext = new CommandContext(
+            commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
                 watcherTerminal,
                 this.lspClient,
@@ -129,6 +130,9 @@ export class AtomicCommand {
             }
 
             const promiseResult = this.withCancellation(async () => {
+                if (commandContext === undefined) {
+                    throw new Error("Command context is undefined");
+                }
                 await commandClosure(commandContext, includeTargets, excludeTargets);
             }, commandContext.cancellationToken);
 
@@ -170,6 +174,7 @@ export class AtomicCommand {
             if (release) {
                 release();
             }
+            commandContext?.dispose();
         }
     }
 
@@ -188,9 +193,10 @@ export class AtomicCommand {
         this.latestOperationID = { id: this.latestOperationID.id + 1, type: "user" };
         const currentOperationID = this.latestOperationID;
         let releaser: MutexInterface.Releaser | undefined = undefined;
+        let commandContext: CommandContext | undefined = undefined;
         try {
             if (this._mutex.isLocked()) {
-                this._prevCommandContext?.cancel();
+                this._prevCommandContext?.dispose();
                 this._mutex.cancel();
             }
             releaser = await this._mutex.acquire();
@@ -198,7 +204,7 @@ export class AtomicCommand {
                 throw E_CANCELED;
             }
             this._executingCommand = "user";
-            const commandContext = new CommandContext(
+            commandContext = new CommandContext(
                 new vscode.CancellationTokenSource(),
                 userTerminal,
                 this.lspClient,
@@ -209,6 +215,9 @@ export class AtomicCommand {
             this._prevCommandContext = commandContext;
 
             const promiseResult = this.withCancellation(async () => {
+                if (commandContext === undefined) {
+                    throw new Error("Command context is undefined");
+                }
                 return await commandClosure(commandContext);
             }, commandContext.cancellationToken);
 
@@ -283,12 +292,13 @@ export class AtomicCommand {
             if (releaser) {
                 releaser();
             }
+            commandContext?.dispose();
         }
     }
 
     cancel() {
         if (this._mutex.isLocked()) {
-            this._prevCommandContext?.cancel();
+            this._prevCommandContext?.dispose();
             this._prevCommandContext = undefined;
             return true;
         }

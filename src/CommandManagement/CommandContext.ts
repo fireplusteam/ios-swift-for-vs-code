@@ -72,6 +72,11 @@ export class CommandContext {
         return this._cancellationTokenSource.token;
     }
 
+    _isDisposed: boolean = false;
+    public get isDisposed(): boolean {
+        return this._isDisposed;
+    }
+
     constructor(
         cancellationToken: vscode.CancellationTokenSource,
         terminal: TerminalShell | undefined,
@@ -115,6 +120,11 @@ export class CommandContext {
             shellExe.pipe = this.convertToExeParams(shell.pipe, attachTerminal);
         }
         return shell;
+    }
+
+    dispose() {
+        this._isDisposed = true;
+        this.cancel();
     }
 
     public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {

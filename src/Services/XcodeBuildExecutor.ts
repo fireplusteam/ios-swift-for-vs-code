@@ -10,7 +10,7 @@ import {
 import * as fs from "fs/promises";
 import * as path from "path";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { Executor, ExecutorMode } from "../Executor";
+import { Executor, ExecutorMode, ExecutorTaskError, ShellProcessResult } from "../Executor";
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { sleep } from "../utils";
 
@@ -41,23 +41,20 @@ export class XcodeBuildExecutor {
     }
 
     async startBuildInXcode(context: CommandContext, logFilePath: string, scheme: string) {
-        const buildWait = context.waitToCancel();
-
         const derivedPath = await getBuildRootPath();
         const previousLogs =
             (await allLogsPath(`${derivedPath}/Logs/Build/LogStoreManifest.plist`, scheme)) || [];
 
-        watchXcactivitylog(
+        const buildComplete = watchXcactivitylog(
             context,
             previousLogs.map(log => log.path),
-            buildWait.token,
-            buildWait.rejectToken,
             derivedPath,
             scheme,
             logFilePath
         );
         this.watchXcodeProcesses(context);
-        let xcodeBuild = undefined;
+        let xcodeBuild: ShellProcessResult | undefined = undefined;
+        let xcodeBuildTapReplaceDialog: ShellProcessResult | undefined = undefined;
         try {
             xcodeBuild = context.execShellWithOptionsAndProc({
                 scriptOrCommand: { command: "osascript" },
@@ -73,36 +70,33 @@ export class XcodeBuildExecutor {
                 ],
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
-            xcodeBuild.result
-                .then(async () => {
-                    context.execShellWithOptions({
-                        scriptOrCommand: { command: "osascript" },
-                        args: [
-                            "-l",
-                            "JavaScript",
-                            getScriptPath("xcode_build.js"),
-                            projectWorkspace(
-                                await context.projectEnv.projectFile,
-                                await context.projectEnv.projectType
-                            ),
-                            "-tapReplaceDialog",
-                        ],
-                        mode: ExecutorMode.onlyCommandNameAndResult,
-                    });
-                })
-                .catch(error => {
-                    buildWait.rejectToken.fire(error);
+            xcodeBuild.result.then(async () => {
+                xcodeBuildTapReplaceDialog = context.execShellWithOptionsAndProc({
+                    scriptOrCommand: { command: "osascript" },
+                    args: [
+                        "-l",
+                        "JavaScript",
+                        getScriptPath("xcode_build.js"),
+                        projectWorkspace(
+                            await context.projectEnv.projectFile,
+                            await context.projectEnv.projectType
+                        ),
+                        "-tapReplaceDialog",
+                    ],
+                    mode: ExecutorMode.onlyCommandNameAndResult,
                 });
-            await buildWait.wait;
+            });
+            await Promise.all([xcodeBuild.result, buildComplete]);
         } finally {
-            if (xcodeBuild?.proc && xcodeBuild.proc.connected) {
-                xcodeBuild.proc.kill("SIGKILL");
+            const anyVar = xcodeBuildTapReplaceDialog as any; // to avoid ts error
+            if (anyVar?.proc && anyVar?.proc.connected) {
+                anyVar?.proc.kill("SIGKILL");
             }
         }
     }
 
     async watchXcodeProcesses(context: CommandContext) {
-        while (!context.cancellationToken.isCancellationRequested) {
+        while (!context.isDisposed) {
             if (
                 (await this.isXcodeOpenWithWorkspaceOrProject(
                     await context.projectEnv.projectFile,
@@ -169,8 +163,6 @@ export class XcodeBuildExecutor {
 async function watchXcactivitylog(
     context: CommandContext,
     previousLogs: string[],
-    success: vscode.EventEmitter<void>,
-    error: vscode.EventEmitter<unknown>,
     derivedPath: string,
     scheme: string | undefined,
     logFilePath: string
@@ -199,26 +191,20 @@ async function watchXcactivitylog(
                     // the old log, skip
                     continue;
                 }
-                try {
-                    await context.execShellWithOptions({
-                        scriptOrCommand: { command: getXCodeBuildServerPath() },
-                        pipeToParseBuildErrors: true,
-                        args: ["debug", "print-build-log", newestLog.path],
-                        mode: ExecutorMode.onlyCommandNameAndResult,
-                        pipe: {
-                            scriptOrCommand: { command: "tee" },
-                            args: [logFilePath],
-                            mode: ExecutorMode.none,
-                        },
-                    });
-                    if (newestLog.hasError) {
-                        throw new Error("Build has errors");
-                    }
-                } catch (buildError) {
-                    error.fire(buildError);
-                    return;
+                await context.execShellWithOptions({
+                    scriptOrCommand: { command: getXCodeBuildServerPath() },
+                    pipeToParseBuildErrors: true,
+                    args: ["debug", "print-build-log", newestLog.path],
+                    mode: ExecutorMode.onlyCommandNameAndResult,
+                    pipe: {
+                        scriptOrCommand: { command: "tee" },
+                        args: [logFilePath],
+                        mode: ExecutorMode.none,
+                    },
+                });
+                if (newestLog.hasError) {
+                    throw new ExecutorTaskError("Build failed with errors", 1, null, "", undefined);
                 }
-                success.fire();
                 return;
             } else {
                 console.log(`No newest log path found for scheme: ${scheme}`);

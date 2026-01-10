@@ -93,6 +93,7 @@ function run(argv) {
 
     console.log("build started");
     console.log("active scheme is:");
+    // last line should be scheme name for easier parsing
     console.log(workspace.activeScheme.name());
 }
 
@@ -131,6 +132,17 @@ function waitForReplaceDialog(filePath) {
                 for (let j = 0; j < sheets.length; j++) {
                     const s = sheets[j];
                     console.log(`sheet ${j} name: ${s.name()}`);
+                    // find if there's a check box above buttons and set it to true before clicking replace
+                    const checkboxes = s.checkboxes();
+                    for (let m = 0; m < checkboxes.length; m++) {
+                        const c = checkboxes[m];
+                        console.log(`checkbox ${m} name: ${c.name()}`);
+                        if (c.value() === 0) {
+                            c.click();
+                            console.log("clicked checkbox to set to true");
+                        }
+                    }
+                    // find replace button and click it
                     const buttons = s.buttons();
                     for (let k = 0; k < buttons.length; k++) {
                         const b = buttons[k];
