@@ -29,6 +29,7 @@ export class BuildManager {
             "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile",
             "-showBuildTimingSummary",
+            "COMPILATION_CACHE_ENABLE_CACHING=YES",
         ];
     }
 

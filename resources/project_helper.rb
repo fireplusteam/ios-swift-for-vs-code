@@ -43,27 +43,27 @@ end
 
 def find_group_by_absolute_file_path(project, path)
   groups =
-    project.groups.lazy.filter_map do |group|
+    project.groups.lazy.map do |group|
       relative_path = path.sub(get_real_path(group, project) + "/", "")
       relative_dir = File.dirname(relative_path)
 
       return group if get_real_path(group, project) == File.dirname(path)
 
       group.find_subpath(relative_dir)
-    end
+    end.reject(&:nil?)
 
   groups.first
 end
 
 def find_group_by_absolute_dir_path(project, path)
   groups =
-    project.groups.lazy.filter_map do |group|
+    project.groups.lazy.map do |group|
       relative_dir = path.sub(get_real_path(group, project) + "/", "")
 
       return group if get_real_path(group, project) == path
 
       group.find_subpath(relative_dir)
-    end
+    end.reject(&:nil?)
 
   groups.first
 end
