@@ -4,7 +4,7 @@ import { Mutex, MutexInterface, E_CANCELED } from "async-mutex";
 import { CommandContext, UserTerminalCloseError, UserTerminatedError } from "./CommandContext";
 import { TerminalMessageStyle, TerminalShell } from "../TerminalShell";
 import { LSPClientContext } from "../LSP/lspExtension";
-import { CustomError } from "../utils";
+import { CustomError, sleep } from "../utils";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
@@ -87,15 +87,21 @@ export class AtomicCommand {
         let release: MutexInterface.Releaser | undefined = undefined;
         let commandContext: CommandContext | undefined = undefined;
         try {
+            let shouldWait = false;
             if (this._mutex.isLocked()) {
                 if (this._executingCommand === "autowatcher") {
                     this._prevCommandContext?.dispose();
                     this._mutex.cancel();
+                    shouldWait = true;
                 } else {
                     throw UserCommandIsExecuting;
                 }
             }
             release = await this._mutex.acquire();
+            if (shouldWait) {
+                // give some time for previous command to cancel
+                await sleep(500);
+            }
             if (currentOperationID !== this.latestOperationID) {
                 throw E_CANCELED;
             }
@@ -195,11 +201,16 @@ export class AtomicCommand {
         let releaser: MutexInterface.Releaser | undefined = undefined;
         let commandContext: CommandContext | undefined = undefined;
         try {
-            if (this._mutex.isLocked()) {
+            const wasLocked = this._mutex.isLocked();
+            if (wasLocked) {
                 this._prevCommandContext?.dispose();
                 this._mutex.cancel();
             }
             releaser = await this._mutex.acquire();
+            if (wasLocked) {
+                // give some time for previous command to cancel
+                await sleep(500);
+            }
             if (currentOperationID !== this.latestOperationID) {
                 throw E_CANCELED;
             }
@@ -292,7 +303,6 @@ export class AtomicCommand {
             if (releaser) {
                 releaser();
             }
-            commandContext?.dispose();
         }
     }
 

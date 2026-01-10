@@ -12,6 +12,8 @@ export class TerminalShell {
     private writeEmitter: vscode.EventEmitter<string> | undefined;
     private changeNameEmitter: vscode.EventEmitter<string> | undefined;
     private exitEmitter = new vscode.EventEmitter<void>();
+    private closeEmitter: vscode.EventEmitter<number> | undefined =
+        new vscode.EventEmitter<number>();
     private _terminalName: string;
     private _source: string | undefined;
     private buffer: string = "";
@@ -61,6 +63,12 @@ export class TerminalShell {
         this.fireNameChange("🚫 " + this.source() + this._terminalName);
     }
 
+    dispose() {
+        // Clean up event emitters, so a task can not flush data to disposed terminal
+        this.writeEmitter = undefined;
+        this.changeNameEmitter = undefined;
+    }
+
     private dataToPrint(data: string): string {
         return data.replaceAll("\n", "\n\r");
     }
@@ -104,11 +112,14 @@ export class TerminalShell {
             if (!this.changeNameEmitter) {
                 this.changeNameEmitter = new vscode.EventEmitter<string>();
             }
-            const closeEmitter = new vscode.EventEmitter<number>();
+            if (!this.closeEmitter) {
+                this.closeEmitter = new vscode.EventEmitter<number>();
+            }
+            const terminalCloseEmitter = this.closeEmitter;
             const pty: vscode.Pseudoterminal = {
                 onDidWrite: this.writeEmitter.event,
                 onDidChangeName: this.changeNameEmitter.event,
-                onDidClose: closeEmitter.event,
+                onDidClose: terminalCloseEmitter.event,
                 open: async () => {
                     try {
                         this.terminalName = this._terminalName;
@@ -117,9 +128,9 @@ export class TerminalShell {
                             this.buffer = "";
                         }
                         await task();
-                        closeEmitter.fire(0);
+                        terminalCloseEmitter.fire(0);
                     } catch (err) {
-                        closeEmitter.fire(1);
+                        terminalCloseEmitter.fire(1);
                     }
                 },
                 close: () => {

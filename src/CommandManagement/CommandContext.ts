@@ -125,6 +125,7 @@ export class CommandContext {
     dispose() {
         this._isDisposed = true;
         this.cancel();
+        this.terminal?.dispose();
     }
 
     public async execShellWithOptions(shell: CommandOptions): Promise<ShellResult> {
