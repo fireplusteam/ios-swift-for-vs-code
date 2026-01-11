@@ -174,9 +174,16 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
         });
     }
     appExecutablePath(deviceID: DeviceID): Promise<string> {
-        return this.productName.then(productName => {
-            return this.projectConfiguration.then(configuration => {
-                return getTargetExecutable(deviceID, productName, configuration);
+        return this.settingsProvider.settings.then((projectSettings: any) => {
+            return this.productName.then(productName => {
+                return this.projectConfiguration.then(configuration => {
+                    return getTargetExecutable(
+                        deviceID,
+                        productName,
+                        projectSettings[0].buildSettings.PRODUCT_TYPE,
+                        configuration
+                    );
+                });
             });
         });
     }
@@ -586,13 +593,21 @@ export function getProjectType(projectFile: string) {
 async function getTargetExecutable(
     deviceID: DeviceID,
     product_name: string,
+    product_type: string,
     build_configuration: string
 ) {
     try {
         const path = `${await getBuildDir(deviceID, build_configuration)}/${product_name}`;
-        if (fs.existsSync(`${path}.app`)) {
+        if (product_type === "com.apple.product-type.application") {
             return `${path}.app`;
+        } else if (product_type === "com.apple.product-type.library.static") {
+            throw AppTargetExecutableMissedError;
+        } else if (product_type === "com.apple.product-type.framework") {
+            throw AppTargetExecutableMissedError;
+        } else if (product_type === undefined) {
+            throw AppTargetExecutableMissedError;
         }
+
         return path;
     } catch {
         throw AppTargetExecutableMissedError;

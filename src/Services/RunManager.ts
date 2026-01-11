@@ -110,16 +110,22 @@ export class RunManager {
         waitDebugger: boolean
     ) {
         await this.prepareSimulator(context, deviceId);
-
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcrun" },
-            args: [
-                "simctl",
-                "install",
-                deviceId.id,
-                await context.projectEnv.appExecutablePath(deviceId),
-            ],
-        });
+        try {
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcrun" },
+                args: [
+                    "simctl",
+                    "install",
+                    deviceId.id,
+                    await context.projectEnv.appExecutablePath(deviceId),
+                ],
+            });
+        } catch (error) {
+            vscode.window.showErrorMessage(
+                "Can not find app executable to install on simulator. Please check build log for details."
+            );
+            DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
+        }
 
         if (context.terminal) {
             context.terminal.terminalName = "Waiting Debugger";

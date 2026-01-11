@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import {
+    AppTargetExecutableMissedError,
     DebugDeviceIDMissedError,
     getFilePathInWorkspace,
     getLogPath,
@@ -599,6 +600,11 @@ export async function handleValidationErrors<T>(
             throw error;
         }
         return await repeatOnChange();
+    } else if (error === AppTargetExecutableMissedError) {
+        vscode.window.showErrorMessage(
+            `The selected app target executable is missing. Please ensure that the scheme is built successfully or it's executable.`
+        );
+        throw error;
     } else {
         throw error;
     }
