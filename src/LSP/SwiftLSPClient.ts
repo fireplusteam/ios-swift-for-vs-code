@@ -16,6 +16,8 @@ import { kill } from "process";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { getFilePathInWorkspace } from "../env";
+import { DidChangeWorkspaceFoldersNotification } from "vscode-languageclient/node";
+import * as fs from "fs";
 
 function useLspForCFamilyFiles(folder: vscode.Uri) {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");
@@ -23,6 +25,24 @@ function useLspForCFamilyFiles(folder: vscode.Uri) {
         return false;
     }
     return true;
+}
+
+class FolderContext implements vscode.Disposable {
+    readonly folder: vscode.Uri;
+    readonly isRootFolder: boolean;
+
+    constructor(folder: vscode.Uri, isRootFolder: boolean) {
+        this.folder = folder;
+        this.isRootFolder = isRootFolder;
+    }
+
+    dispose(): void {
+        // nothing to dispose
+    }
+
+    static uriName(uri: vscode.Uri): string {
+        return path.basename(uri.fsPath);
+    }
 }
 
 export class SwiftLSPClient implements vscode.Disposable {
@@ -40,16 +60,20 @@ export class SwiftLSPClient implements vscode.Disposable {
                 const rootFolder = await this.workspaceContext.workspaceFolder;
                 await this.setupLanguageClient(rootFolder);
             }
+
             return this.languageClient!;
         } finally {
             release();
         }
     }
 
+    private addedFolders: FolderContext[] = [];
+
     constructor(
         private readonly workspaceContext: WorkspaceContext,
         private readonly logs: vscode.OutputChannel & LogChannelInterface
     ) {
+        this.addedFolders = [];
         this.definitionProvider = new DefinitionProvider(this);
         this.startMonitorMemoryUsage();
     }
@@ -66,6 +90,13 @@ export class SwiftLSPClient implements vscode.Disposable {
 
     public async start() {
         await this.client();
+
+        if (
+            (await this.workspaceContext.projectFolder) !==
+            (await this.workspaceContext.workspaceFolder)
+        ) {
+            this.addFolder(new FolderContext(await this.workspaceContext.projectFolder, false));
+        }
     }
 
     public async restart() {
@@ -79,7 +110,11 @@ export class SwiftLSPClient implements vscode.Disposable {
             client.stop();
             client.dispose();
             // start it again
-            await this.start();
+            await this.client();
+
+            for (const folderContext of this.addedFolders) {
+                await this.addFolder(folderContext);
+            }
         } catch (error) {
             this.logs.error(`Swift LSP Client restarted with error ${error}`);
             if (error instanceof Error && error.message === "Stopping the server timed out") {
@@ -268,6 +303,35 @@ export class SwiftLSPClient implements vscode.Disposable {
             ),
             errorHandler,
         };
+    }
+
+    async addFolder(folderContext: FolderContext) {
+        if (!folderContext.isRootFolder) {
+            const client = await this.client();
+
+            const uri = folderContext.folder;
+            const workspaceFolder = {
+                uri: client.code2ProtocolConverter.asUri(uri),
+                name: FolderContext.uriName(uri),
+            };
+
+            // need to copy buildServer.json if it exists from workspace folder
+            await this.copyBuildServerFileIfNeeded(uri);
+
+            await client.sendNotification(DidChangeWorkspaceFoldersNotification.type, {
+                event: { added: [workspaceFolder], removed: [] },
+            });
+        }
+        this.addedFolders.push(folderContext);
+    }
+
+    private async copyBuildServerFileIfNeeded(toFolder: vscode.Uri) {
+        const fromFolder = await this.workspaceContext.workspaceFolder;
+        const fromPath = path.join(fromFolder.fsPath, "buildServer.json");
+        const toPath = path.join(toFolder.fsPath, "buildServer.json");
+        if (fs.existsSync(fromPath)) {
+            fs.copyFileSync(fromPath, toPath);
+        }
     }
 
     private async startClient(
