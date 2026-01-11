@@ -25,7 +25,7 @@ import {
     selectConfiguration,
     selectDevice,
     selectProjectFile,
-    selectTarget,
+    selectScheme,
     updatePackageDependencies,
 } from "./commands";
 import { BuildTaskProvider } from "./BuildTaskProvider";
@@ -350,9 +350,9 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.project.selectTarget", async () => {
+        vscode.commands.registerCommand("vscode-ios.project.selectScheme", async () => {
             await atomicCommand.userCommandWithoutThrowingException(async context => {
-                await selectTarget(context);
+                await selectScheme(context);
             }, "Select Target");
         })
     );
@@ -585,7 +585,7 @@ export async function handleValidationErrors<T>(
         }
         return await repeatOnChange();
     } else if (error === ProjectSchemeMissedError) {
-        if ((await selectTarget(commandContext, true)) === false) {
+        if ((await selectScheme(commandContext, true)) === false) {
             throw error; // cancelled
         }
         return await repeatOnChange();

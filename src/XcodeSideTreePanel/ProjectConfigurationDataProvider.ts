@@ -76,7 +76,7 @@ export class ProjectConfigurationDataProvider implements vscode.TreeDataProvider
             this.config.push(
                 new ProjectConfigurationNode(
                     scheme,
-                    "vscode-ios.project.selectTarget",
+                    "vscode-ios.project.selectScheme",
                     "target",
                     "Click to select Xcode Project Scheme",
                     "Project:Scheme"
@@ -88,7 +88,7 @@ export class ProjectConfigurationDataProvider implements vscode.TreeDataProvider
             this.config.push(
                 new ProjectConfigurationNode(
                     scheme,
-                    "vscode-ios.project.selectTarget",
+                    "vscode-ios.project.selectScheme",
                     "target",
                     "Click to select Xcode Project Scheme",
                     "Project:Scheme"

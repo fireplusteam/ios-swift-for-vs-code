@@ -292,8 +292,8 @@
                 "title": "Xcode: Select Project/Workspace/Package"
             },
             {
-                "command": "vscode-ios.project.selectTarget",
-                "title": "Xcode: Select Target"
+                "command": "vscode-ios.project.selectScheme",
+                "title": "Xcode: Select Scheme"
             },
             {
                 "command": "vscode-ios.project.selectConfiguration",

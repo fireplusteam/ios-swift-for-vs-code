@@ -213,7 +213,7 @@ export async function generateXcodeWorkspaceForPackage(
     return path.join(folder, "Workspace.xcworkspace");
 }
 
-export async function selectTarget(commandContext: CommandContext, ignoreFocusOut = false) {
+export async function selectScheme(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         const schemes = await commandContext.projectSettingsProvider.fetchSchemes();
         let currentScheme: string;
@@ -245,7 +245,7 @@ export async function selectTarget(commandContext: CommandContext, ignoreFocusOu
         await commandContext.projectEnv.setProjectScheme(option);
     } catch (error) {
         return await handleValidationErrors(commandContext, error, async () => {
-            await selectTarget(commandContext, ignoreFocusOut);
+            await selectScheme(commandContext, ignoreFocusOut);
         });
     }
 }
@@ -407,7 +407,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         }
         if (
             validProjectScheme === false &&
-            (await selectTarget(commandContext, ignoreFocusOut)) === false
+            (await selectScheme(commandContext, ignoreFocusOut)) === false
         ) {
             return false;
         }

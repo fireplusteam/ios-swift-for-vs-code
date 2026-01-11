@@ -44,7 +44,7 @@ export function activateNotActiveExtension(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand(
-            "vscode-ios.project.selectTarget",
+            "vscode-ios.project.selectScheme",
             showErrorOnPerformingExtensionCommand
         )
     );

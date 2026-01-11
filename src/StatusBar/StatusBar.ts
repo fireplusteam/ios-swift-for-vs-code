@@ -23,7 +23,7 @@ export class StatusBar implements vscode.Disposable {
     );
 
     constructor() {
-        this.schemeStatusItem.command = "vscode-ios.project.selectTarget";
+        this.schemeStatusItem.command = "vscode-ios.project.selectScheme";
         this.schemeStatusItem.tooltip = "Click to select the Xcode Project Scheme";
 
         this.configurationStatusItem.command = "vscode-ios.project.selectConfiguration";
