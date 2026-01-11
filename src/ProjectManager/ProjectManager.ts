@@ -720,11 +720,11 @@ export class ProjectManager implements ProjectManagerInterface {
     }
 
     async generateScheme(
-        rootTargetName: string,
+        originalSchemeName: string,
         generate: (
             rootProjectPath: string,
-            schemeName: string,
-            rootTargetName: string
+            generatedSchemeName: string,
+            originalSchemeName: string
         ) => Promise<string[]>
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         const release = await this.projectFileEditMutex.acquire();
@@ -750,7 +750,7 @@ export class ProjectManager implements ProjectManagerInterface {
                     const allScheme = await generate(
                         rootProjectPath,
                         `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
-                        rootTargetName
+                        originalSchemeName
                     );
                     if (
                         allScheme.length === 0 ||

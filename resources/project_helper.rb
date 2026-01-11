@@ -236,7 +236,7 @@ end
 def generate_scheme_depend_on_target(
   project,
   generated_scheme_name,
-  root_target_name,
+  original_scheme_name,
   include_targets,
   exclude_targets
 )
@@ -246,15 +246,11 @@ def generate_scheme_depend_on_target(
     exclude_targets.nil? == false ? exclude_targets.split(",") : []
 
   # root target scheme can be a scheme, load it if exists
-  scheme = load_scheme_if_exists(project, root_target_name)
+  scheme = load_scheme_if_exists(project, original_scheme_name)
 
   all_targets = get_all_targets_from_scheme(scheme)
-  # if all_targets.empty?
-  #   target = get_target_by_name(project, root_target_name)
-  #   all_targets << { name: target.name, uuid: target.uuid } unless target.nil?
-  # end
 
-  # write bfs to find all deps of the root_target_name target
+  # write bfs to find all deps of the original_scheme_name target
   root_targets =
     all_targets
       .map do |target|
@@ -328,14 +324,14 @@ end
 def generate_test_scheme_depend_on_target(
   project,
   generated_scheme_name,
-  root_target_name,
+  original_scheme_name,
   test_targets
 )
   test_targets_list = test_targets.split(",")
   test_targets_list = [] if test_targets == "include_all_tests_targets"
   test_targets_list = test_targets_list.uniq
 
-  scheme = load_scheme_if_exists(project, root_target_name)
+  scheme = load_scheme_if_exists(project, original_scheme_name)
 
   is_different_from_existing = false
 

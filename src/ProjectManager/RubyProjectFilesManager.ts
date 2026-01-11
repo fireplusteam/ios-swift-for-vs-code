@@ -35,8 +35,8 @@ export interface RubyProjectFilesManagerInterface {
     ): Promise<string[]>;
     generateTestSchemeDependOnTarget(
         projectFile: string,
-        schemeName: string,
-        rootTargetName: string,
+        generatedSchemeName: string,
+        originalSchemeName: string,
         testsTargets: string | undefined
     ): Promise<string[]>;
 }
