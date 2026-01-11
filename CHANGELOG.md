@@ -1,6 +1,6 @@
 # Change Log
 
-## 0.6.5 - 2026-01-09
+## 0.6.5 - 2026-01-11
 
 -   Added alt+o to switch between header to source files and vice versa
 -   Added support of user defined tasks for build/watcher/clean, see [README.md](README.md) file for more information
