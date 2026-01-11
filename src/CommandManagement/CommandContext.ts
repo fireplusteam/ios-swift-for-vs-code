@@ -73,8 +73,8 @@ export class CommandContext {
     }
 
     _isDisposed: boolean = false;
-    public get isDisposed(): boolean {
-        return this._isDisposed;
+    public get isCancelledOrDisposed(): boolean {
+        return this._isDisposed || this.cancellationToken.isCancellationRequested;
     }
 
     constructor(

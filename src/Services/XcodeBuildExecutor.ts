@@ -96,7 +96,7 @@ export class XcodeBuildExecutor {
     }
 
     async watchXcodeProcesses(context: CommandContext) {
-        while (!context.isDisposed) {
+        while (!context.isCancelledOrDisposed) {
             if (
                 (await this.isXcodeOpenWithWorkspaceOrProject(
                     await context.projectEnv.projectFile,

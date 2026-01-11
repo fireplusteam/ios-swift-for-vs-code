@@ -90,6 +90,7 @@ export class AtomicCommand {
             let shouldWait = false;
             if (this._mutex.isLocked()) {
                 if (this._executingCommand === "autowatcher") {
+                    this._prevCommandContext?.cancel();
                     this._prevCommandContext?.dispose();
                     this._mutex.cancel();
                     shouldWait = true;
@@ -203,6 +204,7 @@ export class AtomicCommand {
         try {
             const wasLocked = this._mutex.isLocked();
             if (wasLocked) {
+                this._prevCommandContext?.cancel();
                 this._prevCommandContext?.dispose();
                 this._mutex.cancel();
             }
@@ -308,6 +310,7 @@ export class AtomicCommand {
 
     cancel() {
         if (this._mutex.isLocked()) {
+            this._prevCommandContext?.cancel();
             this._prevCommandContext?.dispose();
             this._prevCommandContext = undefined;
             return true;

@@ -30,7 +30,7 @@ export class BuildManager {
             "-skipPackageUpdates", // to speed up the build
             "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile",
-            "-showBuildTimingSummary",
+            // "-showBuildTimingSummary",
             "COMPILATION_CACHE_ENABLE_CACHING=YES",
         ];
     }
