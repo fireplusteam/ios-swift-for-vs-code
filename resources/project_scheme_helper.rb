@@ -36,7 +36,7 @@ end
 
 def get_all_targets_from_scheme(scheme)
   targets = []
-  if scheme.build_action
+  if scheme.build_action and scheme.build_action.entries
     scheme.build_action.entries.each do |entry|
       if entry.buildable_references.any?
         entry.buildable_references.each do |buildable_ref|
@@ -89,6 +89,7 @@ def get_build_reference_from_testable_reference(
   target_name,
   target_uuid
 )
+  return nil if testable_reference.nil?
   testable_reference.buildable_references.each do |buildable_ref|
     if buildable_ref.target_name == target_name &&
          buildable_ref.target_uuid == target_uuid
@@ -160,6 +161,8 @@ def remove_target_from_scheme(scheme, test_target)
     puts "Removed target from scheme: #{test_target[:name]}"
     removed = true
   end
+
+  return removed if scheme.test_action.nil? or scheme.test_action.testables.nil?
 
   scheme.test_action.testables.each do |testable_references|
     while buildable_ref =
