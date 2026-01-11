@@ -14,9 +14,6 @@ export const ProjectSchemeMissedError = new CustomError(
 export const ProjectConfigurationMissedError = new CustomError(
     "Project configuration is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
 );
-export const ProjectTestPlanMissedError = new CustomError(
-    "Project test plan is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
-);
 export const DebugDeviceIDMissedError = new CustomError(
     "Debug device is not set in .vscode/xcode/projectConfiguration.json. Please run the command to select it"
 );
@@ -58,7 +55,6 @@ export interface ProjectEnvInterface {
     projectScheme: Promise<string>;
     autoCompleteScheme: Promise<string>;
     projectConfiguration: Promise<string>;
-    projectTestPlan: Promise<string>;
     debugDeviceID: Promise<DeviceID>;
     multipleDeviceID: Promise<DeviceID[]>;
     bundleAppName: Promise<string>;
@@ -79,7 +75,6 @@ export interface SetProjectEnvInterface {
     setProjectFile(projectPath: string, swiftPackagePath: string | undefined): Promise<void>;
     setProjectScheme(scheme: string): Promise<void>;
     setProjectConfiguration(configuration: string): Promise<void>;
-    setProjectTestPlan(testPlan: string): Promise<void>;
     setDebugDeviceID(deviceID: DeviceID | null): Promise<void>;
     setMultipleDeviceID(multiId: DeviceID[]): Promise<void>;
 
@@ -162,9 +157,6 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
     get projectConfiguration(): Promise<string> {
         return Promise.resolve(getProjectConfiguration(this.configuration));
-    }
-    get projectTestPlan(): Promise<string> {
-        return Promise.resolve(getProjectTestPlan(this.configuration));
     }
     get debugDeviceID(): Promise<DeviceID> {
         return Promise.resolve(getDeviceId(this.configuration));
@@ -262,10 +254,6 @@ export class ProjectEnv implements ProjectEnvInterface, SetProjectEnvInterface {
     }
     async setProjectConfiguration(configuration: string): Promise<void> {
         saveKeyToEnvList(this.configuration, "PROJECT_CONFIGURATION", configuration);
-        this.notifyDidChange();
-    }
-    async setProjectTestPlan(testPlan: string): Promise<void> {
-        saveKeyToEnvList(this.configuration, "PROJECT_TEST_PLAN", testPlan);
         this.notifyDidChange();
     }
     async setDebugDeviceID(deviceID: DeviceID | null): Promise<void> {
@@ -425,14 +413,6 @@ function getProjectConfiguration(configuration: { [key: string]: string }) {
     const val = configuration["PROJECT_CONFIGURATION"];
     if (val === undefined) {
         throw ProjectConfigurationMissedError;
-    }
-    return val;
-}
-
-function getProjectTestPlan(configuration: { [key: string]: string }) {
-    const val = configuration["PROJECT_TEST_PLAN"];
-    if (val === undefined) {
-        throw ProjectTestPlanMissedError;
     }
     return val;
 }

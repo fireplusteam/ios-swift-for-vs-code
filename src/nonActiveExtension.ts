@@ -58,7 +58,7 @@ export function activateNotActiveExtension(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand(
-            "vscode-ios.project.selectTestPlan",
+            "vscode-ios.project.runTestPlan",
             showErrorOnPerformingExtensionCommand
         )
     );

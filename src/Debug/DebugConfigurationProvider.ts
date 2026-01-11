@@ -143,15 +143,16 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSTestsDebugger(
-        tests: string[] | undefined,
+        tests: string[],
         isDebuggable: boolean,
         testRun: vscode.TestRun,
         context: CommandContext,
+        selectedTestPlan: string | undefined,
         isCoverage: boolean
     ) {
         context.terminal!.terminalName = `Building for ${isDebuggable ? "Debug Tests" : "Run Tests"}`;
 
-        const sessions = this.testRunInspector.build(context, tests, isCoverage);
+        const sessions = this.testRunInspector.build(context, tests, selectedTestPlan, isCoverage);
 
         const parent = await this.startParentSession(context, testRun, isDebuggable);
 

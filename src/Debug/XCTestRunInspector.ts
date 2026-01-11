@@ -20,15 +20,21 @@ export type XCTestTarget = {
 export class XCTestRunInspector {
     constructor(private problemResolver: ProblemDiagnosticResolver) {}
 
-    async build(context: CommandContext, tests: string[] | undefined, isCoverage: boolean) {
+    async build(
+        context: CommandContext,
+        tests: string[],
+        selectedTestPlan: string | undefined,
+        isCoverage: boolean
+    ) {
         const existingFiles = await this.getAllXCRunFiles();
-        if (tests) {
-            await buildTestsForCurrentFile(context, this.problemResolver, tests, isCoverage);
-        } else {
-            await buildTestsForCurrentFile(context, this.problemResolver, [], isCoverage);
-        }
+        await buildTestsForCurrentFile(
+            context,
+            this.problemResolver,
+            tests,
+            selectedTestPlan,
+            isCoverage
+        );
         const changedFiles = await this.getChangedFiles(existingFiles);
-        const selectedTestPlan = await this.getSelectedTestPlan(context);
         const targets = await this.parseXCRun(changedFiles, selectedTestPlan);
         if (tests) {
             const testsTargets = tests.map(test => test.split("/").at(0));
@@ -64,15 +70,6 @@ export class XCTestRunInspector {
             }
         }
         return changedFiles;
-    }
-
-    private async getSelectedTestPlan(context: CommandContext) {
-        try {
-            // check if it was pre selected by a user
-            return await context.projectEnv.projectTestPlan;
-        } catch {
-            return undefined;
-        }
     }
 
     private async parseXCRun(

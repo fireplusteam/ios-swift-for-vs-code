@@ -69,5 +69,8 @@ CHECKSUMS
   syntax_tree (6.3.0) sha256=56e25a9692c798ec94c5442fe94c5e94af76bef91edc8bb02052cbdecf35f13d
   xcodeproj (1.27.0) sha256=8cc7a73b4505c227deab044dce118ede787041c702bc47636856a2e566f854d3
 
+RUBY VERSION
+  ruby 3.3.0
+
 BUNDLED WITH
   4.0.3

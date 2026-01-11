@@ -21,6 +21,21 @@
         "identifier": "rbenv"
     },
     "rubyLsp.formatter": "syntax_tree",
+    "rubyLsp.indexing": {
+        "excludedPatterns": [
+            "**/test/**/*.rb"
+        ],
+        "includedPatterns": [
+            "**/resources/**/*"
+        ],
+        "excludedGems": [
+            "rubocop",
+            "rubocop-performance"
+        ],
+        "excludedMagicComments": [
+            "compiled:true"
+        ],
+    },
     "editor.detectIndentation": false,
     "editor.formatOnSave": true,
     "cSpell.words": [

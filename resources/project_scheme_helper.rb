@@ -1,3 +1,16 @@
+# type: true
+if LSP = ENV["SORBETSILENCE"]
+  require "sorbet-runtime"
+else
+  begin
+    require "sorbet-runtime"
+  rescue LoadError
+    # Do nothing if sorbet-runtime is not available
+  end
+end
+
+require "xcodeproj"
+
 def get_target_by_name(project, target_name, target_uuid = nil)
   project.targets.each do |target|
     next if target.nil? || target.name.nil? || target.name.empty?

@@ -6,6 +6,7 @@ import { TestTreeContext, getContentFromFilesystem } from "../TestTreeContext";
 import { getTestIDComponents } from "../../LSP/lspExtension";
 import { TestCase } from "./TestCase";
 import { LSPTestItem } from "../../LSP/GetTestsRequest";
+import path = require("path");
 
 let generationCounter = 0;
 
@@ -26,6 +27,10 @@ export class TestFile implements TestContainer {
         lspTest: LSPTestItem,
         suiteGeneration: number
     ): vscode.TestItem[] {
+        let lspTestId = lspTest.id;
+        if (lspTestId.includes("dummy.swift:")) {
+            lspTestId = lspTest.id.split(path.sep).slice(0, -1).join(path.sep);
+        }
         const id = `${parent.uri}/${lspTest.id}`;
         const testItem = this.context.ctrl.createTestItem(id, lspTest.label, parent.uri);
         testItem.range = new vscode.Range(
@@ -42,7 +47,7 @@ export class TestFile implements TestContainer {
             const test = new TestSuite(suiteGeneration);
             this.context.testData.set(testItem, test);
         } else {
-            const idComponents = getTestIDComponents(lspTest.id);
+            const idComponents = getTestIDComponents(lspTestId);
             const test = new TestCase(
                 idComponents.testName,
                 idComponents.suite,

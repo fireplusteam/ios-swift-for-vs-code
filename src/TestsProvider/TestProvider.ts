@@ -22,13 +22,27 @@ enum TestProviderLoadingState {
     error,
 }
 
+class TestRunRequest extends vscode.TestRunRequest {
+    testPlan: string | undefined;
+    context: CommandContext | undefined;
+    constructor(
+        testPlan: string | undefined = undefined,
+        context: CommandContext | undefined = undefined
+    ) {
+        super();
+        this.testPlan = testPlan;
+        this.context = context;
+    }
+}
+
 export class TestProvider {
     projectManager: ProjectManager;
     executeTests: (
-        tests: string[] | undefined,
+        tests: string[],
         isDebuggable: boolean,
         testRun: vscode.TestRun,
         context: CommandContext,
+        testPlan: string | undefined,
         isCoverage: boolean
     ) => Promise<boolean>;
     context: TestTreeContext;
@@ -38,16 +52,18 @@ export class TestProvider {
     private loadingState: TestProviderLoadingState = TestProviderLoadingState.nonInitialized;
     private initialFilesLoadingMutex = new Mutex();
     private readonly log: LogChannelInterface;
+    private _runTestPlan?: (testPlan: string, commandContext: CommandContext) => Promise<void>;
 
     constructor(
         projectManager: ProjectManager,
         context: TestTreeContext,
         log: LogChannelInterface,
         executeTests: (
-            tests: string[] | undefined,
+            tests: string[],
             isDebuggable: boolean,
             testRun: vscode.TestRun,
             context: CommandContext,
+            testPlan: string | undefined,
             isCoverage: boolean
         ) => Promise<boolean>
     ) {
@@ -58,6 +74,12 @@ export class TestProvider {
         this.asyncTestCaseParser = new TestCaseProblemParser(this.log);
     }
 
+    async runTestPlan(testPlan: string, commandContext: CommandContext) {
+        if (this._runTestPlan) {
+            await this._runTestPlan(testPlan, commandContext);
+        }
+    }
+
     activateTests(context: vscode.ExtensionContext) {
         const ctrl = this.context.ctrl;
         context.subscriptions.push(ctrl);
@@ -66,6 +88,11 @@ export class TestProvider {
             if (!request.continuous) {
                 return startTestRun(request, token);
             }
+        };
+
+        this._runTestPlan = async (testPlan: string, commandContext: CommandContext) => {
+            const request = new TestRunRequest(testPlan, commandContext);
+            await runHandler(request, commandContext.cancellationToken);
         };
 
         const startTestRun = async (
@@ -159,10 +186,11 @@ export class TestProvider {
                             return true;
                         });
                         await this.executeTests(
-                            request.include === undefined ? undefined : testList,
+                            testList,
                             request.profile?.kind === vscode.TestRunProfileKind.Debug,
                             run,
                             context,
+                            (request as TestRunRequest).testPlan,
                             request.profile?.kind === vscode.TestRunProfileKind.Coverage
                         );
                     } finally {
@@ -210,21 +238,32 @@ export class TestProvider {
             // resolve all tree before start testing
             await this.findInitialFiles();
             await discoverTests(request.include ?? this.gatherTestItems(ctrl.items));
-            this.context.atomicCommand
-                .userCommand(async context => {
-                    if (token.isCancellationRequested) {
-                        context.cancel();
-                    }
-                    const dis = token.onCancellationRequested(() => {
-                        dis.dispose();
-                        context.cancel();
-                    });
-                    try {
-                        await runTestQueue(context);
-                    } catch (error) {
-                        this.log.error(`${error}`);
-                        throw error;
-                    }
+            const context = (request as TestRunRequest).context;
+            const runner = async (context: CommandContext) => {
+                if (token.isCancellationRequested) {
+                    context.cancel();
+                }
+                const dis = token.onCancellationRequested(() => {
+                    dis.dispose();
+                    context.cancel();
+                });
+                try {
+                    await runTestQueue(context);
+                } catch (error) {
+                    this.log.error(`${error}`);
+                    throw error;
+                }
+            };
+            if (context) {
+                if (context.terminal) {
+                    context.terminal.terminalName = "Start Testing";
+                }
+                await runner(context);
+                return;
+            }
+            this.context?.atomicCommand
+                .userCommand(async userContext => {
+                    await runner(userContext);
                 }, "Start Testing")
                 .catch(() => {});
         };

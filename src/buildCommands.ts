@@ -91,6 +91,7 @@ export async function buildTestsForCurrentFile(
     context: CommandContext,
     problemResolver: ProblemDiagnosticResolver,
     tests: string[],
+    testPlan: string | undefined,
     isCoverage: boolean
 ) {
     await checkWorkspace(context);
@@ -100,7 +101,13 @@ export async function buildTestsForCurrentFile(
     try {
         const build = async () => {
             try {
-                await buildManager.buildForTestingWithTests(context, filePath, tests, isCoverage);
+                await buildManager.buildForTestingWithTests(
+                    context,
+                    filePath,
+                    tests,
+                    testPlan,
+                    isCoverage
+                );
             } catch (error) {
                 await handleValidationErrors(context, error, async () => {
                     await checkWorkspace(context);

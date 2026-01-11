@@ -29,6 +29,7 @@ import { BuildManager } from "./Services/BuildManager";
 import { TestPlanIsNotConfigured } from "./Services/ProjectSettingsProvider";
 import { PackageWorkspaceGenerator } from "./ProjectManager/PackageWorkspaceGenerator";
 import { LogChannelInterface } from "./Logs/LogChannel";
+import { TestProvider } from "./TestsProvider/TestProvider";
 
 function filterDevices(
     devices: { [name: string]: string }[],
@@ -290,7 +291,7 @@ export async function selectConfiguration(commandContext: CommandContext, ignore
     }
 }
 
-export async function selectTestPlan(commandContext: CommandContext, ignoreFocusOut = false) {
+async function selectTestPlan(commandContext: CommandContext, ignoreFocusOut = false) {
     try {
         let testPlans: string[] = [];
         try {
@@ -312,21 +313,8 @@ export async function selectTestPlan(commandContext: CommandContext, ignoreFocus
             }
         }
 
-        let currentTestPlan: string;
-        try {
-            currentTestPlan = await commandContext.projectEnv.projectTestPlan;
-        } catch {
-            currentTestPlan = "";
-        }
         const json = testPlans.map<QuickPickItem>(testPlan => {
-            if (currentTestPlan === testPlan) {
-                return {
-                    label: "$(notebook-state-success) " + testPlan,
-                    value: testPlan,
-                };
-            } else {
-                return { label: testPlan, value: testPlan };
-            }
+            return { label: testPlan, value: testPlan };
         });
 
         const option = await showPicker(
@@ -342,12 +330,20 @@ export async function selectTestPlan(commandContext: CommandContext, ignoreFocus
             return false;
         }
 
-        await commandContext.projectEnv.setProjectTestPlan(option);
+        return option;
     } catch (error) {
         return await handleValidationErrors(commandContext, error, async () => {
             await selectTestPlan(commandContext, ignoreFocusOut);
         });
     }
+}
+
+export async function runTestPlan(commandContext: CommandContext, testProvider: TestProvider) {
+    const testPlan = (await selectTestPlan(commandContext)) as string | undefined;
+    if (!testPlan) {
+        return;
+    }
+    await testProvider.runTestPlan(testPlan, commandContext);
 }
 
 export async function selectDevice(commandContext: CommandContext, ignoreFocusOut = false) {
@@ -641,6 +637,8 @@ export async function enableSWBBuildService(enabled: boolean) {
         } catch (error) {
             if (error instanceof Error && error.message === "Retry") {
                 return await enableSWBBuildService(enabled);
+            } else {
+                throw error;
             }
         }
     } catch (error) {

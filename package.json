@@ -300,7 +300,7 @@
                 "title": "Xcode: Select Build Configuration"
             },
             {
-                "command": "vscode-ios.project.selectTestPlan",
+                "command": "vscode-ios.project.runTestPlan",
                 "title": "Xcode: Select Test Plan"
             },
             {

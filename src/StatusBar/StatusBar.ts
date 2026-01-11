@@ -33,7 +33,7 @@ export class StatusBar implements vscode.Disposable {
         this.deviceStatusItem.command = "vscode-ios.project.selectDevice";
         this.deviceStatusItem.tooltip = "Click to select the Xcode Project Debug Device";
 
-        this.testPlanStatusItem.command = "vscode-ios.project.selectTestPlan";
+        this.testPlanStatusItem.command = "vscode-ios.project.runTestPlan";
         this.testPlanStatusItem.tooltip = "Click to select Xcode Project Test Plan";
     }
 
@@ -77,13 +77,6 @@ export class StatusBar implements vscode.Disposable {
             this.deviceStatusItem.show();
         } catch {
             this.deviceStatusItem.hide();
-        }
-
-        try {
-            this.testPlanStatusItem.text = `$(shield):${await projectEnv.projectTestPlan}`;
-            this.testPlanStatusItem.show();
-        } catch {
-            this.testPlanStatusItem.hide();
         }
     }
 }

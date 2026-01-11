@@ -197,20 +197,14 @@ export class BuildManager {
         context: CommandContext,
         logFilePath: string,
         tests: string[],
+        testPlan: string | undefined,
         isCoverage: boolean
     ) {
         context.bundle.generateNext();
 
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         try {
-            // if a user runs an indidual tests, then we should ignore test plan, only run it if a user run all tests.
-            let testPlan: string | undefined = undefined;
-            try {
-                testPlan = await context.projectEnv.projectTestPlan;
-            } catch {
-                // ignore errors
-            }
-            if (testPlan === undefined || testPlan.length === 0 || tests.length > 0) {
+            if (tests.length > 0 && testPlan === undefined) {
                 const testsTargets = tests.map(test => test.split("/").at(0));
                 const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
                     await context.projectEnv.projectScheme,

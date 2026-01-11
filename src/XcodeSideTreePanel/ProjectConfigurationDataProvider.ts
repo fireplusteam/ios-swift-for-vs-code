@@ -146,13 +146,13 @@ export class ProjectConfigurationDataProvider implements vscode.TreeDataProvider
         }
 
         try {
-            const configuration = `Test Plan: ${await projectEnv.projectTestPlan}`;
+            const configuration = `Test Plan: <tap to run test plan>`;
             this.config.push(
                 new ProjectConfigurationNode(
                     configuration,
-                    "vscode-ios.project.selectTestPlan",
+                    "vscode-ios.project.runTestPlan",
                     "shield",
-                    "Click to select Xcode Project Test Plan",
+                    "Click to run Xcode Project Test Plan",
                     "Project:TestPlan"
                 )
             );
@@ -161,7 +161,7 @@ export class ProjectConfigurationDataProvider implements vscode.TreeDataProvider
             this.config.push(
                 new ProjectConfigurationNode(
                     configuration,
-                    "vscode-ios.project.selectTestPlan",
+                    "vscode-ios.project.runTestPlan",
                     "shield",
                     "Click to select Xcode Project Test Plan",
                     "Project:TestPlan"

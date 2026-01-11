@@ -42,6 +42,8 @@ def get_real_path(file, project)
   end
 end
 
+# FILE AND GROUP MANAGEMENT
+
 def find_group_by_absolute_file_path(project, path)
   groups =
     project
@@ -229,6 +231,8 @@ def get_targets_for_file(project, file_path)
   result
 end
 
+# SCHEME MANAGEMENT
+
 def generate_scheme_depend_on_target(
   project,
   generated_scheme_name,
@@ -245,12 +249,11 @@ def generate_scheme_depend_on_target(
   scheme = load_scheme_if_exists(project, root_target_name)
 
   all_targets = get_all_targets_from_scheme(scheme)
-  if all_targets.empty?
-    target = get_target_by_name(project, root_target_name)
-    all_targets << { name: target.name, uuid: target.uuid } unless target.nil?
-  end
+  # if all_targets.empty?
+  #   target = get_target_by_name(project, root_target_name)
+  #   all_targets << { name: target.name, uuid: target.uuid } unless target.nil?
+  # end
 
-  # add all deps back to the ALL_BUILD target
   # write bfs to find all deps of the root_target_name target
   root_targets =
     all_targets
@@ -359,6 +362,15 @@ def generate_test_scheme_depend_on_target(
     return
   end
 
+  if scheme.test_action.xml_element.elements["TestPlans"]
+    scheme.test_action.xml_element.delete_element("TestPlans")
+  end
+
+  scheme.test_action.testables =
+    scheme.test_action.testables.filter do |testable|
+      testable.buildable_references.any?
+    end
+
   # save the scheme
   scheme_dir = project.path
   scheme_dir.mkpath unless scheme_dir.exist?
@@ -450,6 +462,8 @@ def handle_action(project, action, arg)
     return
   end
 end
+
+# MAIN LOOP
 
 if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
   input = ARGV[0].split("|^|^|")

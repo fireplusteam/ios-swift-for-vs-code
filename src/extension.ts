@@ -21,11 +21,11 @@ import {
     openFile,
     openXCode,
     runAppOnMultipleDevices,
+    runTestPlan,
     selectConfiguration,
     selectDevice,
     selectProjectFile,
     selectTarget,
-    selectTestPlan,
     updatePackageDependencies,
 } from "./commands";
 import { BuildTaskProvider } from "./BuildTaskProvider";
@@ -245,12 +245,13 @@ export async function activate(context: vscode.ExtensionContext) {
         projectManager,
         new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
         logChannel,
-        async (tests, isDebuggable, testRun, context, isCoverage) => {
+        async (tests, isDebuggable, testRun, context, testPlan, isCoverage) => {
             return await debugConfiguration.startIOSTestsDebugger(
                 tests,
                 isDebuggable,
                 testRun,
                 context,
+                testPlan,
                 isCoverage
             );
         }
@@ -365,10 +366,13 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand("vscode-ios.project.selectTestPlan", async () => {
+        vscode.commands.registerCommand("vscode-ios.project.runTestPlan", async () => {
             await atomicCommand.userCommandWithoutThrowingException(async context => {
-                await selectTestPlan(context);
-            }, "Select Test Plan");
+                if (!testProvider) {
+                    throw Error("Test Provider is not initialized");
+                }
+                await runTestPlan(context, testProvider);
+            }, "Run Test Plan");
         })
     );
 
