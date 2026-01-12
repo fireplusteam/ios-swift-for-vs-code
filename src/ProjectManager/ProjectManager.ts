@@ -606,6 +606,11 @@ export class ProjectManager implements ProjectManagerInterface {
             }
 
             const projectFiles = this.projectCache.getProjects();
+            if (projectFiles.length === 0) {
+                throw new Error(
+                    "No project files found to add a new file. Please wait until projects are loaded."
+                );
+            }
             const selectedProject: string | undefined = await this.selectBestFitProject(
                 "Select A Project File to Add a new Files",
                 fileList[0],
