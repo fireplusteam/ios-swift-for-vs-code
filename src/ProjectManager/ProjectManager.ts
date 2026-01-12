@@ -532,6 +532,7 @@ export class ProjectManager implements ProjectManagerInterface {
         if (selectedProject.length !== 1) {
             return;
         }
+        const selectedProjectPath = getFilePathInWorkspace(selectedProject[0]);
 
         const typeOfPath =
             (
@@ -542,16 +543,14 @@ export class ProjectManager implements ProjectManagerInterface {
             ).at(-1) ?? `file:${file.fsPath}`;
 
         const fileTargets = await this.rubyProjectFilesManager.listTargetsForFile(
-            getFilePathInWorkspace(selectedProject[0]),
+            selectedProjectPath,
             file.fsPath
         );
-        const targets = await this.rubyProjectFilesManager.getProjectTargets(
-            getFilePathInWorkspace(selectedProject[0])
-        );
+        const targets = await this.rubyProjectFilesManager.getProjectTargets(selectedProjectPath);
         const items: QuickPickItem[] = sortTargets(targets, fileTargets);
-        let message = `Edit targets of a ${typeOfPath} ${file.fsPath}`;
+        let message = `Edit targets of\n${path.relative(selectedProjectPath, file.fsPath)}`;
         if (typeOfPath.startsWith("folder:")) {
-            message = `This file belongs to a folder. Edit targets of the folder and all its contents: ${typeOfPath.substring("folder:".length)}`;
+            message = `This file belongs to a folder. Edit targets of the folder and all its contents:\n${path.relative(selectedProjectPath, typeOfPath.substring("folder:".length))}`;
         }
         if (typeOfPath.startsWith("group:")) {
             vscode.window.showInformationMessage(
@@ -569,18 +568,18 @@ export class ProjectManager implements ProjectManagerInterface {
 
         if (typeOfPath.startsWith("folder:")) {
             await this.rubyProjectFilesManager.updateFolderToProject(
-                getFilePathInWorkspace(selectedProject[0]),
+                selectedProjectPath,
                 selectedTargets,
                 typeOfPath.substring("folder:".length)
             );
         } else {
             await this.rubyProjectFilesManager.updateFileToProject(
-                getFilePathInWorkspace(selectedProject[0]),
+                selectedProjectPath,
                 selectedTargets,
                 file.fsPath
             );
         }
-        await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(selectedProject[0]));
+        await this.rubyProjectFilesManager.saveProject(selectedProjectPath);
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {

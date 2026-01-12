@@ -264,7 +264,7 @@ def get_targets_for_file(project, file_path)
       result << target.name if get_real_path(file, project) == file_path
     end
     if target.file_system_synchronized_groups
-      target.file_system_synchronized_groups do |folder|
+      target.file_system_synchronized_groups.each do |folder|
         all_files_in_folder(project, folder).each do |file_in_folder|
           result << target.name if file_in_folder == file_path
         end

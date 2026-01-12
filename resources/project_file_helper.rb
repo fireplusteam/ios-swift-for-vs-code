@@ -69,26 +69,22 @@ def combine_path(group, parent_path)
   end
 end
 
-def traverse_all_group(project)
-  @callback =
-    Proc.new do |group, parent_group, group_path, type|
-      yield(group, parent_group, group_path, type)
-    end
-  def all_group_paths_rec(project, group, parent_group, current_path)
-    @callback.call(group, parent_group, current_path, GroupType::GROUP)
+def traverse_all_group(project, &block)
+  def all_group_paths_rec(project, group, parent_group, current_path, &block)
+    yield(group, parent_group, current_path, GroupType::GROUP)
 
     group.children.each do |child|
       # if child is a file reference with folder type, print it as folder reference
       child_path = combine_path(child, current_path)
       if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
            is_folder_reference(child)
-        @callback.call(child, group, child_path, GroupType::FOLDER_REFERENCE)
+        yield(child, group, child_path, GroupType::FOLDER_REFERENCE)
       elsif child.kind_of?(
             Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
           )
-        @callback.call(child, group, child_path, GroupType::SYNCHRONIZED_GROUP)
+        yield(child, group, child_path, GroupType::SYNCHRONIZED_GROUP)
       elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
-        all_group_paths_rec(project, child, group, child_path)
+        all_group_paths_rec(project, child, group, child_path, &block)
       end
     end
   end
@@ -107,7 +103,7 @@ def traverse_all_group(project)
 
   path = combine_path(group, path) if group != project.root_object
 
-  all_group_paths_rec(project, group, nil, path)
+  all_group_paths_rec(project, group, nil, path, &block)
 end
 
 def parent_group_of_group(project, target_group)

@@ -52,7 +52,7 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
         if (!this.xcodeProjects.has(projectPath)) {
             this.xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath, this.log));
         }
-        this.log.debug(`Executing Ruby command: ${command} for project: ${projectPath}`);
+        this.log.debug(`Executing Ruby command: '${projectPath}|^|^|${command}'`);
         return (await this.xcodeProjects.get(projectPath)?.request(command)) || [];
     }
 
