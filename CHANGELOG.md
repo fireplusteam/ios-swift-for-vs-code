@@ -5,6 +5,7 @@
 ### Added
 
 -   Added support of folder references in Xcode projects which was added in Xcode 16 but not supported by the extension before
+-   Added support of build indexes while building via xcodebuild to improve indexing speed but it can increase CPU/RAM usage while building (by default it's enabled, can be disabled via settings)
 
 ### Fixed
 
