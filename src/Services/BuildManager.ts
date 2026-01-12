@@ -1,12 +1,19 @@
+import * as vscode from "vscode";
 import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { ProjectEnv } from "../env";
+import { getWorkspaceFolder, ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
 import { CustomError } from "../utils";
 import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
+
+function isBuildIndexesWhileBuildingEnabled() {
+    return vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get<boolean>("lsp.buildIndexesWhileBuilding", true);
+}
 
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
@@ -18,6 +25,10 @@ export class BuildManager {
         let simulatorId = `id=${deviceid.id},platform=${deviceid.platform}`;
         if (deviceid.arch) {
             simulatorId += `,arch=${deviceid.arch}`;
+        }
+        const extra = [];
+        if (isBuildIndexesWhileBuildingEnabled()) {
+            extra.push("COMPILER_INDEX_STORE_ENABLE=YES"); // Control whether the compiler should emit index data while building.
         }
         return [
             "-configuration",
@@ -31,7 +42,7 @@ export class BuildManager {
             "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile",
             // "-showBuildTimingSummary",
-            //COMPILER_INDEX_STORE_ENABLE=YES, // Control whether the compiler should emit index data while building.
+            ...extra,
             "COMPILATION_CACHE_ENABLE_CACHING=YES", // Caches the results of compilations for a particular set of inputs.
         ];
     }

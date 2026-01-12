@@ -153,6 +153,13 @@
                     "description": "if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch)",
                     "scope": "machine"
                 },
+                "vscode-ios.lsp.buildIndexesWhileBuilding": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Build Indexes While Building",
+                    "description": "if Enabled, xcodebuild will build indexes while building the project (faster indexing, but higher CPU/RAM usage while building)",
+                    "scope": "resource"
+                },
                 "vscode-ios.watcher.enabled": {
                     "type": "boolean",
                     "default": true,
