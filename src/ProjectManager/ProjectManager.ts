@@ -533,6 +533,14 @@ export class ProjectManager implements ProjectManagerInterface {
             return;
         }
 
+        const typeOfPath =
+            (
+                await this.rubyProjectFilesManager.typeOfPath(
+                    getFilePathInWorkspace(selectedProject[0]),
+                    file.fsPath
+                )
+            ).at(-1) ?? `file:${file.fsPath}`;
+
         const fileTargets = await this.rubyProjectFilesManager.listTargetsForFile(
             getFilePathInWorkspace(selectedProject[0]),
             file.fsPath
@@ -541,14 +549,17 @@ export class ProjectManager implements ProjectManagerInterface {
             getFilePathInWorkspace(selectedProject[0])
         );
         const items: QuickPickItem[] = sortTargets(targets, fileTargets);
-        let selectedTargets = await showPicker(
-            items,
-            "Edit targets of a file",
-            "",
-            true,
-            false,
-            false
-        );
+        let message = `Edit targets of a ${typeOfPath} ${file.fsPath}`;
+        if (typeOfPath.startsWith("folder:")) {
+            message = `This file belongs to a folder. Edit targets of the folder and all its contents: ${typeOfPath.substring("folder:".length)}`;
+        }
+        if (typeOfPath.startsWith("group:")) {
+            vscode.window.showInformationMessage(
+                "This's an Xcode group. Please edit targets for individual files."
+            );
+            return;
+        }
+        let selectedTargets = await showPicker(items, message, "", true, false, false);
 
         if (selectedTargets === undefined) {
             return;
@@ -556,11 +567,19 @@ export class ProjectManager implements ProjectManagerInterface {
 
         selectedTargets = selectedTargets.join(",");
 
-        await this.rubyProjectFilesManager.updateFileToProject(
-            getFilePathInWorkspace(selectedProject[0]),
-            selectedTargets,
-            file.fsPath
-        );
+        if (typeOfPath.startsWith("folder:")) {
+            await this.rubyProjectFilesManager.updateFolderToProject(
+                getFilePathInWorkspace(selectedProject[0]),
+                selectedTargets,
+                typeOfPath.substring("folder:".length)
+            );
+        } else {
+            await this.rubyProjectFilesManager.updateFileToProject(
+                getFilePathInWorkspace(selectedProject[0]),
+                selectedTargets,
+                file.fsPath
+            );
+        }
         await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(selectedProject[0]));
     }
 
@@ -643,7 +662,20 @@ export class ProjectManager implements ProjectManagerInterface {
             }
 
             let selectedTargets: string | undefined;
-            if (filesToAdd.size > 0) {
+            let shouldAskForTargets = false;
+            for (const file of filesToAdd) {
+                const typeOfPath = (
+                    await this.rubyProjectFilesManager.typeOfPath(
+                        getFilePathInWorkspace(selectedProject),
+                        file
+                    )
+                ).at(-1);
+                if (typeOfPath !== undefined && typeOfPath.startsWith("file:")) {
+                    shouldAskForTargets = true;
+                    break;
+                }
+            }
+            if (filesToAdd.size > 0 && shouldAskForTargets) {
                 const proposedTargets = await this.determineTargetForFile(
                     [...filesToAdd][0],
                     selectedProject

@@ -8,6 +8,7 @@ export interface RubyProjectFilesManagerInterface {
     addFileToProject(projectFile: string, target: string, file: string): Promise<string[]>;
     addFolderToProject(projectFile: string, folder: string): Promise<string[]>;
     updateFileToProject(projectFile: string, target: string, file: string): Promise<string[]>;
+    updateFolderToProject(projectFile: string, target: string, folder: string): Promise<string[]>;
     renameFileToProject(projectFile: string, oldFile: string, file: string): Promise<string[]>;
     moveFileToProject(projectFile: string, oldFile: string, file: string): Promise<string[]>;
     renameFolderToProject(
@@ -25,6 +26,7 @@ export interface RubyProjectFilesManagerInterface {
     deleteFileFromProject(projectFile: string, file: string): Promise<string[]>;
     deleteFolderFromProject(projectFile: string, folder: string): Promise<string[]>;
     listTargetsForFile(projectFile: string, file: string): Promise<string[]>;
+    typeOfPath(projectFile: string, path: string): Promise<string[]>;
     saveProject(projectFile: string): Promise<string[]>;
     generateSchemeDependOnTarget(
         projectFile: string,
@@ -50,6 +52,7 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
         if (!this.xcodeProjects.has(projectPath)) {
             this.xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath, this.log));
         }
+        this.log.debug(`Executing Ruby command: ${command} for project: ${projectPath}`);
         return (await this.xcodeProjects.get(projectPath)?.request(command)) || [];
     }
 
@@ -67,6 +70,13 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
 
     async updateFileToProject(projectFile: string, target: string, file: string) {
         return await this.executeRuby(projectFile, `update_file_targets|^|^|${target}|^|^|${file}`);
+    }
+
+    async updateFolderToProject(projectFile: string, target: string, folder: string) {
+        return await this.executeRuby(
+            projectFile,
+            `update_folder_targets|^|^|${target}|^|^|${folder}`
+        );
     }
 
     async renameFileToProject(projectFile: string, oldFile: string, file: string) {
@@ -106,6 +116,10 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
 
     async listTargetsForFile(projectFile: string, file: string) {
         return await this.executeRuby(projectFile, `list_targets_for_file|^|^|${file}`);
+    }
+
+    async typeOfPath(projectFile: string, path: string) {
+        return await this.executeRuby(projectFile, `type_of_path|^|^|${path}`);
     }
 
     async saveProject(projectFile: string) {

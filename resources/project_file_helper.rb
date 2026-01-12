@@ -1,4 +1,6 @@
 require "xcodeproj"
+require "find"
+require "pathname"
 
 # to support old ruby 2.6 versions
 if !File.respond_to?(:absolute_path?)
@@ -15,6 +17,14 @@ def is_folder_reference(file)
   return(
     file.last_known_file_type == "folder" ||
       file.last_known_file_type == "folder.assetcatalog"
+  )
+end
+
+def is_folder(group)
+  return(
+    group.kind_of?(
+      Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
+    ) || is_folder_reference(group)
   )
 end
 
@@ -47,12 +57,6 @@ module GroupType
   GROUP = 0
   SYNCHRONIZED_GROUP = 1
   FOLDER_REFERENCE = 2
-end
-
-def is_folder(group)
-  group.kind_of?(
-    Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
-  ) || is_folder_reference(group)
 end
 
 def combine_path(group, parent_path)
@@ -125,13 +129,21 @@ def parent_group_of_group(project, target_group)
   nil
 end
 
-def find_group_by_absolute_file_path(project, path)
-  path = File.dirname(path)
-  path = Pathname.new(path).cleanpath.to_s
-  traverse_all_group(project) do |group, parent_group, group_path, _type|
-    return group if group_path == path
+def get_path_of_group(project, folder)
+  traverse_all_group(project) do |group, _parent, group_path, type|
+    return group_path if group == folder
   end
   nil
+end
+
+def all_files_in_folder(project, group)
+  result = []
+  folder_path = get_path_of_group(project, group)
+  # look up all files in folder and subfolders and futher folders recursively in file system
+  Find.find(folder_path) do |path|
+    result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+  end
+  return result
 end
 
 def find_group_by_absolute_dir_path(project, path)

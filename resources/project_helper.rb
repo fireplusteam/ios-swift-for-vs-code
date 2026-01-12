@@ -26,10 +26,16 @@ def find_file(project, file_path)
 end
 
 def add_file_to_targets(project, targets, file_path)
+  group = first_folder_by_absolute_dir_path(project, File.dirname(file_path))
+  if group # file is part of folder, no need to add it separately
+    puts "file_is_part_of_folder"
+    return
+  end
+
   file_ref = find_file(project, file_path)
 
   if file_ref.nil?
-    group = find_group_by_absolute_file_path(project, file_path)
+    group = find_group_by_absolute_dir_path(project, File.dirname(file_path))
     file_ref = group.new_reference(file_path)
   end
 
@@ -42,6 +48,12 @@ def add_file_to_targets(project, targets, file_path)
 end
 
 def update_file_targets(project, targets, file_path)
+  group = first_folder_by_absolute_dir_path(project, file_path)
+  if group # todo: file is part of folder, so targets are managed by folder (managing exception is not supported yet)
+    puts "file_is_part_of_folder"
+    return
+  end
+
   file_ref = find_file(project, file_path)
   file_ref.remove_from_project if not file_ref.nil?
   if targets == "" # means to remove the file from all targets
@@ -50,20 +62,53 @@ def update_file_targets(project, targets, file_path)
   add_file_to_targets(project, targets, file_path)
 end
 
+def update_folder_targets(project, targets, folder_path)
+  group = find_group_by_absolute_dir_path(project, folder_path)
+  if group.nil? || is_folder(group) == false
+    puts "folder_not_found"
+    return
+  end
+
+  project.targets.each do |target|
+    if target.file_system_synchronized_groups
+      if targets.split(",").include?(target.name)
+        unless target.file_system_synchronized_groups.include?(group)
+          target.file_system_synchronized_groups << group
+        end
+      else
+        if target.file_system_synchronized_groups.include?(group)
+          target.file_system_synchronized_groups.delete(group)
+        end
+      end
+    end
+  end
+end
+
 def delete_file(project, file_path)
+  group = first_folder_by_absolute_dir_path(project, file_path)
+  return if not group.nil?
   file_ref = find_file(project, file_path)
   file_ref.remove_from_project if not file_ref.nil?
 end
 
 def rename_file(project, old_file_path, new_file_path)
+  group = first_folder_by_absolute_dir_path(project, old_file_path)
+  return if not group.nil?
   file_ref = find_file(project, old_file_path)
   file_ref.set_path(new_file_path) if not file_ref.nil?
 end
 
 def move_file(project, old_path, new_path)
-  targets = get_targets_for_file(project, old_path)
-  delete_file(project, old_path)
-  add_file_to_targets(project, targets.join(","), new_path)
+  old_group = find_group_by_absolute_dir_path(project, File.dirname(old_path))
+  new_group = find_group_by_absolute_dir_path(project, File.dirname(new_path))
+  return if old_group.equal?(new_group)
+
+  if (not new_group.nil?) && !is_folder(new_group)
+    targets = get_targets_for_file(project, old_path)
+    add_file_to_targets(project, targets.join(","), new_path)
+  else # new parent is folder so the old file can be deleted as it would be part of folder
+    delete_file(project, old_path)
+  end
 end
 
 # GROUP MANAGEMENT
@@ -91,13 +136,12 @@ end
 def rename_group(project, old_group_path, new_group_path)
   group = find_group_by_absolute_dir_path(project, old_group_path)
   if not group.nil?
-    if group.kind_of?(
-         Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
-       )
+    if is_folder(group)
       group.path = File.basename(new_group_path)
+      return
     else
       group.name = File.basename(new_group_path)
-      group.set_path(new_group_path)
+      group.path = new_group_path
     end
   end
 end
@@ -105,38 +149,38 @@ end
 def move_group(project, old_path, new_path)
   new_parent_path = File.dirname(new_path)
   new_parent_group = find_group_by_absolute_dir_path(project, new_parent_path)
-  if not new_parent_group.nil?
+  if (not new_parent_group.nil?) && is_folder(new_parent_group) == false
     old_group = find_group_by_absolute_dir_path(project, old_path)
-    if old_group.nil?
-      if !is_folder(new_parent_group)
-        # create an instance of  PBXFileSystemSynchronizedRootGroup
-        new_folder =
-          Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup.new(
-            project,
-            project.generate_uuid
-          )
-        new_folder.path = File.basename(new_path)
-        new_parent_group.children << new_folder
+    if old_group.nil? # it's a folder if it's not found as a group
+      # create an instance of  PBXFileSystemSynchronizedRootGroup and inherit all properties of parent folder
+      new_folder =
+        Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup.new(
+          project,
+          project.generate_uuid
+        )
+      new_folder.source_tree = "<group>"
+      new_folder.path = File.basename(new_path)
+
+      # update targets to include the new folder as it's for a parent folder
+      old_parent = first_folder_by_absolute_dir_path(project, old_path)
+      project.targets.each do |target|
+        if target.file_system_synchronized_groups &&
+             target.file_system_synchronized_groups.include?(old_parent)
+          target.file_system_synchronized_groups << new_folder
+        end
       end
-    elsif is_folder(old_group)
+      # update structure of folders
+      new_parent_group.children << new_folder
+    elsif is_folder(old_group) # old_group is a folder group
       old_parent = parent_group_of_group(project, old_group)
       return if old_parent.equal?(new_parent_group)
-      if !is_folder(new_parent_group)
-        old_parent.children.delete(old_group)
-        new_parent_group.children << old_group
-      else
-        delete_group(project, old_path)
-      end
-    else
-      if is_folder(new_parent_group)
-        delete_group(project, old_path)
-      else
-        old_group.move(new_parent_group)
-      end
+      old_parent.children.delete(old_group)
+      new_parent_group.children << old_group
+    else # old_group is a group
+      old_group.move(new_parent_group)
     end
-  else
-    new_parent_dir = first_folder_by_absolute_dir_path(project, new_parent_path)
-    delete_group(project, old_path) if not new_parent_dir.nil?
+  else # new parent is folder so the old group can be deleted as it would be part of folder
+    delete_group(project, old_path) if old_path != new_path
   end
 end
 
@@ -160,19 +204,18 @@ def list_targets(project)
   project.targets.each { |target| puts target.name }
 end
 
-def print_all_group_paths(project)
-  traverse_all_group(project) do |group, parent_group, group_path, _type|
-    if _type == GroupType::SYNCHRONIZED_GROUP
-      puts "folder:#{group_path}"
-    elsif _type == GroupType::FOLDER_REFERENCE
-      puts "folder:#{group_path}"
-    else
-      puts "group:#{group_path}"
+def list_files(project)
+  def print_all_group_paths(project)
+    traverse_all_group(project) do |group, parent_group, group_path, _type|
+      if _type == GroupType::SYNCHRONIZED_GROUP
+        puts "folder:#{group_path}"
+      elsif _type == GroupType::FOLDER_REFERENCE
+        puts "folder:#{group_path}"
+      else
+        puts "group:#{group_path}"
+      end
     end
   end
-end
-
-def list_files(project)
   project.files.each do |file|
     puts "file:#{get_real_path(file, project)}" if !is_folder_reference(file)
   end
@@ -185,11 +228,27 @@ def list_files_for_target(project, target_name)
       target.source_build_phase.files_references.each do |file|
         puts get_real_path(file, project) if !is_folder_reference(file)
       end
+      if target.file_system_synchronized_groups
+        target.file_system_synchronized_groups.each do |folder|
+          all_files_in_folder(project, folder).each do |file_in_folder|
+            puts file_in_folder
+          end
+        end
+      end
     end
   end
 end
 
 def list_targets_for_file(project, file_path)
+  group = first_folder_by_absolute_dir_path(project, file_path)
+  if not group.nil?
+    project.targets.each do |target|
+      if target.file_system_synchronized_groups &&
+           target.file_system_synchronized_groups.include?(group)
+        puts target.name
+      end
+    end
+  end
   project.targets.each do |target|
     target.source_build_phase.files_references.each do |file|
       puts target.name if get_real_path(file, project) == file_path
@@ -204,9 +263,30 @@ def get_targets_for_file(project, file_path)
     target.source_build_phase.files_references.each do |file|
       result << target.name if get_real_path(file, project) == file_path
     end
+    if target.file_system_synchronized_groups
+      target.file_system_synchronized_groups do |folder|
+        all_files_in_folder(project, folder).each do |file_in_folder|
+          result << target.name if file_in_folder == file_path
+        end
+      end
+    end
   end
 
   result
+end
+
+def type_of_path(project, path)
+  group = first_folder_by_absolute_dir_path(project, path)
+  if group
+    puts "folder:#{get_path_of_group(project, group)}"
+  else
+    group = find_group_by_absolute_dir_path(project, path)
+    if group
+      puts "group:#{get_path_of_group(project, group)}"
+    else
+      puts "file:#{path}"
+    end
+  end
 end
 
 # SCHEME MANAGEMENT
@@ -416,6 +496,11 @@ def handle_action(project, action, arg)
     return
   end
 
+  if action == "update_folder_targets"
+    update_folder_targets(project, arg[1], arg[2])
+    return
+  end
+
   if action == "list_targets"
     list_targets(project)
     return
@@ -423,6 +508,11 @@ def handle_action(project, action, arg)
 
   if action == "list_targets_for_file"
     list_targets_for_file(project, arg[1])
+    return
+  end
+
+  if action == "type_of_path"
+    type_of_path(project, arg[1])
     return
   end
 

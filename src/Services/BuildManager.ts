@@ -31,7 +31,8 @@ export class BuildManager {
             "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile",
             // "-showBuildTimingSummary",
-            "COMPILATION_CACHE_ENABLE_CACHING=YES",
+            //COMPILER_INDEX_STORE_ENABLE=YES, // Control whether the compiler should emit index data while building.
+            "COMPILATION_CACHE_ENABLE_CACHING=YES", // Caches the results of compilations for a particular set of inputs.
         ];
     }
 
