@@ -12,72 +12,11 @@ end
 require "xcodeproj"
 require "pathname"
 require_relative "project_scheme_helper"
+require_relative "project_file_helper"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
-# to support old ruby 2.6 versions
-if !File.respond_to?(:absolute_path?)
-  def File.absolute_path?(path)
-    # Check if it starts with / (Unix)
-    path.start_with?("/")
-  end
-end
-
-def is_relative_path?(path)
-  !File.absolute_path?(path)
-end
-
-def get_real_path(file, project)
-  xc_project_dir_path = project.root_object.project_dir_path
-  if file.path.nil?
-    file.real_path.to_s
-  elsif is_relative_path?(file.path)
-    if xc_project_dir_path.empty?
-      file.real_path.to_s
-    else
-      Pathname.new(File.join(xc_project_dir_path, file.path)).cleanpath.to_s
-    end
-  else
-    file.path.to_s
-  end
-end
-
 # FILE AND GROUP MANAGEMENT
-
-def find_group_by_absolute_file_path(project, path)
-  groups =
-    project
-      .groups
-      .lazy
-      .map do |group|
-        relative_path = path.sub(get_real_path(group, project) + "/", "")
-        relative_dir = File.dirname(relative_path)
-
-        return group if get_real_path(group, project) == File.dirname(path)
-
-        group.find_subpath(relative_dir)
-      end
-      .reject(&:nil?)
-
-  groups.first
-end
-
-def find_group_by_absolute_dir_path(project, path)
-  groups =
-    project
-      .groups
-      .lazy
-      .map do |group|
-        relative_dir = path.sub(get_real_path(group, project) + "/", "")
-
-        return group if get_real_path(group, project) == path
-
-        group.find_subpath(relative_dir)
-      end
-      .reject(&:nil?)
-
-  groups.first
-end
 
 def find_file(project, file_path)
   file_ref =
@@ -127,9 +66,14 @@ def move_file(project, old_path, new_path)
   add_file_to_targets(project, targets.join(","), new_path)
 end
 
-def add_group(project, group_path)
-  splitted_path = group_path.split("/")
+# GROUP MANAGEMENT
 
+def add_group(project, group_path)
+  root_group = furthest_group_by_absolute_dir_path(project, group_path)
+  return if root_group && is_folder(root_group)
+
+  splitted_path = group_path.split("/")
+  # todo: optimize the search by starting from root_group
   for i in 1..(splitted_path.length - 2)
     current_path = splitted_path[0..i].join("/")
     new_group_path = current_path + "/" + splitted_path[i + 1]
@@ -147,8 +91,14 @@ end
 def rename_group(project, old_group_path, new_group_path)
   group = find_group_by_absolute_dir_path(project, old_group_path)
   if not group.nil?
-    group.name = File.basename(new_group_path)
-    group.set_path(new_group_path)
+    if group.kind_of?(
+         Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
+       )
+      group.path = File.basename(new_group_path)
+    else
+      group.name = File.basename(new_group_path)
+      group.set_path(new_group_path)
+    end
   end
 end
 
@@ -157,39 +107,67 @@ def move_group(project, old_path, new_path)
   new_parent_group = find_group_by_absolute_dir_path(project, new_parent_path)
   if not new_parent_group.nil?
     old_group = find_group_by_absolute_dir_path(project, old_path)
-    old_group.move(new_parent_group) if not old_group.nil?
+    if old_group.nil?
+      if !is_folder(new_parent_group)
+        # create an instance of  PBXFileSystemSynchronizedRootGroup
+        new_folder =
+          Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup.new(
+            project,
+            project.generate_uuid
+          )
+        new_folder.path = File.basename(new_path)
+        new_parent_group.children << new_folder
+      end
+    elsif is_folder(old_group)
+      old_parent = parent_group_of_group(project, old_group)
+      return if old_parent.equal?(new_parent_group)
+      if !is_folder(new_parent_group)
+        old_parent.children.delete(old_group)
+        new_parent_group.children << old_group
+      else
+        delete_group(project, old_path)
+      end
+    else
+      if is_folder(new_parent_group)
+        delete_group(project, old_path)
+      else
+        old_group.move(new_parent_group)
+      end
+    end
+  else
+    new_parent_dir = first_folder_by_absolute_dir_path(project, new_parent_path)
+    delete_group(project, old_path) if not new_parent_dir.nil?
   end
 end
 
 def delete_group(project, group_path)
   group = find_group_by_absolute_dir_path(project, group_path)
   if not group.nil?
-    group.recursive_children_groups.reverse.each(&:clear)
-    group.clear
-    group.remove_from_project
+    if is_folder(group)
+      # remove group from project
+      group.remove_from_project
+    else
+      group.recursive_children_groups.reverse.each(&:clear)
+      group.clear
+      group.remove_from_project
+    end
   end
 end
+
+# TARGET MANAGEMENT
 
 def list_targets(project)
   project.targets.each { |target| puts target.name }
 end
 
-def is_folder_reference(file)
-  return(
-    file.last_known_file_type == "folder" ||
-      file.last_known_file_type == "folder.assetcatalog"
-  )
-end
-
-def print_all_group_paths(project, group = project.main_group)
-  puts "group:#{get_real_path(group, project)}"
-  group.children.each do |child|
-    # if child is a file reference with folder type, print it as folder reference
-    if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
-         is_folder_reference(child)
-      puts "folder:#{get_real_path(child, project)}"
-    elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
-      print_all_group_paths(project, child)
+def print_all_group_paths(project)
+  traverse_all_group(project) do |group, parent_group, group_path, _type|
+    if _type == GroupType::SYNCHRONIZED_GROUP
+      puts "folder:#{group_path}"
+    elsif _type == GroupType::FOLDER_REFERENCE
+      puts "folder:#{group_path}"
+    else
+      puts "group:#{group_path}"
     end
   end
 end
@@ -205,7 +183,7 @@ def list_files_for_target(project, target_name)
   project.targets.each do |target|
     if target_name == target.name
       target.source_build_phase.files_references.each do |file|
-        puts get_real_path(file, project)
+        puts get_real_path(file, project) if !is_folder_reference(file)
       end
     end
   end
@@ -469,6 +447,7 @@ if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
   # rest of the input is action
   action = input[1]
   handle_action(project, action, input[1..-1])
+  project.save
   exit 0
 end
 
