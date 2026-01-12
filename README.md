@@ -191,6 +191,7 @@ This extension contributes the following settings:
 
 -   Make sure that Package.swift file is in root workspace folder and you open root folder, otherwise LSP client may work incorrectly
 -   When you use 'mixedWithXcode' building system mode, it may lead to some unpredictable behavior, use it on your own risk
+-   Xcode folder references are supported only for adding folders,renaming/moving/deleting folder references. Also added somebasic support of editing targets for such folder references, but it may not work in some complex cases when you need to add/remove files individually from such folder references in targets.
 
 ## Release Notes
 

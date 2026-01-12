@@ -69,25 +69,13 @@ def combine_path(group, parent_path)
   end
 end
 
-def type_of_group(group)
-  if group.kind_of?(
-       Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
-     )
-    GroupType::SYNCHRONIZED_GROUP
-  elsif group.kind_of?(Xcodeproj::Project::Object::PBXGroup)
-    GroupType::GROUP
-  else
-    GroupType::FOLDER_REFERENCE
-  end
-end
-
 def traverse_all_group(project)
   @callback =
     Proc.new do |group, parent_group, group_path, type|
       yield(group, parent_group, group_path, type)
     end
   def all_group_paths_rec(project, group, parent_group, current_path)
-    @callback.call(group, parent_group, current_path, type_of_group(group))
+    @callback.call(group, parent_group, current_path, GroupType::GROUP)
 
     group.children.each do |child|
       # if child is a file reference with folder type, print it as folder reference

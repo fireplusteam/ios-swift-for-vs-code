@@ -1,5 +1,15 @@
 # Change Log
 
+### 0.6.6 - 2026-01-15
+
+### Added
+
+-   Added support of folder references in Xcode projects which was added in Xcode 16 but not supported by the extension before
+
+### Fixed
+
+-   minor bugs and stability improvements
+
 ## 0.6.5 - 2026-01-11
 
 -   Added alt+o to switch between header to source files and vice versa
