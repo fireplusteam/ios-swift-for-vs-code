@@ -23,8 +23,6 @@ To activate extension you need to open a folder which contains your Xcode projec
 
 [![Autocomplete](media/autocomplete.gif)](https://youtu.be/0dXQGY0IIEA)
 
-### Also check [Tricks and Tips](Tricks_and_tips.md)
-
 ## Features
 
 -   Supports iOS/MacOS/WatchOS/VisionOS/TvOS
@@ -32,7 +30,7 @@ To activate extension you need to open a folder which contains your Xcode projec
 -   Swift/Objective-C/C++ autocompletion
 -   Compatibility with CodeLLDB/lldb-dap
 -   Debug/Run app on Simulators (physical device is currently is not supported)
--   Debug/Run unit/snapshot/UI tests. Support running single/multiple tests for a class/target/set of classes
+-   Debug/Run unit/snapshot/UI tests/test plans. Support running single/multiple tests for a class/target/set of classes
 -   Support code coverage
 -   Run an application on multiple simulator with a single command
 -   Support project/workspace
@@ -41,6 +39,7 @@ To activate extension you need to open a folder which contains your Xcode projec
 -   Add/Delete/Rename/Move files/folders inside vscode
 -   VS Code workspace generation based on Xcode project/workspace
 -   Parsing build/test logs and display in real time
+-   File tree explorer based on Xcode project structure
 
 Instead of xCode preview you can use hot reloading [InjectionIII](https://github.com/johnno1962/InjectionIII) which works great with this extension:
 
@@ -177,6 +176,8 @@ This extension contributes the following settings:
 -   `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 -   `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
 
+### Also check [Tricks and Tips](Tricks_and_tips.md)
+
 ## Known Issues
 
 -   You still need Xcode to use SwiftUI preview or edit storyboard/assets/project settings.
@@ -195,6 +196,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.6.0
+### 0.6.6
 
 It's still under development, so you can face some bugs
