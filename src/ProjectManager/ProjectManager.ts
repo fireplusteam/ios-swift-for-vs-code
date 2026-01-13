@@ -46,6 +46,8 @@ export class ProjectManager implements ProjectManagerInterface {
     readonly onProjectLoaded = new vscode.EventEmitter<void>();
     onUpdateDeps: (() => Promise<void>) | undefined;
 
+    private cachedTestTargets = new Map<string, string[]>();
+
     constructor(
         private readonly log: LogChannelInterface,
         private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface,
@@ -90,21 +92,34 @@ export class ProjectManager implements ProjectManagerInterface {
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
     }
 
-    async listTargetsForFile(file: string, project: string | undefined = undefined) {
-        const projects = project === undefined ? this.projectCache.getProjects() : [project];
-        for (const project of projects) {
-            if (this.projectCache.getList(project).has(file)) {
-                return (
+    isTestTarget(target: string) {
+        return target.toLowerCase().includes("tests");
+    }
+
+    async listTestTargetsForFile(file: string, project: string | undefined = undefined) {
+        const release = await this.projectFileEditMutex.acquire();
+
+        try {
+            if (this.cachedTestTargets.has(file)) {
+                return this.cachedTestTargets.get(file) || [];
+            }
+            const projects = project === undefined ? this.projectCache.getProjects() : [project];
+            for (const project of projects) {
+                const targets = (
                     await this.rubyProjectFilesManager.listTargetsForFile(
                         getFilePathInWorkspace(project),
                         file
                     )
                 ).filter(e => {
-                    return e.length > 0;
+                    return e.length > 0 && this.isTestTarget(e);
                 });
+                this.cachedTestTargets.set(file, targets);
+                return targets;
             }
+            return [];
+        } finally {
+            release();
         }
-        return [];
     }
 
     async loadProjectFiles(shouldDropCache = false) {
@@ -446,6 +461,7 @@ export class ProjectManager implements ProjectManagerInterface {
     }
 
     private async touch() {
+        this.cachedTestTargets.clear();
         this.onProjectUpdate.fire();
         await this.generateWorkspace();
     }
@@ -524,62 +540,68 @@ export class ProjectManager implements ProjectManagerInterface {
         if (!this.isAllowed()) {
             return;
         }
+        const release = await this.projectFileEditMutex.acquire();
         if (!file) {
             return;
         }
-        const projectFiles = this.projectCache.getProjects();
-        const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
-        if (selectedProject.length !== 1) {
-            return;
-        }
-        const selectedProjectPath = getFilePathInWorkspace(selectedProject[0]);
+        try {
+            const projectFiles = this.projectCache.getProjects();
+            const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+            if (selectedProject.length !== 1) {
+                return;
+            }
+            const selectedProjectPath = getFilePathInWorkspace(selectedProject[0]);
 
-        const typeOfPath =
-            (
-                await this.rubyProjectFilesManager.typeOfPath(
-                    getFilePathInWorkspace(selectedProject[0]),
-                    file.fsPath
-                )
-            ).at(-1) ?? `file:${file.fsPath}`;
+            const typeOfPath =
+                (
+                    await this.rubyProjectFilesManager.typeOfPath(
+                        getFilePathInWorkspace(selectedProject[0]),
+                        file.fsPath
+                    )
+                ).at(-1) ?? `file:${file.fsPath}`;
 
-        const fileTargets = await this.rubyProjectFilesManager.listTargetsForFile(
-            selectedProjectPath,
-            file.fsPath
-        );
-        const targets = await this.rubyProjectFilesManager.getProjectTargets(selectedProjectPath);
-        const items: QuickPickItem[] = sortTargets(targets, fileTargets);
-        let message = `Edit targets of\n${path.relative(selectedProjectPath, file.fsPath)}`;
-        if (typeOfPath.startsWith("folder:")) {
-            message = `This file belongs to a folder. Edit targets of the folder and all its contents:\n${path.relative(selectedProjectPath, typeOfPath.substring("folder:".length))}`;
-        }
-        if (typeOfPath.startsWith("group:")) {
-            vscode.window.showInformationMessage(
-                "This's an Xcode group. Please edit targets for individual files."
-            );
-            return;
-        }
-        let selectedTargets = await showPicker(items, message, "", true, false, false);
-
-        if (selectedTargets === undefined) {
-            return;
-        }
-
-        selectedTargets = selectedTargets.join(",");
-
-        if (typeOfPath.startsWith("folder:")) {
-            await this.rubyProjectFilesManager.updateFolderToProject(
+            const fileTargets = await this.rubyProjectFilesManager.listTargetsForFile(
                 selectedProjectPath,
-                selectedTargets,
-                typeOfPath.substring("folder:".length)
-            );
-        } else {
-            await this.rubyProjectFilesManager.updateFileToProject(
-                selectedProjectPath,
-                selectedTargets,
                 file.fsPath
             );
+            const targets =
+                await this.rubyProjectFilesManager.getProjectTargets(selectedProjectPath);
+            const items: QuickPickItem[] = sortTargets(targets, fileTargets);
+            let message = `Edit targets of\n${path.relative(selectedProjectPath, file.fsPath)}`;
+            if (typeOfPath.startsWith("folder:")) {
+                message = `This file belongs to a folder. Edit targets of the folder and all its contents:\n${path.relative(selectedProjectPath, typeOfPath.substring("folder:".length))}`;
+            }
+            if (typeOfPath.startsWith("group:")) {
+                vscode.window.showInformationMessage(
+                    "This's an Xcode group. Please edit targets for individual files."
+                );
+                return;
+            }
+            let selectedTargets = await showPicker(items, message, "", true, false, false);
+
+            if (selectedTargets === undefined) {
+                return;
+            }
+
+            selectedTargets = selectedTargets.join(",");
+
+            if (typeOfPath.startsWith("folder:")) {
+                await this.rubyProjectFilesManager.updateFolderToProject(
+                    selectedProjectPath,
+                    selectedTargets,
+                    typeOfPath.substring("folder:".length)
+                );
+            } else {
+                await this.rubyProjectFilesManager.updateFileToProject(
+                    selectedProjectPath,
+                    selectedTargets,
+                    file.fsPath
+                );
+            }
+            await this.rubyProjectFilesManager.saveProject(selectedProjectPath);
+        } finally {
+            release();
         }
-        await this.rubyProjectFilesManager.saveProject(selectedProjectPath);
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {

@@ -62,6 +62,10 @@ export class ToolsManager {
         return await this.isToolInstalled("tuist", "version");
     }
 
+    private async isXcodeprojGemInstalled() {
+        return await this.isGemInstalled("xcodeproj");
+    }
+
     private async installHomebrew() {
         const installScript = `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
         this.terminal.show();
@@ -100,7 +104,7 @@ export class ToolsManager {
             await this.installTool("tuist");
         }
 
-        if (!(await this.isGemInstalled("xcodeproj"))) {
+        if (!(await this.isXcodeprojGemInstalled())) {
             await this.installTool("xcodeproj", "gem");
         }
 
@@ -182,7 +186,7 @@ export class ToolsManager {
             !(await this.isHomebrewInstalled()) ||
             !(await this.isXcbeautifyInstalled()) ||
             !(await this.isTuistInstalled()) ||
-            !(await this.isGemInstalled("xcodeproj")) ||
+            !(await this.isXcodeprojGemInstalled()) ||
             !(await this.isLLDBStubExeCompiled())
         ) {
             let option: string | undefined = "Yes";

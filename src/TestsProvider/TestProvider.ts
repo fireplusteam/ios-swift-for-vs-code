@@ -356,10 +356,6 @@ export class TestProvider {
         return file.endsWith(".swift"); // || file.endsWith(".m") || file.endsWith(".mm"));
     }
 
-    isTestTarget(target: string) {
-        return target.includes("Tests");
-    }
-
     async updateNodeForDocument(e: vscode.TextDocument) {
         if (e.uri.scheme !== "file") {
             return;
@@ -370,8 +366,10 @@ export class TestProvider {
         }
 
         const project = (await this.projectManager.getProjects()).at(0) || "";
-        const target = (await this.projectManager.listTargetsForFile(e.uri.fsPath, project)).at(0);
-        if (target === undefined || !this.isTestTarget(target)) {
+        const target = (await this.projectManager.listTestTargetsForFile(e.uri.fsPath, project)).at(
+            0
+        );
+        if (target === undefined || !this.projectManager.isTestTarget(target)) {
             return;
         }
 
@@ -440,7 +438,7 @@ export class TestProvider {
                         async () => {
                             const targets = await this.projectManager.getProjectTargets();
                             return targets.filter(e => {
-                                return this.isTestTarget(e);
+                                return this.projectManager.isTestTarget(e);
                             });
                         },
                         async targetName => {

@@ -39,6 +39,7 @@ def add_file_to_targets(project, targets, file_path)
     file_ref = group.new_reference(file_path)
   end
 
+  return if targets.nil? || targets.empty?
   targets
     .split(",")
     .each do |target|
@@ -56,9 +57,6 @@ def update_file_targets(project, targets, file_path)
 
   file_ref = find_file(project, file_path)
   file_ref.remove_from_project if not file_ref.nil?
-  if targets == "" # means to remove the file from all targets
-    return
-  end
   add_file_to_targets(project, targets, file_path)
 end
 
