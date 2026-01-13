@@ -113,6 +113,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     return;
                 }
                 if (Date.now() - value.time < 5000) {
+                    // reactive breakpoints only once every 5 seconds, less can cause side effects
                     return;
                 }
                 /// update the map to not refresh again until next breakpointLocations
@@ -129,16 +130,17 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                         bp.location.range.start.line + 1 === message.arguments.line
                     ) {
                         breakpointFound = true;
-                        this.log?.debug(
-                            `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
-                        );
+                        // this.log?.debug(
+                        //     `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
+                        // );
                         toRemove.push(bp);
                     }
                 }
                 if (!breakpointFound) {
+                    this.refreshBreakpoints.delete(sourcePath);
+                } else {
                     vscode.debug.removeBreakpoints(toRemove);
                     vscode.debug.addBreakpoints(toRemove);
-                    this.refreshBreakpoints.delete(sourcePath);
                 }
             }
         } else if (

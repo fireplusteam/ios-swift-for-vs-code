@@ -157,14 +157,21 @@
                     "type": "boolean",
                     "default": true,
                     "title": "Build Indexes While Building",
-                    "description": "if Enabled, xcodebuild will build indexes while building the project (faster indexing, but higher CPU/RAM usage while building)",
+                    "description": "if Enabled, xcodebuild will build indexes while building the project (faster indexing, but higher CPU/RAM usage while building). It's recommended to keep it enabled.",
+                    "scope": "resource"
+                },
+                "vscode-ios.build.compilationCache": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Enable Compilation Cache",
+                    "description": "Caches the results of compilations for a particular set of inputs. Enabling this option can significantly speed up subsequent builds by reusing previously compiled outputs when the same inputs are encountered again.",
                     "scope": "resource"
                 },
                 "vscode-ios.watcher.enabled": {
                     "type": "boolean",
                     "default": true,
                     "title": "Autocomplete Watcher Mode",
-                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes for LSP client while editing.",
+                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes for LSP client while editing. Disable it if you want to manually build the project to update indexes. For example you can configure watcher task and run it manually when needed.",
                     "scope": "resource"
                 },
                 "vscode-ios.building.system.mode": {

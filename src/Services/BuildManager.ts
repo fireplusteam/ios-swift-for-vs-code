@@ -15,6 +15,12 @@ function isBuildIndexesWhileBuildingEnabled() {
         .get<boolean>("lsp.buildIndexesWhileBuilding", true);
 }
 
+function isCompilationCacheEnabled() {
+    return vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get<boolean>("build.compilationCache", true);
+}
+
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
 
@@ -30,6 +36,9 @@ export class BuildManager {
         if (isBuildIndexesWhileBuildingEnabled()) {
             extra.push("COMPILER_INDEX_STORE_ENABLE=YES"); // Control whether the compiler should emit index data while building.
         }
+        if (isCompilationCacheEnabled()) {
+            extra.push("COMPILATION_CACHE_ENABLE_CACHING=YES"); // Caches the results of compilations for a particular set of inputs.
+        }
         return [
             "-configuration",
             await projectEnv.projectConfiguration,
@@ -43,7 +52,6 @@ export class BuildManager {
             "-onlyUsePackageVersionsFromResolvedFile",
             // "-showBuildTimingSummary",
             ...extra,
-            "COMPILATION_CACHE_ENABLE_CACHING=YES", // Caches the results of compilations for a particular set of inputs.
         ];
     }
 

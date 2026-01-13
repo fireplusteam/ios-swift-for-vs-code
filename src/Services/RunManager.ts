@@ -1,5 +1,9 @@
 import * as vscode from "vscode";
-import { CommandContext } from "../CommandManagement/CommandContext";
+import {
+    CommandContext,
+    UserTerminalCloseError,
+    UserTerminatedError,
+} from "../CommandManagement/CommandContext";
 import { DeviceID, getLogRelativePath } from "../env";
 import { sleep } from "../utils";
 import { promiseWithTimeout, TimeoutError } from "../utils";
@@ -121,9 +125,11 @@ export class RunManager {
                 ],
             });
         } catch (error) {
-            vscode.window.showErrorMessage(
-                "Can not find app executable to install on simulator. Please check build log for details."
-            );
+            if (error !== UserTerminalCloseError && error !== UserTerminatedError) {
+                vscode.window.showErrorMessage(
+                    "Can not find app executable to install on simulator. Please check build log for details."
+                );
+            }
             DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
         }
 
