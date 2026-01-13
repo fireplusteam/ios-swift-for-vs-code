@@ -189,6 +189,7 @@ def delete_group(project, group_path)
   if not group.nil?
     if is_folder(group)
       # remove group from project
+      group.exceptions.each { |exception| exception.remove_from_project }
       group.remove_from_project
     else
       group.recursive_children_groups.reverse.each(&:clear)
@@ -239,40 +240,29 @@ def list_files_for_target(project, target_name)
   end
 end
 
-def list_targets_for_file(project, file_path)
+def get_targets_for_file(project, file_path)
   group = first_folder_by_absolute_dir_path(project, file_path)
+  result = []
   if not group.nil?
     project.targets.each do |target|
       if target.file_system_synchronized_groups &&
            target.file_system_synchronized_groups.include?(group)
-        puts target.name
+        result << target.name
       end
     end
   end
-  project.targets.each do |target|
-    target.source_build_phase.files_references.each do |file|
-      puts target.name if get_real_path(file, project) == file_path
-    end
-  end
-end
-
-def get_targets_for_file(project, file_path)
-  result = []
-
   project.targets.each do |target|
     target.source_build_phase.files_references.each do |file|
       result << target.name if get_real_path(file, project) == file_path
     end
-    if target.file_system_synchronized_groups
-      target.file_system_synchronized_groups.each do |folder|
-        all_files_in_folder(project, folder).each do |file_in_folder|
-          result << target.name if file_in_folder == file_path
-        end
-      end
-    end
   end
+  result.uniq
+end
 
-  result
+def list_targets_for_file(project, file_path)
+  get_targets_for_file(project, file_path).each do |target_name|
+    puts target_name
+  end
 end
 
 def type_of_path(project, path)
