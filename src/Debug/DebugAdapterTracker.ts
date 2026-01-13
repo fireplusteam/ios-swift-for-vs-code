@@ -84,7 +84,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onDidSendMessage(message: any) {
-        this.log?.debug(`Sent: ${JSON.stringify(message)}`);
+        // this.log?.debug(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
             this.simulatorInteractor.focus();
         }
@@ -94,7 +94,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
-        this.log?.debug(`Received: ${JSON.stringify(message)}`);
+        // this.log?.debug(`Received: ${JSON.stringify(message)}`);
         if (message.command === "breakpointLocations") {
             // example of getting breakpointLocations request
             // Received: {"command":"breakpointLocations","arguments":{"source":{"name":"ShopController.swift","path":"/path/UI/ShopController.swift"},"line":11},"type":"request","seq":51
@@ -112,7 +112,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     this.refreshBreakpoints.set(sourcePath, { time: 0 });
                     return;
                 }
-                if (Date.now() - value.time < 1000) {
+                if (Date.now() - value.time < 5000) {
                     return;
                 }
                 /// update the map to not refresh again until next breakpointLocations
@@ -121,6 +121,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                 const breakpoints = vscode.debug.breakpoints;
                 // get vscode breakpoints by source and line
                 let breakpointFound = false;
+                const toRemove: vscode.Breakpoint[] = [];
                 for (const bp of breakpoints) {
                     if (
                         bp instanceof vscode.SourceBreakpoint &&
@@ -131,11 +132,12 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                         this.log?.debug(
                             `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
                         );
-                        vscode.debug.removeBreakpoints([bp]);
-                        vscode.debug.addBreakpoints([bp]);
+                        toRemove.push(bp);
                     }
                 }
                 if (!breakpointFound) {
+                    vscode.debug.removeBreakpoints(toRemove);
+                    vscode.debug.addBreakpoints(toRemove);
                     this.refreshBreakpoints.delete(sourcePath);
                 }
             }

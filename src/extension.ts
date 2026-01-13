@@ -158,7 +158,11 @@ export async function activate(context: vscode.ExtensionContext) {
     projectManager.onUpdateDeps = async () => {
         await tools.updateThirdPartyTools();
     };
-    autocompleteWatcher = new AutocompleteWatcher(atomicCommand, problemDiagnosticResolver);
+    autocompleteWatcher = new AutocompleteWatcher(
+        atomicCommand,
+        problemDiagnosticResolver,
+        logChannel
+    );
 
     // initialise code
     context.subscriptions.push(sourceLsp);

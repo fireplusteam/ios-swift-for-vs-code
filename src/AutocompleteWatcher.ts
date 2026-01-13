@@ -6,6 +6,8 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
 import { BuildManager } from "./Services/BuildManager";
 import { UserTerminatedError } from "./CommandManagement/CommandContext";
+import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
+import { LogChannelInterface } from "./Logs/LogChannel";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -20,7 +22,11 @@ export class AutocompleteWatcher {
 
     private buildId = 0;
 
-    constructor(atomicCommand: AtomicCommand, problemResolver: ProblemDiagnosticResolver) {
+    constructor(
+        atomicCommand: AtomicCommand,
+        problemResolver: ProblemDiagnosticResolver,
+        private log: LogChannelInterface
+    ) {
         this.atomicCommand = atomicCommand;
         this.disposable.push(
             vscode.workspace.onDidOpenTextDocument(doc => {
@@ -112,6 +118,8 @@ export class AutocompleteWatcher {
 
                     emptyAutobuildLog();
                     const fileLog = getLogRelativePath("autocomplete.log");
+                    const buildServer = new BuildServerLogParser(this.log);
+                    buildServer.startParsing(context.cancellationToken, context.buildEvent);
                     const rawParser = this.problemResolver.parseAsyncLogs(
                         fileLog,
                         context.buildEvent
@@ -131,6 +139,7 @@ export class AutocompleteWatcher {
                         }
                         throw error;
                     } finally {
+                        buildServer.endParsing();
                         await this.problemResolver.end(
                             context.bundle,
                             rawParser,
