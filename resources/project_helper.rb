@@ -103,6 +103,7 @@ def move_file(project, old_path, new_path)
 
   if (not new_group.nil?) && !is_folder(new_group)
     targets = get_targets_for_file(project, old_path)
+    delete_file(project, old_path)
     add_file_to_targets(project, targets.join(","), new_path)
   else # new parent is folder so the old file can be deleted as it would be part of folder
     delete_file(project, old_path)
