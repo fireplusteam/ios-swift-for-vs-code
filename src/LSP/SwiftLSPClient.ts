@@ -91,11 +91,17 @@ export class SwiftLSPClient implements vscode.Disposable {
     public async start() {
         await this.client();
 
-        if (
-            (await this.workspaceContext.projectFolder) !==
-            (await this.workspaceContext.workspaceFolder)
-        ) {
-            this.addFolder(new FolderContext(await this.workspaceContext.projectFolder, false));
+        for (const folder of vscode.workspace.workspaceFolders ?? []) {
+            const isRootFolder =
+                (await this.workspaceContext.workspaceFolder)?.fsPath === folder.uri.fsPath;
+            try {
+                await this.addFolder(new FolderContext(folder.uri, isRootFolder));
+            } catch {
+                /* empty */
+                this.logs.error(
+                    `Failed to add folder ${folder.uri.toString()} to Swift LSP Client`
+                );
+            }
         }
     }
 
@@ -118,7 +124,7 @@ export class SwiftLSPClient implements vscode.Disposable {
         } catch (error) {
             this.logs.error(`Swift LSP Client restarted with error ${error}`);
             if (error instanceof Error && error.message === "Stopping the server timed out") {
-                await this.start(); // start a new one
+                await this.client(); // start a new one
             }
         }
     }
@@ -321,8 +327,8 @@ export class SwiftLSPClient implements vscode.Disposable {
             await client.sendNotification(DidChangeWorkspaceFoldersNotification.type, {
                 event: { added: [workspaceFolder], removed: [] },
             });
+            this.addedFolders.push(folderContext);
         }
-        this.addedFolders.push(folderContext);
     }
 
     private async copyBuildServerFileIfNeeded(toFolder: vscode.Uri) {

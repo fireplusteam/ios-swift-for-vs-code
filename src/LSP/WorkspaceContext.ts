@@ -7,22 +7,11 @@ import * as fs from "fs/promises";
 import * as path from "path";
 export interface WorkspaceContext {
     readonly workspaceFolder: Promise<vscode.Uri>;
-    readonly projectFolder: Promise<vscode.Uri>;
     readonly problemDiagnosticResolver: HandleProblemDiagnosticResolver;
     setLLDBVersion: () => Promise<void>;
 }
 
 export class WorkspaceContextImp implements WorkspaceContext {
-    get projectFolder(): Promise<vscode.Uri> {
-        return new Promise((resolve, reject) => {
-            const folder = getWorkspaceFolder();
-            if (folder) {
-                resolve(folder);
-            } else {
-                reject(new Error("Workspace folder is not found."));
-            }
-        });
-    }
     get workspaceFolder(): Promise<vscode.Uri> {
         return getLSPWorkspacePath();
     }
