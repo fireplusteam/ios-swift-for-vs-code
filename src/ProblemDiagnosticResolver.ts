@@ -81,7 +81,13 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
     ): void {
         // console.log(uri, isSourceKit(""), newDiagnostics);
         const filesWithNewBuildDiagnostics: { [key: string]: vscode.Diagnostic[] } = {};
-        filesWithNewBuildDiagnostics[uri.fsPath] = newDiagnostics;
+        if (uri.fsPath.endsWith(".h") || uri.fsPath.endsWith(".hpp")) {
+            filesWithNewBuildDiagnostics[uri.fsPath] = newDiagnostics.filter(
+                e => e.source !== "clang" && e.code !== "fatal_too_many_errors" // for header files too many errors from clang are not relevant
+            );
+        } else {
+            filesWithNewBuildDiagnostics[uri.fsPath] = newDiagnostics;
+        }
         const previousBuildDiagnostics = new Set<string>();
         previousBuildDiagnostics.add(uri.fsPath);
         this.storeNewDiagnostics(

@@ -105,6 +105,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             debugOptions["XBS_LOGPATH"] = getFilePathInWorkspace(
                 "/.vscode/xcode/logs/xcode-build-server.log"
             );
+            // debugOptions["SOURCEKIT_LOGGING"] = 3; // LSP DEBUG PURPOSES
         }
         const sourcekit: langclient.Executable = {
             command: serverPath,
@@ -113,7 +114,6 @@ export class SwiftLSPClient implements vscode.Disposable {
                 env: {
                     ...process.env,
                     XXX_BUILD_SERVER_KIT: "/SERVE",
-                    // SOURCEKIT_LOGGING: 3, // LSP DEBUG PURPOSES
                     ...debugOptions,
                     SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
