@@ -15,6 +15,8 @@ import { exec } from "child_process";
 import { kill } from "process";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import { getFilePathInWorkspace } from "../env";
+import { debug } from "console";
 
 function useLspForCFamilyFiles(folder: vscode.Uri) {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");
@@ -97,6 +99,13 @@ export class SwiftLSPClient implements vscode.Disposable {
         errorHandler: SourceKitLSPErrorHandler;
     }> {
         const serverPath = await XCRunHelper.sourcekitLSPPath();
+        const debugOptions: { [key: string]: number | string } = {};
+        if (this.logs.logLevel === "debug") {
+            debugOptions["XBS_DEBUG"] = 1;
+            debugOptions["XBS_LOGPATH"] = getFilePathInWorkspace(
+                "/.vscode/xcode/logs/xcode-build-server.log"
+            );
+        }
         const sourcekit: langclient.Executable = {
             command: serverPath,
             args: [],
@@ -104,7 +113,8 @@ export class SwiftLSPClient implements vscode.Disposable {
                 env: {
                     ...process.env,
                     XXX_BUILD_SERVER_KIT: "/SERVE",
-                    // SOURCEKIT_LOGGING: 3, // for DEBUG PURPOSES
+                    // SOURCEKIT_LOGGING: 3, // LSP DEBUG PURPOSES
+                    ...debugOptions,
                     SOURCEKIT_TOOLCHAIN_PATH: await XCRunHelper.swiftToolchainPath(),
                 },
             },
