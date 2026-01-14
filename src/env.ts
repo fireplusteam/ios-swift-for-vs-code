@@ -521,7 +521,7 @@ export async function isActivated() {
     return true;
 }
 
-async function getBuildServerJsonPath() {
+export async function getBuildServerJsonPath() {
     return path.join((await getLSPWorkspacePath()).fsPath, "buildServer.json");
 }
 
@@ -553,7 +553,7 @@ export async function isBuildServerValid() {
         if (
             buildServer.build_root === undefined ||
             buildServer.workspace === undefined ||
-            buildServer.kind === undefined ||
+            buildServer.kind !== "xcode" ||
             buildServer.argv === undefined
         ) {
             return false;

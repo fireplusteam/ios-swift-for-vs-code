@@ -8,6 +8,7 @@ import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { buildSelectedTarget } from "./buildCommands";
 import {
     DeviceID,
+    getBuildServerJsonPath,
     getFilePathInWorkspace,
     getLSPWorkspacePath,
     getProjectPath,
@@ -446,7 +447,13 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
             await updatePackageDependencies(commandContext, false);
         }
         if ((await isBuildServerValid()) === false) {
-            await generateXcodeServer(commandContext, false);
+            try {
+                await generateXcodeServer(commandContext, false);
+            } catch {
+                // try to remove build server file and generate again
+                fs.unlinkSync(await getBuildServerJsonPath());
+                await generateXcodeServer(commandContext, false);
+            }
         }
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {
@@ -496,6 +503,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
             /*"-scheme", await env.autoCompleteScheme,*/ projectType,
             relativeProjectPath,
         ],
+        mode: ExecutorMode.verbose,
     });
 
     await commandContext
