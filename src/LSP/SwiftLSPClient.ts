@@ -16,7 +16,6 @@ import { kill } from "process";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { getFilePathInWorkspace } from "../env";
-import { debug } from "console";
 
 function useLspForCFamilyFiles(folder: vscode.Uri) {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios", folder).get("lsp.c_family");

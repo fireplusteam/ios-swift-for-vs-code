@@ -1,5 +1,15 @@
 # Change Log
 
+### 0.6.7 - 2026-01-15
+
+### Added
+-   Added better support of C/C++/ Objective-C lsp support for header files
+
+### Fixed
+-   Fixed lsp diagnostics for subprojects in workspace if they were added not in root folder
+
+You need to clean build cache after updating to this version to avoid lsp issues
+
 ### 0.6.6 - 2026-01-15
 
 ### Added
