@@ -38,6 +38,7 @@
     },
     "editor.detectIndentation": false,
     "editor.formatOnSave": true,
+    "editor.formatOnType": false,
     "cSpell.words": [
         "appletvsimulator",
         "assetcatalog",

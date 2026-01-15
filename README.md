@@ -52,6 +52,22 @@ To Debug View Hierarchy you can use this technique [How to debug your view hiera
 
 -   alt+o - switch between header and source files for C/C++/ObjC files like in Visual Studio
 
+## Formatting
+
+That extension provides built-in support for formatting Swift files using 'swift-format' tool from Apple. It's only available if you set it as default formatter for Swift files in VS Code settings and turns on format on save:
+
+```json
+{
+    "[swift]": {
+        "editor.defaultFormatter": "fireplusteam.vscode-ios"
+    },
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true // optional, to format while typing like in Xcode
+}
+```
+
+if you want to use 'swiftformat' tool, you need to install a separate extension [XCode Swift Formatter](https://marketplace.visualstudio.com/items?itemName=FirePlusTeam.vscode-swiftformat-xcode) or similar which provides the integration with 'swiftformat' tool and also supports formatting on save and on type.
+
 ## Dependencies
 
 Before an extension is activated, there's a automatic check if those dependencies are installed and if not, it's ask a user to install them automatically.

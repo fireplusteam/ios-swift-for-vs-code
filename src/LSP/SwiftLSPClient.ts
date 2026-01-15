@@ -108,7 +108,9 @@ export class SwiftLSPClient implements vscode.Disposable {
         }
         const sourcekit: langclient.Executable = {
             command: serverPath,
-            args: [],
+            args: [
+                "--experimental-feature=on-type-formatting" 
+            ],
             options: {
                 env: {
                     ...process.env,

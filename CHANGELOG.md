@@ -1,12 +1,15 @@
 # Change Log
 
-### 0.6.7 - 2026-01-15
+### 0.6.7 - 2026-01-16
 
 ### Added
+
 -   Added better support of C/C++/ Objective-C lsp support for header files
 -   Swift packages as a project dependencies are now available for lsp diagnostics and autocompletion
+-   Added support of 'swift-format' tool for code formatting via LSP (see [README.md](README.md) for more details)
 
 ### Fixed
+
 -   Fixed lsp diagnostics for subprojects in workspace if they were added not in root folder
 
 You need to clean build cache after updating to this version to avoid lsp issues
