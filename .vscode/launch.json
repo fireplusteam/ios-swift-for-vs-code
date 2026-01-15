@@ -123,11 +123,6 @@
         {
             "type": "ruby_lsp",
             "request": "launch",
-            "name": "Debug Ruby program",
-            "program": "ruby resources/project_helper.rb '/Users/Ievgenii_Mykhalevskyi/Desktop/source8/AdidasAppSuite.xcodeproj'"
-        {
-            "type": "ruby_lsp",
-            "request": "launch",
             "name": "Debug Ruby program: move",
             "program": "ruby ./resources/project_helper.rb '/Users/Ievgenii_Mykhalevskyi/tests/out_files_project/SomeProject/SomeProject.xcodeproj|^|^|move_file|^|^|/Users/Ievgenii_Mykhalevskyi/tests/out_files_project/SomeProject/NewGroup/sub_sub/sub_file.swift|^|^|/Users/Ievgenii_Mykhalevskyi/tests/out_files_project/SomeProject/NewGroup/sub_file.swift'",
             "env": {
