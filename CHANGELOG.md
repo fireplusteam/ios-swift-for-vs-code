@@ -4,6 +4,7 @@
 
 ### Added
 -   Added better support of C/C++/ Objective-C lsp support for header files
+-   Swift packages as a project dependencies are now available for lsp diagnostics and autocompletion
 
 ### Fixed
 -   Fixed lsp diagnostics for subprojects in workspace if they were added not in root folder
