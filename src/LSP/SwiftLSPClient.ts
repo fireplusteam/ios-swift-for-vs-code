@@ -117,9 +117,14 @@ export class SwiftLSPClient implements vscode.Disposable {
             client.dispose();
             // start it again
             await this.client();
-
             for (const folderContext of this.addedFolders) {
-                await this.addFolder(folderContext);
+                try {
+                    await this.addFolder(folderContext);
+                } catch {
+                    this.logs.error(
+                        `Failed to re-add folder ${folderContext.folder.toString()} to Swift LSP Client after restart`
+                    );
+                }
             }
         } catch (error) {
             this.logs.error(`Swift LSP Client restarted with error ${error}`);
@@ -336,6 +341,7 @@ export class SwiftLSPClient implements vscode.Disposable {
         const fromPath = path.join(fromFolder.fsPath, "buildServer.json");
         const toPath = path.join(toFolder.fsPath, "buildServer.json");
         if (fs.existsSync(fromPath)) {
+            fs.unlinkSync(toPath);
             fs.copyFileSync(fromPath, toPath);
         }
     }
