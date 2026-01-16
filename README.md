@@ -189,8 +189,13 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 This extension contributes the following settings:
 
 -   `vscode-ios.watcher.enabled`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file.
+-   `vscode-ios.build.compilationCache` : Enable/disable the compilation cache to speed up the building time.
+-   `vscode-ios.lsp.buildIndexesWhileBuilding`: Enable/disable building indexes while building the project to keep indexes up to date.
 -   `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
+-   `vscode-ios.swiftui.runtimeWarnings`: Enable/disable SwiftUI runtime warnings in the sidebar Xcode panel of this extension.
 -   `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
+-   `vscode-ios.lsp.c_family`: Enable/disable C/C++/Objective-C language server support for header files to provide better autocomplete for such files.
+-   `vscode-ios.log.level`: Set the logging level for the extension. Possible values are 'debug', 'info', 'warning', 'error', 'critical'.
 
 ### Also check [Tricks and Tips](Tricks_and_tips.md)
 
@@ -212,6 +217,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.6.6
+### 0.6.7
 
 It's still under development, so you can face some bugs
