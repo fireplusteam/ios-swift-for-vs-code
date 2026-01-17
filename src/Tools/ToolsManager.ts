@@ -31,20 +31,35 @@ export class ToolsManager {
         });
     }
 
-    private isGemInstalled(gemName: string): Promise<boolean> {
+    private getInstalledGemLib(gemName: string): Promise<string[] | undefined> {
         // return new Promise(resolve => { resolve(false) });
         return new Promise(resolve => {
-            const command = `gem list ^${gemName}$ -i`;
+            const command = `gem list | grep ${gemName}`;
             this.log.info(command);
             exec(command, (error, stdout, stderr) => {
                 this.log.info(`stderr: ${stderr}`);
                 this.log.info(`stdout: ${stdout}`);
                 if (error) {
-                    resolve(false);
+                    resolve(undefined);
                 } else {
-                    // stdout returns a boolean as a string, either 'true' or 'false'
-                    const isInstalled = stdout.trim() === "true";
-                    resolve(isInstalled);
+                    // get version of gem lib
+                    // xcodeproj (1.27.0, 1.26.0, 1.25.0)
+                    const versions = [...stdout.matchAll(/(\d+).(\d+).(\d+)/gm)];
+                    if (versions.length === 0) {
+                        resolve(undefined);
+                        return;
+                    }
+                    versions.sort((a, b) => {
+                        for (let i = 1; i <= 3; i++) {
+                            const numA = parseInt(a[i], 10);
+                            const numB = parseInt(b[i], 10);
+                            if (numA !== numB) {
+                                return numB - numA;
+                            }
+                        }
+                        return 0;
+                    });
+                    resolve([versions[0][1], versions[0][2], versions[0][3]]);
                 }
             });
         });
@@ -63,7 +78,11 @@ export class ToolsManager {
     }
 
     private async isXcodeprojGemInstalled() {
-        return await this.isGemInstalled("xcodeproj");
+        const version = await this.getInstalledGemLib("xcodeproj");
+        if (version === undefined) {
+            return false;
+        }
+        return XCRunHelper.isVersionGreaterOrEqual([version[0], version[1], version[2]], [1, 27, 0]);
     }
 
     private async installHomebrew() {
