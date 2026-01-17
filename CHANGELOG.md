@@ -1,5 +1,10 @@
 # Change Log
 
+### 0.6.8 - 2026-01-20
+
+### Fixed
+-   Minor bug fixes and stability improvements
+
 ### 0.6.7 - 2026-01-16
 
 ### Added

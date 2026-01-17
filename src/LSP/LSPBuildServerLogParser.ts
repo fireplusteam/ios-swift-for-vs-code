@@ -2,6 +2,8 @@ import { spawn } from "child_process";
 import * as vscode from "vscode";
 import { getLSPWorkspacePath, getXCodeBuildServerPath } from "../env";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import { UserTerminalCloseError, UserTerminatedError } from "../CommandManagement/CommandContext";
+import { ExecutorTerminated } from "../Executor";
 
 export class BuildServerLogParser {
     private disposable: vscode.Disposable[] = [];
@@ -19,13 +21,20 @@ export class BuildServerLogParser {
         );
         this.disposable.push(
             token.onCancellationRequested(() => {
-                this.endParsing();
+                this.endParsing(UserTerminatedError);
             })
         );
     }
 
-    async endParsing() {
+    async endParsing(error: any) {
         try {
+            if (
+                error !== UserTerminatedError &&
+                error !== UserTerminalCloseError &&
+                error !== ExecutorTerminated
+            ) {
+                return;
+            }
             if (this.buffer === "") {
                 // nothing to parse
                 return;

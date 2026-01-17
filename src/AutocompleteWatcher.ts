@@ -134,12 +134,12 @@ export class AutocompleteWatcher {
                             excludeTargets
                         );
                     } catch (error) {
+                        buildServer.endParsing(error);
                         if (error === UserTerminatedError) {
                             shouldCleanPreviousBuildErrors = false; // do not clean previous errors if user terminated (like when a user edits a file again)
                         }
                         throw error;
                     } finally {
-                        buildServer.endParsing();
                         await this.problemResolver.end(
                             context.bundle,
                             rawParser,

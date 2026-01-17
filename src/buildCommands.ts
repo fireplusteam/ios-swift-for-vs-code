@@ -49,8 +49,10 @@ export async function buildSelectedTarget(
             }
         };
         await build();
+    } catch (error) {
+        buildServer.endParsing(error);
+        throw error;
     } finally {
-        buildServer.endParsing();
         await problemResolver.end(context.bundle, rawParser);
     }
 }
@@ -86,8 +88,10 @@ export async function buildAutocomplete(
             }
         };
         await build();
+    } catch (error) {
+        buildServer.endParsing(error);
+        throw error;
     } finally {
-        buildServer.endParsing();
         await problemResolver.end(context.bundle, rawParser);
     }
 }
@@ -125,8 +129,10 @@ export async function buildTestsForCurrentFile(
             }
         };
         await build();
+    } catch (error) {
+        buildServer.endParsing(error);
+        throw error;
     } finally {
-        buildServer.endParsing();
         await problemResolver.end(context.bundle, rawParser);
     }
 }
