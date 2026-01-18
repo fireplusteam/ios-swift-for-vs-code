@@ -189,6 +189,7 @@ export class AtomicCommand {
         commandClosure: (commandContext: CommandContext) => Promise<T>,
         taskName: string | undefined,
         taskSource: string | undefined = undefined,
+        showMessageOnError: boolean = true,
         runFromTask: {
             shouldRunFromTask: boolean;
             onSudoTerminalCreated: (terminal: vscode.Pseudoterminal) => void;
@@ -294,8 +295,10 @@ export class AtomicCommand {
             } else if (err === UserTerminalCloseError) {
                 throw err;
             } else {
-                if ((err as Error).message) {
-                    vscode.window.showErrorMessage((err as Error).message);
+                if (showMessageOnError) {
+                    if ((err as Error).message) {
+                        vscode.window.showErrorMessage((err as Error).message);
+                    }
                 }
                 throw err;
             }

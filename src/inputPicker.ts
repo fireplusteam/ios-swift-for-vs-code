@@ -34,11 +34,10 @@ export async function initializeWithError(error: unknown) {
     const option = await vscode.window.showErrorMessage(
         `Projects can not be initialized. ${error}. Open in Xcode and fix it first!`,
         "Open in Xcode",
+        "Retry",
         "Cancel"
     );
-    if (option === "Open in Xcode") {
-        vscode.commands.executeCommand("vscode-ios.env.open.xcode");
-    }
+    return option;
 }
 
 let extContext: vscode.ExtensionContext;

@@ -7,8 +7,8 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { buildSelectedTarget } from "./buildCommands";
 import {
+    BuildServerConfiguration,
     DeviceID,
-    getBuildServerJsonPath,
     getFilePathInWorkspace,
     getLSPWorkspacePath,
     getProjectPath,
@@ -446,15 +446,7 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
             await updatePackageDependencies(commandContext, false);
         }
-        if ((await isBuildServerValid()) === false) {
-            try {
-                await generateXcodeServer(commandContext, false);
-            } catch {
-                // try to remove build server file and generate again
-                fs.unlinkSync(await getBuildServerJsonPath());
-                await generateXcodeServer(commandContext, false);
-            }
-        }
+        await generateXcodeServer(commandContext, false);
     } catch (error) {
         await handleValidationErrors(commandContext, error, async () => {
             return await checkWorkspace(commandContext, ignoreFocusOut);
@@ -479,32 +471,79 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
     }
     const env = commandContext.projectEnv;
     const lspFolder = await getLSPWorkspacePath();
-    const relativeProjectPath = path.relative(
-        lspFolder.fsPath,
-        getFilePathInWorkspace(await env.projectFile)
-    );
     const projectType = await env.projectType;
+    const projectWorkspace = path.join(
+        getFilePathInWorkspace(await env.projectFile),
+        "project.xcworkspace"
+    );
     if (projectType === "-project") {
         // This's a workaround, if the workspace is not there, we need to create an empty folder to make everything working
-        const projectWorkspace = path.join(
-            getFilePathInWorkspace(await env.projectFile),
-            "project.xcworkspace"
-        );
         if (!fs.existsSync(projectWorkspace)) {
             fs.mkdirSync(projectWorkspace, { recursive: true });
         }
     }
-    await commandContext.execShellWithOptions({
-        scriptOrCommand: { command: getXCodeBuildServerPath() },
-        cwd: lspFolder.fsPath,
-        // project scheme is optional but it prevents from parsing some builds and use compile flags, so better not to pass
-        args: [
-            "config",
-            /*"-scheme", await env.autoCompleteScheme,*/ projectType,
-            relativeProjectPath,
-        ],
-        mode: ExecutorMode.verbose,
-    });
+    function getBuildDir(settings: any): string | undefined {
+        if (settings.length === 0) {
+            return undefined;
+        }
+        if (settings.at(0).buildSettings === undefined) {
+            return undefined;
+        }
+        const buildDir = settings.at(0).buildSettings.SYMROOT;
+        if (buildDir === undefined || buildDir === null || buildDir === "") {
+            return undefined;
+        }
+        return buildDir;
+    }
+    async function getFirstBuildDir(): Promise<string | undefined> {
+        const schemes = await commandContext.projectManager.getRootProjectTargets();
+        // try all targets from the root project first as they are more relevant
+        for (const scheme of schemes) {
+            const settings =
+                await commandContext.projectSettingsProvider.getSettingsForScheme(scheme);
+            const buildDir = getBuildDir(settings);
+            if (buildDir !== undefined) {
+                return buildDir;
+            }
+        }
+        const settings = await commandContext.projectSettingsProvider.settings;
+        const buildDir = getBuildDir(settings);
+        if (buildDir !== undefined) {
+            return buildDir;
+        }
+        return undefined;
+    }
+    const buildDir = await getFirstBuildDir();
+    if (buildDir === undefined) {
+        const option = await vscode.window.showErrorMessage(
+            `Cannot generate Build Server configuration as 'Build Directory' is not set in build settings for ${await commandContext.projectEnv.projectScheme}. Please, make sure that your project scheme has a valid Build Configuration selected and try again.`,
+            "Select Another Scheme",
+            "Cancel"
+        );
+        if (option === "Select Another Scheme") {
+            await selectScheme(commandContext);
+            await generateXcodeServer(commandContext, false);
+            return;
+        }
+        // set build root to SYMROOT if it's set
+        throw Error("No Build Server configuration generated for selected scheme");
+    }
+    const buildServerConfigData: BuildServerConfiguration = {
+        name: "xcode build server",
+        version: "1.3.0",
+        bspVersion: "2.2.0",
+        languages: ["c", "cpp", "objective-c", "objective-cpp", "swift"],
+        argv: [getXCodeBuildServerPath()],
+        workspace: projectWorkspace,
+        build_root: path.join(buildDir, "../.."),
+        kind: "xcode",
+    };
+    if ((await isBuildServerValid(buildServerConfigData)) === true) {
+        return;
+    }
+
+    const buildServerConfigPath = path.join(lspFolder.fsPath, "buildServer.json");
+    fs.writeFileSync(buildServerConfigPath, JSON.stringify(buildServerConfigData, null, 4), "utf8");
 
     await commandContext
         .execShellParallel({

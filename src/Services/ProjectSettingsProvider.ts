@@ -24,6 +24,10 @@ export class ProjectSettingsProvider implements XCodeSettings {
         return this.fetchProjectXcodeBuildSettings();
     }
 
+    async getSettingsForScheme(scheme: string): Promise<any> {
+        return this.fetchProjectXcodeBuildSettings(scheme);
+    }
+
     get testPlans(): Promise<string[]> {
         return this.fetchTestPlan();
     }
@@ -160,13 +164,13 @@ export class ProjectSettingsProvider implements XCodeSettings {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private static cachedSettings: [string, string, string, any] | undefined = undefined;
-    private async fetchProjectXcodeBuildSettings() {
+    private async fetchProjectXcodeBuildSettings(scheme?: string) {
         const projectEnv = this.projectEnv?.deref();
         if (projectEnv === undefined) {
             throw Error("ProjectEnv is not set");
         }
         const projectFile = await projectEnv.projectFile;
-        const scheme = await projectEnv.projectScheme;
+        scheme = scheme ?? (await projectEnv.projectScheme);
         const buildConfiguration = await projectEnv.projectConfiguration;
 
         if (ProjectSettingsProvider.cachedSettings) {

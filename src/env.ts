@@ -540,38 +540,23 @@ export async function getBuildRootPath() {
     }
 }
 
-export async function isBuildServerValid() {
+export interface BuildServerConfiguration {
+    name: string;
+    version: string;
+    bspVersion: string;
+    languages: string[];
+    argv: string[];
+    workspace: string;
+    build_root: string;
+    kind: string;
+}
+export async function isBuildServerValid(newConfig: BuildServerConfiguration) {
     try {
         const buildServer = await getBuildServerJson();
-        if (
-            buildServer.workspace.indexOf(getFilePathInWorkspace(await getProjectFileName())) === -1
-        ) {
-            return false;
-        }
         if (buildServer.scheme !== undefined) {
             return false;
         }
-        if (
-            buildServer.build_root === undefined ||
-            buildServer.workspace === undefined ||
-            buildServer.kind !== "xcode" ||
-            buildServer.argv === undefined
-        ) {
-            return false;
-        }
-        const configuration = getEnvList();
-        if (configuration.build_root === getWorkspaceFolder()) {
-            return false; // build folder can not be the same as workspace
-        }
-
-        let isValid = false;
-        for (const arg of buildServer.argv) {
-            const path = getXCodeBuildServerPath();
-            if (path === arg) {
-                isValid = true;
-            }
-        }
-        if (!isValid) {
+        if (JSON.stringify(buildServer) !== JSON.stringify(newConfig)) {
             return false;
         }
 

@@ -25,6 +25,8 @@ import { LogChannelInterface } from "../Logs/LogChannel";
 import * as touch from "touch";
 
 export interface ProjectManagerInterface {
+    getRootProjectTargets(): Promise<string[]>;
+
     addBuildAllTargetToProjects(
         rootTargetName: string,
         includeTargets: string[],
@@ -515,6 +517,16 @@ export class ProjectManager implements ProjectManagerInterface {
 
     async getProjects() {
         return getProjectFiles(await getProjectPath());
+    }
+
+    async getRootProjectTargets() {
+        const rootProjectFile = await getRootProjectFilePath();
+        if (rootProjectFile === undefined) {
+            return [];
+        }
+        return await this.rubyProjectFilesManager.getProjectTargets(
+            getFilePathInWorkspace(rootProjectFile)
+        );
     }
 
     async getProjectTargets() {

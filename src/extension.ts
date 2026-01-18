@@ -106,15 +106,29 @@ async function initialize(
     }
 
     emptyLog(".vscode/xcode/debugger.launching");
-    try {
-        await atomicCommand.userCommand(async context => {
-            // add BuildAll target root project if not exists (hide it with checkbox in settings)
-            await checkWorkspace(context, true);
-        }, "Initialize");
-    } catch (error) {
-        await initializeWithError(error);
-        // try to regenerate xcode build server, if it fails, let extension activate as it can be done later
+    async function checkWorkspaceWrapper() {
+        try {
+            await atomicCommand.userCommand(
+                async context => {
+                    // add BuildAll target root project if not exists (hide it with checkbox in settings)
+                    await checkWorkspace(context, true);
+                },
+                "Initialize",
+                undefined,
+                false
+            );
+        } catch (error) {
+            const option = await initializeWithError(error);
+            if (option === "Open in Xcode") {
+                vscode.commands.executeCommand("vscode-ios.env.open.xcode");
+            }
+            if (option === "Retry") {
+                await checkWorkspaceWrapper();
+            }
+        }
     }
+    await checkWorkspaceWrapper();
+
     lsp.start();
     fs.mkdir(getLogPath(), () => {});
     await enableSWBBuildService(shouldInjectSWBBuildService());
