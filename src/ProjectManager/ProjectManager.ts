@@ -144,7 +144,7 @@ export class ProjectManager implements ProjectManagerInterface {
             }
         }
 
-        const projects = await this.getProjects();
+        const projects = await getProjectFiles(await getProjectPath());
 
         const wasLoadedWithError = [] as string[];
         await vscode.window.withProgress(
@@ -516,7 +516,7 @@ export class ProjectManager implements ProjectManagerInterface {
     }
 
     async getProjects() {
-        return getProjectFiles(await getProjectPath());
+        return this.projectCache.getProjects();
     }
 
     async getRootProjectTargets() {
@@ -524,28 +524,21 @@ export class ProjectManager implements ProjectManagerInterface {
         if (rootProjectFile === undefined) {
             return [];
         }
+        return this.getProjectTargets(rootProjectFile);
+    }
+
+    // project is a related path to workspace
+    async getProjectTargets(project: string) {
         return await this.rubyProjectFilesManager.getProjectTargets(
-            getFilePathInWorkspace(rootProjectFile)
+            getFilePathInWorkspace(project)
         );
     }
 
-    async getProjectTargets() {
-        for (const proj of await this.getProjects()) {
-            return await this.rubyProjectFilesManager.getProjectTargets(
-                getFilePathInWorkspace(proj)
-            );
-        }
-        return [];
-    }
-
-    async getFilesForTarget(targetName: string) {
-        for (const proj of await this.getProjects()) {
-            return await this.rubyProjectFilesManager.listFilesFromTarget(
-                getFilePathInWorkspace(proj),
-                targetName
-            );
-        }
-        return [];
+    async getFilesForTarget(project: string, targetName: string) {
+        return await this.rubyProjectFilesManager.listFilesFromTarget(
+            getFilePathInWorkspace(project),
+            targetName
+        );
     }
 
     async editFileTargets(file: vscode.Uri | undefined) {
@@ -976,6 +969,17 @@ export class ProjectManager implements ProjectManagerInterface {
             }
         }
         return [...bestFitProject];
+    }
+
+    async getProjectForFile(filePath: string) {
+        const projectFiles = this.projectCache.getProjects();
+        for (const proj of projectFiles) {
+            const files = await this.projectCache.getList(proj);
+            if (files.has(filePath)) {
+                return proj;
+            }
+        }
+        return undefined;
     }
 }
 

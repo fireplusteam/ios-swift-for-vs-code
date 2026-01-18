@@ -44,16 +44,15 @@ export interface RubyProjectFilesManagerInterface {
 }
 
 export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface {
-    private readonly xcodeProjects = new Map<string, XcodeProjectFileProxy>();
+    private readonly xcodeProjects: XcodeProjectFileProxy;
 
-    constructor(private log: LogChannelInterface) {}
+    constructor(private log: LogChannelInterface) {
+        this.xcodeProjects = new XcodeProjectFileProxy(log);
+    }
 
     private async executeRuby(projectPath: string, command: string): Promise<string[]> {
-        if (!this.xcodeProjects.has(projectPath)) {
-            this.xcodeProjects.set(projectPath, new XcodeProjectFileProxy(projectPath, this.log));
-        }
         this.log.debug(`Executing Ruby command: '${projectPath}|^|^|${command}'`);
-        return (await this.xcodeProjects.get(projectPath)?.request(command)) || [];
+        return (await this.xcodeProjects.request(`${projectPath}|^|^|${command}`)) || [];
     }
 
     async getProjectTargets(projectFile: string) {

@@ -209,8 +209,14 @@ def list_files(project)
     traverse_all_group(project) do |group, parent_group, group_path, _type|
       if _type == GroupType::SYNCHRONIZED_GROUP
         puts "folder:#{group_path}"
+        all_files_in_folder(project, group).each do |file_in_folder|
+          puts "file:#{file_in_folder}"
+        end
       elsif _type == GroupType::FOLDER_REFERENCE
         puts "folder:#{group_path}"
+        all_files_in_folder(project, group).each do |file_in_folder|
+          puts "file:#{file_in_folder}"
+        end
       else
         puts "group:#{group_path}"
       end
@@ -530,22 +536,51 @@ if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
   exit 0
 end
 
-project_path = ARGV[0]
-project = Xcodeproj::Project.open(project_path)
-previous_mtime = File.mtime(project_path)
+$all_projects = {}
+def get_project(path)
+  # use global all_projects to cache opened projects
+  unless $all_projects.key?(path)
+    $all_projects[path] = {
+      project: Xcodeproj::Project.open(path),
+      mtime: File.mtime(path)
+    }
+  end
+  $all_projects[path]
+end
 
-while (input = STDIN.gets.chomp)
-  break if input == "exit"
+def perform_action_on_project(project_path, action, arg)
+  project = get_project(project_path)
+
+  previous_mtime = project[:mtime]
+  project = project[:project]
 
   new_mtime = File.mtime(project_path)
   if previous_mtime != new_mtime
     previous_mtime = new_mtime
     project = Xcodeproj::Project.open(project_path)
   end
-  arg = input.split("|^|^|")
-  action = arg[0]
   handle_action(project, action, arg)
+
   previous_mtime = File.mtime(project_path) if action == "save"
-  puts "EOF_REQUEST"
+
+  $all_projects[project_path] = { project: project, mtime: previous_mtime }
+
+  handle_action(project, action, arg)
+end
+
+# READ-EVAL-PRINT LOOP
+while (input = STDIN.gets.chomp)
+  break if input == "exit"
+
+  arg = input.split("|^|^|")
+  project_path = arg[0]
+  action = arg[1]
+  begin
+    perform_action_on_project(project_path, action, arg[1..-1])
+    puts "EOF_REQUEST"
+  rescue => e
+    puts "#{e.full_message}}"
+    puts "ERROR_REQUEST_error"
+  end
   STDOUT.flush
 end

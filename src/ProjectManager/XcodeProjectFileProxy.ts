@@ -2,7 +2,6 @@ import { ChildProcess, spawn } from "child_process";
 import { getScriptPath } from "../env";
 import { createInterface, Interface } from "readline";
 import * as vscode from "vscode";
-import * as fs from "fs";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
 
@@ -12,18 +11,13 @@ export class XcodeProjectFileProxy {
     private rl: Interface | undefined;
     private onEndRead = new vscode.EventEmitter<string[]>();
     private onEndReadWithError = new vscode.EventEmitter<any>();
-    private projectPath: string;
 
-    constructor(
-        projectPath: string,
-        private log: LogChannelInterface
-    ) {
-        this.projectPath = projectPath;
-        this.runProcess(projectPath);
+    constructor(private log: LogChannelInterface) {
+        this.runProcess();
     }
 
-    private runProcess(projectPath: string) {
-        this.process = spawn(`ruby '${getScriptPath("project_helper.rb")}' '${projectPath}'`, {
+    private runProcess() {
+        this.process = spawn(`ruby '${getScriptPath("project_helper.rb")}'`, {
             shell: true,
             stdio: "pipe",
         });
@@ -34,16 +28,14 @@ export class XcodeProjectFileProxy {
         this.process.on("exit", (code, signal) => {
             this.rl = undefined;
             this.log.debug(
-                `XcodeProjectFileProxy process exited for ${projectPath}, return code: ${code}, signal: ${signal}, error: ${stderr}`
+                `XcodeProjectFileProxy process exited, return code: ${code}, signal: ${signal}, error: ${stderr}`
             );
             this.onEndReadWithError.fire(
                 Error(
-                    `XcodeProjectFileProxy process exited for ${projectPath}, return code: ${code}, signal: ${signal}, error: ${stderr}`
+                    `XcodeProjectFileProxy process exited, return code: ${code}, signal: ${signal}, error: ${stderr}`
                 )
             );
-            if (fs.existsSync(projectPath)) {
-                this.runProcess(projectPath);
-            }
+            this.runProcess();
         });
         this.read();
     }
@@ -59,12 +51,13 @@ export class XcodeProjectFileProxy {
             }
             let result = [] as string[];
             if (this.rl === undefined) {
-                throw Error(
-                    `XcodeProjectFileProxy process stdout is undefined for project path: ${this.projectPath}`
-                );
+                throw Error(`XcodeProjectFileProxy process stdout is undefined`);
             }
             for await (const line of this.rl) {
-                if (line === "EOF_REQUEST") {
+                if (line === "ERROR_REQUEST_error") {
+                    this.onEndReadWithError.fire(new Error(result.join("\n")));
+                    result = [];
+                } else if (line === "EOF_REQUEST") {
                     this.onEndRead.fire(result);
                     result = [];
                 } else {
@@ -74,9 +67,7 @@ export class XcodeProjectFileProxy {
         } catch (error) {
             this.rl = undefined;
             process?.kill();
-            this.log.error(
-                `Error in XcodeProjectFileProxy for project path ${this.projectPath}: ${String(error)}`
-            );
+            this.log.error(`Error in XcodeProjectFileProxy for project path: ${String(error)}`);
             this.onEndReadWithError.fire(error);
         }
     }
@@ -88,11 +79,7 @@ export class XcodeProjectFileProxy {
             let disError: vscode.Disposable | undefined;
             const result = await new Promise<string[]>((resolve, reject) => {
                 if (this.rl === undefined) {
-                    reject(
-                        Error(
-                            `XcodeProjectFileProxy process stdout is undefined for project path: ${this.projectPath}`
-                        )
-                    );
+                    reject(Error(`XcodeProjectFileProxy process stdout is undefined`));
                 }
                 dis = this.onEndRead.event(e => {
                     dis?.dispose();

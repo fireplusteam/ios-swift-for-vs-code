@@ -365,7 +365,10 @@ export class TestProvider {
             return;
         }
 
-        const project = (await this.projectManager.getProjects()).at(0) || "";
+        const project = await this.projectManager.getProjectForFile(e.uri.fsPath);
+        if (project === undefined) {
+            return;
+        }
         const target = (await this.projectManager.listTestTargetsForFile(e.uri.fsPath, project)).at(
             0
         );
@@ -436,13 +439,16 @@ export class TestProvider {
                     return new TestProject(
                         this.context,
                         async () => {
-                            const targets = await this.projectManager.getProjectTargets();
+                            const targets = await this.projectManager.getProjectTargets(proj);
                             return targets.filter(e => {
                                 return this.projectManager.isTestTarget(e);
                             });
                         },
                         async targetName => {
-                            const files = await this.projectManager.getFilesForTarget(targetName);
+                            const files = await this.projectManager.getFilesForTarget(
+                                proj,
+                                targetName
+                            );
                             return files.filter(e => {
                                 return this.supportedFileExtensions(e);
                             });
@@ -453,7 +459,6 @@ export class TestProvider {
             if (!data.didResolve || forceUpdate) {
                 await data.updateFromDisk(this.context.ctrl, file);
             }
-            break; // only first target
         }
         return;
     }
