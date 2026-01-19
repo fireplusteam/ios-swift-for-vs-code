@@ -264,12 +264,20 @@ export async function activate(context: vscode.ExtensionContext) {
         projectManager,
         new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
         logChannel,
-        async (isDebuggable, testRun, context, testInput, onFinishTestSubsession) => {
+        async (
+            isDebuggable,
+            testRun,
+            context,
+            testInput,
+            onStartTestProject,
+            onFinishTestSubsession
+        ) => {
             return await debugConfiguration.startIOSTestsDebugger(
                 isDebuggable,
                 testRun,
                 context,
                 testInput,
+                onStartTestProject,
                 onFinishTestSubsession
             );
         }

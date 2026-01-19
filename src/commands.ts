@@ -496,8 +496,14 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         return buildDir;
     }
     async function getFirstBuildDir(): Promise<string | undefined> {
+        // get settings for the current scheme first
+        const settings = await commandContext.projectSettingsProvider.settings;
+        const buildDir = getBuildDir(settings);
+        if (buildDir !== undefined) {
+            return buildDir;
+        }
         const schemes = await commandContext.projectManager.getRootProjectTargets();
-        // try all targets from the root project first as they are more relevant
+        // try all other targets from the root project first as they are more relevant
         for (const scheme of schemes) {
             const settings =
                 await commandContext.projectSettingsProvider.getSettingsForScheme(scheme);
@@ -506,11 +512,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
                 return buildDir;
             }
         }
-        const settings = await commandContext.projectSettingsProvider.settings;
-        const buildDir = getBuildDir(settings);
-        if (buildDir !== undefined) {
-            return buildDir;
-        }
+
         return undefined;
     }
     const buildDir = await getFirstBuildDir();

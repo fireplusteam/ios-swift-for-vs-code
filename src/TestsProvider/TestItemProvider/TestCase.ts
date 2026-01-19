@@ -46,9 +46,9 @@ export class TestCase {
     getTestId() {
         if (this.target && this.testName) {
             if (this.suite) {
-                return `${this.target}/${this.suite}/${this.testName}`;
+                return `${this.projectFile}/${this.target}/${this.suite}/${this.testName}`;
             } else {
-                return `${this.target}/${this.testName}`;
+                return `${this.projectFile}/${this.target}/${this.testName}`;
             }
         }
         throw InvalidTestCase;

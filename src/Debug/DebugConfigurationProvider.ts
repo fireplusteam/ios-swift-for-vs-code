@@ -20,6 +20,7 @@ import { WorkspaceContext } from "../LSP/WorkspaceContext";
 import { handleValidationErrors } from "../extension";
 import { BuildTestsInput } from "../Services/BuildManager";
 import * as fs from "fs";
+import { TerminalMessageStyle } from "../TerminalShell";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -159,6 +160,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
         testRun: vscode.TestRun,
         context: CommandContext,
         testInput: DebugTestsInput,
+        onStartTestProject: (projectFile: string) => Promise<void>,
         onFinishTestSubsession: () => void
     ) {
         context.terminal!.terminalName = `Building for ${isDebuggable ? "Debug Tests" : "Run Tests"}`;
@@ -169,6 +171,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             let wasErrorThrown: any | null = null;
             for (const testUnit of testInput.testUnit) {
                 try {
+                    await onStartTestProject(testUnit.projectFile);
                     const input: BuildTestsInput = {
                         tests: testUnit.tests,
                         testPlan: testInput.testPlan,
@@ -179,7 +182,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     const sessions = this.testRunInspector.build(context, input);
 
                     if ((await sessions).length === 0) {
-                        throw Error("There's no tests available for selected project/scheme");
+                        context.terminal?.write(
+                            `There's no tests available for ${testUnit.projectFile} and specified tests.\n`,
+                            TerminalMessageStyle.error
+                        );
+                        continue;
                     }
                     for (const session of await sessions) {
                         const sessionId = getSessionId(
@@ -228,7 +235,6 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                         }
                         try {
                             await waiter;
-                            await onFinishTestSubsession();
                         } catch (error) {
                             if (
                                 typeof error === "object" &&
@@ -241,10 +247,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                             } else {
                                 throw error;
                             }
+                        } finally {
+                            await onFinishTestSubsession();
                         }
-                    }
-                    if (wasErrorThrown) {
-                        throw wasErrorThrown;
                     }
                 } finally {
                     // clean up build all target scheme if it was created
@@ -257,6 +262,9 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                         // ignore errors
                     }
                 }
+            }
+            if (wasErrorThrown) {
+                throw wasErrorThrown;
             }
         } finally {
             if (parent) {

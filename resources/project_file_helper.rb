@@ -16,7 +16,8 @@ def is_folder_reference(file)
   end
   return(
     file.last_known_file_type == "folder" ||
-      file.last_known_file_type == "folder.assetcatalog"
+      file.last_known_file_type == "folder.assetcatalog" ||
+      file.last_known_file_type == "wrapper"
   )
 end
 

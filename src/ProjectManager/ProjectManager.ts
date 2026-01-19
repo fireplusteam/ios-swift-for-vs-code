@@ -756,24 +756,22 @@ export class ProjectManager implements ProjectManagerInterface {
     async cleanAutocompleteSchemes() {
         const release = await this.projectFileEditMutex.acquire();
         try {
-            const rootProject = await getRootProjectFilePath();
-            if (rootProject === undefined) {
-                throw new Error("No project files found to clean autocomplete schemes");
-            }
-            const rootProjectPath = getFilePathInWorkspace(rootProject);
+            for (const project of this.projectCache.getProjects()) {
+                const projectPath = getFilePathInWorkspace(project);
 
-            const schemeDir = path.join(
-                rootProjectPath,
-                "xcuserdata",
-                `${process.env.USER}.xcuserdatad`,
-                "xcschemes"
-            );
+                const schemeDir = path.join(
+                    projectPath,
+                    "xcuserdata",
+                    `${process.env.USER}.xcuserdatad`,
+                    "xcschemes"
+                );
 
-            if (fs.existsSync(schemeDir)) {
-                const globPattern = path.join(schemeDir, "VSCODE_AUTOCOMPLETE_TAG_*.xcscheme");
-                const files = await glob.glob(globPattern);
-                for (const file of files) {
-                    fs.unlinkSync(file);
+                if (fs.existsSync(schemeDir)) {
+                    const globPattern = path.join(schemeDir, "VSCODE_AUTOCOMPLETE_TAG_*.xcscheme");
+                    const files = await glob.glob(globPattern);
+                    for (const file of files) {
+                        fs.unlinkSync(file);
+                    }
                 }
             }
         } catch (err) {

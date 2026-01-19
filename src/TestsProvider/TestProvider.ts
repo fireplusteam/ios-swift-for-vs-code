@@ -42,6 +42,7 @@ export class TestProvider {
         testRun: vscode.TestRun,
         context: CommandContext,
         testInput: DebugTestsInput,
+        onStartTestProject: (projectFile: string) => Promise<void>,
         onFinishTestSubsession: () => Promise<void>
     ) => Promise<boolean>;
     context: TestTreeContext;
@@ -62,6 +63,7 @@ export class TestProvider {
             testRun: vscode.TestRun,
             context: CommandContext,
             testInput: DebugTestsInput,
+            onStartTestProject: (projectFile: string) => Promise<void>,
             onFinishTestSubsession: () => Promise<void>
         ) => Promise<boolean>
     ) {
@@ -148,11 +150,16 @@ export class TestProvider {
                     }
                 }
 
-                const extractTestingResults = async (cleanTests: boolean) => {
+                const extractTestingResults = async (projectFile: string, cleanTests: boolean) => {
                     try {
                         await context.bundle.merge();
                         // read testing results
-                        await this.extractTestingResults(context.bundle, mapTests, run);
+                        await this.extractTestingResults(
+                            context.bundle,
+                            projectFile,
+                            mapTests,
+                            run
+                        );
                     } catch (error) {
                         this.log.error(`Error parsing test result logs: ${error}`);
                     } finally {
@@ -180,12 +187,13 @@ export class TestProvider {
                     context.bundle.clear();
                 };
 
+                let currentProjectFile = "";
                 try {
                     emptyTestsLog();
                     const rawParser = this.asyncParser.parseAsyncLogs(
                         context.debugConsoleEvent,
                         async (result, rawMessage, target, className, testName, duration) => {
-                            const key = `${target}/${className}/${testName}()`;
+                            const key = `${currentProjectFile}/${target}/${className}/${testName}()`;
                             const item = mapTests.get(key)?.test;
                             if (item) {
                                 run.appendOutput(
@@ -237,15 +245,18 @@ export class TestProvider {
                             run,
                             context,
                             testsInput,
+                            async (projectFile: string) => {
+                                currentProjectFile = projectFile;
+                            },
                             async () => {
-                                await extractTestingResults(false);
+                                await extractTestingResults(currentProjectFile, false);
                             }
                         );
                     } finally {
                         this.asyncParser.end(rawParser);
                     }
                 } finally {
-                    await extractTestingResults(true);
+                    await extractTestingResults(currentProjectFile, true);
 
                     run.end();
                 }
@@ -342,6 +353,7 @@ export class TestProvider {
 
     private async extractTestingResults(
         bundle: BundlePath,
+        projectFile: string,
         mapTests: Map<string, { test: vscode.TestItem; data: TestCase }>,
         run: vscode.TestRun
     ) {
@@ -352,6 +364,7 @@ export class TestProvider {
             },
             bundle,
             (key, result, rawMessage, messages, duration) => {
+                key = `${projectFile}/${key}`;
                 const item = mapTests.get(key)?.test;
                 if (item) {
                     run.appendOutput(rawMessage.replaceAll("\n", "\n\r"), undefined, item);
