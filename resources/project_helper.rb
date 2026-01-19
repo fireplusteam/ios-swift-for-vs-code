@@ -287,7 +287,7 @@ end
 # SCHEME MANAGEMENT
 
 def generate_scheme_depend_on_target(
-  project,
+  projects,
   generated_scheme_name,
   original_scheme_name,
   include_targets,
@@ -299,7 +299,10 @@ def generate_scheme_depend_on_target(
     exclude_targets.nil? == false ? exclude_targets.split(",") : []
 
   # root target scheme can be a scheme, load it if exists
-  scheme = load_scheme_if_exists(project, original_scheme_name)
+  result_scheme_load = load_scheme_if_exists(projects, original_scheme_name)
+  scheme = result_scheme_load[:scheme]
+  project = result_scheme_load[:project]
+  project = projects[0] if project.nil?
 
   all_targets = get_all_targets_from_scheme(scheme)
 
@@ -333,7 +336,9 @@ def generate_scheme_depend_on_target(
   queue.each { |target| visited[target.uuid] = true }
   is_different_from_existing = false
   root_targets.each do |target|
-    is_different_from_existing ||= add_target_to_scheme(scheme, target, false)
+    if add_target_to_scheme(scheme, target, false)
+      is_different_from_existing = true
+    end
   end
 
   while !queue.empty?
@@ -346,8 +351,9 @@ def generate_scheme_depend_on_target(
              exclude_targets_list.include?(neighbor.name) == false
           visited[neighbor.uuid] = true
           queue << neighbor
-          is_different_from_existing ||=
-            add_target_to_scheme(scheme, neighbor, false)
+          if add_target_to_scheme(scheme, neighbor, false)
+            is_different_from_existing = true
+          end
         end
       end
     end
@@ -358,7 +364,9 @@ def generate_scheme_depend_on_target(
     if !visited.key?(target.uuid) &&
          include_targets_list.include?(target.name) &&
          exclude_targets_list.include?(target.name) == false
-      is_different_from_existing ||= add_target_to_scheme(scheme, target, false)
+      if add_target_to_scheme(scheme, target, false)
+        is_different_from_existing = true
+      end
     end
   end
 
@@ -371,6 +379,8 @@ def generate_scheme_depend_on_target(
   scheme_dir = project.path
   scheme_dir.mkpath unless scheme_dir.exist?
   scheme.save_as(scheme_dir, generated_scheme_name, false)
+
+  puts project.path
   puts generated_scheme_name
 end
 
@@ -384,7 +394,7 @@ def generate_test_scheme_depend_on_target(
   test_targets_list = [] if test_targets == "include_all_tests_targets"
   test_targets_list = test_targets_list.uniq
 
-  scheme = load_scheme_if_exists(project, original_scheme_name)
+  scheme = load_scheme_if_exists(project, original_scheme_name)[:scheme]
 
   is_different_from_existing = false
 
@@ -402,7 +412,9 @@ def generate_test_scheme_depend_on_target(
     # puts "current target: #{current.name}, #{current.product_name}"
     if test_targets_list.empty? == true ||
          test_targets_list.include?(current.name)
-      add_target_to_scheme(scheme, current, true)
+      if add_target_to_scheme(scheme, current, true)
+        is_different_from_existing = true
+      end
     end
   end
 
@@ -424,6 +436,8 @@ def generate_test_scheme_depend_on_target(
   scheme_dir = project.path
   scheme_dir.mkpath unless scheme_dir.exist?
   scheme.save_as(scheme_dir, generated_scheme_name, false)
+
+  puts project.path
   puts generated_scheme_name
 end
 
@@ -524,18 +538,6 @@ end
 
 # MAIN LOOP
 
-if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
-  input = ARGV[0].split("|^|^|")
-  project_path = input[0]
-  puts "Opening project at path: #{project_path}"
-  project = Xcodeproj::Project.open(project_path)
-  # rest of the input is action
-  action = input[1]
-  handle_action(project, action, input[1..-1])
-  project.save
-  exit 0
-end
-
 $all_projects = {}
 def get_project(path)
   # use global all_projects to cache opened projects
@@ -549,23 +551,52 @@ def get_project(path)
 end
 
 def perform_action_on_project(project_path, action, arg)
-  project = get_project(project_path)
+  def get_latest_project(project_path)
+    project = get_project(project_path)
 
-  previous_mtime = project[:mtime]
-  project = project[:project]
+    previous_mtime = project[:mtime]
+    project = project[:project]
 
-  new_mtime = File.mtime(project_path)
-  if previous_mtime != new_mtime
-    previous_mtime = new_mtime
-    project = Xcodeproj::Project.open(project_path)
+    new_mtime = File.mtime(project_path)
+    if previous_mtime != new_mtime
+      previous_mtime = new_mtime
+      project = Xcodeproj::Project.open(project_path)
+      $all_projects[project_path] = { project: project, mtime: previous_mtime }
+    end
+    project
   end
-  handle_action(project, action, arg)
 
-  previous_mtime = File.mtime(project_path) if action == "save"
+  if action == "generate_scheme_depend_on_target"
+    project_path = project_path.split(":::")
+    projects = project_path.map { |path| get_latest_project(path) }
+    handle_action(projects, action, arg)
+  else
+    project = get_latest_project(project_path)
+    handle_action(project, action, arg)
+  end
 
-  $all_projects[project_path] = { project: project, mtime: previous_mtime }
+  if action == "save"
+    previous_mtime = File.mtime(project_path)
+    $all_projects[project_path] = { project: project, mtime: previous_mtime }
+  end
+end
 
-  handle_action(project, action, arg)
+# DEBUG MODE
+if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
+  input = ARGV[0]
+
+  arg = input.split("|^|^|")
+  project_path = arg[0]
+  action = arg[1]
+  begin
+    perform_action_on_project(project_path, action, arg[1..-1])
+    puts "EOF_REQUEST"
+  rescue => e
+    puts "#{e.full_message}}"
+    puts "ERROR_REQUEST_error"
+  end
+
+  exit 0
 end
 
 # READ-EVAL-PRINT LOOP

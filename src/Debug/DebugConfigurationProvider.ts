@@ -18,6 +18,8 @@ import { XCTestRunInspector } from "./XCTestRunInspector";
 import * as path from "path";
 import { WorkspaceContext } from "../LSP/WorkspaceContext";
 import { handleValidationErrors } from "../extension";
+import { BuildTestsInput } from "../Services/BuildManager";
+import * as fs from "fs";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -40,6 +42,16 @@ export interface DebugConfigurationContextBinderType {
     commandContext: CommandContext;
     token: vscode.EventEmitter<void>;
     rejectToken: vscode.EventEmitter<unknown>;
+}
+
+export interface DebugTestUnit {
+    projectFile: string;
+    tests: string[];
+}
+export interface DebugTestsInput {
+    testUnit: DebugTestUnit[];
+    testPlan: string | undefined;
+    isCoverage: boolean;
 }
 
 export class DebugConfigurationProvider implements vscode.DebugConfigurationProvider {
@@ -143,83 +155,108 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
     }
 
     async startIOSTestsDebugger(
-        tests: string[],
         isDebuggable: boolean,
         testRun: vscode.TestRun,
         context: CommandContext,
-        selectedTestPlan: string | undefined,
-        isCoverage: boolean
+        testInput: DebugTestsInput,
+        onFinishTestSubsession: () => void
     ) {
         context.terminal!.terminalName = `Building for ${isDebuggable ? "Debug Tests" : "Run Tests"}`;
-
-        const sessions = this.testRunInspector.build(context, tests, selectedTestPlan, isCoverage);
 
         const parent = await this.startParentSession(context, testRun, isDebuggable);
 
         try {
             let wasErrorThrown: any | null = null;
-            if ((await sessions).length === 0) {
-                throw Error("There's no tests available for selected project/scheme");
-            }
-            for (const session of await sessions) {
-                const sessionId = getSessionId(`All tests: ${isDebuggable}${this.counterID}`);
-                const testToRun =
-                    tests === undefined
-                        ? [session.target]
-                        : tests.filter(test => test.split(path.sep).at(0) === session.target);
-                if (testToRun.length === 0) {
-                    continue;
-                }
-                const device = await context.projectEnv.debugDeviceID;
-                const debugSession: vscode.DebugConfiguration = {
-                    type: "xcode-lldb",
-                    name: `Xcode: Testing: ${session.target}`,
-                    request: "launch",
-                    target: "tests",
-                    isDebuggable:
-                        device.platform === "macOS" && session.host.includes("-Runner.app")
-                            ? false
-                            : isDebuggable, // for macOS, we can not debug UITests as it freezes for some reason
-                    sessionId: sessionId,
-                    testsToRun: testToRun,
-                    buildBeforeLaunch: "never",
-                    hostApp: session.host,
-                    xctestrun: session.testRun,
-                    isCoverage: isCoverage,
-                };
-
-                if (context.cancellationToken.isCancellationRequested) {
-                    return false;
-                }
-
-                const waiter = this.waitForDebugSession(context, sessionId);
-                if (
-                    (await vscode.debug.startDebugging(undefined, debugSession, {
-                        parentSession: parent.debugSession,
-                        // lifecycleManagedByParent: true,
-                    })) === false
-                ) {
-                    context.cancel();
-                    return false;
-                }
+            for (const testUnit of testInput.testUnit) {
                 try {
-                    await waiter;
-                } catch (error) {
-                    if (
-                        typeof error === "object" &&
-                        error &&
-                        "code" in error &&
-                        error.code === 65
-                    ) {
-                        // code 65 means that xcodebuild found failed tests. However we want to continue running all tests
-                        wasErrorThrown = error;
-                    } else {
-                        throw error;
+                    const input: BuildTestsInput = {
+                        tests: testUnit.tests,
+                        testPlan: testInput.testPlan,
+                        isCoverage: testInput.isCoverage,
+                        projectFile: testUnit.projectFile,
+                    };
+
+                    const sessions = this.testRunInspector.build(context, input);
+
+                    if ((await sessions).length === 0) {
+                        throw Error("There's no tests available for selected project/scheme");
+                    }
+                    for (const session of await sessions) {
+                        const sessionId = getSessionId(
+                            `All tests: ${isDebuggable}${this.counterID}`
+                        );
+                        const testToRun =
+                            testUnit.tests === undefined
+                                ? [session.target]
+                                : testUnit.tests.filter(
+                                      test => test.split(path.sep).at(0) === session.target
+                                  );
+                        if (testToRun.length === 0) {
+                            continue;
+                        }
+                        const device = await context.projectEnv.debugDeviceID;
+                        const debugSession: vscode.DebugConfiguration = {
+                            type: "xcode-lldb",
+                            name: `Xcode: Testing: ${session.target}`,
+                            request: "launch",
+                            target: "tests",
+                            isDebuggable:
+                                device.platform === "macOS" && session.host.includes("-Runner.app")
+                                    ? false
+                                    : isDebuggable, // for macOS, we can not debug UITests as it freezes for some reason
+                            sessionId: sessionId,
+                            testsToRun: testToRun,
+                            buildBeforeLaunch: "never",
+                            hostApp: session.host,
+                            xctestrun: session.testRun,
+                            isCoverage: testInput.isCoverage,
+                        };
+
+                        if (context.cancellationToken.isCancellationRequested) {
+                            return false;
+                        }
+
+                        const waiter = this.waitForDebugSession(context, sessionId);
+                        if (
+                            (await vscode.debug.startDebugging(undefined, debugSession, {
+                                parentSession: parent.debugSession,
+                                // lifecycleManagedByParent: true,
+                            })) === false
+                        ) {
+                            context.cancel();
+                            return false;
+                        }
+                        try {
+                            await waiter;
+                            await onFinishTestSubsession();
+                        } catch (error) {
+                            if (
+                                typeof error === "object" &&
+                                error &&
+                                "code" in error &&
+                                error.code === 65
+                            ) {
+                                // code 65 means that xcodebuild found failed tests. However we want to continue running all tests
+                                wasErrorThrown = error;
+                            } else {
+                                throw error;
+                            }
+                        }
+                    }
+                    if (wasErrorThrown) {
+                        throw wasErrorThrown;
+                    }
+                } finally {
+                    // clean up build all target scheme if it was created
+                    try {
+                        const generatedSchemePath = context.projectEnv.buildScheme()?.path;
+                        if (generatedSchemePath && fs.existsSync(generatedSchemePath)) {
+                            fs.unlinkSync(generatedSchemePath);
+                        }
+                    } catch {
+                        // ignore errors
                     }
                 }
-            }
-            if (wasErrorThrown) {
-                throw wasErrorThrown;
             }
         } finally {
             if (parent) {

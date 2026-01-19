@@ -13,7 +13,7 @@ import { BundlePath } from "../CommandManagement/BundlePath";
 import * as path from "path";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
-import * as fs from "fs";
+import { DebugTestsInput } from "../Debug/DebugConfigurationProvider";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -38,12 +38,11 @@ class TestRunRequest extends vscode.TestRunRequest {
 export class TestProvider {
     projectManager: ProjectManager;
     executeTests: (
-        tests: string[],
         isDebuggable: boolean,
         testRun: vscode.TestRun,
         context: CommandContext,
-        testPlan: string | undefined,
-        isCoverage: boolean
+        testInput: DebugTestsInput,
+        onFinishTestSubsession: () => Promise<void>
     ) => Promise<boolean>;
     context: TestTreeContext;
     asyncParser = new TestCaseAsyncParser();
@@ -59,12 +58,11 @@ export class TestProvider {
         context: TestTreeContext,
         log: LogChannelInterface,
         executeTests: (
-            tests: string[],
             isDebuggable: boolean,
             testRun: vscode.TestRun,
             context: CommandContext,
-            testPlan: string | undefined,
-            isCoverage: boolean
+            testInput: DebugTestsInput,
+            onFinishTestSubsession: () => Promise<void>
         ) => Promise<boolean>
     ) {
         this.projectManager = projectManager;
@@ -128,7 +126,7 @@ export class TestProvider {
 
             const runTestQueue = async (context: CommandContext) => {
                 const mapTests = new Map<string, { test: vscode.TestItem; data: TestCase }>();
-                const xcodebuildTestsIds = new Set<string>();
+                const testsByProjectFile = new Map<string, Set<string>>();
                 for (const { test, data } of queue) {
                     run.appendOutput(`Running ${test.id}\r\n`);
                     if (run.token.isCancellationRequested) {
@@ -138,7 +136,10 @@ export class TestProvider {
                             run.started(test);
                             const xCodeBuildTest = data.getXCodeBuildTest();
                             const testId = data.getTestId();
-                            xcodebuildTestsIds.add(xCodeBuildTest);
+                            if (testsByProjectFile.has(data.getProjectFile()) === false) {
+                                testsByProjectFile.set(data.getProjectFile(), new Set());
+                            }
+                            testsByProjectFile.get(data.getProjectFile())?.add(xCodeBuildTest);
                             mapTests.set(testId, { test: test, data: data });
                         } catch (error) {
                             run.failed(test, { message: "Test Case was not well parsed" });
@@ -146,6 +147,38 @@ export class TestProvider {
                         }
                     }
                 }
+
+                const extractTestingResults = async (cleanTests: boolean) => {
+                    try {
+                        await context.bundle.merge();
+                        // read testing results
+                        await this.extractTestingResults(context.bundle, mapTests, run);
+                    } catch (error) {
+                        this.log.error(`Error parsing test result logs: ${error}`);
+                    } finally {
+                        if (cleanTests === true) {
+                            // all others are skipped
+                            mapTests.forEach(item => {
+                                run.skipped(item.test);
+                            });
+                            mapTests.clear();
+                        }
+                    }
+
+                    try {
+                        // read coverage results
+                        const convergedFiles = await this.context.coverage.getCoverageFiles(
+                            context.bundle
+                        );
+                        for (const file of convergedFiles) {
+                            run.addCoverage(file);
+                        }
+                    } catch (error) {
+                        this.log.error(`Coverage data can not be obtained: ${error}`);
+                    }
+                    // reset bundle for the next test session
+                    context.bundle.clear();
+                };
 
                 try {
                     emptyTestsLog();
@@ -174,63 +207,45 @@ export class TestProvider {
                         }
                     );
                     try {
+                        const testsInput: DebugTestsInput = {
+                            testUnit: [],
+                            testPlan:
+                                request instanceof TestRunRequest ? request.testPlan : undefined,
+                            isCoverage:
+                                request.profile?.kind === vscode.TestRunProfileKind.Coverage,
+                        };
                         // filter out all repetition tests
-                        const testList = [...xcodebuildTestsIds.values()].filter(test => {
-                            const component = test.split(path.sep);
-                            for (let i = 1; i < component.length; ++i) {
-                                const key = component.slice(0, i).join(path.sep);
-                                if (xcodebuildTestsIds.has(key)) {
-                                    return false;
+                        for (const [projectFile, testsByFile] of testsByProjectFile) {
+                            const testList = [...testsByFile.values()].filter(test => {
+                                const component = test.split(path.sep);
+                                for (let i = 1; i < component.length; ++i) {
+                                    const key = component.slice(0, i).join(path.sep);
+                                    if (testsByFile.has(key)) {
+                                        return false;
+                                    }
                                 }
-                            }
-                            return true;
-                        });
+                                return true;
+                            });
+                            testsInput.testUnit.push({
+                                projectFile: projectFile,
+                                tests: testList,
+                            });
+                        }
+
                         await this.executeTests(
-                            testList,
                             request.profile?.kind === vscode.TestRunProfileKind.Debug,
                             run,
                             context,
-                            (request as TestRunRequest).testPlan,
-                            request.profile?.kind === vscode.TestRunProfileKind.Coverage
+                            testsInput,
+                            async () => {
+                                await extractTestingResults(false);
+                            }
                         );
                     } finally {
                         this.asyncParser.end(rawParser);
                     }
                 } finally {
-                    try {
-                        await context.bundle.merge();
-                        // read testing results
-                        await this.extractTestingResults(context.bundle, mapTests, run);
-                    } catch (error) {
-                        this.log.error(`Error parsing test result logs: ${error}`);
-                    } finally {
-                        // all others are skipped
-                        mapTests.forEach(item => {
-                            run.skipped(item.test);
-                        });
-                        mapTests.clear();
-                    }
-
-                    try {
-                        // read coverage results
-                        const convergedFiles = await this.context.coverage.getCoverageFiles(
-                            context.bundle
-                        );
-                        for (const file of convergedFiles) {
-                            run.addCoverage(file);
-                        }
-                    } catch (error) {
-                        this.log.error(`Coverage data can not be obtained: ${error}`);
-                    }
-                    // clean up build all target scheme if it was created
-                    try {
-                        const generatedSchemePath = context.projectEnv.buildScheme()?.path;
-                        if (generatedSchemePath && fs.existsSync(generatedSchemePath)) {
-                            fs.unlinkSync(generatedSchemePath);
-                        }
-                    } catch {
-                        // ignore errors
-                    }
+                    await extractTestingResults(true);
 
                     run.end();
                 }
@@ -381,7 +396,7 @@ export class TestProvider {
         }
 
         const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
-            return new TestFile(this.context, target);
+            return new TestFile(this.context, project, target);
         });
         const testFile = data as TestFile;
         await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
@@ -458,6 +473,9 @@ export class TestProvider {
             );
             if (!data.didResolve || forceUpdate) {
                 await data.updateFromDisk(this.context.ctrl, file);
+            }
+            if (file.children.size === 0) {
+                this.context.deleteItem(file.id);
             }
         }
         return;

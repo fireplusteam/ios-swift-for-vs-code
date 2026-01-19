@@ -21,6 +21,13 @@ function isCompilationCacheEnabled() {
         .get<boolean>("build.compilationCache", true);
 }
 
+export interface BuildTestsInput {
+    projectFile: string;
+    tests: string[];
+    testPlan: string | undefined;
+    isCoverage: boolean;
+}
+
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
 
@@ -216,17 +223,16 @@ export class BuildManager {
     async buildForTestingWithTests(
         context: CommandContext,
         logFilePath: string,
-        tests: string[],
-        testPlan: string | undefined,
-        isCoverage: boolean
+        input: BuildTestsInput
     ) {
         context.bundle.generateNext();
 
         let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
         try {
-            if (tests.length > 0 && testPlan === undefined) {
-                const testsTargets = tests.map(test => test.split("/").at(0));
+            if (input.tests.length > 0 && input.testPlan === undefined) {
+                const testsTargets = input.tests.map(test => test.split("/").at(0));
                 const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
+                    input.projectFile,
                     await context.projectEnv.projectScheme,
                     testsTargets.join(",")
                 );
@@ -251,7 +257,7 @@ export class BuildManager {
         // }
 
         const extraArguments: string[] = [];
-        if (isCoverage) {
+        if (input.isCoverage) {
             extraArguments.push(...["-enableCodeCoverage", "YES"]);
         }
 
@@ -260,7 +266,7 @@ export class BuildManager {
             pipeToParseBuildErrors: true,
             args: [
                 "build-for-testing",
-                ...tests.map(test => {
+                ...input.tests.map(test => {
                     return `-only-testing:${test}`;
                 }),
                 ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),

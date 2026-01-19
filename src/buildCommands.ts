@@ -2,7 +2,7 @@ import { checkWorkspace } from "./commands";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { getBuildRootPath, getLogRelativePath } from "./env";
 import { CommandContext } from "./CommandManagement/CommandContext";
-import { BuildManager } from "./Services/BuildManager";
+import { BuildManager, BuildTestsInput } from "./Services/BuildManager";
 import { ExecutorMode } from "./Executor";
 import { handleValidationErrors } from "./extension";
 import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
@@ -101,9 +101,7 @@ export async function buildAutocomplete(
 export async function buildTestsForCurrentFile(
     context: CommandContext,
     problemResolver: ProblemDiagnosticResolver,
-    tests: string[],
-    testPlan: string | undefined,
-    isCoverage: boolean
+    input: BuildTestsInput
 ) {
     await checkWorkspace(context);
     const buildManager = new BuildManager();
@@ -114,13 +112,7 @@ export async function buildTestsForCurrentFile(
     try {
         const build = async () => {
             try {
-                await buildManager.buildForTestingWithTests(
-                    context,
-                    filePath,
-                    tests,
-                    testPlan,
-                    isCoverage
-                );
+                await buildManager.buildForTestingWithTests(context, filePath, input);
             } catch (error) {
                 await handleValidationErrors(context, error, async () => {
                     await checkWorkspace(context);

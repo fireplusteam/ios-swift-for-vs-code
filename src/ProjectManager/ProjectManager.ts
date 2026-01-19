@@ -34,6 +34,7 @@ export interface ProjectManagerInterface {
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 
     addTestSchemeDependOnTargetToProjects(
+        projectFile: string,
         rootTargetName: string,
         testTargets: string | undefined
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
@@ -784,11 +785,7 @@ export class ProjectManager implements ProjectManagerInterface {
 
     async generateScheme(
         originalSchemeName: string,
-        generate: (
-            rootProjectPath: string,
-            generatedSchemeName: string,
-            originalSchemeName: string
-        ) => Promise<string[]>
+        generate: (generatedSchemeName: string, originalSchemeName: string) => Promise<string[]>
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         const release = await this.projectFileEditMutex.acquire();
         try {
@@ -800,46 +797,37 @@ export class ProjectManager implements ProjectManagerInterface {
                 return;
             }
 
-            const rootProject = await getRootProjectFilePath();
-            if (rootProject === undefined) {
-                throw new Error("No project files found to add BuildAll target");
+            this.buildAllTargetTagCounter += 1;
+            const result = await generate(
+                `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
+                originalSchemeName
+            );
+            if (
+                result.length === 0 ||
+                result.at(-1) === "scheme_does_not_exist" ||
+                result.at(-1) === "scheme_unchanged"
+            ) {
+                throw new Error("Failed to add BuildAll target to the project");
             }
-            const rootProjectPath = getFilePathInWorkspace(rootProject);
 
-            const projectFiles = this.projectCache.getProjects();
-            for (const project of projectFiles) {
-                if (project === rootProject) {
-                    this.buildAllTargetTagCounter += 1;
-                    const allScheme = await generate(
-                        rootProjectPath,
-                        `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
-                        originalSchemeName
-                    );
-                    if (
-                        allScheme.length === 0 ||
-                        allScheme.at(-1) === "scheme_does_not_exist" ||
-                        allScheme.at(-1) === "scheme_unchanged"
-                    ) {
-                        throw new Error("Failed to add BuildAll target to the project");
-                    }
-                    const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");
-                    touch.sync(touchProjectPath);
-                    this.log.debug(
-                        `Generated scheme: VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}, with added targets: ${allScheme.join(", ")}`
-                    );
-                    return {
-                        scheme: allScheme.at(-1) || "",
-                        path: path.join(
-                            rootProjectPath,
-                            "xcuserdata",
-                            `${process.env.USER}.xcuserdatad`,
-                            "xcschemes",
-                            `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}.xcscheme`
-                        ),
-                        projectPath: touchProjectPath,
-                    };
-                }
-            }
+            const rootProjectPath = result.at(-2) || "";
+
+            const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");
+            touch.sync(touchProjectPath);
+            this.log.debug(
+                `Generated scheme: VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}, with added targets: ${result.join(", ")}`
+            );
+            return {
+                scheme: result.at(-1) || "",
+                path: path.join(
+                    rootProjectPath,
+                    "xcuserdata",
+                    `${process.env.USER}.xcuserdatad`,
+                    "xcschemes",
+                    `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}.xcscheme`
+                ),
+                projectPath: touchProjectPath,
+            };
         } catch (err) {
             this.log.error(`Failed to generate Scheme target to projects: ${String(err)}`);
         } finally {
@@ -852,32 +840,33 @@ export class ProjectManager implements ProjectManagerInterface {
         includeTargets: string[],
         excludeTargets: string[]
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
-        return this.generateScheme(
-            rootTargetName,
-            (rootProjectPath: string, schemeName: string, rootTargetName: string) =>
-                this.rubyProjectFilesManager.generateSchemeDependOnTarget(
-                    rootProjectPath,
-                    schemeName,
-                    rootTargetName,
-                    includeTargets.join(","),
-                    excludeTargets.join(",")
-                )
+        // root project should be the first one
+        const all = [(await getRootProjectFilePath()) || "", ...this.projectCache.getProjects()];
+        const projectFiles = [...new Set(all)].map(proj => getFilePathInWorkspace(proj));
+
+        return this.generateScheme(rootTargetName, (schemeName: string, rootTargetName: string) =>
+            this.rubyProjectFilesManager.generateSchemeDependOnTarget(
+                projectFiles,
+                schemeName,
+                rootTargetName,
+                includeTargets.join(","),
+                excludeTargets.join(",")
+            )
         );
     }
 
     async addTestSchemeDependOnTargetToProjects(
+        projectFile: string,
         rootTargetName: string,
         testTargets: string | undefined
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
-        return this.generateScheme(
-            rootTargetName,
-            (rootProjectPath: string, schemeName: string, rootTargetName: string) =>
-                this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
-                    rootProjectPath,
-                    schemeName,
-                    rootTargetName,
-                    testTargets
-                )
+        return this.generateScheme(rootTargetName, (schemeName: string, rootTargetName: string) =>
+            this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
+                [getFilePathInWorkspace(projectFile)],
+                schemeName,
+                rootTargetName,
+                testTargets
+            )
         );
     }
 

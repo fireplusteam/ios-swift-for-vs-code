@@ -33,6 +33,11 @@ export class BundlePath {
         deleteFile(getFilePathInWorkspace(this.bundleResultPath()));
     }
 
+    clear() {
+        this.allBundles = [];
+        this.generateNext();
+    }
+
     generateNext() {
         this.number = generateGlobalId();
         this.deleteExistingFilesIfAny();

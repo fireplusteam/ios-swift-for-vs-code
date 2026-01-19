@@ -14,11 +14,13 @@ export class TestFile implements TestContainer {
     public didResolve = false;
     context: TestTreeContext;
     private target: string;
+    private projectFile: string;
     private fileContent: string | undefined;
 
-    constructor(context: TestTreeContext, target: string) {
+    constructor(context: TestTreeContext, projectFile: string, target: string) {
         this.context = context;
         this.target = target;
+        this.projectFile = projectFile;
     }
 
     private mapTestItems(
@@ -49,6 +51,7 @@ export class TestFile implements TestContainer {
         } else {
             const idComponents = getTestIDComponents(lspTestId);
             const test = new TestCase(
+                this.projectFile,
                 idComponents.testName,
                 idComponents.suite,
                 target,
@@ -109,7 +112,13 @@ export class TestFile implements TestContainer {
             parseSwiftSource(content, {
                 onTest: (range: vscode.Range, testName: string) => {
                     const parent = ancestors[ancestors.length - 1];
-                    const data = new TestCase(testName, parent.item.label, this.target, "XCTest");
+                    const data = new TestCase(
+                        this.projectFile,
+                        testName,
+                        parent.item.label,
+                        this.target,
+                        "XCTest"
+                    );
                     const id = `${item.uri}/${data.getLabel()}`;
 
                     const tcase = controller.createTestItem(id, data.getLabel(), item.uri);

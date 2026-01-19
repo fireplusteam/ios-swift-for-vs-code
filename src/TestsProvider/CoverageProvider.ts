@@ -5,12 +5,13 @@ import * as vscode from "vscode";
 
 class XCFileCoverage extends vscode.FileCoverage {
     lineCoverage: vscode.StatementCoverage[] | undefined;
-    bundle: BundlePath | undefined;
+    bundleResultPath: string | undefined;
 }
 
 export class CoverageProvider {
     public async getCoverageFiles(bundle: BundlePath): Promise<vscode.FileCoverage[]> {
-        const tree = await this.getCoverageData(bundle);
+        const bundleResultPath = bundle.bundleResultPath();
+        const tree = await this.getCoverageData(bundleResultPath);
 
         const allCoverages = [] as vscode.FileCoverage[];
 
@@ -20,7 +21,7 @@ export class CoverageProvider {
                     vscode.Uri.file(file.path),
                     new vscode.TestCoverageCount(file.coveredLines, file.executableLines)
                 );
-                fileCoverage.bundle = bundle;
+                fileCoverage.bundleResultPath = bundleResultPath;
                 allCoverages.push(fileCoverage);
             }
         }
@@ -32,10 +33,10 @@ export class CoverageProvider {
         fileCoverage: vscode.FileCoverage
     ): Promise<vscode.StatementCoverage[]> {
         if (fileCoverage instanceof XCFileCoverage) {
-            if (fileCoverage.bundle === undefined) {
+            if (fileCoverage.bundleResultPath === undefined) {
                 return [];
             }
-            const command = `xcrun xccov view --archive --json --file '${fileCoverage.uri.fsPath}' '${this.xcresultPath(fileCoverage.bundle)}'`;
+            const command = `xcrun xccov view --archive --json --file '${fileCoverage.uri.fsPath}' '${this.xcresultPath(fileCoverage.bundleResultPath)}'`;
             const executor = new Executor();
             const outFileCoverageStr = await executor.execShell({
                 scriptOrCommand: { command: command },
@@ -66,9 +67,9 @@ export class CoverageProvider {
         return [];
     }
 
-    private async getCoverageData(bundle: BundlePath) {
+    private async getCoverageData(bundleResultPath: string) {
         const shell = new Executor();
-        const command = `xcrun xccov view --report --json '${this.xcresultPath(bundle)}'`;
+        const command = `xcrun xccov view --report --json '${this.xcresultPath(bundleResultPath)}'`;
         const coverageJsonStr = await shell.execShell({
             scriptOrCommand: { command: command },
         });
@@ -76,7 +77,7 @@ export class CoverageProvider {
         return JSON.parse(coverageJsonStr.stdout);
     }
 
-    private xcresultPath(bundle: BundlePath) {
-        return getFilePathInWorkspace(bundle.bundleResultPath());
+    private xcresultPath(bundleResultPath: string) {
+        return getFilePathInWorkspace(bundleResultPath);
     }
 }

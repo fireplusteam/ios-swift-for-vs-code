@@ -23,15 +23,27 @@ def get_target_by_name(project, target_name, target_uuid = nil)
 end
 
 def load_scheme_if_exists(project, scheme_name)
-  scheme_dir = project.path
-  scheme_path = scheme_dir + "xcshareddata/xcschemes/#{scheme_name}.xcscheme"
-  return Xcodeproj::XCScheme.new(scheme_path) if scheme_path.exist?
-  # check user schemes
-  scheme_path =
-    scheme_dir +
-      "xcuserdata/#{ENV["USER"]}.xcuserdatad/xcschemes/#{scheme_name}.xcscheme"
-  return Xcodeproj::XCScheme.new(scheme_path) if scheme_path.exist?
-  Xcodeproj::XCScheme.new # return empty scheme
+  def load_scheme_for_project(project, scheme_name)
+    scheme_dir = project.path
+    scheme_path = scheme_dir + "xcshareddata/xcschemes/#{scheme_name}.xcscheme"
+    return Xcodeproj::XCScheme.new(scheme_path) if scheme_path.exist?
+    # check user schemes
+    scheme_path =
+      scheme_dir +
+        "xcuserdata/#{ENV["USER"]}.xcuserdatad/xcschemes/#{scheme_name}.xcscheme"
+    return Xcodeproj::XCScheme.new(scheme_path) if scheme_path.exist?
+    nil
+  end
+  if project.is_a?(Array)
+    project.each do |proj|
+      scheme = load_scheme_for_project(proj, scheme_name)
+      return { scheme: scheme, project: proj } if scheme
+    end
+  else
+    scheme = load_scheme_for_project(project, scheme_name)
+    return { scheme: scheme, project: project } if scheme
+  end
+  { scheme: Xcodeproj::XCScheme.new, project: nil } # return empty scheme
 end
 
 def get_all_targets_from_scheme(scheme)
@@ -73,6 +85,8 @@ def get_build_reference_from_build_action(
   target_name,
   target_uuid
 )
+  return nil if build_action.nil?
+  return nil if build_action.entries.nil?
   build_action.entries.each do |entry|
     entry.buildable_references.each do |buildable_ref|
       if buildable_ref.target_name == target_name &&

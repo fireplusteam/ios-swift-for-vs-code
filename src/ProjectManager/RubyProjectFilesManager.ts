@@ -29,14 +29,14 @@ export interface RubyProjectFilesManagerInterface {
     typeOfPath(projectFile: string, path: string): Promise<string[]>;
     saveProject(projectFile: string): Promise<string[]>;
     generateSchemeDependOnTarget(
-        projectFile: string,
+        projectFiles: string[],
         schemeName: string,
         rootTargetName: string,
         includeTargets: string,
         excludeTargets: string
     ): Promise<string[]>;
     generateTestSchemeDependOnTarget(
-        projectFile: string,
+        projectFiles: string[],
         generatedSchemeName: string,
         originalSchemeName: string,
         testsTargets: string | undefined
@@ -126,26 +126,26 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
     }
 
     async generateSchemeDependOnTarget(
-        projectFile: string,
+        projectFiles: string[],
         tag: string,
         rootTargetName: string,
         includeTargets: string,
         excludeTargets: string
     ) {
         return await this.executeRuby(
-            projectFile,
+            projectFiles.join(":::"),
             `generate_scheme_depend_on_target|^|^|${tag}|^|^|${rootTargetName}|^|^|${includeTargets}|^|^|${excludeTargets}`
         );
     }
 
     async generateTestSchemeDependOnTarget(
-        projectFile: string,
+        projectFiles: string[],
         schemeName: string,
         rootTargetName: string,
         testsTargets: string | undefined
     ) {
         return await this.executeRuby(
-            projectFile,
+            projectFiles.join(":::"),
             `generate_test_scheme_depend_on_target|^|^|${schemeName}|^|^|${rootTargetName}|^|^|${testsTargets?.length === 0 ? "include_all_tests_targets" : testsTargets}`
         );
     }

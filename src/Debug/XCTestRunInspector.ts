@@ -5,6 +5,7 @@ import { CommandContext } from "../CommandManagement/CommandContext";
 import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
 import { getProductDir } from "../env";
 import { XCRunHelper } from "../Tools/XCRunHelper";
+import { BuildTestsInput } from "../Services/BuildManager";
 
 type XCTestRunFile = {
     file: string;
@@ -20,24 +21,13 @@ export type XCTestTarget = {
 export class XCTestRunInspector {
     constructor(private problemResolver: ProblemDiagnosticResolver) {}
 
-    async build(
-        context: CommandContext,
-        tests: string[],
-        selectedTestPlan: string | undefined,
-        isCoverage: boolean
-    ) {
+    async build(context: CommandContext, input: BuildTestsInput) {
         const existingFiles = await this.getAllXCRunFiles();
-        await buildTestsForCurrentFile(
-            context,
-            this.problemResolver,
-            tests,
-            selectedTestPlan,
-            isCoverage
-        );
+        await buildTestsForCurrentFile(context, this.problemResolver, input);
         const changedFiles = await this.getChangedFiles(existingFiles);
-        const targets = await this.parseXCRun(changedFiles, selectedTestPlan);
-        if (tests) {
-            const testsTargets = tests.map(test => test.split("/").at(0));
+        const targets = await this.parseXCRun(changedFiles, input.testPlan);
+        if (input.tests) {
+            const testsTargets = input.tests.map(test => test.split("/").at(0));
             return targets.filter(target => testsTargets.includes(target.target));
         } else {
             return targets;

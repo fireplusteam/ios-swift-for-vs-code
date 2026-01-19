@@ -48,7 +48,7 @@ export class TestProject implements TestContainer {
         for (const target of targets) {
             const url = TestTreeContext.getTargetFilePath(item.uri, target);
             const { file, data } = this.context.getOrCreateTest("target://", url, () => {
-                return new TestTarget(this.context, async () => {
+                return new TestTarget(this.context, item.uri?.fsPath || "", async () => {
                     return (await weakRef.deref()?.filesForTargetProvider(target)) || [];
                 });
             });

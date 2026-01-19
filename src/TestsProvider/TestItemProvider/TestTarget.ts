@@ -5,13 +5,19 @@ import { TestContainer } from "./TestContainer";
 
 export class TestTarget implements TestContainer {
     public didResolve = false;
-    public context: TestTreeContext;
+    private context: TestTreeContext;
+    private projectFile: string;
 
-    public filesForTargetProvider: () => Promise<string[]>;
+    private filesForTargetProvider: () => Promise<string[]>;
 
-    constructor(context: TestTreeContext, filesForTargetProvider: () => Promise<string[]>) {
+    constructor(
+        context: TestTreeContext,
+        projectFile: string,
+        filesForTargetProvider: () => Promise<string[]>
+    ) {
         this.context = context;
         this.filesForTargetProvider = filesForTargetProvider;
+        this.projectFile = projectFile;
     }
 
     public async updateFromDisk(controller: vscode.TestController, item: vscode.TestItem) {
@@ -32,7 +38,7 @@ export class TestTarget implements TestContainer {
         for (const fileInTarget of files) {
             const url = vscode.Uri.file(fileInTarget);
             const { file, data } = this.context.getOrCreateTest("file://", url, () => {
-                return new TestFile(this.context, item.label);
+                return new TestFile(this.context, this.projectFile, item.label);
             });
 
             try {

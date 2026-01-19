@@ -5,6 +5,7 @@ const InvalidTestCase = new CustomError("Invalid Test Case");
 
 export class TestCase {
     constructor(
+        private readonly projectFile: string,
         private readonly testName: string | undefined,
         private readonly suite: string | undefined,
         private readonly target: string | undefined,
@@ -51,5 +52,9 @@ export class TestCase {
             }
         }
         throw InvalidTestCase;
+    }
+
+    getProjectFile() {
+        return this.projectFile;
     }
 }
