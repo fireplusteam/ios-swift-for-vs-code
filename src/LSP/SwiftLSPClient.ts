@@ -25,6 +25,24 @@ function useLspForCFamilyFiles(folder: vscode.Uri) {
     return true;
 }
 
+function checkIfThisExtensionIsFormatterByDefaultForSwiftFiles(folder: vscode.Uri) {
+    /* example of setting
+        "[swift]": {
+        "editor.defaultFormatter": "fireplusteam.vscode-swiftformat-xcode"
+    }*/
+    try {
+        const config = vscode.workspace.getConfiguration();
+        const swiftConfig = config.get<{ [key: string]: any }>("[swift]");
+        const defaultFormatter = swiftConfig?.["editor.defaultFormatter"];
+        if (defaultFormatter === "fireplusteam.vscode-ios") {
+            return true;
+        }
+        return false;
+    } catch {
+        return false;
+    }
+}
+
 export class SwiftLSPClient implements vscode.Disposable {
     private languageClient: langclient.LanguageClient | null | undefined;
     private mutex = new Mutex();
@@ -106,10 +124,20 @@ export class SwiftLSPClient implements vscode.Disposable {
             );
             // debugOptions["SOURCEKIT_LOGGING"] = 3; // LSP DEBUG PURPOSES
         }
+
+        let workspaceFolder = undefined;
+        if (folder) {
+            workspaceFolder = { uri: folder, name: path.basename(folder.fsPath), index: 0 };
+        }
+
         const sourcekit: langclient.Executable = {
             command: serverPath,
             args: [
-                "--experimental-feature=on-type-formatting" 
+                // this option is blocking other extensions to provide formatting on format on type even if it's not set in settings
+                ...(folder !== undefined &&
+                checkIfThisExtensionIsFormatterByDefaultForSwiftFiles(folder)
+                    ? ["--experimental-feature=on-type-formatting"]
+                    : []),
             ],
             options: {
                 env: {
@@ -121,10 +149,6 @@ export class SwiftLSPClient implements vscode.Disposable {
             },
         };
         const serverOptions: langclient.ServerOptions = sourcekit;
-        let workspaceFolder = undefined;
-        if (folder) {
-            workspaceFolder = { uri: folder, name: path.basename(folder.fsPath), index: 0 };
-        }
 
         const documentSelector = [
             { scheme: "sourcekit-lsp", language: "swift" },
