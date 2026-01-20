@@ -54,7 +54,10 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
     private async executeRuby(projectPath: string, command: string): Promise<string[]> {
         this.log.debug(`Executing Ruby command: '${projectPath}|^|^|${command}'`);
         try {
-            return (await this.xcodeProjects.request(`${projectPath}|^|^|${command}`)) || [];
+            const result =
+                (await this.xcodeProjects.request(`${projectPath}|^|^|${command}`)) || [];
+            // this.log.debug(`Ruby command result: ${result.join("\n")}`);
+            return result;
         } catch (error) {
             this.log.error(
                 `Error executing Ruby command: '${projectPath}|^|^|${command}'\n: ${error}`
