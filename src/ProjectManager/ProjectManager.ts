@@ -412,6 +412,25 @@ export class ProjectManager implements ProjectManagerInterface {
                 const file = files[i];
                 const oldFile = oldFiles[i];
                 const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+                const previousProject = await this.determineProjectFile(
+                    oldFile.fsPath,
+                    projectFiles
+                );
+
+                // for the case when file was moved from one project to another, we need to remove it for the old project
+                for (const project of previousProject) {
+                    if (!selectedProject.includes(project)) {
+                        modifiedProjects.add(project);
+                        try {
+                            await this.rubyProjectFilesManager.deleteFileFromProject(
+                                getFilePathInWorkspace(project),
+                                oldFile.fsPath
+                            );
+                        } catch (err) {
+                            this.log.error(`Failed to delete file from project: ${String(err)}`);
+                        }
+                    }
+                }
 
                 for (const project of selectedProject) {
                     try {
