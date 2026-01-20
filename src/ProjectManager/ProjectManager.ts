@@ -48,14 +48,18 @@ export class ProjectManager implements ProjectManagerInterface {
     readonly onProjectUpdate = new vscode.EventEmitter<void>();
     readonly onProjectLoaded = new vscode.EventEmitter<void>();
     onUpdateDeps: (() => Promise<void>) | undefined;
+    private readonly projectCache: ProjectCacheInterface;
 
     private cachedTestTargets = new Map<string, string[]>();
 
     constructor(
         private readonly log: LogChannelInterface,
-        private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface,
-        private readonly projectCache: ProjectCacheInterface = new ProjectsCache()
+        private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface
     ) {
+        this.projectCache = new ProjectsCache((projectFile: string) => {
+            return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
+        });
+
         this.disposable.push(
             vscode.workspace.onDidCreateFiles(async e => {
                 this.addAFileToXcodeProject([...e.files]);
@@ -95,10 +99,6 @@ export class ProjectManager implements ProjectManagerInterface {
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
     }
 
-    isTestTarget(target: string) {
-        return target.toLowerCase().includes("tests");
-    }
-
     async listTestTargetsForFile(file: string, project: string | undefined = undefined) {
         const release = await this.projectFileEditMutex.acquire();
 
@@ -108,13 +108,14 @@ export class ProjectManager implements ProjectManagerInterface {
             }
             const projects = project === undefined ? this.projectCache.getProjects() : [project];
             for (const project of projects) {
+                const testTargets = await this.getTestProjectTargets(project);
                 const targets = (
                     await this.rubyProjectFilesManager.listTargetsForFile(
                         getFilePathInWorkspace(project),
                         file
                     )
                 ).filter(e => {
-                    return e.length > 0 && this.isTestTarget(e);
+                    return e.length > 0 && testTargets.includes(e);
                 });
                 this.cachedTestTargets.set(file, targets);
                 return targets;
@@ -144,6 +145,7 @@ export class ProjectManager implements ProjectManagerInterface {
                 this.log.error(`Project files cache is broken ${err}`);
             }
         }
+        this.cachedTestTargets.clear();
 
         const projects = await getProjectFiles(await getProjectPath());
 
@@ -157,10 +159,8 @@ export class ProjectManager implements ProjectManagerInterface {
                         message: fileNameFromPath(project),
                     });
                     try {
-                        await this.projectCache.update(project, projectFile => {
-                            return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
-                        });
-                        await this.readAllProjects(this.projectCache.getList(project, false));
+                        await this.projectCache.update(project);
+                        await this.readAllProjects(await this.projectCache.getList(project, false));
                     } catch (error) {
                         this.log.error(`Failed to load project ${project}: ${error}`);
                         wasLoadedWithError.push(fileNameFromPath(project));
@@ -189,15 +189,11 @@ export class ProjectManager implements ProjectManagerInterface {
 
     private async readAllProjects(files: Set<string>) {
         for (const file of files) {
-            if (file.endsWith(".xcodeproj")) {
+            if (file.endsWith(".xcodeproj") || file.endsWith("Package.swift")) {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
-                if (
-                    await this.projectCache.update(relativeProjectPath, projectFile => {
-                        return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
-                    })
-                ) {
+                if (await this.projectCache.update(relativeProjectPath)) {
                     await this.readAllProjects(
-                        this.projectCache.getList(relativeProjectPath, false)
+                        await this.projectCache.getList(relativeProjectPath, false)
                     );
                 }
             }
@@ -212,7 +208,7 @@ export class ProjectManager implements ProjectManagerInterface {
         projectTree.addIncluded(getLogPath());
 
         // add all project first as they are visible
-        for (const file of this.projectCache.allFiles()) {
+        for (const file of await this.projectCache.allFiles()) {
             projectTree.addIncluded(file.path, file.includeSubfolders);
         }
         for (const file of [...(await this.getAdditionalIncludedFiles())]) {
@@ -222,7 +218,10 @@ export class ProjectManager implements ProjectManagerInterface {
 
         // now try to go over all subfolder and exclude every single file which is not in the project files
         const visitedFolders = new Set<string>();
-        for (const file of [getWorkspacePath(), ...this.projectCache.allFiles().map(f => f.path)]) {
+        for (const file of [
+            getWorkspacePath(),
+            ...(await this.projectCache.allFiles()).map(f => f.path),
+        ]) {
             const relative = path.relative(getWorkspacePath(), file);
             if (relative.startsWith("..")) {
                 continue;
@@ -487,7 +486,7 @@ export class ProjectManager implements ProjectManagerInterface {
                 for (const project of selectedProject) {
                     modifiedProjects.add(project);
                     try {
-                        const list = this.projectCache.getList(project);
+                        const list = await this.projectCache.getList(project);
                         if (list.has(file.fsPath)) {
                             await this.rubyProjectFilesManager.deleteFileFromProject(
                                 getFilePathInWorkspace(project),
@@ -531,6 +530,12 @@ export class ProjectManager implements ProjectManagerInterface {
     // project is a related path to workspace
     async getProjectTargets(project: string) {
         return await this.rubyProjectFilesManager.getProjectTargets(
+            getFilePathInWorkspace(project)
+        );
+    }
+
+    async getTestProjectTargets(project: string) {
+        return await this.rubyProjectFilesManager.getProjectTestsTargets(
             getFilePathInWorkspace(project)
         );
     }
@@ -672,7 +677,7 @@ export class ProjectManager implements ProjectManagerInterface {
 
             const foldersToAdd = new Set<string>();
             const filesToAdd = new Set<string>();
-            const allFilesInProject = this.projectCache.getList(selectedProject, false);
+            const allFilesInProject = await this.projectCache.getList(selectedProject, false);
             for (const filePath of paths) {
                 if (!filePath.isFolder) {
                     const localFolder = filePath.path.fsPath
@@ -757,7 +762,14 @@ export class ProjectManager implements ProjectManagerInterface {
         const release = await this.projectFileEditMutex.acquire();
         try {
             for (const project of this.projectCache.getProjects()) {
-                const projectPath = getFilePathInWorkspace(project);
+                const projectPath = (() => {
+                    if (project.endsWith("Package.swift")) {
+                        return getFilePathInWorkspace(
+                            path.join(path.dirname(project), ".swiftpm", "xcode")
+                        );
+                    }
+                    return getFilePathInWorkspace(project);
+                })();
 
                 const schemeDir = path.join(
                     projectPath,
@@ -810,7 +822,18 @@ export class ProjectManager implements ProjectManagerInterface {
 
             const rootProjectPath = result.at(-2) || "";
 
-            const touchProjectPath = path.join(rootProjectPath, "project.pbxproj");
+            const touchProjectPath = (() => {
+                if (rootProjectPath.endsWith("Package.swift")) {
+                    return rootProjectPath;
+                }
+                return path.join(rootProjectPath, "project.pbxproj");
+            })();
+            const schemePath = (() => {
+                if (rootProjectPath.endsWith("Package.swift")) {
+                    return path.join(path.dirname(rootProjectPath), ".swiftpm", "xcode");
+                }
+                return rootProjectPath;
+            })();
             touch.sync(touchProjectPath);
             this.log.debug(
                 `Generated scheme: VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}, with added targets: ${result.join(", ")}`
@@ -818,7 +841,7 @@ export class ProjectManager implements ProjectManagerInterface {
             return {
                 scheme: result.at(-1) || "",
                 path: path.join(
-                    rootProjectPath,
+                    schemePath,
                     "xcuserdata",
                     `${process.env.USER}.xcuserdatad`,
                     "xcschemes",
@@ -923,10 +946,8 @@ export class ProjectManager implements ProjectManagerInterface {
         const filePathComponent = filePath.split(path.sep);
         for (const project of projects) {
             try {
-                await this.projectCache.update(project, projectFile => {
-                    return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
-                });
-                const files = this.projectCache.getList(project, false);
+                await this.projectCache.update(project);
+                const files = await this.projectCache.getList(project, false);
                 for (const file of files) {
                     const fileComponent = file.split(path.sep);
                     for (
@@ -996,7 +1017,7 @@ export async function getRootProjectFilePath() {
     return undefined;
 }
 
-export async function getProjectFiles(project: string) {
+async function getProjectFiles(project: string) {
     if (project.indexOf(".xcworkspace") !== -1) {
         const xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), "utf-8");
 

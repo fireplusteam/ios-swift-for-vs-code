@@ -584,7 +584,7 @@ async function getTargetExecutable(
 ) {
     try {
         const path = `${await getBuildDir(deviceID, build_configuration)}/${product_name}`;
-        if (product_type === "com.apple.product-type.application") {
+        if (product_type.includes("com.apple.product-type.application")) {
             return `${path}.app`;
         } else if (product_type === "com.apple.product-type.library.static") {
             throw AppTargetExecutableMissedError;

@@ -124,9 +124,24 @@ end
 def all_files_in_folder(project, group)
   result = []
   folder_path = get_path_of_group(project, group)
-  # look up all files in folder and subfolders and futher folders recursively in file system
+  # look up all files in folder and subfolders and further folders recursively in file system
+  # don't recurse folder if it has Package.swift file at root (as Swift Package)
+  def package_file(path)
+    File.join(path, "Package.swift")
+  end
+
+  if File.exist?(package_file(folder_path))
+    result << Pathname.new(package_file(folder_path)).cleanpath.to_s
+    return result
+  end
   Find.find(folder_path) do |path|
-    result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+    # skip search if we have Package.swift file in subfolder
+    if File.directory?(path) && File.exist?(package_file(path))
+      result << Pathname.new(package_file(path)).cleanpath.to_s
+      Find.prune
+    else
+      result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+    end
   end
   return result
 end

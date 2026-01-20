@@ -1,14 +1,3 @@
-# type: true
-if LSP = ENV["SORBETSILENCE"]
-  require "sorbet-runtime"
-else
-  begin
-    require "sorbet-runtime"
-  rescue LoadError
-    # Do nothing if sorbet-runtime is not available
-  end
-end
-
 require "xcodeproj"
 
 def get_target_by_name(project, target_name, target_uuid = nil)
@@ -22,18 +11,31 @@ def get_target_by_name(project, target_name, target_uuid = nil)
   nil
 end
 
+def get_scheme_dir(project)
+  scheme_dir = project.path
+  if project.is_a?(SwiftPackage)
+    scheme_dir = Pathname.new(File.join(project.folder_path, ".swiftpm/xcode"))
+  end
+  scheme_dir
+end
+
+def get_user_scheme_path(scheme_dir, scheme_name)
+  Pathname.new(scheme_dir) +
+    "xcuserdata/#{ENV["USER"]}.xcuserdatad/xcschemes/#{scheme_name}.xcscheme"
+end
+
 def load_scheme_if_exists(project, scheme_name)
   def load_scheme_for_project(project, scheme_name)
-    scheme_dir = project.path
+    scheme_dir = get_scheme_dir(project)
+
     scheme_path = scheme_dir + "xcshareddata/xcschemes/#{scheme_name}.xcscheme"
     return Xcodeproj::XCScheme.new(scheme_path) if scheme_path.exist?
     # check user schemes
-    scheme_path =
-      scheme_dir +
-        "xcuserdata/#{ENV["USER"]}.xcuserdatad/xcschemes/#{scheme_name}.xcscheme"
+    scheme_path = get_user_scheme_path(scheme_dir, scheme_name)
     return Xcodeproj::XCScheme.new(scheme_path) if scheme_path.exist?
     nil
   end
+
   if project.is_a?(Array)
     project.each do |proj|
       scheme = load_scheme_for_project(proj, scheme_name)
@@ -191,4 +193,13 @@ def remove_target_from_scheme(scheme, test_target)
   end
 
   removed
+end
+
+def remove_package_swift_from_scheme(scheme_path)
+  # load file as text
+  content = File.read(scheme_path)
+  # replace occurrences of Package.swift with empty string in content
+  modified_content = content.gsub(/Package.swift/i, "")
+  # save file back to disk
+  File.open(scheme_path, "w") { |file| file.write(modified_content) }
 end

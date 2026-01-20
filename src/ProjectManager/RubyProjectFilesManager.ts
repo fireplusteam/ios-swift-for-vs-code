@@ -5,6 +5,7 @@ import { XcodeProjectFileProxy } from "./XcodeProjectFileProxy";
 
 export interface RubyProjectFilesManagerInterface {
     getProjectTargets(projectFile: string): Promise<string[]>;
+    getProjectTestsTargets(projectFile: string): Promise<string[]>;
     addFileToProject(projectFile: string, target: string, file: string): Promise<string[]>;
     addFolderToProject(projectFile: string, folder: string): Promise<string[]>;
     updateFileToProject(projectFile: string, target: string, file: string): Promise<string[]>;
@@ -64,6 +65,10 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
 
     async getProjectTargets(projectFile: string) {
         return await this.executeRuby(projectFile, `list_targets`);
+    }
+
+    async getProjectTestsTargets(projectFile: string) {
+        return await this.executeRuby(projectFile, `list_test_targets`);
     }
 
     async addFileToProject(projectFile: string, target: string, file: string) {

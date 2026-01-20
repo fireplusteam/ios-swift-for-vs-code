@@ -66,14 +66,10 @@ export interface ProjectCacheInterface {
     preloadCacheFromFile(filePath: string): Promise<void>;
     saveCacheToFile(filePath: string): Promise<void>;
     has(project: string): boolean;
-    getList(project: string, onlyFiles?: boolean): Set<string>;
+    getList(project: string, onlyFiles?: boolean): Promise<Set<string>>;
     getProjects(): string[];
-    allFiles(): { path: string; includeSubfolders: boolean }[];
-    update(
-        projectPath: string,
-        listFilesFromProject: (projectFile: string) => Promise<string[]>,
-        contentFile?: Buffer
-    ): Promise<boolean>;
+    allFiles(): Promise<{ path: string; includeSubfolders: boolean }[]>;
+    update(projectPath: string, contentFile?: Buffer): Promise<boolean>;
 }
 
 export class ProjectsCache implements ProjectCacheInterface {
@@ -81,8 +77,11 @@ export class ProjectsCache implements ProjectCacheInterface {
     private watcher = new Map<string, { watcher: fs.FSWatcher; content: Buffer }>();
 
     readonly onProjectChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    listFilesFromProject: (projectFile: string) => Promise<string[]>;
 
-    constructor() {}
+    constructor(listFilesFromProject: (projectFile: string) => Promise<string[]>) {
+        this.listFilesFromProject = listFilesFromProject;
+    }
 
     clear() {
         this.cache.clear();
@@ -124,13 +123,22 @@ export class ProjectsCache implements ProjectCacheInterface {
         });
     }
 
+    private async getFilesForProject(projectPath: string) {
+        if (projectPath.endsWith("Package.swift")) {
+            return await this.parseProjectList(
+                await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
+            );
+        }
+        return this.cache.get(projectPath)?.list;
+    }
+
     has(project: string) {
         return this.cache.has(project);
     }
 
-    getList(project: string, onlyFiles = true) {
+    async getList(project: string, onlyFiles = true) {
         const res = new Set<string>();
-        const projectList = this.cache.get(project)?.list;
+        const projectList = await this.getFilesForProject(project);
         if (!projectList) {
             return res;
         }
@@ -150,10 +158,11 @@ export class ProjectsCache implements ProjectCacheInterface {
         return projects;
     }
 
-    allFiles(): { path: string; isFolder: boolean; includeSubfolders: boolean }[] {
+    async allFiles(): Promise<{ path: string; isFolder: boolean; includeSubfolders: boolean }[]> {
         const files: { path: string; isFolder: boolean; includeSubfolders: boolean }[] = [];
-        for (const [, value] of this.cache) {
-            for (const file of value.list) {
+        for (const project of this.cache.keys()) {
+            const list = await this.getFilesForProject(project);
+            for (const file of list || []) {
                 files.push({
                     path: file.path,
                     isFolder: file.isFolder,
@@ -206,18 +215,23 @@ export class ProjectsCache implements ProjectCacheInterface {
         return resPaths;
     }
 
-    async update(
-        projectPath: string,
-        listFilesFromProject: (projectFile: string) => Promise<string[]>,
-        contentFile: Buffer | undefined = undefined
-    ) {
+    async update(projectPath: string, contentFile: Buffer | undefined = undefined) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
+        const isPackageSwift = projectPath.endsWith("Package.swift");
+        // no need to watch Package.swift files as files comes from file system
+        if (isPackageSwift) {
+            this.cache.set(projectPath, {
+                timestamp: time,
+                list: new Set<ProjFilePath>(), // empty set as files are read from file system
+            });
+            return true;
+        }
         let updated = false;
         if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
             this.cache.set(projectPath, {
                 timestamp: time,
                 list: await this.parseProjectList(
-                    await listFilesFromProject(getFilePathInWorkspace(projectPath))
+                    await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
                 ),
             });
             updated = true;
@@ -234,7 +248,7 @@ export class ProjectsCache implements ProjectCacheInterface {
                 if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
                     this.watcher.get(projectPath)?.watcher.close();
                     this.watcher.delete(projectPath);
-                    await this.update(projectPath, listFilesFromProject, contentFile);
+                    await this.update(projectPath, contentFile);
                     return;
                 }
                 this.watcher.get(projectPath)?.watcher.close();
@@ -243,7 +257,7 @@ export class ProjectsCache implements ProjectCacheInterface {
                     this.cache.delete(projectPath);
                     return;
                 }
-                await this.update(projectPath, listFilesFromProject);
+                await this.update(projectPath, contentFile);
                 this.onProjectChanged.fire();
             });
             const contentProjectFile =

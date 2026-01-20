@@ -1,18 +1,8 @@
-# typed: true
-if LSP = ENV["SORBETSILENCE"]
-  require "sorbet-runtime"
-else
-  begin
-    require "sorbet-runtime"
-  rescue LoadError
-    # Do nothing if sorbet-runtime is not available
-  end
-end
-
 require "xcodeproj"
 require "pathname"
 require_relative "project_scheme_helper"
 require_relative "project_file_helper"
+require_relative "package_helper"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
@@ -204,6 +194,14 @@ def list_targets(project)
   project.targets.each { |target| puts target.name }
 end
 
+def list_test_targets(project)
+  project.targets.each do |target|
+    if target.respond_to?(:test_target_type?) && target.test_target_type?
+      puts target.name
+    end
+  end
+end
+
 def list_files(project)
   def print_all_group_paths(project)
     traverse_all_group(project) do |group, parent_group, group_path, _type|
@@ -293,6 +291,7 @@ def generate_scheme_depend_on_target(
   include_targets,
   exclude_targets
 )
+  projects = projects.filter { |proj| proj.is_a?(Xcodeproj::Project) }
   include_targets_list =
     include_targets.nil? == false ? include_targets.split(",") : []
   exclude_targets_list =
@@ -433,9 +432,13 @@ def generate_test_scheme_depend_on_target(
     end
 
   # save the scheme
-  scheme_dir = project.path
+  scheme_dir = get_scheme_dir(project)
+
   scheme_dir.mkpath unless scheme_dir.exist?
   scheme.save_as(scheme_dir, generated_scheme_name, false)
+  remove_package_swift_from_scheme(
+    get_user_scheme_path(scheme_dir, generated_scheme_name)
+  )
 
   puts project.path
   puts generated_scheme_name
@@ -446,6 +449,31 @@ def save(project)
 end
 
 def handle_action(project, action, arg)
+  if project.is_a?(SwiftPackage)
+    if action == "list_files"
+      package_list_files(project)
+      return
+    end
+    if action == "list_files_for_target"
+      package_list_files_for_target(project, arg[1])
+      return
+    end
+    if action == "list_targets_for_file"
+      package_list_targets_for_file(project, arg[1])
+      return
+    end
+    if action == "list_targets"
+      list_targets(project)
+      return
+    end
+    list_test_targets(project) if action == "list_test_targets"
+    if action == "generate_test_scheme_depend_on_target"
+      generate_test_scheme_depend_on_target(project, arg[1], arg[2], arg[3])
+      return
+    end
+    return
+  end
+
   if action == "save"
     save(project)
     return
@@ -515,6 +543,11 @@ def handle_action(project, action, arg)
     return
   end
 
+  if action == "list_test_targets"
+    list_test_targets(project)
+    return
+  end
+
   if action == "list_targets_for_file"
     list_targets_for_file(project, arg[1])
     return
@@ -542,10 +575,18 @@ $all_projects = {}
 def get_project(path)
   # use global all_projects to cache opened projects
   unless $all_projects.key?(path)
-    $all_projects[path] = {
-      project: Xcodeproj::Project.open(path),
-      mtime: File.mtime(path)
-    }
+    if path.end_with?("Package.swift")
+      package_project = SwiftPackage.new(path)
+      $all_projects[path] = {
+        project: package_project,
+        mtime: File.mtime(path)
+      }
+    else
+      $all_projects[path] = {
+        project: Xcodeproj::Project.open(path),
+        mtime: File.mtime(path)
+      }
+    end
   end
   $all_projects[path]
 end
@@ -558,7 +599,7 @@ def perform_action_on_project(project_path, action, arg)
     project = project[:project]
 
     new_mtime = File.mtime(project_path)
-    if previous_mtime != new_mtime
+    if previous_mtime != new_mtime && project.is_a?(Xcodeproj::Project)
       previous_mtime = new_mtime
       project = Xcodeproj::Project.open(project_path)
       $all_projects[project_path] = { project: project, mtime: previous_mtime }

@@ -400,7 +400,10 @@ export class TestProvider {
         const target = (await this.projectManager.listTestTargetsForFile(e.uri.fsPath, project)).at(
             0
         );
-        if (target === undefined || !this.projectManager.isTestTarget(target)) {
+        if (
+            target === undefined ||
+            !(await this.projectManager.getTestProjectTargets(project)).includes(target)
+        ) {
             return;
         }
 
@@ -467,10 +470,8 @@ export class TestProvider {
                     return new TestProject(
                         this.context,
                         async () => {
-                            const targets = await this.projectManager.getProjectTargets(proj);
-                            return targets.filter(e => {
-                                return this.projectManager.isTestTarget(e);
-                            });
+                            const targets = await this.projectManager.getTestProjectTargets(proj);
+                            return targets;
                         },
                         async targetName => {
                             const files = await this.projectManager.getFilesForTarget(
