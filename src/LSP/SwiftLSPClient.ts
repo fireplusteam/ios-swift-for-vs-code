@@ -25,7 +25,7 @@ function useLspForCFamilyFiles(folder: vscode.Uri) {
     return true;
 }
 
-function checkIfThisExtensionIsFormatterByDefaultForSwiftFiles(folder: vscode.Uri) {
+function checkIfThisExtensionIsFormatterByDefaultForSwiftFiles() {
     /* example of setting
         "[swift]": {
         "editor.defaultFormatter": "fireplusteam.vscode-swiftformat-xcode"
@@ -134,8 +134,7 @@ export class SwiftLSPClient implements vscode.Disposable {
             command: serverPath,
             args: [
                 // this option is blocking other extensions to provide formatting on format on type even if it's not set in settings
-                ...(folder !== undefined &&
-                checkIfThisExtensionIsFormatterByDefaultForSwiftFiles(folder)
+                ...(checkIfThisExtensionIsFormatterByDefaultForSwiftFiles()
                     ? ["--experimental-feature=on-type-formatting"]
                     : []),
             ],
