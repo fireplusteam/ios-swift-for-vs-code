@@ -135,7 +135,23 @@ def check_test_target_in_scheme(scheme, test_target)
   false
 end
 
-def add_target_to_scheme(scheme, test_target, build_for_testing)
+def apply_action_on_add_ref_to_scheme(project, root_project, &closure)
+  Xcodeproj::Project.class_eval { attr_writer :path }
+  old_path = project.path
+  relative_path =
+    Pathname.new(project.path).relative_path_from(Pathname.new(root_project))
+  puts "Temporarily changing project path from #{project.path} to #{relative_path}"
+  project.path = Pathname(File.join(File.dirname(project.path), relative_path))
+  closure.call
+  project.path = old_path
+end
+
+def add_target_to_scheme(
+  scheme,
+  test_target,
+  build_for_testing,
+  root_project_dir_path
+)
   if scheme.is_a?(Xcodeproj::XCScheme) == false
     raise "scheme should be of type Xcodeproj::XCScheme"
   end
@@ -143,16 +159,25 @@ def add_target_to_scheme(scheme, test_target, build_for_testing)
   if !build_for_testing
     if !check_target_in_scheme(scheme, test_target) &&
          !check_test_target_in_scheme(scheme, test_target)
-      scheme.add_build_target(test_target)
+      apply_action_on_add_ref_to_scheme(
+        test_target.project,
+        root_project_dir_path
+      ) { scheme.add_build_target(test_target) }
       puts "Added target to scheme: #{test_target.name}"
       return true
     end
   else
     if !check_test_target_in_scheme(scheme, test_target)
       test_action = scheme.test_action
-      testable_reference =
-        Xcodeproj::XCScheme::TestAction::TestableReference.new(test_target)
-      test_action.add_testable(testable_reference)
+
+      apply_action_on_add_ref_to_scheme(
+        test_target.project,
+        root_project_dir_path
+      ) do
+        testable_reference =
+          Xcodeproj::XCScheme::TestAction::TestableReference.new(test_target)
+        test_action.add_testable(testable_reference)
+      end
       return true
     end
   end

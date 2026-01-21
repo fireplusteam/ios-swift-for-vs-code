@@ -291,7 +291,6 @@ def generate_scheme_depend_on_target(
   include_targets,
   exclude_targets
 )
-  projects = projects.filter { |proj| proj.is_a?(Xcodeproj::Project) }
   include_targets_list =
     include_targets.nil? == false ? include_targets.split(",") : []
   exclude_targets_list =
@@ -328,43 +327,53 @@ def generate_scheme_depend_on_target(
     puts "scheme_does_not_exist"
     return
   end
+  root_project_dir_path = project.path.dirname
 
-  # use bfs to find all deps of the original_scheme_name target
-
-  # build inverted dependency graph
-  dep_graph = {}
-  project.targets.each do |target|
-    target.dependencies.each do |dep|
-      next if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
-
-      dep_graph[dep.target.name] ||= []
-      dep_graph[dep.target.name] << target
-    end
-  end
-
-  # bfs to find all dependents targets of the root_target
-  queue = root_targets.dup
   visited = {}
-  queue.each { |target| visited[target.uuid] = true }
   is_different_from_existing = false
-  root_targets.each do |target|
-    if add_target_to_scheme(scheme, target, false)
-      is_different_from_existing = true
+  # use bfs to find all deps of the original_scheme_name target
+  # only Xcodeproj::Project is supported for dependency analysis, for Package.swift we need to parse Package.swift file first
+  if project.is_a?(Xcodeproj::Project)
+    # build inverted dependency graph
+    dep_graph = {}
+    project.targets.each do |target|
+      target.dependencies.each do |dep|
+        if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
+          next
+        end
+
+        dep_graph[dep.target.name] ||= []
+        dep_graph[dep.target.name] << target
+      end
     end
-  end
 
-  while !queue.empty?
-    current = queue.shift
-    if dep_graph.key?(current.name)
-      dep_graph[current.name].each do |neighbor|
-        next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
+    # bfs to find all dependents targets of the root_target
+    queue = root_targets.dup
+    queue.each { |target| visited[target.uuid] = true }
+    root_targets.each do |target|
+      if add_target_to_scheme(scheme, target, false, root_project_dir_path)
+        is_different_from_existing = true
+      end
+    end
 
-        if !visited.key?(neighbor.uuid) &&
-             exclude_targets_list.include?(neighbor.name) == false
-          visited[neighbor.uuid] = true
-          queue << neighbor
-          if add_target_to_scheme(scheme, neighbor, false)
-            is_different_from_existing = true
+    while !queue.empty?
+      current = queue.shift
+      if dep_graph.key?(current.name)
+        dep_graph[current.name].each do |neighbor|
+          next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
+
+          if !visited.key?(neighbor.uuid) &&
+               exclude_targets_list.include?(neighbor.name) == false
+            visited[neighbor.uuid] = true
+            queue << neighbor
+            if add_target_to_scheme(
+                 scheme,
+                 neighbor,
+                 false,
+                 root_project_dir_path
+               )
+              is_different_from_existing = true
+            end
           end
         end
       end
@@ -372,25 +381,31 @@ def generate_scheme_depend_on_target(
   end
 
   # add all other targets from include_targets_list
-  project.targets.each do |target|
-    if !visited.key?(target.uuid) &&
-         include_targets_list.include?(target.name) &&
-         exclude_targets_list.include?(target.name) == false
-      if add_target_to_scheme(scheme, target, false)
-        is_different_from_existing = true
+  projects.each do |project|
+    project.targets.each do |target|
+      if !visited.key?(target.uuid) &&
+           include_targets_list.include?(target.name) &&
+           exclude_targets_list.include?(target.name) == false
+        if add_target_to_scheme(scheme, target, false, root_project_dir_path)
+          is_different_from_existing = true
+        end
       end
     end
   end
 
-  # save the scheme
   if is_different_from_existing == false
     puts "scheme_unchanged"
     return
   end
 
+  # save the scheme
+
   scheme_dir = project.path
   scheme_dir.mkpath unless scheme_dir.exist?
   scheme.save_as(scheme_dir, generated_scheme_name, false)
+  remove_package_swift_from_scheme(
+    get_user_scheme_path(scheme_dir, generated_scheme_name)
+  )
 
   puts project.path
   puts generated_scheme_name
@@ -405,6 +420,7 @@ def generate_test_scheme_depend_on_target(
   test_targets_list = test_targets.split(",")
   test_targets_list = [] if test_targets == "include_all_tests_targets"
   test_targets_list = test_targets_list.uniq
+  root_project_dir_path = project.path.dirname
 
   scheme = load_scheme_if_exists(project, original_scheme_name)[:scheme]
 
@@ -424,7 +440,7 @@ def generate_test_scheme_depend_on_target(
     # puts "current target: #{current.name}, #{current.product_name}"
     if test_targets_list.empty? == true ||
          test_targets_list.include?(current.name)
-      if add_target_to_scheme(scheme, current, true)
+      if add_target_to_scheme(scheme, current, true, root_project_dir_path)
         is_different_from_existing = true
       end
     end

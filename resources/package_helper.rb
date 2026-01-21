@@ -43,25 +43,80 @@ class SwiftPackage
     end
   end
 
-  attr_accessor :path
+  attr_accessor :path, :folder_path, :project_dir_path
 
   def initialize(package_path)
     @path = Pathname.new(package_path).expand_path
+    @folder_path = @path.dirname
+    # should be used in buildable reference to construct XCScheme only
+    @project_dir_path = @folder_path
+    # TODO: to parse Package.swift file, we can use the following command to dump package info as JSON
+    # swift package dump-package
+    #   "targets" : [
+    #   {
+    #     "dependencies" : [
+    #       {
+    #         "byName" : [
+    #           "FLAnimatedImage",
+    #           null
+    #         ]
+    #       },
+    #       {
+    #         "byName" : [
+    #           "Nuke",
+    #           null
+    #         ]
+    #       },
+    #       {
+    #         "product" : [
+    #           "NukeExtensions",
+    #           "Nuke",
+    #           null,
+    #           null
+    #         ]
+    #       },
+    #     ],
+    #     "exclude" : [
+
+    #     ],
+    #     "name" : "MainLib",
+    #     "packageAccess" : false,
+    #     "type" : "regular"
+    #   },
+    #   {
+    #     "dependencies" : [
+    #       {
+    #         "byName" : [
+    #           "MainLib",
+    #           null
+    #         ]
+    #       },
+    #       {
+    #         "product" : [
+    #           "SnapshotTesting",
+    #           "swift-snapshot-testing",
+    #           null,
+    #           null
+    #         ]
+    #       }
+    #     ],
+    #     "exclude" : [
+
+    #     ],
+    #     "name" : "MainLibTests",
+    #     "packageAccess" : false,
+    #     "settings" : [
+
+    #     ],
+    #     "type" : "test"
+    #   }
+    # ],
   end
 
   #root_object.project_dir_path
 
   def root_object
     self
-  end
-
-  # should be used in buildable reference to construct XCScheme only
-  def project_dir_path
-    @path
-  end
-
-  def folder_path
-    @path.dirname
   end
 
   def targets
