@@ -301,22 +301,35 @@ def generate_scheme_depend_on_target(
   result_scheme_load = load_scheme_if_exists(projects, original_scheme_name)
   scheme = result_scheme_load[:scheme]
   project = result_scheme_load[:project]
-  project = projects[0] if project.nil?
 
-  all_targets = get_all_targets_from_scheme(scheme)
-
-  # write bfs to find all deps of the original_scheme_name target
-  root_targets =
-    all_targets
-      .map do |target|
-        get_target_by_name(project, target[:name], target[:uuid])
+  root_targets = []
+  if project.nil?
+    projects.each do |proj|
+      proj.targets.each do |target|
+        if target.name == original_scheme_name
+          root_targets = [target]
+          project = proj
+          break
+        end
       end
-      .reject(&:nil?)
+      break unless project.nil?
+    end
+  else
+    all_targets = get_all_targets_from_scheme(scheme)
+    root_targets =
+      all_targets
+        .map do |target|
+          get_target_by_name(project, target[:name], target[:uuid])
+        end
+        .reject(&:nil?)
+  end
 
-  if root_targets.empty?
+  if project.nil? || root_targets.empty?
     puts "scheme_does_not_exist"
     return
   end
+
+  # use bfs to find all deps of the original_scheme_name target
 
   # build inverted dependency graph
   dep_graph = {}

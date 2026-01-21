@@ -466,7 +466,13 @@ export class ProjectManager implements ProjectManagerInterface {
         } finally {
             try {
                 for (const project of modifiedProjects) {
-                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                    try {
+                        await this.rubyProjectFilesManager.saveProject(
+                            getFilePathInWorkspace(project)
+                        );
+                    } catch {
+                        // ignore
+                    }
                 }
             } finally {
                 release();
@@ -574,6 +580,23 @@ export class ProjectManager implements ProjectManagerInterface {
                 return;
             }
             const selectedProjectPath = getFilePathInWorkspace(selectedProject[0]);
+
+            // for Package.swift a file can belong only to one target which is defined by file path
+            if (selectedProjectPath.endsWith("Package.swift")) {
+                const target = await this.rubyProjectFilesManager.listTargetsForFile(
+                    selectedProjectPath,
+                    file.fsPath
+                );
+                if (target.length === 0) {
+                    vscode.window.showInformationMessage(
+                        "This file does not belong to any target in the Package.swift project."
+                    );
+                    return;
+                }
+                const items = sortTargets(target, target);
+                await showPicker(items, "Package: File Target", "", false, false, false);
+                return;
+            }
 
             const typeOfPath =
                 (

@@ -123,14 +123,17 @@ export class RunManager {
                     deviceId.id,
                     await context.projectEnv.appExecutablePath(deviceId),
                 ],
+                mode: ExecutorMode.verbose,
             });
         } catch (error) {
+            DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
             if (error !== UserTerminalCloseError && error !== UserTerminatedError) {
                 vscode.window.showErrorMessage(
                     "Can not find app executable to install on simulator. Please check build log for details."
                 );
             }
-            DebugAdapterTracker.updateStatus(this.sessionID, "stopped");
+
+            throw error;
         }
 
         if (context.terminal) {
