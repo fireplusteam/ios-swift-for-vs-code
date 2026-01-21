@@ -2,7 +2,13 @@
 
 ### 0.6.8 - 2026-01-20
 
+### Added
+
+-   Added support of running/debugging tests for all subprojects including swift packages in workspace or project via test explorer
+-   Now you can add targets from swift packages/sub projects/libs to the watcher command task to include them in the build for autocompletion
+
 ### Fixed
+
 -   Minor bug fixes and stability improvements
 
 ### 0.6.7 - 2026-01-16

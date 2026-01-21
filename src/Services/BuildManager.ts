@@ -190,7 +190,7 @@ export class BuildManager {
                     )),
                     "-skipUnavailableActions", // for autocomplete, skip if it fails
                     "-jobs",
-                    "4",
+                    "4", // TODO: make it configurable via settings
                 ],
                 env: {
                     continueBuildingAfterErrors: "True", // build even if there's an error triggered
