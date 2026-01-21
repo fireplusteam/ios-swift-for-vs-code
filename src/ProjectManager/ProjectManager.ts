@@ -411,28 +411,21 @@ export class ProjectManager implements ProjectManagerInterface {
             for (let i = 0; i < oldFiles.length; ++i) {
                 const file = files[i];
                 const oldFile = oldFiles[i];
-                const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
-                const previousProject = await this.determineProjectFile(
-                    oldFile.fsPath,
-                    projectFiles
-                );
+                const newProjects = await this.determineProjectFile(file.fsPath, projectFiles);
+                const oldProjects = await this.determineProjectFile(oldFile.fsPath, projectFiles);
 
                 // for the case when file was moved from one project to another, we need to remove it for the old project
-                for (const project of previousProject) {
-                    if (!selectedProject.includes(project)) {
+                for (const project of oldProjects) {
+                    if (!newProjects.includes(project)) {
                         modifiedProjects.add(project);
-                        try {
-                            await this.rubyProjectFilesManager.deleteFileFromProject(
-                                getFilePathInWorkspace(project),
-                                oldFile.fsPath
-                            );
-                        } catch (err) {
-                            this.log.error(`Failed to delete file from project: ${String(err)}`);
-                        }
+                        await this.rubyProjectFilesManager.deleteFileFromProject(
+                            getFilePathInWorkspace(project),
+                            oldFile.fsPath
+                        );
                     }
                 }
 
-                for (const project of selectedProject) {
+                for (const project of newProjects) {
                     try {
                         modifiedProjects.add(project);
                         if (isFolder(file.fsPath)) {

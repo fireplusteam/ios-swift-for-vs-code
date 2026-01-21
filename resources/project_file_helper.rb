@@ -134,13 +134,15 @@ def all_files_in_folder(project, group)
     result << Pathname.new(package_file(folder_path)).cleanpath.to_s
     return result
   end
-  Find.find(folder_path) do |path|
-    # skip search if we have Package.swift file in subfolder
-    if File.directory?(path) && File.exist?(package_file(path))
-      result << Pathname.new(package_file(path)).cleanpath.to_s
-      Find.prune
-    else
-      result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+  if File.directory?(folder_path)
+    Find.find(folder_path) do |path|
+      # skip search if we have Package.swift file in subfolder
+      if File.directory?(path) && File.exist?(package_file(path))
+        result << Pathname.new(package_file(path)).cleanpath.to_s
+        Find.prune
+      else
+        result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+      end
     end
   end
   return result

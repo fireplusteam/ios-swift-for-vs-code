@@ -132,7 +132,7 @@ async function initialize(
     lsp.start();
     fs.mkdir(getLogPath(), () => {});
     await enableSWBBuildService(shouldInjectSWBBuildService());
-    await projectManager.loadProjectFiles();
+    await projectManager.loadProjectFiles(true);
     await projectManager.cleanAutocompleteSchemes();
     autocompleteWatcher.triggerIncrementalBuild();
     return true;

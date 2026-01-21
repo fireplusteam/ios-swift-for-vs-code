@@ -1,4 +1,5 @@
 require "pathname"
+require "find"
 require_relative "project_scheme_helper"
 require_relative "project_file_helper"
 
@@ -89,8 +90,10 @@ end
 
 def find_files(path)
   result = []
-  Find.find(path) do |path|
-    result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+  if File.directory?(path)
+    Find.find(path) do |path|
+      result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+    end
   end
   result
 end
