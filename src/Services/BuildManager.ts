@@ -19,6 +19,13 @@ function isCompilationCacheEnabled() {
         .get<boolean>("build.compilationCache", true);
 }
 
+function jobsCountForWatcher(): number {
+    const jobs = vscode.workspace
+        .getConfiguration("vscode-ios", getWorkspaceFolder())
+        .get<number>("watcher.jobs", 2);
+    return Math.min(Math.max(jobs, 1), 16);
+}
+
 export interface BuildTestsInput {
     projectFile: string;
     tests: string[];
@@ -189,7 +196,7 @@ export class BuildManager {
                     )),
                     "-skipUnavailableActions", // for autocomplete, skip if it fails
                     "-jobs",
-                    "4", // TODO: make it configurable via settings
+                    jobsCountForWatcher().toString(),
                 ],
                 env: {
                     continueBuildingAfterErrors: "True", // build even if there's an error triggered
