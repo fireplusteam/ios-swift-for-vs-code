@@ -444,7 +444,12 @@ export async function checkWorkspace(commandContext: CommandContext, ignoreFocus
         await checkSwiftPackageWorkspace(commandContext);
 
         if (commandContext.projectEnv.firstLaunchedConfigured === false) {
-            await updatePackageDependencies(commandContext, false);
+            try {
+                await updatePackageDependencies(commandContext, false);
+            } catch {
+                /// might not work as expected as dependencies are not updated
+                /// but we can continue anyway to let user work with the project, but try to update deps next time
+            }
         }
         await generateXcodeServer(commandContext, false);
     } catch (error) {

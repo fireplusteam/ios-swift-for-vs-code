@@ -14,7 +14,8 @@ end
 def get_scheme_dir(project)
   scheme_dir = project.path
   if project.is_a?(SwiftPackage)
-    scheme_dir = Pathname.new(File.join(project.folder_path, ".swiftpm/xcode"))
+    scheme_dir =
+      Pathname.new(File.join(project.project_dir_path, ".swiftpm/xcode"))
   end
   scheme_dir
 end
@@ -218,6 +219,17 @@ def remove_target_from_scheme(scheme, test_target)
   end
 
   removed
+end
+
+def remove_all_test_targets_from_scheme(scheme, test_targets_list)
+  all_test_targets_in_scheme = get_all_test_targets_from_scheme(scheme)
+  modified = false
+  for to_remove_target in all_test_targets_in_scheme
+    if !test_targets_list.include?(to_remove_target[:name])
+      modified = true if remove_target_from_scheme(scheme, to_remove_target)
+    end
+  end
+  modified
 end
 
 def remove_package_swift_from_scheme(scheme_path)

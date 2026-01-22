@@ -6,8 +6,6 @@ import { getWorkspaceFolder, ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
-import { CustomError } from "../utils";
-import { TestPlanIsNotConfigured } from "./ProjectSettingsProvider";
 
 function isBuildIndexesWhileBuildingEnabled() {
     return vscode.workspace
@@ -139,16 +137,17 @@ export class BuildManager {
         includeTargets: string[] = [],
         excludeTargets: string[] = []
     ) {
-        let buildCommand: "build" | "build-for-testing" = "build-for-testing";
-        try {
-            await context.projectSettingsProvider.testPlans;
-        } catch (error) {
-            if (error instanceof CustomError && error.isEqual(TestPlanIsNotConfigured)) {
-                buildCommand = "build";
-            } else {
-                throw error;
-            }
-        }
+        // let buildCommand: "build" | "build-for-testing" = "build-for-testing";
+        const buildCommand = "build";
+        // try {
+        //     await context.projectSettingsProvider.testPlans;
+        // } catch (error) {
+        //     if (error instanceof CustomError && error.isEqual(TestPlanIsNotConfigured)) {
+        //         buildCommand = "build";
+        //     } else {
+        //         throw error;
+        //     }
+        // }
 
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;

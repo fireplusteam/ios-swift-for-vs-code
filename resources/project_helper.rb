@@ -327,53 +327,56 @@ def generate_scheme_depend_on_target(
     puts "scheme_does_not_exist"
     return
   end
+
   root_project_dir_path = project.path.dirname
 
   visited = {}
+
   is_different_from_existing = false
+
+  # remove all test targets from scheme first and then add back only required ones as buildable references
+  # remove "Testables" from test action
+  scheme.test_action.testables = [] if not scheme.test_action.nil?
+
   # use bfs to find all deps of the original_scheme_name target
   # only Xcodeproj::Project is supported for dependency analysis, for Package.swift we need to parse Package.swift file first
-  if project.is_a?(Xcodeproj::Project)
-    # build inverted dependency graph
-    dep_graph = {}
-    project.targets.each do |target|
-      target.dependencies.each do |dep|
-        if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
-          next
-        end
+  # build inverted dependency graph
+  dep_graph = {}
+  project.targets.each do |target|
+    target.dependencies.each do |dep|
+      next if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
 
-        dep_graph[dep.target.name] ||= []
-        dep_graph[dep.target.name] << target
-      end
+      dep_graph[dep.target.name] ||= []
+      dep_graph[dep.target.name] << target
     end
+  end
 
-    # bfs to find all dependents targets of the root_target
-    queue = root_targets.dup
-    queue.each { |target| visited[target.uuid] = true }
-    root_targets.each do |target|
-      if add_target_to_scheme(scheme, target, false, root_project_dir_path)
-        is_different_from_existing = true
-      end
+  # bfs to find all dependents targets of the root_target
+  queue = root_targets.dup
+  queue.each { |target| visited[target.uuid] = true }
+  root_targets.each do |target|
+    if add_target_to_scheme(scheme, target, false, root_project_dir_path)
+      is_different_from_existing = true
     end
+  end
 
-    while !queue.empty?
-      current = queue.shift
-      if dep_graph.key?(current.name)
-        dep_graph[current.name].each do |neighbor|
-          next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
+  while !queue.empty?
+    current = queue.shift
+    if dep_graph.key?(current.name)
+      dep_graph[current.name].each do |neighbor|
+        next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
 
-          if !visited.key?(neighbor.uuid) &&
-               exclude_targets_list.include?(neighbor.name) == false
-            visited[neighbor.uuid] = true
-            queue << neighbor
-            if add_target_to_scheme(
-                 scheme,
-                 neighbor,
-                 false,
-                 root_project_dir_path
-               )
-              is_different_from_existing = true
-            end
+        if !visited.key?(neighbor.uuid) &&
+             exclude_targets_list.include?(neighbor.name) == false
+          visited[neighbor.uuid] = true
+          queue << neighbor
+          if add_target_to_scheme(
+               scheme,
+               neighbor,
+               false,
+               root_project_dir_path
+             )
+            is_different_from_existing = true
           end
         end
       end
@@ -400,7 +403,7 @@ def generate_scheme_depend_on_target(
 
   # save the scheme
 
-  scheme_dir = project.path
+  scheme_dir = get_scheme_dir(project)
   scheme_dir.mkpath unless scheme_dir.exist?
   scheme.save_as(scheme_dir, generated_scheme_name, false)
   remove_package_swift_from_scheme(
@@ -426,14 +429,8 @@ def generate_test_scheme_depend_on_target(
 
   is_different_from_existing = false
 
-  all_test_targets_in_scheme = get_all_test_targets_from_scheme(scheme)
-  for to_remove_target in all_test_targets_in_scheme
-    if test_targets_list.empty? == false &&
-         !test_targets_list.include?(to_remove_target[:name])
-      if remove_target_from_scheme(scheme, to_remove_target)
-        is_different_from_existing = true
-      end
-    end
+  if remove_all_test_targets_from_scheme(scheme, test_targets_list)
+    is_different_from_existing = true
   end
 
   project.targets.each do |current|
@@ -628,9 +625,13 @@ def perform_action_on_project(project_path, action, arg)
     project = project[:project]
 
     new_mtime = File.mtime(project_path)
-    if previous_mtime != new_mtime && project.is_a?(Xcodeproj::Project)
+    if previous_mtime != new_mtime
       previous_mtime = new_mtime
-      project = Xcodeproj::Project.open(project_path)
+      if project.is_a?(Xcodeproj::Project)
+        project = Xcodeproj::Project.open(project_path)
+      else
+        project = SwiftPackage.new(project_path)
+      end
       $all_projects[project_path] = { project: project, mtime: previous_mtime }
     end
     project
