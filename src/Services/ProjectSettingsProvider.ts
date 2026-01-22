@@ -1,5 +1,11 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getProjectType, isPlatformValid, ProjectEnv, ProjectFileMissedError } from "../env";
+import {
+    getProjectType,
+    isPlatformValid,
+    NoAvailableSchemesForProjectError,
+    ProjectEnv,
+    ProjectFileMissedError,
+} from "../env";
 import { ExecutorMode } from "../Executor";
 import { getRootProjectFilePath } from "../ProjectManager/ProjectManager";
 import { CustomError } from "../utils";
@@ -40,6 +46,13 @@ export class ProjectSettingsProvider implements XCodeSettings {
         const json = await this.fetchXcodeList(await projectEnv.projectFile);
         if ((await projectEnv.projectType) === "-workspace") {
             return json.workspace.schemes;
+        }
+        if (
+            json.project.schemes === null ||
+            json.project.schemes === undefined ||
+            json.project.schemes.length === 0
+        ) {
+            throw NoAvailableSchemesForProjectError;
         }
         return json.project.schemes;
     }

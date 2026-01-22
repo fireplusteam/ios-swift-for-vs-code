@@ -8,6 +8,7 @@ import {
     getLogPath,
     isActivated,
     isWorkspaceOpened,
+    NoAvailableSchemesForProjectError,
     ProjectConfigurationMissedError,
     ProjectEnv,
     ProjectFileMissedError,
@@ -601,7 +602,9 @@ export async function handleValidationErrors<T>(
                 return await repeatOnChange();
         }
     }
-    if (error === ProjectFileMissedError) {
+    if (error === NoAvailableSchemesForProjectError) {
+        throw error;
+    } else if (error === ProjectFileMissedError) {
         if (!projectManager) {
             throw Error("ProjectManager is not valid");
         }

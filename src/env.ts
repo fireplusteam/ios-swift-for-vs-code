@@ -34,6 +34,10 @@ export const ConfigurationProjectError = new CustomError(
     "Project configuration was changed by another operation. Can not be modified by this one"
 );
 
+export const NoAvailableSchemesForProjectError = new CustomError(
+    "No available schemes for the given project. Open Xcode and create at least one scheme first."
+);
+
 export interface DeviceID {
     id: string;
     name: string;
