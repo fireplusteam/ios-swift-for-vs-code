@@ -560,13 +560,17 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
     const buildServerConfigPath = path.join(lspFolder.fsPath, "buildServer.json");
     fs.writeFileSync(buildServerConfigPath, JSON.stringify(buildServerConfigData, null, 4), "utf8");
 
-    await commandContext
-        .execShellParallel({
-            scriptOrCommand: { file: "update_git_exclude_if_any.py" },
-        })
-        .catch(error => {
-            commandContext.log.error(`Git exclude was not updated. Error: ${error}`);
-        });
+    try {
+        await commandContext
+            .execShellParallel({
+                scriptOrCommand: { file: "update_git_exclude_if_any.py" },
+            })
+            .catch(error => {
+                commandContext.log.error(`Git exclude was not updated. Error: ${error}`);
+            });
+    } catch {
+        // do nothing
+    }
 
     commandContext.lspClient.restart();
 }

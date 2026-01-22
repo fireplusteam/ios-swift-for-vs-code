@@ -144,18 +144,6 @@ export class BuildManager {
         includeTargets: string[] = [],
         excludeTargets: string[] = []
     ) {
-        // let buildCommand: "build" | "build-for-testing" = "build-for-testing";
-        const buildCommand = "build";
-        // try {
-        //     await context.projectSettingsProvider.testPlans;
-        // } catch (error) {
-        //     if (error instanceof CustomError && error.isEqual(TestPlanIsNotConfigured)) {
-        //         buildCommand = "build";
-        //     } else {
-        //         throw error;
-        //     }
-        // }
-
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
             try {
@@ -188,7 +176,7 @@ export class BuildManager {
                 scriptOrCommand: { command: "xcodebuild" },
                 pipeToParseBuildErrors: true,
                 args: [
-                    buildCommand,
+                    "build",
                     ...(await BuildManager.args(
                         context.projectEnv,
                         context.bundle,

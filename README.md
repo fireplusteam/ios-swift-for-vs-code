@@ -164,8 +164,12 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
                 "kind": "build",
                 "isDefault": false
             },
-            "includeTargets": ["someTestTarget", ...], // add targets which you want watcher to include for each run to improve autocompletion. For example, you can add AGGREGATE targets which build all targets you need for autocompletion
-            "excludeTargets": ["someTargetWhichExecuteScripts", ...] // exclude targets which you want definitely exclude from building, for example targets which execute scripts only
+            // add targets which you want watcher to include for each run to improve autocompletion.
+            // For example, you can add AGGREGATE targets which build all targets you need for autocompletion
+            "includeTargets": ["someTestTarget", ...],
+            // exclude targets which you want definitely exclude from building,
+            // for example targets which execute scripts only
+            "excludeTargets": ["someTargetWhichExecuteScripts", ...]
         },
         {
             "label": "Xcode Clean",
