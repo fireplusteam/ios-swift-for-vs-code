@@ -339,7 +339,6 @@ def generate_scheme_depend_on_target(
   scheme.test_action.testables = [] if not scheme.test_action.nil?
 
   # use bfs to find all deps of the original_scheme_name target
-  # only Xcodeproj::Project is supported for dependency analysis, for Package.swift we need to parse Package.swift file first
   # build inverted dependency graph
   dep_graph = {}
   project.targets.each do |target|
@@ -351,7 +350,7 @@ def generate_scheme_depend_on_target(
     end
   end
 
-  # bfs to find all dependents targets of the root_target
+  # bfs to find all dependent targets of the root_target
   queue = root_targets.dup
   queue.each { |target| visited[target.uuid] = true }
   root_targets.each do |target|
@@ -474,7 +473,10 @@ def save(project)
   project.save
 end
 
+# ACTION HANDLER
+
 def handle_action(project, action, arg)
+  # HANDLE SWIFTPACKAGE ACTIONS
   if project.is_a?(SwiftPackage)
     if action == "list_files"
       package_list_files(project)
@@ -499,6 +501,8 @@ def handle_action(project, action, arg)
     end
     return
   end
+
+  # HANDLE XCODEPROJ ACTIONS
 
   if action == "save"
     save(project)
@@ -598,21 +602,21 @@ end
 # MAIN LOOP
 
 $all_projects = {}
+def load_project(project_path)
+  if project_path.end_with?("Package.swift")
+    SwiftPackage.new(project_path)
+  else
+    Xcodeproj::Project.open(project_path)
+  end
+end
+
 def get_project(path)
   # use global all_projects to cache opened projects
   unless $all_projects.key?(path)
-    if path.end_with?("Package.swift")
-      package_project = SwiftPackage.new(path)
-      $all_projects[path] = {
-        project: package_project,
-        mtime: File.mtime(path)
-      }
-    else
-      $all_projects[path] = {
-        project: Xcodeproj::Project.open(path),
-        mtime: File.mtime(path)
-      }
-    end
+    $all_projects[path] = {
+      project: load_project(path),
+      mtime: File.mtime(path)
+    }
   end
   $all_projects[path]
 end
@@ -626,13 +630,8 @@ def perform_action_on_project(project_path, action, arg)
 
     new_mtime = File.mtime(project_path)
     if previous_mtime != new_mtime
-      previous_mtime = new_mtime
-      if project.is_a?(Xcodeproj::Project)
-        project = Xcodeproj::Project.open(project_path)
-      else
-        project = SwiftPackage.new(project_path)
-      end
-      $all_projects[project_path] = { project: project, mtime: previous_mtime }
+      project = load_project(project_path)
+      $all_projects[project_path] = { project: project, mtime: new_mtime }
     end
     project
   end
@@ -646,7 +645,7 @@ def perform_action_on_project(project_path, action, arg)
     handle_action(project, action, arg)
   end
 
-  if action == "save"
+  if action == "save" && project.is_a?(Xcodeproj::Project)
     previous_mtime = File.mtime(project_path)
     $all_projects[project_path] = { project: project, mtime: previous_mtime }
   end

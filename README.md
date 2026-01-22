@@ -164,8 +164,8 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
                 "kind": "build",
                 "isDefault": false
             },
-            "includeTargets": ["someTestTarget", ...], // add targets which you want watcher include for each run
-            "excludeTargets": ["someTargetWhichExecuteScripts", ...] // exclude targets which you want definitely exclude from building
+            "includeTargets": ["someTestTarget", ...], // add targets which you want watcher to include for each run to improve autocompletion. For example, you can add AGGREGATE targets which build all targets you need for autocompletion
+            "excludeTargets": ["someTargetWhichExecuteScripts", ...] // exclude targets which you want definitely exclude from building, for example targets which execute scripts only
         },
         {
             "label": "Xcode Clean",
@@ -180,7 +180,7 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 }
 ```
 
--   Also there're automatically added build tasks which can be used by pressing standard "**Cmd+Shift+B**" shortcut.
+-   Also there're automatically added build tasks which can be used by pressing standard "**Cmd+Shift+B**" shortcut. If you have other building tasks, you need to add one of the above building tasks to your `tasks.json` file to make it work.
 
 -   To make autocompletion to work you may need to clean the project and build it entirely for the first time.
 
@@ -214,10 +214,10 @@ This extension contributes the following settings:
 
 -   Make sure that Package.swift file is in root workspace folder and you open root folder, otherwise LSP client may work incorrectly
 -   When you use 'mixedWithXcode' building system mode, it may lead to some unpredictable behavior, use it on your own risk
--   Xcode folder references are supported only for adding folders,renaming/moving/deleting folder references. Also added somebasic support of editing targets for such folder references, but it may not work in some complex cases when you need to add/remove files individually from such folder references in targets.
+-   Xcode folder references are supported only for adding folders,renaming/moving/deleting folder references. Also added some basic support of editing targets for such folder references, but it may not work in some complex cases when you need to add/remove files individually from such folder references in targets.
 
 ## Release Notes
 
-### 0.6.7
+### 0.6.8
 
 It's still under development, so you can face some bugs

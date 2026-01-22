@@ -404,8 +404,8 @@ export class ProjectManager implements ProjectManagerInterface {
             return;
         }
 
-        const release = await this.projectFileEditMutex.acquire();
         const modifiedProjects = new Set<string>();
+        const release = await this.projectFileEditMutex.acquire();
         try {
             const projectFiles = this.projectCache.getProjects();
             for (let i = 0; i < oldFiles.length; ++i) {
@@ -569,10 +569,10 @@ export class ProjectManager implements ProjectManagerInterface {
         if (!this.isAllowed()) {
             return;
         }
-        const release = await this.projectFileEditMutex.acquire();
         if (!file) {
             return;
         }
+        const release = await this.projectFileEditMutex.acquire();
         try {
             const projectFiles = this.projectCache.getProjects();
             const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
@@ -651,18 +651,18 @@ export class ProjectManager implements ProjectManagerInterface {
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
+        if (!this.isAllowed()) {
+            if (await isActivated()) {
+                this.onProjectUpdate.fire();
+                return;
+            }
+            return;
+        }
+        if (files === undefined) {
+            return;
+        }
         const release = await this.projectFileEditMutex.acquire();
         try {
-            if (!this.isAllowed()) {
-                if (await isActivated()) {
-                    this.onProjectUpdate.fire();
-                    return;
-                }
-                return;
-            }
-            if (files === undefined) {
-                return;
-            }
             let fileList: vscode.Uri[] = [];
             if (files instanceof vscode.Uri) {
                 fileList = [files as vscode.Uri];
@@ -832,16 +832,15 @@ export class ProjectManager implements ProjectManagerInterface {
         originalSchemeName: string,
         generate: (generatedSchemeName: string, originalSchemeName: string) => Promise<string[]>
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
-        const release = await this.projectFileEditMutex.acquire();
-        try {
-            if (!this.isAllowed()) {
-                if (await isActivated()) {
-                    this.onProjectUpdate.fire();
-                    return;
-                }
+        if (!this.isAllowed()) {
+            if (await isActivated()) {
+                this.onProjectUpdate.fire();
                 return;
             }
-
+            return;
+        }
+        const release = await this.projectFileEditMutex.acquire();
+        try {
             this.buildAllTargetTagCounter += 1;
             const result = await generate(
                 `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}`,
@@ -951,23 +950,24 @@ export class ProjectManager implements ProjectManagerInterface {
 
     private async determineTargetForFile(filePath: string, project: string) {
         const filePathComponent = filePath.split(path.sep);
+        const neighborFiles = await this.projectCache.getList(project, true);
+        let tryCnt = 0;
         for (let i = filePathComponent.length - 1; i >= 0; --i) {
             const fileSubpath = filePathComponent.slice(0, i).join(path.sep);
-            const neighborFiles = await vscode.workspace.findFiles({
-                baseUri: vscode.Uri.file(fileSubpath),
-                base: fileSubpath,
-                pattern: "*",
-            });
             for (const file of neighborFiles) {
-                if (file.fsPath === filePath) {
-                    continue;
-                }
-                const targets = await this.rubyProjectFilesManager.listTargetsForFile(
-                    getFilePathInWorkspace(project),
-                    file.fsPath
-                );
-                if (targets.length > 0) {
-                    return targets;
+                if (file.startsWith(`${fileSubpath}${path.sep}`) && file !== filePath) {
+                    tryCnt += 1;
+                    const targets = await this.rubyProjectFilesManager.listTargetsForFile(
+                        getFilePathInWorkspace(project),
+                        file
+                    );
+                    if (targets.length > 0) {
+                        return targets;
+                    }
+                    if (tryCnt >= 20) {
+                        // do not try too hard, let a user select manually if we can not find any
+                        break;
+                    }
                 }
             }
         }
