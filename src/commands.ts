@@ -507,15 +507,23 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         if (buildDir !== undefined) {
             return buildDir;
         }
-        const schemes = await commandContext.projectManager.getRootProjectTargets();
-        // try all other targets from the root project first as they are more relevant
-        for (const scheme of schemes) {
-            const settings =
-                await commandContext.projectSettingsProvider.getSettingsForScheme(scheme);
-            const buildDir = getBuildDir(settings);
-            if (buildDir !== undefined) {
-                return buildDir;
+        try {
+            const schemes = await commandContext.projectSettingsProvider.fetchSchemes();
+            // try all other targets from the root project first as they are more relevant
+            for (const scheme of schemes) {
+                try {
+                    const settings =
+                        await commandContext.projectSettingsProvider.getSettingsForScheme(scheme);
+                    const buildDir = getBuildDir(settings);
+                    if (buildDir !== undefined) {
+                        return buildDir;
+                    }
+                } catch {
+                    // do nothing and try next scheme
+                }
             }
+        } catch {
+            // do nothing
         }
 
         return undefined;
