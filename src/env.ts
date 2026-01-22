@@ -530,7 +530,7 @@ async function getBuildServerJson() {
     return JSON.parse(fs.readFileSync(await getBuildServerJsonPath(), "utf-8").toString());
 }
 
-export async function getBuildRootPath() {
+export async function getBuildRootPath(): Promise<string | undefined> {
     try {
         const json = await getBuildServerJson();
         return json.build_root;

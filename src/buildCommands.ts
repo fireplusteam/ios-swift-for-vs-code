@@ -16,7 +16,10 @@ export async function cleanDerivedData(context: CommandContext) {
 
     const buildRootPath = await getBuildRootPath();
     // Safety check to avoid deleting arbitrary folders
-    if (!buildRootPath.includes("/Library/Developer/Xcode/DerivedData/")) {
+    if (
+        buildRootPath === undefined ||
+        !buildRootPath.includes("/Library/Developer/Xcode/DerivedData/")
+    ) {
         throw new Error("Can only clean DerivedData folder");
     }
 

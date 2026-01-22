@@ -42,6 +42,9 @@ export class XcodeBuildExecutor {
 
     async startBuildInXcode(context: CommandContext, logFilePath: string, scheme: string) {
         const derivedPath = await getBuildRootPath();
+        if (derivedPath === undefined) {
+            throw new Error("DerivedData path is undefined");
+        }
         const previousLogs =
             (await allLogsPath(`${derivedPath}/Logs/Build/LogStoreManifest.plist`, scheme)) || [];
 
