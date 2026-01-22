@@ -6,6 +6,7 @@
 
 -   Added support of running/debugging tests for all subprojects including swift packages in workspace or project via test explorer or navigating files
 -   Now you can add targets from swift packages/sub projects/libs to the watcher command task to include them in the build for autocompletion
+-   Added support of lsp diagnostics for swift packages.swift files in workspace or project
 
 ### Fixed
 

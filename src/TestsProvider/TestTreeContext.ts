@@ -38,6 +38,13 @@ export class TestTreeContext {
         return vscode.Uri.file(`${projectPath?.toString() || ""}/${target}`);
     }
 
+    static getLabelFromUri(uri: vscode.Uri) {
+        if (uri.path.toLowerCase().endsWith("package.swift")) {
+            return uri.path.split("/").at(-2) || uri.toString();
+        }
+        return uri.path.split("/").pop() || uri.toString();
+    }
+
     clear() {
         this.ctrl.items.replace([]);
     }
@@ -53,7 +60,7 @@ export class TestTreeContext {
             return { file: existing, data: this.testData.get(existing) };
         }
 
-        const file = this.ctrl.createTestItem(uniqueId, uri.path.split("/").pop()!, uri);
+        const file = this.ctrl.createTestItem(uniqueId, TestTreeContext.getLabelFromUri(uri), uri);
         this.ctrl.items.add(file);
 
         const data = provider();
