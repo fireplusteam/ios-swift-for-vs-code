@@ -918,7 +918,7 @@ export class ProjectManager implements ProjectManagerInterface {
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         return this.generateScheme(rootTargetName, (schemeName: string, rootTargetName: string) =>
             this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
-                [getFilePathInWorkspace(projectFile)],
+                getFilePathInWorkspace(projectFile),
                 schemeName,
                 rootTargetName,
                 testTargets
