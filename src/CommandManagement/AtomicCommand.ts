@@ -92,17 +92,13 @@ export class AtomicCommand {
                 if (this._executingCommand === "autowatcher") {
                     this._prevCommandContext?.cancel();
                     this._prevCommandContext?.dispose();
-                    this._mutex.cancel();
                     shouldWait = true;
                 } else {
                     throw UserCommandIsExecuting;
                 }
             }
             release = await this._mutex.acquire();
-            if (shouldWait) {
-                // give some time for previous command to cancel
-                await sleep(500);
-            }
+
             if (currentOperationID !== this.latestOperationID) {
                 throw E_CANCELED;
             }
@@ -116,6 +112,11 @@ export class AtomicCommand {
                 this.log
             );
             this._prevCommandContext = commandContext;
+
+            if (shouldWait) {
+                // give some time for previous command to cancel
+                await sleep(500);
+            }
 
             this._fetchingTasks = true;
             this._watcherTaskData = undefined;
@@ -207,13 +208,9 @@ export class AtomicCommand {
             if (wasLocked) {
                 this._prevCommandContext?.cancel();
                 this._prevCommandContext?.dispose();
-                this._mutex.cancel();
             }
             releaser = await this._mutex.acquire();
-            if (wasLocked) {
-                // give some time for previous command to cancel
-                await sleep(500);
-            }
+
             if (currentOperationID !== this.latestOperationID) {
                 throw E_CANCELED;
             }
@@ -227,6 +224,11 @@ export class AtomicCommand {
                 this.log
             );
             this._prevCommandContext = commandContext;
+
+            if (wasLocked) {
+                // give some time for previous command to cancel
+                await sleep(500);
+            }
 
             const promiseResult = this.withCancellation(async () => {
                 if (commandContext === undefined) {
