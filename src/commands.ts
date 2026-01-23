@@ -474,6 +474,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
     if (check) {
         await checkWorkspace(commandContext);
     }
+    return;
     const env = commandContext.projectEnv;
     const lspFolder = await getLSPWorkspacePath();
     const projectType = await env.projectType;
