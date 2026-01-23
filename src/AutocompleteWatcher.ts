@@ -8,6 +8,7 @@ import { BuildManager } from "./Services/BuildManager";
 import { UserTerminatedError } from "./CommandManagement/CommandContext";
 import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
 import { LogChannelInterface } from "./Logs/LogChannel";
+import * as path from "path";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -87,7 +88,7 @@ export class AutocompleteWatcher {
 
     private isValidFile(filePath: string | undefined) {
         // Exclude Package.swift from triggering autocomplete watcher builds, as it requires to regenerate workspace which is heavy operation
-        if (filePath && filePath.endsWith("Package.swift")) {
+        if (filePath && path.basename(filePath) === "Package.swift") {
             return false;
         }
         if (
