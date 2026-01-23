@@ -574,7 +574,7 @@ export function getProjectType(projectFile: string) {
     if (projectFile.includes(".xcodeproj")) {
         return "-project";
     }
-    if (projectFile.includes("Package.swift")) {
+    if (path.basename(projectFile) === "Package.swift") {
         return "-package";
     }
     return "-workspace";

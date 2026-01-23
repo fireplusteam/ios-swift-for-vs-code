@@ -1,10 +1,7 @@
 import * as vscode from "vscode";
-import * as fs from "fs";
 import { TestTreeContext } from "../TestTreeContext";
 import { TestContainer } from "./TestContainer";
-import { getFilePathInWorkspace } from "../../env";
-import { FSWatcher, watch } from "fs";
-import * as path from "path";
+import { FSWatcher } from "fs";
 import { TestTarget } from "./TestTarget";
 
 export class TestProject implements TestContainer {
@@ -63,45 +60,9 @@ export class TestProject implements TestContainer {
             }
         }
 
-        // watch to changes for a file, if it's changed, refresh unit tests
-        const filePath = getFilePathInWorkspace(
-            path.join(item.uri?.path || "", item.label === "Package.swift" ? "" : "project.pbxproj")
-        );
-        this.watchFile(filePath, controller, item);
-
         this.didResolve = true;
         // finish
 
         this.context.replaceItemsChildren(item, parent.children);
-    }
-
-    private watchFile(
-        filePath: string,
-        controller: vscode.TestController,
-        item: vscode.TestItem,
-        contentFile: Buffer | undefined = undefined
-    ) {
-        const weakRef = new WeakRef(this);
-
-        this.fsWatcher?.close();
-        this.fsWatcher = undefined;
-        this.fsWatcher = watch(filePath);
-        this.fsWatcher.on("change", () => {
-            const content = fs.readFileSync(filePath);
-            if (this.projectContent?.toString() === content.toString()) {
-                this.watchFile(filePath, controller, item, content);
-                return;
-            }
-            this.projectContent = content;
-            setTimeout(() => {
-                weakRef.deref()?.context.replaceItemsChildren(item, []);
-                weakRef.deref()?.updateFromDisk(controller, item);
-            }, 1000);
-        });
-        if (contentFile === undefined) {
-            this.projectContent = fs.readFileSync(filePath);
-        } else {
-            this.projectContent = contentFile;
-        }
     }
 }

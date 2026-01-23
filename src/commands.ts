@@ -102,7 +102,7 @@ export async function selectProjectFile(
             return true;
         })
         .map(file => {
-            if (file.endsWith("Package.swift")) {
+            if (path.basename(file) === "Package.swift") {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
                 return { label: relativeProjectPath, value: file };
             }
@@ -113,7 +113,7 @@ export async function selectProjectFile(
                 .join(path.sep);
             return {
                 label: relativeProjectPath,
-                value: file.split(path.sep).slice(0, -1).join(path.sep),
+                value: path.dirname(file),
             };
         })
         .filter(file => {

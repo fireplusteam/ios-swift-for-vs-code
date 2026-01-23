@@ -220,3 +220,15 @@ export async function deleteFifo(fifoPath: string) {
 export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+export function readFileContent(filePath: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        });
+    });
+}

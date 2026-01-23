@@ -7,6 +7,7 @@ import { CoverageProvider } from "./CoverageProvider";
 import { LSPTestsProvider } from "../LSP/LSPTestsProvider";
 import { TestResultProvider } from "./TestResultProvider";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
+import * as path from "path";
 
 const textDecoder = new TextDecoder("utf-8");
 
@@ -39,7 +40,7 @@ export class TestTreeContext {
     }
 
     static getLabelFromUri(uri: vscode.Uri) {
-        if (uri.path.toLowerCase().endsWith("package.swift")) {
+        if (path.basename(uri.path).toLowerCase() === "package.swift") {
             return uri.path.split("/").at(-2) || uri.toString();
         }
         return uri.path.split("/").pop() || uri.toString();

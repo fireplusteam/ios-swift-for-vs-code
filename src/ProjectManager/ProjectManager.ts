@@ -189,7 +189,7 @@ export class ProjectManager implements ProjectManagerInterface {
 
     private async readAllProjects(files: Set<string>) {
         for (const file of files) {
-            if (file.endsWith(".xcodeproj") || file.endsWith("Package.swift")) {
+            if (file.endsWith(".xcodeproj") || path.basename(file) === "Package.swift") {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
                 if (await this.projectCache.update(relativeProjectPath)) {
                     await this.readAllProjects(
@@ -583,7 +583,7 @@ export class ProjectManager implements ProjectManagerInterface {
             const selectedProjectPath = getFilePathInWorkspace(selectedProject[0]);
 
             // for Package.swift a file can belong only to one target which is defined by file path
-            if (selectedProjectPath.endsWith("Package.swift")) {
+            if (path.basename(selectedProjectPath) === "Package.swift") {
                 const target = await this.rubyProjectFilesManager.listTargetsForFile(
                     selectedProjectPath,
                     file.fsPath
@@ -799,7 +799,7 @@ export class ProjectManager implements ProjectManagerInterface {
         try {
             for (const project of this.projectCache.getProjects()) {
                 const projectPath = (() => {
-                    if (project.endsWith("Package.swift")) {
+                    if (path.basename(project) === "Package.swift") {
                         return getFilePathInWorkspace(
                             path.join(path.dirname(project), ".swiftpm", "xcode")
                         );
@@ -858,13 +858,13 @@ export class ProjectManager implements ProjectManagerInterface {
             const rootProjectPath = result.at(-2) || "";
 
             const touchProjectPath = (() => {
-                if (rootProjectPath.endsWith("Package.swift")) {
+                if (path.basename(rootProjectPath) === "Package.swift") {
                     return rootProjectPath;
                 }
                 return path.join(rootProjectPath, "project.pbxproj");
             })();
             const schemePath = (() => {
-                if (rootProjectPath.endsWith("Package.swift")) {
+                if (path.basename(rootProjectPath) === "Package.swift") {
                     return path.join(path.dirname(rootProjectPath), ".swiftpm", "xcode");
                 }
                 return rootProjectPath;

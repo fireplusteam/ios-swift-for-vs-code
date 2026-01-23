@@ -3,7 +3,7 @@ import { getFilePathInWorkspace } from "../env";
 import { watch } from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { isFolder } from "../utils";
+import { isFolder, readFileContent } from "../utils";
 
 type ProjFilePath = {
     path: string;
@@ -124,7 +124,7 @@ export class ProjectsCache implements ProjectCacheInterface {
     }
 
     private async getFilesForProject(projectPath: string) {
-        if (projectPath.endsWith("Package.swift")) {
+        if (path.basename(projectPath) === "Package.swift") {
             return await this.parseProjectList(
                 await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
             );
@@ -217,7 +217,7 @@ export class ProjectsCache implements ProjectCacheInterface {
 
     async update(projectPath: string, contentFile: Buffer | undefined = undefined) {
         const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
-        const isPackageSwift = projectPath.endsWith("Package.swift");
+        const isPackageSwift = path.basename(projectPath) === "Package.swift";
         // no need to watch Package.swift files as files comes from file system
         if (isPackageSwift) {
             this.cache.set(projectPath, {
@@ -243,7 +243,7 @@ export class ProjectsCache implements ProjectCacheInterface {
             );
             const fileWatch = watch(fullProjectPath, null);
             fileWatch.on("change", async () => {
-                const contentFile = fs.readFileSync(fullProjectPath);
+                const contentFile = await readFileContent(fullProjectPath);
 
                 if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
                     this.watcher.get(projectPath)?.watcher.close();
@@ -261,7 +261,7 @@ export class ProjectsCache implements ProjectCacheInterface {
                 this.onProjectChanged.fire();
             });
             const contentProjectFile =
-                contentFile === undefined ? fs.readFileSync(fullProjectPath) : contentFile;
+                contentFile === undefined ? await readFileContent(fullProjectPath) : contentFile;
             this.watcher.set(projectPath, { watcher: fileWatch, content: contentProjectFile });
         }
         return updated;
