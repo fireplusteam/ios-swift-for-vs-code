@@ -1,9 +1,7 @@
 import * as fs from "fs";
-import { getFilePathInWorkspace } from "../env";
-import { watch } from "fs";
-import * as path from "path";
-import * as vscode from "vscode";
-import { isFolder, readFileContent } from "../utils";
+import { getFilePathInWorkspace, isProjectFileChanged } from "../env";
+import { isFolder } from "../utils";
+import { ProjectWatcherInterface } from "./ProjectWatcher";
 
 type ProjFilePath = {
     path: string;
@@ -21,7 +19,6 @@ function isProjFilePath(obj: any): obj is ProjFilePath {
 }
 
 type ProjFile = {
-    timestamp: number;
     list: Set<ProjFilePath>;
 };
 function mapReplacer(key: any, value: any) {
@@ -60,8 +57,6 @@ function mapReviver(key: any, value: any) {
 }
 
 export interface ProjectCacheInterface {
-    onProjectChanged: vscode.EventEmitter<void>;
-
     clear(): void;
     preloadCacheFromFile(filePath: string): Promise<void>;
     saveCacheToFile(filePath: string): Promise<void>;
@@ -69,17 +64,18 @@ export interface ProjectCacheInterface {
     getList(project: string, onlyFiles?: boolean): Promise<Set<string>>;
     getProjects(): string[];
     allFiles(): Promise<{ path: string; includeSubfolders: boolean }[]>;
-    update(projectPath: string, contentFile?: Buffer): Promise<boolean>;
+    addProject(projectPath: string): Promise<void>;
 }
 
 export class ProjectsCache implements ProjectCacheInterface {
     private cache = new Map<string, ProjFile>();
-    private watcher = new Map<string, { watcher: fs.FSWatcher; content: Buffer }>();
 
-    readonly onProjectChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
     listFilesFromProject: (projectFile: string) => Promise<string[]>;
 
-    constructor(listFilesFromProject: (projectFile: string) => Promise<string[]>) {
+    constructor(
+        private readonly projectWatcher: ProjectWatcherInterface,
+        listFilesFromProject: (projectFile: string) => Promise<string[]>
+    ) {
         this.listFilesFromProject = listFilesFromProject;
     }
 
@@ -124,10 +120,11 @@ export class ProjectsCache implements ProjectCacheInterface {
     }
 
     private async getFilesForProject(projectPath: string) {
-        if (path.basename(projectPath) === "Package.swift") {
-            return await this.parseProjectList(
+        if (await isProjectFileChanged(projectPath, "ProjectsCache", this.projectWatcher)) {
+            const list = await this.parseProjectList(
                 await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
             );
+            this.cache.set(projectPath, { list });
         }
         return this.cache.get(projectPath)?.list;
     }
@@ -215,55 +212,11 @@ export class ProjectsCache implements ProjectCacheInterface {
         return resPaths;
     }
 
-    async update(projectPath: string, contentFile: Buffer | undefined = undefined) {
-        const time = fs.statSync(getFilePathInWorkspace(projectPath)).mtimeMs;
-        const isPackageSwift = path.basename(projectPath) === "Package.swift";
-        // no need to watch Package.swift files as files comes from file system
-        if (isPackageSwift) {
+    async addProject(projectPath: string) {
+        if (!this.cache.has(projectPath)) {
             this.cache.set(projectPath, {
-                timestamp: time,
-                list: new Set<ProjFilePath>(), // empty set as files are read from file system
+                list: new Set<ProjFilePath>(),
             });
-            return true;
         }
-        let updated = false;
-        if (!this.cache.has(projectPath) || time !== this.cache.get(projectPath)?.timestamp) {
-            this.cache.set(projectPath, {
-                timestamp: time,
-                list: await this.parseProjectList(
-                    await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
-                ),
-            });
-            updated = true;
-        }
-        if (!this.watcher.has(projectPath)) {
-            const fullProjectPath = path.join(
-                getFilePathInWorkspace(projectPath),
-                "project.pbxproj"
-            );
-            const fileWatch = watch(fullProjectPath, null);
-            fileWatch.on("change", async () => {
-                const contentFile = await readFileContent(fullProjectPath);
-
-                if (contentFile.toString() === this.watcher.get(projectPath)?.content.toString()) {
-                    this.watcher.get(projectPath)?.watcher.close();
-                    this.watcher.delete(projectPath);
-                    await this.update(projectPath, contentFile);
-                    return;
-                }
-                this.watcher.get(projectPath)?.watcher.close();
-                this.watcher.delete(projectPath);
-                if (!fs.existsSync(getFilePathInWorkspace(projectPath))) {
-                    this.cache.delete(projectPath);
-                    return;
-                }
-                await this.update(projectPath, contentFile);
-                this.onProjectChanged.fire();
-            });
-            const contentProjectFile =
-                contentFile === undefined ? await readFileContent(fullProjectPath) : contentFile;
-            this.watcher.set(projectPath, { watcher: fileWatch, content: contentProjectFile });
-        }
-        return updated;
     }
 }

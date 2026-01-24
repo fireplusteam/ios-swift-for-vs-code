@@ -10,6 +10,7 @@ import {
     getWorkspaceId,
     getWorkspacePath,
     isActivated,
+    isProjectFileChanged,
 } from "../env";
 import * as parser from "fast-xml-parser";
 import * as path from "path";
@@ -23,6 +24,7 @@ import { Mutex } from "async-mutex";
 import { RubyProjectFilesManagerInterface } from "./RubyProjectFilesManager";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import * as touch from "touch";
+import { ProjectWatcherInterface } from "./ProjectWatcher";
 
 export interface ProjectManagerInterface {
     getRootProjectTargets(): Promise<string[]>;
@@ -54,9 +56,10 @@ export class ProjectManager implements ProjectManagerInterface {
 
     constructor(
         private readonly log: LogChannelInterface,
+        private readonly projectWatcher: ProjectWatcherInterface,
         private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface
     ) {
-        this.projectCache = new ProjectsCache((projectFile: string) => {
+        this.projectCache = new ProjectsCache(projectWatcher, (projectFile: string) => {
             return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
         });
 
@@ -90,11 +93,11 @@ export class ProjectManager implements ProjectManagerInterface {
                 this.log.debug("Deleted: " + e.files.map(f => f.fsPath).join(", "));
             })
         );
-        this.disposable.push(
-            this.projectCache.onProjectChanged.event(() => {
-                this.touch();
-            })
-        );
+        // this.disposable.push(
+        //     this.projectCache.onProjectChanged.event(() => {
+        //         this.touch();
+        //     })
+        // );
 
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
     }
@@ -139,11 +142,11 @@ export class ProjectManager implements ProjectManagerInterface {
         if (shouldDropCache) {
             this.projectCache.clear();
         } else {
-            try {
-                await this.projectCache.preloadCacheFromFile(await this.xCodeCachePath());
-            } catch (err) {
-                this.log.error(`Project files cache is broken ${err}`);
-            }
+            // try {
+            //     await this.projectCache.preloadCacheFromFile(await this.xCodeCachePath());
+            // } catch (err) {
+            //     this.log.error(`Project files cache is broken ${err}`);
+            // }
         }
         this.cachedTestTargets.clear();
 
@@ -159,7 +162,7 @@ export class ProjectManager implements ProjectManagerInterface {
                         message: fileNameFromPath(project),
                     });
                     try {
-                        await this.projectCache.update(project);
+                        await this.projectCache.addProject(project);
                         await this.readAllProjects(await this.projectCache.getList(project, false));
                     } catch (error) {
                         this.log.error(`Failed to load project ${project}: ${error}`);
@@ -191,7 +194,14 @@ export class ProjectManager implements ProjectManagerInterface {
         for (const file of files) {
             if (file.endsWith(".xcodeproj") || path.basename(file) === "Package.swift") {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
-                if (await this.projectCache.update(relativeProjectPath)) {
+                await this.projectCache.addProject(relativeProjectPath);
+                if (
+                    await isProjectFileChanged(
+                        relativeProjectPath,
+                        "ProjectsCache.readAllProjects",
+                        this.projectWatcher
+                    )
+                ) {
                     await this.readAllProjects(
                         await this.projectCache.getList(relativeProjectPath, false)
                     );
@@ -297,7 +307,7 @@ export class ProjectManager implements ProjectManagerInterface {
             });
         }
 
-        await this.projectCache.saveCacheToFile(await this.xCodeCachePath());
+        // await this.projectCache.saveCacheToFile(await this.xCodeCachePath());
         await this.saveWorkspace(xCodeWorkspace);
     }
 
@@ -982,7 +992,7 @@ export class ProjectManager implements ProjectManagerInterface {
         const filePathComponent = filePath.split(path.sep);
         for (const project of projects) {
             try {
-                await this.projectCache.update(project);
+                await this.projectCache.addProject(project);
                 const files = await this.projectCache.getList(project, false);
                 for (const file of files) {
                     const fileComponent = file.split(path.sep);

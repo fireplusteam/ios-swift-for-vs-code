@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import { CustomError, emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
+import { ProjectWatcherInterface } from "./ProjectManager/ProjectWatcher";
 
 export const ProjectFileMissedError = new CustomError(
     "Project File is not set in .vscode/xcode/projectConfiguration.json file. Please select project or workspace Xcode file"
@@ -627,4 +628,33 @@ async function getBuildDir(deviceID: DeviceID, build_configuration: string) {
     } catch {
         throw AppTargetExecutableMissedError;
     }
+}
+
+export function isPackageSwiftProject(projectFile: string) {
+    return path.basename(projectFile) === "Package.swift";
+}
+
+export function getFullProjectPath(projectPath: string) {
+    const isPackageSwift = isPackageSwiftProject(projectPath);
+    if (isPackageSwift) {
+        return getFilePathInWorkspace(projectPath);
+    }
+    const fullProjectPath = path.join(getFilePathInWorkspace(projectPath), "project.pbxproj");
+    return fullProjectPath;
+}
+
+export async function isProjectFileChanged(
+    projectPath: string,
+    id: string,
+    projectWatcher: ProjectWatcherInterface
+) {
+    let filePath = getFullProjectPath(projectPath);
+    if (isPackageSwiftProject(projectPath)) {
+        filePath = path.dirname(filePath);
+    }
+    const fileWatcher = projectWatcher.newFileChecker(filePath, id);
+    if (await fileWatcher.isFileChanged()) {
+        return true;
+    }
+    return false;
 }

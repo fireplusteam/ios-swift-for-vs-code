@@ -58,6 +58,7 @@ import { ProjectConfigurationDataProvider } from "./XcodeSideTreePanel/ProjectCo
 import { LogChannel } from "./Logs/LogChannel";
 import { buildSelectedTarget, cleanDerivedData } from "./buildCommands";
 import { RubyProjectFilesManager } from "./ProjectManager/RubyProjectFilesManager";
+import { ProjectWatcher } from "./ProjectManager/ProjectWatcher";
 
 // SETTINGS WATCHER
 
@@ -140,10 +141,15 @@ async function initialize(
 }
 
 const logChannel = new LogChannel("VSCode-iOS");
+const projectWatcher = new ProjectWatcher(logChannel);
 const problemDiagnosticResolver = new ProblemDiagnosticResolver(logChannel);
 const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
 const sourceLsp = new SwiftLSPClient(workspaceContext, logChannel);
-const projectManager = new ProjectManager(logChannel, new RubyProjectFilesManager(logChannel));
+const projectManager = new ProjectManager(
+    logChannel,
+    projectWatcher,
+    new RubyProjectFilesManager(logChannel)
+);
 const atomicCommand = new AtomicCommand(sourceLsp, projectManager, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;
@@ -208,6 +214,8 @@ export async function activate(context: vscode.ExtensionContext) {
         activateNotActiveExtension(context);
         return;
     }
+    context.subscriptions.push(projectWatcher);
+    projectWatcher.start();
 
     context.subscriptions.push(watchSWBBuildServiceSetting());
 
