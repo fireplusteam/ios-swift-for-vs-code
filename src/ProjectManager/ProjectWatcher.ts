@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { LogChannelInterface } from "../Logs/LogChannel";
-import { getWorkspacePath } from "../env";
+import * as chokidar from "chokidar";
+import * as path from "path";
 
 export interface ProjectWatcherInterface extends vscode.Disposable {
     newFileWatcher(filePath: string): ProjectFileWatcherInterface;
@@ -9,7 +10,7 @@ export interface ProjectWatcherInterface extends vscode.Disposable {
 
 interface ProjectWatcherTimestamp {
     watcherTimeStamps(filePath: string): number;
-    checkerTimeStamps(filePath: string): number;
+    checkerTimeStamps(key: string): number;
 }
 
 // A watcher that emits events on file changes
@@ -27,47 +28,78 @@ interface ProjectFileWatcherImp {
 }
 
 export class ProjectWatcher implements ProjectWatcherInterface, ProjectWatcherTimestamp {
-    private disposable: vscode.Disposable[] = [];
     private watchers: Map<
         string,
         { timestamps: number; watcher: ProjectFileWatcherInterface & ProjectFileWatcherImp }
     > = new Map();
 
+    private _mainWatcher: chokidar.FSWatcher | undefined;
+
     private checkers = new Map<
         string,
-        { timestamps: number; checker: ProjectFileCheckerInterface }
+        Map<string, { timestamps: number; checker: ProjectFileCheckerInterface }>
     >();
 
     constructor(private log: LogChannelInterface) {}
 
-    public start() {
-        // if already started
-        this.dispose();
+    private get mainWatcher(): chokidar.FSWatcher {
+        if (!this._mainWatcher) {
+            const watcher = chokidar.watch([], {
+                persistent: true,
+                ignoreInitial: true,
+                depth: 10,
+                awaitWriteFinish: {
+                    stabilityThreshold: 200,
+                    pollInterval: 100,
+                },
+            });
+            this._mainWatcher = watcher;
+            watcher.on("change", (filePath: string, stats) => {
+                const ext = path.extname(filePath).toLowerCase();
+                if (ext !== ".pbxproj" && ext !== ".swift") {
+                    return;
+                }
 
-        const watcher = vscode.workspace.createFileSystemWatcher({
-            baseUri: vscode.Uri.file(getWorkspacePath()),
-            base: getWorkspacePath(),
-            pattern: "**/*.{xcodeproj/project.pbxproj,swift}",
-        });
-        watcher.onDidChange(e => {
-            this.log.debug(`File changed: ${e.fsPath}`);
-            const entry = this.watchers.get(e.fsPath);
-            if (entry) {
-                entry.timestamps = Date.now();
-                entry.watcher.notify(e.fsPath);
-            }
-        });
-        this.disposable.push(watcher);
+                const components = filePath.split(path.sep).filter(c => c.length > 0) || [];
+                let subPath = "";
+                for (let i = 0; i < components.length; i++) {
+                    subPath += path.sep + components[i];
+                    const checkerEntries = this.checkers.get(subPath);
+                    if (checkerEntries) {
+                        for (const key of checkerEntries.keys()) {
+                            const entry = checkerEntries.get(key);
+                            if (entry) {
+                                entry.timestamps = Date.now();
+                            }
+                        }
+                    }
+                }
+
+                const watcherEntry = this.watchers.get(filePath);
+                if (watcherEntry) {
+                    watcherEntry.timestamps = Date.now();
+                    watcherEntry.watcher.notify(filePath);
+                }
+                this.log.debug(`ProjectWatcher: File changed: ${filePath}, stats: ${stats}`);
+            });
+            return watcher;
+        }
+        return this._mainWatcher;
+    }
+
+    private addPath(filePath: string) {
+        this.mainWatcher.add(filePath);
     }
 
     dispose() {
         this.watchers.clear();
         this.checkers.clear();
-        this.disposable.forEach(d => d.dispose());
+        this._mainWatcher?.close();
     }
 
     newFileWatcher(filePath: string): ProjectFileWatcherInterface {
         if (!this.watchers.has(filePath)) {
+            this.addPath(filePath);
             const watcherEntry = new ProjectFileWatcher(filePath, this);
             this.watchers.set(filePath, { timestamps: Date.now(), watcher: watcherEntry });
             return watcherEntry;
@@ -76,13 +108,24 @@ export class ProjectWatcher implements ProjectWatcherInterface, ProjectWatcherTi
     }
 
     newFileChecker(filePath: string, id: string): ProjectFileCheckerInterface {
-        const key = `${filePath}|^|^|${id}`;
-        if (!this.checkers.has(key)) {
-            const checker = new ProjectFileWatcher(key, this);
-            this.checkers.set(key, { timestamps: Date.now(), checker: checker });
-            return checker;
+        this.addPath(filePath);
+        let checkerEntry = this.checkers.get(filePath);
+        if (checkerEntry === undefined) {
+            checkerEntry = new Map<
+                string,
+                { timestamps: number; checker: ProjectFileCheckerInterface }
+            >();
+            this.checkers.set(filePath, checkerEntry);
         }
-        return this.checkers.get(key)!.checker;
+        let entry = checkerEntry.get(id);
+        if (entry === undefined) {
+            const checker = new ProjectFileWatcher(`${filePath}|^|^|${id}`, this);
+            entry = { timestamps: Date.now(), checker: checker };
+            checkerEntry.set(id, entry);
+            return checker;
+        } else {
+            return entry.checker;
+        }
     }
 
     watcherTimeStamps(filePath: string): number {
@@ -93,8 +136,13 @@ export class ProjectWatcher implements ProjectWatcherInterface, ProjectWatcherTi
         return 0;
     }
 
-    checkerTimeStamps(filePath: string): number {
-        const entry = this.checkers.get(filePath);
+    checkerTimeStamps(key: string): number {
+        const [filePath, id] = key.split("|^|^|");
+        const checkerEntry = this.checkers.get(filePath);
+        if (!checkerEntry) {
+            return 0;
+        }
+        const entry = checkerEntry.get(id);
         if (entry) {
             return entry.timestamps;
         }

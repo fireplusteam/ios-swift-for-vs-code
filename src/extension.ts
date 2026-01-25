@@ -215,7 +215,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
     }
     context.subscriptions.push(projectWatcher);
-    projectWatcher.start();
 
     context.subscriptions.push(watchSWBBuildServiceSetting());
 
@@ -578,6 +577,8 @@ export async function deactivate() {
     atomicCommand.cancel();
     runtimeWarningLogWatcher.disposeWatcher();
     projectManager?.cleanAutocompleteSchemes();
+    projectManager?.dispose();
+    projectWatcher.dispose();
     deleteFile(getFilePathInWorkspace(".vscode/xcode/bundles"));
 }
 

@@ -146,12 +146,15 @@ export class BuildManager {
     ) {
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+            const canStartBuildInXcode =
+                await this.xcodeBuildExecutor.canStartBuildInXcode(context);
             try {
                 if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
                     const scheme = await context.projectManager.addBuildAllTargetToProjects(
                         await context.projectEnv.projectScheme,
                         includeTargets,
-                        excludeTargets
+                        excludeTargets,
+                        canStartBuildInXcode // touch project only if we are going to build in Xcode
                     );
                     context.projectEnv.setBuildScheme(scheme);
                     if (scheme) {
@@ -161,7 +164,7 @@ export class BuildManager {
             } catch (error) {
                 // ignore errors
             }
-            if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+            if (canStartBuildInXcode) {
                 // at the moment build-for-testing does not work with opened Xcode workspace/project
                 await this.xcodeBuildExecutor.startBuildInXcode(
                     context,
@@ -228,7 +231,8 @@ export class BuildManager {
                 const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
                     input.projectFile,
                     await context.projectEnv.projectScheme,
-                    testsTargets.join(",")
+                    testsTargets.join(","),
+                    false
                 );
                 context.projectEnv.setBuildScheme(scheme);
                 if (scheme) {

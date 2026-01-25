@@ -648,10 +648,7 @@ export async function isProjectFileChanged(
     id: string,
     projectWatcher: ProjectWatcherInterface
 ) {
-    let filePath = getFullProjectPath(projectPath);
-    if (isPackageSwiftProject(projectPath)) {
-        filePath = path.dirname(filePath);
-    }
+    const filePath = getFullProjectPath(projectPath);
     const fileWatcher = projectWatcher.newFileChecker(filePath, id);
     if (await fileWatcher.isFileChanged()) {
         return true;

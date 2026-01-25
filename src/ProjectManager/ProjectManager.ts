@@ -3,6 +3,7 @@ import * as fs from "fs";
 import {
     getBuildRootPath,
     getFilePathInWorkspace,
+    getFullProjectPath,
     getLogPath,
     getProjectFileName,
     getProjectFolderPath,
@@ -14,7 +15,7 @@ import {
 } from "../env";
 import * as parser from "fast-xml-parser";
 import * as path from "path";
-import { fileNameFromPath, isFileMoved, isFolder } from "../utils";
+import { fileNameFromPath, isFileMoved, isFolder, sleep } from "../utils";
 import { ProjectTree } from "./ProjectTree";
 import { glob } from "glob";
 import { ProjectCacheInterface, ProjectsCache } from "./ProjectsCache";
@@ -32,18 +33,21 @@ export interface ProjectManagerInterface {
     addBuildAllTargetToProjects(
         rootTargetName: string,
         includeTargets: string[],
-        excludeTargets: string[]
+        excludeTargets: string[],
+        shouldTouch: boolean
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 
     addTestSchemeDependOnTargetToProjects(
         projectFile: string,
         rootTargetName: string,
-        testTargets: string | undefined
+        testTargets: string | undefined,
+        shouldTouch: boolean
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 }
 
-export class ProjectManager implements ProjectManagerInterface {
-    private readonly disposable: vscode.Disposable[] = [];
+export class ProjectManager implements ProjectManagerInterface, vscode.Disposable {
+    private disposable: vscode.Disposable[] = [];
+    private projectWatcherDisposable: vscode.Disposable[] = [];
 
     private readonly projectFileEditMutex = new Mutex();
 
@@ -53,6 +57,8 @@ export class ProjectManager implements ProjectManagerInterface {
     private readonly projectCache: ProjectCacheInterface;
 
     private cachedTestTargets = new Map<string, string[]>();
+
+    private isSavingProjects = false;
 
     constructor(
         private readonly log: LogChannelInterface,
@@ -93,13 +99,35 @@ export class ProjectManager implements ProjectManagerInterface {
                 this.log.debug("Deleted: " + e.files.map(f => f.fsPath).join(", "));
             })
         );
-        // this.disposable.push(
-        //     this.projectCache.onProjectChanged.event(() => {
-        //         this.touch();
-        //     })
-        // );
 
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
+    }
+
+    dispose() {
+        for (const dis of this.disposable) {
+            dis.dispose();
+        }
+        this.disposable = [];
+        for (const dis of this.projectWatcherDisposable) {
+            dis.dispose();
+        }
+        this.projectWatcherDisposable = [];
+        this.projectCache.dispose();
+        this.cachedTestTargets.clear();
+    }
+
+    async addProject(projectPath: string) {
+        if (await this.projectCache.addProject(projectPath)) {
+            const watcher = this.projectWatcher.newFileWatcher(getFullProjectPath(projectPath));
+            this.projectWatcherDisposable.push(
+                watcher.onFileChanged(async () => {
+                    if (!this.isSavingProjects) {
+                        // notify only when we are not saving projects ourselves
+                        await this.touch();
+                    }
+                })
+            );
+        }
     }
 
     async listTestTargetsForFile(file: string, project: string | undefined = undefined) {
@@ -162,7 +190,7 @@ export class ProjectManager implements ProjectManagerInterface {
                         message: fileNameFromPath(project),
                     });
                     try {
-                        await this.projectCache.addProject(project);
+                        await this.addProject(project);
                         await this.readAllProjects(await this.projectCache.getList(project, false));
                     } catch (error) {
                         this.log.error(`Failed to load project ${project}: ${error}`);
@@ -194,7 +222,7 @@ export class ProjectManager implements ProjectManagerInterface {
         for (const file of files) {
             if (file.endsWith(".xcodeproj") || path.basename(file) === "Package.swift") {
                 const relativeProjectPath = path.relative(getWorkspacePath(), file);
-                await this.projectCache.addProject(relativeProjectPath);
+                await this.addProject(relativeProjectPath);
                 if (
                     await isProjectFileChanged(
                         relativeProjectPath,
@@ -475,19 +503,8 @@ export class ProjectManager implements ProjectManagerInterface {
                 }
             }
         } finally {
-            try {
-                for (const project of modifiedProjects) {
-                    try {
-                        await this.rubyProjectFilesManager.saveProject(
-                            getFilePathInWorkspace(project)
-                        );
-                    } catch {
-                        // ignore
-                    }
-                }
-            } finally {
-                release();
-            }
+            await this.saveProjects(modifiedProjects);
+            release();
         }
     }
 
@@ -534,13 +551,8 @@ export class ProjectManager implements ProjectManagerInterface {
                 }
             }
         } finally {
-            try {
-                for (const project of modifiedProjects) {
-                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
-                }
-            } finally {
-                release();
-            }
+            await this.saveProjects(modifiedProjects);
+            release();
         }
     }
 
@@ -796,9 +808,27 @@ export class ProjectManager implements ProjectManagerInterface {
                 );
             }
 
-            await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(selectedProject));
+            await this.saveProjects(new Set([selectedProject]));
         } finally {
             release();
+        }
+    }
+
+    private async saveProjects(projects: Set<string>) {
+        this.isSavingProjects = true;
+        try {
+            for (const project of projects) {
+                try {
+                    await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                } catch {
+                    // ignore
+                }
+            }
+            await sleep(250);
+            // notify about changes
+            await this.touch();
+        } finally {
+            this.isSavingProjects = false;
         }
     }
 
@@ -841,7 +871,8 @@ export class ProjectManager implements ProjectManagerInterface {
 
     async generateScheme(
         originalSchemeName: string,
-        generate: (generatedSchemeName: string, originalSchemeName: string) => Promise<string[]>
+        generate: (generatedSchemeName: string, originalSchemeName: string) => Promise<string[]>,
+        shouldTouch: boolean = true
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         if (!this.isAllowed()) {
             if (await isActivated()) {
@@ -879,7 +910,9 @@ export class ProjectManager implements ProjectManagerInterface {
                 }
                 return rootProjectPath;
             })();
-            touch.sync(touchProjectPath);
+            if (shouldTouch) {
+                touch.sync(touchProjectPath);
+            }
             this.log.debug(
                 `Generated scheme: VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}, with added targets: ${result.join(", ")}`
             );
@@ -892,7 +925,7 @@ export class ProjectManager implements ProjectManagerInterface {
                     "xcschemes",
                     `VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}.xcscheme`
                 ),
-                projectPath: touchProjectPath,
+                projectPath: shouldTouch ? touchProjectPath : "",
             };
         } catch (err) {
             this.log.error(`Failed to generate Scheme target to projects: ${String(err)}`);
@@ -904,35 +937,43 @@ export class ProjectManager implements ProjectManagerInterface {
     async addBuildAllTargetToProjects(
         rootTargetName: string,
         includeTargets: string[],
-        excludeTargets: string[]
+        excludeTargets: string[],
+        shouldTouch: boolean
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         // root project should be the first one
         const all = [(await getRootProjectFilePath()) || "", ...this.projectCache.getProjects()];
         const projectFiles = [...new Set(all)].map(proj => getFilePathInWorkspace(proj));
 
-        return this.generateScheme(rootTargetName, (schemeName: string, rootTargetName: string) =>
-            this.rubyProjectFilesManager.generateSchemeDependOnTarget(
-                projectFiles,
-                schemeName,
-                rootTargetName,
-                includeTargets.join(","),
-                excludeTargets.join(",")
-            )
+        return this.generateScheme(
+            rootTargetName,
+            (schemeName: string, rootTargetName: string) =>
+                this.rubyProjectFilesManager.generateSchemeDependOnTarget(
+                    projectFiles,
+                    schemeName,
+                    rootTargetName,
+                    includeTargets.join(","),
+                    excludeTargets.join(",")
+                ),
+            shouldTouch
         );
     }
 
     async addTestSchemeDependOnTargetToProjects(
         projectFile: string,
         rootTargetName: string,
-        testTargets: string | undefined
+        testTargets: string | undefined,
+        shouldTouch: boolean
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
-        return this.generateScheme(rootTargetName, (schemeName: string, rootTargetName: string) =>
-            this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
-                getFilePathInWorkspace(projectFile),
-                schemeName,
-                rootTargetName,
-                testTargets
-            )
+        return this.generateScheme(
+            rootTargetName,
+            (schemeName: string, rootTargetName: string) =>
+                this.rubyProjectFilesManager.generateTestSchemeDependOnTarget(
+                    getFilePathInWorkspace(projectFile),
+                    schemeName,
+                    rootTargetName,
+                    testTargets
+                ),
+            shouldTouch
         );
     }
 
@@ -992,7 +1033,7 @@ export class ProjectManager implements ProjectManagerInterface {
         const filePathComponent = filePath.split(path.sep);
         for (const project of projects) {
             try {
-                await this.projectCache.addProject(project);
+                await this.addProject(project);
                 const files = await this.projectCache.getList(project, false);
                 for (const file of files) {
                     const fileComponent = file.split(path.sep);

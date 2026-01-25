@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as vscode from "vscode";
 import { getFilePathInWorkspace, isProjectFileChanged } from "../env";
 import { isFolder } from "../utils";
 import { ProjectWatcherInterface } from "./ProjectWatcher";
@@ -56,7 +57,7 @@ function mapReviver(key: any, value: any) {
     return value;
 }
 
-export interface ProjectCacheInterface {
+export interface ProjectCacheInterface extends vscode.Disposable {
     clear(): void;
     preloadCacheFromFile(filePath: string): Promise<void>;
     saveCacheToFile(filePath: string): Promise<void>;
@@ -64,7 +65,7 @@ export interface ProjectCacheInterface {
     getList(project: string, onlyFiles?: boolean): Promise<Set<string>>;
     getProjects(): string[];
     allFiles(): Promise<{ path: string; includeSubfolders: boolean }[]>;
-    addProject(projectPath: string): Promise<void>;
+    addProject(projectPath: string): Promise<boolean>;
 }
 
 export class ProjectsCache implements ProjectCacheInterface {
@@ -81,6 +82,10 @@ export class ProjectsCache implements ProjectCacheInterface {
 
     clear() {
         this.cache.clear();
+    }
+
+    dispose() {
+        this.clear();
     }
 
     async preloadCacheFromFile(filePath: string) {
@@ -120,7 +125,7 @@ export class ProjectsCache implements ProjectCacheInterface {
     }
 
     private async getFilesForProject(projectPath: string) {
-        if (await isProjectFileChanged(projectPath, "ProjectsCache", this.projectWatcher)) {
+        if (await isProjectFileChanged(projectPath, "ProjectsCache.files", this.projectWatcher)) {
             const list = await this.parseProjectList(
                 await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
             );
@@ -217,6 +222,8 @@ export class ProjectsCache implements ProjectCacheInterface {
             this.cache.set(projectPath, {
                 list: new Set<ProjFilePath>(),
             });
+            return true;
         }
+        return false;
     }
 }
