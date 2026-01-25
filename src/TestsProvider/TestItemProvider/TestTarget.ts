@@ -4,20 +4,34 @@ import { TestFile } from "./TestFile";
 import { TestContainer } from "./TestContainer";
 
 export class TestTarget implements TestContainer {
-    public didResolve = false;
+    async didResolveImp(): Promise<boolean> {
+        const watcher = this.context.projectWatcher.newFileChecker(
+            this.projectFile,
+            `TestProject.${this.target}`
+        );
+        return await watcher.isFileChanged();
+    }
+
+    public get didResolve(): Promise<boolean> {
+        return this.didResolveImp();
+    }
+
     private context: TestTreeContext;
     private projectFile: string;
+    private target: string;
 
     private filesForTargetProvider: () => Promise<string[]>;
 
     constructor(
         context: TestTreeContext,
         projectFile: string,
+        target: string,
         filesForTargetProvider: () => Promise<string[]>
     ) {
         this.context = context;
         this.filesForTargetProvider = filesForTargetProvider;
         this.projectFile = projectFile;
+        this.target = target;
     }
 
     public async updateFromDisk(controller: vscode.TestController, item: vscode.TestItem) {
@@ -42,7 +56,7 @@ export class TestTarget implements TestContainer {
             });
 
             try {
-                if (!data.didResolve) {
+                if (!(await data.didResolve)) {
                     await data.updateFromDisk(controller, file);
                 }
                 if ([...file.children].length > 0) {
@@ -55,8 +69,6 @@ export class TestTarget implements TestContainer {
                 this.context.deleteItem(file.id);
             }
         }
-        this.didResolve = true;
-        // finish
         this.context.replaceItemsChildren(item, parent.children);
     }
 }

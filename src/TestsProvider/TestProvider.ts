@@ -113,11 +113,11 @@ export class TestProvider {
                         run.enqueued(test);
                         queue.push({ test, data });
                     } else {
-                        if (data instanceof TestFile && !data.didResolve) {
+                        if (data instanceof TestFile && !(await data.didResolve)) {
                             await data.updateFromDisk(ctrl, test);
-                        } else if (data instanceof TestTarget && !data.didResolve) {
+                        } else if (data instanceof TestTarget && !(await data.didResolve)) {
                             await data.updateFromDisk(ctrl, test);
-                        } else if (data instanceof TestProject && !data.didResolve) {
+                        } else if (data instanceof TestProject && !(await data.didResolve)) {
                             await data.updateFromDisk(ctrl, test);
                         }
 
@@ -485,7 +485,7 @@ export class TestProvider {
                     );
                 }
             );
-            if (!data.didResolve || forceUpdate) {
+            if (!(await data.didResolve) || forceUpdate) {
                 await data.updateFromDisk(this.context.ctrl, file);
             }
             if (file.children.size === 0) {

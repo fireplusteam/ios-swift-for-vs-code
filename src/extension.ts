@@ -270,7 +270,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     testProvider = new TestProvider(
         projectManager,
-        new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
+        new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand, projectWatcher),
         logChannel,
         async (
             isDebuggable,
@@ -296,6 +296,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         projectManager.onProjectUpdate.event(() => {
+            testProvider?.findInitialFiles();
             autocompleteWatcher?.triggerIncrementalBuild();
         })
     );

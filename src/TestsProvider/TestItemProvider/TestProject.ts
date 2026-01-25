@@ -1,19 +1,29 @@
 import * as vscode from "vscode";
 import { TestTreeContext } from "../TestTreeContext";
 import { TestContainer } from "./TestContainer";
-import { FSWatcher } from "fs";
 import { TestTarget } from "./TestTarget";
 
 export class TestProject implements TestContainer {
-    public didResolve = false;
+    private _lastUrl: vscode.Uri | undefined;
+    async didResolveImp(): Promise<boolean> {
+        if (this._lastUrl) {
+            const watcher = this.context.projectWatcher.newFileChecker(
+                this._lastUrl.fsPath,
+                "TestProjectFile"
+            );
+            return await watcher.isFileChanged();
+        }
+        return false;
+    }
+
+    public get didResolve(): Promise<boolean> {
+        return this.didResolveImp();
+    }
 
     public context: TestTreeContext;
 
     public targetProvider: () => Promise<string[]>;
     public filesForTargetProvider: (target: string) => Promise<string[]>;
-
-    private fsWatcher: FSWatcher | undefined;
-    private projectContent: Buffer | undefined;
 
     constructor(
         context: TestTreeContext,
@@ -41,16 +51,17 @@ export class TestProject implements TestContainer {
         const parent = { item, children: [] as vscode.TestItem[] };
         const targets = await this.targetProvider();
         const weakRef = new WeakRef(this);
+        this._lastUrl = item.uri;
 
         for (const target of targets) {
             const url = TestTreeContext.getTargetFilePath(item.uri, target);
             const { file, data } = this.context.getOrCreateTest("target://", url, () => {
-                return new TestTarget(this.context, item.uri?.fsPath || "", async () => {
+                return new TestTarget(this.context, item.uri?.fsPath || "", target, async () => {
                     return (await weakRef.deref()?.filesForTargetProvider(target)) || [];
                 });
             });
 
-            if (!data.didResolve) {
+            if (!(await data.didResolve)) {
                 await data.updateFromDisk(controller, file);
             }
             if ([...file.children].length > 0) {
@@ -60,9 +71,7 @@ export class TestProject implements TestContainer {
             }
         }
 
-        this.didResolve = true;
         // finish
-
         this.context.replaceItemsChildren(item, parent.children);
     }
 }

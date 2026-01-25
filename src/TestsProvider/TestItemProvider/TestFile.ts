@@ -11,7 +11,21 @@ import path = require("path");
 let generationCounter = 0;
 
 export class TestFile implements TestContainer {
-    public didResolve = false;
+    private _lastUrl: vscode.Uri | undefined;
+    async didResolveImp(): Promise<boolean> {
+        if (this._lastUrl) {
+            const watcher = this.context.projectWatcher.newFileChecker(
+                this._lastUrl.fsPath,
+                "testfile"
+            );
+            return await watcher.isFileChanged();
+        }
+        return false;
+    }
+
+    public get didResolve(): Promise<boolean> {
+        return this.didResolveImp();
+    }
     context: TestTreeContext;
     private target: string;
     private projectFile: string;
@@ -89,6 +103,7 @@ export class TestFile implements TestContainer {
     ) {
         try {
             const url = item.uri!;
+            this._lastUrl = url;
             const tests = await this.context.lspTestProvider.fetchTests(url, content);
 
             const itemChildren: vscode.TestItem[] = [];
@@ -141,6 +156,5 @@ export class TestFile implements TestContainer {
 
             ascend(0); // finish and assign children for all remaining items
         }
-        this.didResolve = true;
     }
 }

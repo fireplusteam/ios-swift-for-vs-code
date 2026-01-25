@@ -5,16 +5,18 @@ import { TestContainer } from "../../../src/TestsProvider/TestItemProvider/TestC
 import { TestCase } from "../../../src/TestsProvider/TestItemProvider/TestCase";
 import { LSPTestsProvider } from "../../../src/LSP/LSPTestsProvider";
 import { AtomicCommand } from "../../../src/CommandManagement/AtomicCommand";
+import { ProjectWatcherInterface } from "../../../src/ProjectManager/ProjectWatcher";
 
 suite("TestTreeContext", () => {
     let context: TestTreeContext;
     let mockLSPProvider: LSPTestsProvider;
     let mockAtomicCommand: AtomicCommand;
-
+    let mockProjectWatcher: ProjectWatcherInterface;
     setup(() => {
         mockLSPProvider = {} as LSPTestsProvider;
         mockAtomicCommand = {} as AtomicCommand;
-        context = new TestTreeContext(mockLSPProvider, mockAtomicCommand);
+        mockProjectWatcher = {} as ProjectWatcherInterface;
+        context = new TestTreeContext(mockLSPProvider, mockAtomicCommand, mockProjectWatcher);
     });
 
     teardown(() => {

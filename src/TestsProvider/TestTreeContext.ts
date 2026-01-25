@@ -8,6 +8,7 @@ import { LSPTestsProvider } from "../LSP/LSPTestsProvider";
 import { TestResultProvider } from "./TestResultProvider";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import * as path from "path";
+import { ProjectWatcherInterface } from "../ProjectManager/ProjectWatcher";
 
 const textDecoder = new TextDecoder("utf-8");
 
@@ -25,10 +26,16 @@ export class TestTreeContext {
     readonly testResult: TestResultProvider = new TestResultProvider();
     readonly lspTestProvider: LSPTestsProvider;
     readonly atomicCommand: AtomicCommand;
+    readonly projectWatcher: ProjectWatcherInterface;
 
-    constructor(lspTestProvider: LSPTestsProvider, atomicCommand: AtomicCommand) {
+    constructor(
+        lspTestProvider: LSPTestsProvider,
+        atomicCommand: AtomicCommand,
+        projectWatcher: ProjectWatcherInterface
+    ) {
         this.lspTestProvider = lspTestProvider;
         this.atomicCommand = atomicCommand;
+        this.projectWatcher = projectWatcher;
     }
 
     static TestID(id: TestNodeId, uri: vscode.Uri) {

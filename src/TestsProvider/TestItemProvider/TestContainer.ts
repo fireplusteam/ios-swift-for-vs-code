@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 export interface TestContainer {
-    didResolve: boolean;
+    didResolve: Promise<boolean>;
 
     updateFromDisk(controller: vscode.TestController, item: vscode.TestItem): Promise<void>;
 
