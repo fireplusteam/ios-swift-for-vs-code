@@ -11,6 +11,7 @@ import {
     getWorkspaceId,
     getWorkspacePath,
     isActivated,
+    isPackageSwiftProject,
     isProjectFileChanged,
 } from "../env";
 import * as parser from "fast-xml-parser";
@@ -25,7 +26,7 @@ import { Mutex } from "async-mutex";
 import { RubyProjectFilesManagerInterface } from "./RubyProjectFilesManager";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import * as touch from "touch";
-import { ProjectWatcherInterface } from "./ProjectWatcher";
+import { ProjectWatcherInterface, ProjectWatcherTouchInterface } from "./ProjectWatcher";
 
 export interface ProjectManagerInterface {
     getRootProjectTargets(): Promise<string[]>;
@@ -62,7 +63,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
 
     constructor(
         private readonly log: LogChannelInterface,
-        private readonly projectWatcher: ProjectWatcherInterface,
+        private readonly projectWatcher: ProjectWatcherInterface & ProjectWatcherTouchInterface,
         private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface
     ) {
         this.projectCache = new ProjectsCache(projectWatcher, (projectFile: string) => {
@@ -116,7 +117,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         this.cachedTestTargets.clear();
     }
 
-    async addProject(projectPath: string) {
+    private async addProject(projectPath: string) {
         if (await this.projectCache.addProject(projectPath)) {
             const watcher = this.projectWatcher.newFileWatcher(getFullProjectPath(projectPath));
             this.projectWatcherDisposable.push(
@@ -820,6 +821,9 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
             for (const project of projects) {
                 try {
                     await this.rubyProjectFilesManager.saveProject(getFilePathInWorkspace(project));
+                    if (isPackageSwiftProject(project)) {
+                        await this.projectWatcher.update(getFilePathInWorkspace(project));
+                    }
                 } catch {
                     // ignore
                 }

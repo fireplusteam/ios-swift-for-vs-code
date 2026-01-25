@@ -8,6 +8,10 @@ export interface ProjectWatcherInterface extends vscode.Disposable {
     newFileChecker(filePath: string, id: string): ProjectFileCheckerInterface;
 }
 
+export interface ProjectWatcherTouchInterface {
+    update(filePath: string): Promise<void>;
+}
+
 interface ProjectWatcherTimestamp {
     watcherTimeStamps(filePath: string): number;
     checkerTimeStamps(key: string): number;
@@ -27,7 +31,9 @@ interface ProjectFileWatcherImp {
     notify(projectFilePath: string): Promise<boolean>;
 }
 
-export class ProjectWatcher implements ProjectWatcherInterface, ProjectWatcherTimestamp {
+export class ProjectWatcher
+    implements ProjectWatcherInterface, ProjectWatcherTimestamp, ProjectWatcherTouchInterface
+{
     private watchers: Map<
         string,
         { timestamps: number; watcher: ProjectFileWatcherInterface & ProjectFileWatcherImp }
@@ -54,37 +60,40 @@ export class ProjectWatcher implements ProjectWatcherInterface, ProjectWatcherTi
                 },
             });
             this._mainWatcher = watcher;
-            watcher.on("change", (filePath: string, stats) => {
-                const ext = path.extname(filePath).toLowerCase();
-                if (ext !== ".pbxproj" && ext !== ".swift") {
-                    return;
-                }
-
-                const components = filePath.split(path.sep).filter(c => c.length > 0) || [];
-                let subPath = "";
-                for (let i = 0; i < components.length; i++) {
-                    subPath += path.sep + components[i];
-                    const checkerEntries = this.checkers.get(subPath);
-                    if (checkerEntries) {
-                        for (const key of checkerEntries.keys()) {
-                            const entry = checkerEntries.get(key);
-                            if (entry) {
-                                entry.timestamps = Date.now();
-                            }
-                        }
-                    }
-                }
-
-                const watcherEntry = this.watchers.get(filePath);
-                if (watcherEntry) {
-                    watcherEntry.timestamps = Date.now();
-                    watcherEntry.watcher.notify(filePath);
-                }
-                this.log.debug(`ProjectWatcher: File changed: ${filePath}, stats: ${stats}`);
+            watcher.on("change", (filePath: string) => {
+                this.update(filePath);
             });
             return watcher;
         }
         return this._mainWatcher;
+    }
+
+    async update(filePath: string): Promise<void> {
+        const ext = path.extname(filePath).toLowerCase();
+        if (ext !== ".pbxproj" && ext !== ".swift") {
+            return;
+        }
+
+        const components = filePath.split(path.sep).filter(c => c.length > 0) || [];
+        let subPath = "";
+        for (let i = 0; i < components.length; i++) {
+            subPath += path.sep + components[i];
+            const checkerEntries = this.checkers.get(subPath);
+            if (checkerEntries) {
+                for (const key of checkerEntries.keys()) {
+                    const entry = checkerEntries.get(key);
+                    if (entry) {
+                        entry.timestamps = Date.now();
+                    }
+                }
+            }
+        }
+
+        const watcherEntry = this.watchers.get(filePath);
+        if (watcherEntry) {
+            watcherEntry.timestamps = Date.now();
+            watcherEntry.watcher.notify(filePath);
+        }
     }
 
     private addPath(filePath: string) {
