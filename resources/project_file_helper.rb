@@ -36,20 +36,15 @@ end
 def get_real_path(file, project)
   xc_project_dir_path = project.root_object.project_dir_path
   if file.path.nil?
-    file.real_path.to_s
+    file.real_path.cleanpath
   elsif is_relative_path?(file.path)
     if xc_project_dir_path.empty?
-      file.real_path.to_s
+      file.real_path.cleanpath
     else
-      Pathname
-        .new(
-          File.join(project.project_dir, xc_project_dir_path, file.path.to_s)
-        )
-        .cleanpath
-        .to_s
+      (project.project_dir + xc_project_dir_path + file.path).cleanpath
     end
   else
-    file.path.to_s
+    file.path.cleanpath
   end
 end
 
@@ -64,15 +59,15 @@ def combine_path(group, parent_path)
   if group.path.nil?
     parent_path
   elsif is_relative_path?(group.path)
-    Pathname.new(File.join(parent_path, group.path.to_s)).cleanpath.to_s
+    parent_path + group.path
   else
-    Pathname.new(group.path.to_s).cleanpath.to_s
+    group.path
   end
 end
 
 def traverse_all_group(project, &block)
   def all_group_paths_rec(project, group, parent_group, current_path, &block)
-    yield(group, parent_group, current_path, GroupType::GROUP)
+    yield(group, parent_group, current_path.cleanpath, GroupType::GROUP)
 
     group.children.each do |child|
       # if child is a file reference with folder type, print it as folder reference
@@ -91,16 +86,7 @@ def traverse_all_group(project, &block)
   end
 
   group = project.main_group
-  path =
-    Pathname
-      .new(
-        File.join(
-          project.project_dir,
-          project.root_object.project_dir_path.to_s
-        )
-      )
-      .cleanpath
-      .to_s
+  path = project.project_dir + project.root_object.project_dir_path
 
   path = combine_path(group, path) if group != project.root_object
 
@@ -124,24 +110,26 @@ end
 def all_files_in_folder(project, group)
   result = []
   folder_path = get_path_of_group(project, group)
+  return result if folder_path.nil?
   # look up all files in folder and subfolders and further folders recursively in file system
   # don't recurse folder if it has Package.swift file at root (as Swift Package)
   def package_file(path)
-    File.join(path, "Package.swift")
+    path + "Package.swift"
   end
 
   if File.exist?(package_file(folder_path))
-    result << Pathname.new(package_file(folder_path)).cleanpath.to_s
+    result << package_file(folder_path)
     return result
   end
   if File.directory?(folder_path)
     Find.find(folder_path) do |path|
+      path = Pathname.new(path).cleanpath
       # skip search if we have Package.swift file in subfolder
       if File.directory?(path) && File.exist?(package_file(path))
-        result << Pathname.new(package_file(path)).cleanpath.to_s
+        result << package_file(path)
         Find.prune
       else
-        result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+        result << path if File.file?(path)
       end
     end
   end
@@ -149,7 +137,7 @@ def all_files_in_folder(project, group)
 end
 
 def find_group_by_absolute_dir_path(project, path)
-  path = Pathname.new(path).cleanpath.to_s
+  path = Pathname.new(path).cleanpath
   traverse_all_group(project) do |group, parent_group, group_path, _type|
     return group if group_path == path
   end
@@ -160,14 +148,14 @@ def first_folder_by_absolute_dir_path(project, path)
   path = Pathname.new(path).cleanpath.to_s.split("/")
 
   all_pref_paths = {}
-  current_path = ""
+  current_path = Pathname.new("/")
   path.each do |part|
-    current_path = Pathname.new(File.join(current_path, part)).cleanpath.to_s
-    all_pref_paths[current_path] = true
+    current_path = current_path + part
+    all_pref_paths[current_path.to_s] = true
   end
 
   traverse_all_group(project) do |group, parent_group, group_path, type|
-    return group if all_pref_paths.key?(group_path) && is_folder(group)
+    return group if all_pref_paths.key?(group_path.to_s) && is_folder(group)
   end
   nil
 end
@@ -181,15 +169,16 @@ def furthest_group_by_absolute_dir_path(project, path)
   path = Pathname.new(path).cleanpath.to_s.split("/")
 
   all_pref_paths = {}
-  current_path = ""
+  current_path = Pathname.new("/")
   path.each do |part|
-    current_path = Pathname.new(File.join(current_path, part)).cleanpath.to_s
-    all_pref_paths[current_path] = current_path.split("/").length
+    current_path = current_path + part
+    all_pref_paths[current_path.to_s] = current_path.to_s.split("/").length
   end
 
   traverse_all_group(project) do |group, parent_group, group_path, _type|
-    group_path_components = group_path.split("/").length
+    group_path = group_path.to_s
     if all_pref_paths.key?(group_path)
+      group_path_components = group_path.split("/").length
       if group_path_components > result_path_components
         result_group = group
         result_path_components = group_path_components

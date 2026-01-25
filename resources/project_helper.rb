@@ -9,6 +9,7 @@ require_relative "package_helper"
 # FILE AND GROUP MANAGEMENT
 
 def find_file(project, file_path)
+  file_path = Pathname.new(file_path).cleanpath
   file_ref =
     project.files.find { |file| get_real_path(file, project) == file_path }
 
@@ -244,6 +245,7 @@ def list_files_for_target(project, target_name)
 end
 
 def get_targets_for_file(project, file_path)
+  file_path = Pathname.new(file_path).cleanpath
   group = first_folder_by_absolute_dir_path(project, file_path)
   result = []
   if not group.nil?

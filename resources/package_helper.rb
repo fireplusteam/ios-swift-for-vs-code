@@ -204,7 +204,7 @@ def find_files(path)
   result = []
   if File.directory?(path)
     Find.find(path) do |path|
-      result << Pathname.new(path).cleanpath.to_s if File.file?(path)
+      result << Pathname.new(path).cleanpath if File.file?(path)
     end
   end
   result
@@ -224,12 +224,8 @@ end
 
 def package_list_targets_for_file(project, file_path)
   project.targets.each do |target|
-    candidate_target =
-      Pathname
-        .new(File.join(project.project_dir_path, target.path))
-        .cleanpath
-        .to_s
-    if file_path.downcase.start_with?("#{candidate_target.downcase}/")
+    candidate_target = (project.project_dir_path + target.path).cleanpath
+    if file_path.to_s.downcase.start_with?("#{candidate_target.to_s.downcase}/")
       puts target.name
     end
   end
@@ -240,7 +236,7 @@ def package_list_files_for_target(project, target_name)
   project.targets.each do |target|
     next if target.name != target_name
     dir_path = target.path
-    full_dir_path = File.join(project.project_dir_path, dir_path)
+    full_dir_path = (project.project_dir_path + dir_path).cleanpath
     if File.exist?(full_dir_path) && File.directory?(full_dir_path)
       find_files(full_dir_path).each { |file_path| puts file_path }
     end
