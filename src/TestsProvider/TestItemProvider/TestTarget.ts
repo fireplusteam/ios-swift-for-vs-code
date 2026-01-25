@@ -3,14 +3,16 @@ import { TestTreeContext } from "../TestTreeContext";
 import { TestFile } from "./TestFile";
 import { TestContainer } from "./TestContainer";
 import { getFilePathInWorkspace } from "../../env";
+import { ProjectWatcherInterface } from "../../ProjectManager/ProjectWatcher";
 
 export class TestTarget implements TestContainer {
+    private _didResolve = false;
     async didResolveImp(): Promise<boolean> {
-        const watcher = this.context.projectWatcher.newFileChecker(
+        const watcher = this.projectWatcher.newFileChecker(
             getFilePathInWorkspace(this.projectFile),
             `TestProject.${this.target}`
         );
-        return !(await watcher.isFileChanged());
+        return !(await watcher.isFileChanged()) && this._didResolve;
     }
 
     public get didResolve(): Promise<boolean> {
@@ -25,6 +27,7 @@ export class TestTarget implements TestContainer {
 
     constructor(
         context: TestTreeContext,
+        private projectWatcher: ProjectWatcherInterface,
         projectFile: string,
         target: string,
         filesForTargetProvider: () => Promise<string[]>
@@ -53,7 +56,12 @@ export class TestTarget implements TestContainer {
         for (const fileInTarget of files) {
             const url = vscode.Uri.file(fileInTarget);
             const { file, data } = this.context.getOrCreateTest("file://", url, () => {
-                return new TestFile(this.context, this.projectFile, item.label);
+                return new TestFile(
+                    this.context,
+                    this.projectWatcher,
+                    this.projectFile,
+                    item.label
+                );
             });
 
             try {
@@ -71,5 +79,6 @@ export class TestTarget implements TestContainer {
             }
         }
         this.context.replaceItemsChildren(item, parent.children);
+        this._didResolve = true;
     }
 }

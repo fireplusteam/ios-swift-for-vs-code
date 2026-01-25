@@ -7,20 +7,19 @@ import { getTestIDComponents } from "../../LSP/lspExtension";
 import { TestCase } from "./TestCase";
 import { LSPTestItem } from "../../LSP/GetTestsRequest";
 import path = require("path");
+import { ProjectWatcherInterface } from "../../ProjectManager/ProjectWatcher";
 
 let generationCounter = 0;
 
 export class TestFile implements TestContainer {
+    private _didResolve = false;
     private _lastUrl: vscode.Uri | undefined;
     async didResolveImp(): Promise<boolean> {
         if (this._lastUrl) {
-            const watcher = this.context.projectWatcher.newFileChecker(
-                this._lastUrl.fsPath,
-                "TestFile"
-            );
-            return !(await watcher.isFileChanged());
+            const watcher = this.projectWatcher.newFileChecker(this._lastUrl.fsPath, "TestFile");
+            return !(await watcher.isFileChanged()) && this._didResolve;
         }
-        return false;
+        return this._didResolve;
     }
 
     public get didResolve(): Promise<boolean> {
@@ -31,7 +30,12 @@ export class TestFile implements TestContainer {
     private projectFile: string;
     private fileContent: string | undefined;
 
-    constructor(context: TestTreeContext, projectFile: string, target: string) {
+    constructor(
+        context: TestTreeContext,
+        private projectWatcher: ProjectWatcherInterface,
+        projectFile: string,
+        target: string
+    ) {
         this.context = context;
         this.target = target;
         this.projectFile = projectFile;
@@ -156,5 +160,6 @@ export class TestFile implements TestContainer {
 
             ascend(0); // finish and assign children for all remaining items
         }
+        this._didResolve = true;
     }
 }

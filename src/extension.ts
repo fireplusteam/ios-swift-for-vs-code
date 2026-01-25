@@ -270,7 +270,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     testProvider = new TestProvider(
         projectManager,
-        new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand, projectWatcher),
+        new TestTreeContext(new LSPTestsProvider(sourceLsp), atomicCommand),
+        projectWatcher,
         logChannel,
         async (
             isDebuggable,

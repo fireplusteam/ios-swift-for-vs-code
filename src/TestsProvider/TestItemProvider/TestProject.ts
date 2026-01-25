@@ -3,18 +3,20 @@ import { TestTreeContext } from "../TestTreeContext";
 import { TestContainer } from "./TestContainer";
 import { TestTarget } from "./TestTarget";
 import { getFilePathInWorkspace } from "../../env";
+import { ProjectWatcherInterface } from "../../ProjectManager/ProjectWatcher";
 
 export class TestProject implements TestContainer {
+    private _didResolve = false;
     private _lastUrl: vscode.Uri | undefined;
     async didResolveImp(): Promise<boolean> {
         if (this._lastUrl) {
-            const watcher = this.context.projectWatcher.newFileChecker(
+            const watcher = this.projectWatcher.newFileChecker(
                 getFilePathInWorkspace(this._lastUrl.fsPath),
                 "TestProjectFile"
             );
-            return !(await watcher.isFileChanged());
+            return !(await watcher.isFileChanged()) && this._didResolve;
         }
-        return false;
+        return this._didResolve;
     }
 
     public get didResolve(): Promise<boolean> {
@@ -28,6 +30,7 @@ export class TestProject implements TestContainer {
 
     constructor(
         context: TestTreeContext,
+        private projectWatcher: ProjectWatcherInterface,
         targetProvider: () => Promise<string[]>,
         filesForTargetProvider: (target: string) => Promise<string[]>
     ) {
@@ -57,9 +60,15 @@ export class TestProject implements TestContainer {
         for (const target of targets) {
             const url = TestTreeContext.getTargetFilePath(item.uri, target);
             const { file, data } = this.context.getOrCreateTest("target://", url, () => {
-                return new TestTarget(this.context, item.uri?.fsPath || "", target, async () => {
-                    return (await weakRef.deref()?.filesForTargetProvider(target)) || [];
-                });
+                return new TestTarget(
+                    this.context,
+                    this.projectWatcher,
+                    item.uri?.fsPath || "",
+                    target,
+                    async () => {
+                        return (await weakRef.deref()?.filesForTargetProvider(target)) || [];
+                    }
+                );
             });
 
             if (!(await data.didResolve)) {
@@ -74,5 +83,6 @@ export class TestProject implements TestContainer {
 
         // finish
         this.context.replaceItemsChildren(item, parent.children);
+        this._didResolve = true;
     }
 }

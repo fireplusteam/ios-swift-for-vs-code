@@ -5,18 +5,15 @@ import { TestContainer } from "../../../src/TestsProvider/TestItemProvider/TestC
 import { TestCase } from "../../../src/TestsProvider/TestItemProvider/TestCase";
 import { LSPTestsProvider } from "../../../src/LSP/LSPTestsProvider";
 import { AtomicCommand } from "../../../src/CommandManagement/AtomicCommand";
-import { ProjectWatcherInterface } from "../../../src/ProjectManager/ProjectWatcher";
 
 suite("TestTreeContext", () => {
     let context: TestTreeContext;
     let mockLSPProvider: LSPTestsProvider;
     let mockAtomicCommand: AtomicCommand;
-    let mockProjectWatcher: ProjectWatcherInterface;
     setup(() => {
         mockLSPProvider = {} as LSPTestsProvider;
         mockAtomicCommand = {} as AtomicCommand;
-        mockProjectWatcher = {} as ProjectWatcherInterface;
-        context = new TestTreeContext(mockLSPProvider, mockAtomicCommand, mockProjectWatcher);
+        context = new TestTreeContext(mockLSPProvider, mockAtomicCommand);
     });
 
     teardown(() => {
@@ -278,17 +275,25 @@ suite("TestTreeContext", () => {
         test("should find deeply nested item", () => {
             const mockData: TestContainer = {} as TestContainer;
             const root = context.getOrCreateTest(
-                "file://",
+                "target://",
                 vscode.Uri.file("/root.swift"),
                 () => mockData
             );
-            const child = context.ctrl.createTestItem("child", "Child");
-            const grandchild = context.ctrl.createTestItem("grandchild", "Grandchild");
-            root.file.children.add(child);
-            child.children.add(grandchild);
+            const child = context.getOrCreateTest(
+                "file://",
+                vscode.Uri.file("/child.swift"),
+                () => "Child"
+            );
+            const grandchild = context.getOrCreateTest(
+                "file://",
+                vscode.Uri.file("/grandchild.swift"),
+                () => "Grandchild"
+            );
+            root.file.children.add(child.file);
+            child.file.children.add(grandchild.file);
 
-            const found = context["get"]("grandchild", context.ctrl.items);
-            assert.strictEqual(found?.id, "grandchild");
+            const found = context["get"]("file:///file:///grandchild.swift", context.ctrl.items);
+            assert.strictEqual(found?.id, "file:///file:///grandchild.swift");
         });
 
         test("should return undefined for non-existent item", () => {
@@ -449,9 +454,13 @@ suite("TestTreeContext", () => {
             let currentParent = root.file;
             const depth = 10;
             for (let i = 0; i < depth; i++) {
-                const child = context.ctrl.createTestItem(`level${i}`, `Level${i}`);
-                currentParent.children.add(child);
-                currentParent = child;
+                const child = context.getOrCreateTest(
+                    "file://",
+                    vscode.Uri.file(`/level${i}.swift`),
+                    () => ({}) as TestContainer
+                );
+                currentParent.children.add(child.file);
+                currentParent = child.file;
             }
 
             // Verify depth
@@ -459,15 +468,21 @@ suite("TestTreeContext", () => {
             assert.strictEqual(allItems.length, depth + 1); // +1 for root
 
             // Verify we can find deepest item
-            const deepest = context["get"](`level${depth - 1}`, context.ctrl.items);
+            const deepest = context["get"](
+                `file:///file:///level${depth - 1}.swift`,
+                context.ctrl.items
+            );
             assert.ok(deepest);
-            assert.strictEqual(deepest.label, `Level${depth - 1}`);
+            assert.strictEqual(deepest.label, `level${depth - 1}.swift`);
 
             // Delete from middle
-            context.deleteItem(`level${depth / 2}`);
+            context.deleteItem(`file:///file:///level${Math.floor(depth / 2)}.swift`);
 
             // Verify partial structure remains
-            const middle = context["get"](`level${depth / 2}`, context.ctrl.items);
+            const middle = context["get"](
+                `file:///file:///level${Math.floor(depth / 2)}.swift`,
+                context.ctrl.items
+            );
             assert.strictEqual(middle, undefined);
         });
 

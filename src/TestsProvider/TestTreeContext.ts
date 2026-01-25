@@ -8,7 +8,6 @@ import { LSPTestsProvider } from "../LSP/LSPTestsProvider";
 import { TestResultProvider } from "./TestResultProvider";
 import { AtomicCommand } from "../CommandManagement/AtomicCommand";
 import * as path from "path";
-import { ProjectWatcherInterface } from "../ProjectManager/ProjectWatcher";
 
 const textDecoder = new TextDecoder("utf-8");
 
@@ -18,7 +17,7 @@ type TestNodeId = "file://" | "target://" | "project://";
 
 export class TestTreeContext {
     readonly testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
-    readonly reusedTestData = new Map<string, vscode.TestItem>();
+    readonly reusedTestItems = new Map<string, vscode.TestItem>();
 
     readonly ctrl: vscode.TestController = vscode.tests.createTestController(
         "iOSTestController",
@@ -28,16 +27,10 @@ export class TestTreeContext {
     readonly testResult: TestResultProvider = new TestResultProvider();
     readonly lspTestProvider: LSPTestsProvider;
     readonly atomicCommand: AtomicCommand;
-    readonly projectWatcher: ProjectWatcherInterface;
 
-    constructor(
-        lspTestProvider: LSPTestsProvider,
-        atomicCommand: AtomicCommand,
-        projectWatcher: ProjectWatcherInterface
-    ) {
+    constructor(lspTestProvider: LSPTestsProvider, atomicCommand: AtomicCommand) {
         this.lspTestProvider = lspTestProvider;
         this.atomicCommand = atomicCommand;
-        this.projectWatcher = projectWatcher;
     }
 
     static TestID(id: TestNodeId, uri: vscode.Uri) {
@@ -75,56 +68,35 @@ export class TestTreeContext {
 
         const data = provider();
         this.testData.set(file, data);
-        this.reusedTestData.set(uniqueId, file);
+        this.reusedTestItems.set(uniqueId, file);
 
         file.canResolveChildren = true;
         return { file, data };
     }
 
     private get(key: string, items: vscode.TestItemCollection) {
-        const file = this.reusedTestData.get(key);
+        const file = this.reusedTestItems.get(key);
         if (file) {
             // fast find by checking if we can achieve one of the root items, if not, then it was removed
             // it reduces the need to do a full tree traversal each time
             let parent: vscode.TestItem | undefined = file;
             while (parent) {
                 if (parent.parent === undefined) {
-                    for (const [id] of this.ctrl.items) {
-                        if (id === key) {
-                            return file;
-                        }
+                    if (items.get(parent.id)) {
+                        return file;
                     }
+                    break;
+                }
+                // if an item is removed from parent children, but still has a parent reference, we can detect it here
+                else if (parent.parent.children.get(parent.id) === undefined) {
+                    break;
                 }
                 parent = parent?.parent;
             }
             // this item was removed from the tree, so clean up for the next time
-            this.reusedTestData.delete(key);
+            this.reusedTestItems.delete(key);
+            return undefined;
         }
-        for (const [id, item] of items) {
-            if (id === key) {
-                this.reusedTestData.set(key, item);
-                return item;
-            }
-            const value = this.getImp(key, item);
-            if (value !== undefined) {
-                this.reusedTestData.set(key, value);
-                return value;
-            }
-        }
-    }
-
-    private getImp(key: string, item: vscode.TestItem): vscode.TestItem | undefined {
-        if (item.id === key) {
-            return item;
-        }
-
-        for (const [, child] of item.children) {
-            const value = this.getImp(key, child);
-            if (value !== undefined) {
-                return value;
-            }
-        }
-        return undefined;
     }
 
     addItem(item: vscode.TestItem, shouldAdd: (root: vscode.TestItem) => boolean) {
