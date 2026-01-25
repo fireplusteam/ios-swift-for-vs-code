@@ -58,7 +58,6 @@ function mapReviver(key: any, value: any) {
 }
 
 export interface ProjectCacheInterface extends vscode.Disposable {
-    clear(): void;
     preloadCacheFromFile(filePath: string): Promise<void>;
     saveCacheToFile(filePath: string): Promise<void>;
     has(project: string): boolean;
@@ -80,12 +79,8 @@ export class ProjectsCache implements ProjectCacheInterface {
         this.listFilesFromProject = listFilesFromProject;
     }
 
-    clear() {
-        this.cache.clear();
-    }
-
     dispose() {
-        this.clear();
+        this.cache.clear();
     }
 
     async preloadCacheFromFile(filePath: string) {

@@ -53,7 +53,7 @@ export class ProjectWatcher
             const watcher = chokidar.watch([], {
                 persistent: true,
                 ignoreInitial: true,
-                depth: 10,
+                depth: 32,
                 awaitWriteFinish: {
                     stabilityThreshold: 200,
                     pollInterval: 100,
@@ -104,6 +104,7 @@ export class ProjectWatcher
         this.watchers.clear();
         this.checkers.clear();
         this._mainWatcher?.close();
+        this._mainWatcher = undefined;
     }
 
     newFileWatcher(filePath: string): ProjectFileWatcherInterface {

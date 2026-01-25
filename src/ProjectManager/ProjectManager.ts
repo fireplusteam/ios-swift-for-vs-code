@@ -16,7 +16,7 @@ import {
 } from "../env";
 import * as parser from "fast-xml-parser";
 import * as path from "path";
-import { fileNameFromPath, isFileMoved, isFolder, sleep } from "../utils";
+import { fileNameFromPath, isFileMoved, isFolder, readFileContent, sleep } from "../utils";
 import { ProjectTree } from "./ProjectTree";
 import { glob } from "glob";
 import { ProjectCacheInterface, ProjectsCache } from "./ProjectsCache";
@@ -63,7 +63,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
 
     constructor(
         private readonly log: LogChannelInterface,
-        private readonly projectWatcher: ProjectWatcherInterface & ProjectWatcherTouchInterface,
+        readonly projectWatcher: ProjectWatcherInterface & ProjectWatcherTouchInterface,
         private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface
     ) {
         this.projectCache = new ProjectsCache(projectWatcher, (projectFile: string) => {
@@ -104,17 +104,22 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         fs.mkdirSync(getFilePathInWorkspace(this.cachePath()), { recursive: true });
     }
 
-    dispose() {
-        for (const dis of this.disposable) {
-            dis.dispose();
-        }
-        this.disposable = [];
+    resetProjectCache() {
         for (const dis of this.projectWatcherDisposable) {
             dis.dispose();
         }
         this.projectWatcherDisposable = [];
         this.projectCache.dispose();
+        this.projectWatcher.dispose();
         this.cachedTestTargets.clear();
+    }
+
+    dispose() {
+        for (const dis of this.disposable) {
+            dis.dispose();
+        }
+        this.disposable = [];
+        this.resetProjectCache();
     }
 
     private async addProject(projectPath: string) {
@@ -169,7 +174,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
             return;
         }
         if (shouldDropCache) {
-            this.projectCache.clear();
+            this.resetProjectCache();
         } else {
             // try {
             //     await this.projectCache.preloadCacheFromFile(await this.xCodeCachePath());
@@ -1110,7 +1115,9 @@ export async function getRootProjectFilePath() {
 
 async function getProjectFiles(project: string) {
     if (project.indexOf(".xcworkspace") !== -1) {
-        const xmlData = fs.readFileSync(path.join(project, "contents.xcworkspacedata"), "utf-8");
+        const xmlData = (
+            await readFileContent(path.join(project, "contents.xcworkspacedata"))
+        ).toString("utf-8");
 
         const options = {
             ignoreAttributes: false,

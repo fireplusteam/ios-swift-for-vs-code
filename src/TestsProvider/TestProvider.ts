@@ -14,7 +14,6 @@ import * as path from "path";
 import { Mutex } from "async-mutex";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { DebugTestsInput } from "../Debug/DebugConfigurationProvider";
-import { ProjectWatcherInterface } from "../ProjectManager/ProjectWatcher";
 
 enum TestProviderLoadingState {
     nonInitialized,
@@ -58,7 +57,6 @@ export class TestProvider {
     constructor(
         projectManager: ProjectManager,
         context: TestTreeContext,
-        private projectWatcher: ProjectWatcherInterface,
         log: LogChannelInterface,
         executeTests: (
             isDebuggable: boolean,
@@ -414,7 +412,7 @@ export class TestProvider {
         }
 
         const { file, data } = this.context.getOrCreateTest("file://", e.uri, () => {
-            return new TestFile(this.context, this.projectWatcher, project, target);
+            return new TestFile(this.context, this.projectManager.projectWatcher, project, target);
         });
         const testFile = data as TestFile;
         await testFile.updateFromContents(this.context.ctrl, e.getText(), file);
@@ -462,6 +460,7 @@ export class TestProvider {
     async findInitialFilesIml(forceUpdate: boolean) {
         if (forceUpdate) {
             this.context.clear();
+            await this.projectManager.loadProjectFiles(true);
         }
         for (const proj of await this.projectManager.getProjects()) {
             const url = proj;
@@ -471,7 +470,7 @@ export class TestProvider {
                 () => {
                     return new TestProject(
                         this.context,
-                        this.projectWatcher,
+                        this.projectManager.projectWatcher,
                         async () => {
                             const targets = await this.projectManager.getTestProjectTargets(proj);
                             return targets;

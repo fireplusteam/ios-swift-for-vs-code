@@ -1,5 +1,15 @@
 # Change Log
 
+### 0.6.9 - 2026-01-29
+
+### Added
+
+-   Reworked project watcher to improve stability and performance while working with large projects, supporting better reaction on file changes for test explorer and autocompletion build triggering
+
+### Fixed
+
+-   Package targets now cab be determine under custom path set via `path` property in `Package.swift` manifest file
+
 ### 0.6.8 - 2026-01-23
 
 ### Added
