@@ -17,14 +17,15 @@ class SwiftPackage
       end
     end
 
-    attr_accessor :project, :name, :uuid, :is_test_target, :dependencies
+    attr_accessor :project, :name, :uuid, :is_test_target, :dependencies, :path
 
-    def initialize(project, name, is_test_target)
+    def initialize(project, name, target_path, is_test_target)
       @project = project
       @name = name.to_s
       @uuid = name.to_s
       @is_test_target = is_test_target
       @dependencies = []
+      @path = target_path
     end
 
     def isa
@@ -44,6 +45,7 @@ class SwiftPackage
     end
 
     def path
+      return Pathname.new(@path) if @path && !@path.empty?
       if @is_test_target
         File.join($tests_dir, @name)
       else
@@ -141,7 +143,8 @@ class SwiftPackage
         target_name = target_info["name"]
         target_type = target_info["type"]
         is_test_target = target_type == "test" ? true : false
-        target = Target.new(self, target_name, is_test_target)
+        target_path = target_info["path"] if target_info.key?("path")
+        target = Target.new(self, target_name, target_path, is_test_target)
         targets[target_name] = target
 
         target.dependencies = target_info["dependencies"]
@@ -232,12 +235,14 @@ def package_list_targets_for_file(project, file_path)
   end
 end
 
-def package_list_files_for_target(project, target)
+def package_list_files_for_target(project, target_name)
   # find all dirs in Sources or Tests matching target name
-  [$targets_dir, $tests_dir].each do |base_dir|
-    dir_path = File.join(project.project_dir_path, base_dir, target)
-    if File.exist?(dir_path) && File.directory?(dir_path)
-      find_files(dir_path).each { |file_path| puts file_path }
+  project.targets.each do |target|
+    next if target.name != target_name
+    dir_path = target.path
+    full_dir_path = File.join(project.project_dir_path, dir_path)
+    if File.exist?(full_dir_path) && File.directory?(full_dir_path)
+      find_files(full_dir_path).each { |file_path| puts file_path }
     end
   end
 end
