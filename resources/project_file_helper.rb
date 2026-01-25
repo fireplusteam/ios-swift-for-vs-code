@@ -44,7 +44,7 @@ def get_real_path(file, project)
       (project.project_dir + xc_project_dir_path + file.path).cleanpath
     end
   else
-    file.path.cleanpath
+    Pathname.new(file.path).cleanpath
   end
 end
 
@@ -61,7 +61,7 @@ def combine_path(group, parent_path)
   elsif is_relative_path?(group.path)
     parent_path + group.path
   else
-    group.path
+    Pathname.new(group.path)
   end
 end
 
