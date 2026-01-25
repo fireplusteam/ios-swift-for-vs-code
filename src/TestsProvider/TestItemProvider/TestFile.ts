@@ -16,9 +16,9 @@ export class TestFile implements TestContainer {
         if (this._lastUrl) {
             const watcher = this.context.projectWatcher.newFileChecker(
                 this._lastUrl.fsPath,
-                "testfile"
+                "TestFile"
             );
-            return await watcher.isFileChanged();
+            return !(await watcher.isFileChanged());
         }
         return false;
     }

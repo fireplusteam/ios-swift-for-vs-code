@@ -2,16 +2,17 @@ import * as vscode from "vscode";
 import { TestTreeContext } from "../TestTreeContext";
 import { TestContainer } from "./TestContainer";
 import { TestTarget } from "./TestTarget";
+import { getFilePathInWorkspace } from "../../env";
 
 export class TestProject implements TestContainer {
     private _lastUrl: vscode.Uri | undefined;
     async didResolveImp(): Promise<boolean> {
         if (this._lastUrl) {
             const watcher = this.context.projectWatcher.newFileChecker(
-                this._lastUrl.fsPath,
+                getFilePathInWorkspace(this._lastUrl.fsPath),
                 "TestProjectFile"
             );
-            return await watcher.isFileChanged();
+            return !(await watcher.isFileChanged());
         }
         return false;
     }

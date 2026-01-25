@@ -2,14 +2,15 @@ import * as vscode from "vscode";
 import { TestTreeContext } from "../TestTreeContext";
 import { TestFile } from "./TestFile";
 import { TestContainer } from "./TestContainer";
+import { getFilePathInWorkspace } from "../../env";
 
 export class TestTarget implements TestContainer {
     async didResolveImp(): Promise<boolean> {
         const watcher = this.context.projectWatcher.newFileChecker(
-            this.projectFile,
+            getFilePathInWorkspace(this.projectFile),
             `TestProject.${this.target}`
         );
-        return await watcher.isFileChanged();
+        return !(await watcher.isFileChanged());
     }
 
     public get didResolve(): Promise<boolean> {

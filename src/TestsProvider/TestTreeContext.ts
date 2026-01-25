@@ -18,6 +18,8 @@ type TestNodeId = "file://" | "target://" | "project://";
 
 export class TestTreeContext {
     readonly testData = new WeakMap<vscode.TestItem, MarkdownTestData>();
+    readonly reusedTestData = new Map<string, vscode.TestItem>();
+
     readonly ctrl: vscode.TestController = vscode.tests.createTestController(
         "iOSTestController",
         "iOS Tests"
@@ -73,18 +75,39 @@ export class TestTreeContext {
 
         const data = provider();
         this.testData.set(file, data);
+        this.reusedTestData.set(uniqueId, file);
 
         file.canResolveChildren = true;
         return { file, data };
     }
 
     private get(key: string, items: vscode.TestItemCollection) {
+        const file = this.reusedTestData.get(key);
+        if (file) {
+            // fast find by checking if we can achieve one of the root items, if not, then it was removed
+            // it reduces the need to do a full tree traversal each time
+            let parent: vscode.TestItem | undefined = file;
+            while (parent) {
+                if (parent.parent === undefined) {
+                    for (const [id] of this.ctrl.items) {
+                        if (id === key) {
+                            return file;
+                        }
+                    }
+                }
+                parent = parent?.parent;
+            }
+            // this item was removed from the tree, so clean up for the next time
+            this.reusedTestData.delete(key);
+        }
         for (const [id, item] of items) {
             if (id === key) {
+                this.reusedTestData.set(key, item);
                 return item;
             }
             const value = this.getImp(key, item);
             if (value !== undefined) {
+                this.reusedTestData.set(key, value);
                 return value;
             }
         }
