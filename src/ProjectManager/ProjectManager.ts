@@ -534,8 +534,8 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
 
     private async touch() {
         this.cachedTestTargets.clear();
-        this.onProjectUpdate.fire();
         await this.generateWorkspace();
+        this.onProjectUpdate.fire();
     }
 
     private async deleteFileFromXcodeProjectImp(files: vscode.Uri[]) {
