@@ -250,10 +250,15 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         projectTree.addIncluded(getFilePathInWorkspace((await getRootProjectFilePath()) || ""));
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getLogPath());
-        projectTree.addIncluded(getFilePathInWorkspace("Package.swift"));
+        // projectTree.addIncluded(getFilePathInWorkspace("Package.swift"));
 
         // add all project first as they are visible
+        const workspacePath = getWorkspacePath() + "/";
         for (const file of await this.projectCache.allFiles()) {
+            // we don't want to include all root workspace files as they should be included via projects. Sometimes package.swift can be out of projects which causing issues
+            if (file.includeSubfolders && workspacePath.startsWith(file.path + path.sep)) {
+                continue;
+            }
             projectTree.addIncluded(file.path, file.includeSubfolders);
         }
         for (const file of [...(await this.getAdditionalIncludedFiles())]) {

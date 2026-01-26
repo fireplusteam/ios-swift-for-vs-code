@@ -213,13 +213,19 @@ end
 # Package interface
 
 def package_list_files(project)
-  find_files(
-    File.join(project.project_dir_path, $targets_dir)
-  ).each { |file_path| puts "file:#{file_path}" }
-
-  find_files(
-    File.join(project.project_dir_path, $tests_dir)
-  ).each { |file_path| puts "file:#{file_path}" }
+  project.targets.each do |target|
+    dir_path = target.path
+    full_dir_path = (project.project_dir_path + dir_path).cleanpath
+    if File.exist?(full_dir_path) && File.directory?(full_dir_path)
+      find_files(full_dir_path).each { |file_path| puts "file:#{file_path}" }
+    end
+  end
+  # print all files in the package root, without recursing into subfolders
+  Dir.foreach(project.project_dir_path) do |entry|
+    next if entry == "." || entry == ".." || entry.start_with?(".")
+    file_path = project.project_dir_path + entry
+    puts "file:#{file_path}" if File.file?(file_path)
+  end
 end
 
 def package_list_targets_for_file(project, file_path)
