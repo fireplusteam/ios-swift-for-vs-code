@@ -65,43 +65,62 @@ def combine_path(group, parent_path)
   end
 end
 
-def traverse_all_group(project, &block)
-  def all_group_paths_rec(project, group, parent_group, current_path, &block)
-    yield(group, parent_group, current_path.cleanpath, GroupType::GROUP)
+module Traverse
+  VERSION = "0.1.0"
 
-    group.children.each do |child|
-      # if child is a file reference with folder type, print it as folder reference
-      child_path = combine_path(child, current_path)
-      if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
-           is_folder_reference(child)
-        yield(child, group, child_path, GroupType::FOLDER_REFERENCE)
-      elsif child.kind_of?(
-            Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
-          )
-        yield(child, group, child_path, GroupType::SYNCHRONIZED_GROUP)
-      elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
-        all_group_paths_rec(project, child, group, child_path, &block)
+  def traverse_all_group(project)
+    group = project.main_group
+    path = project.project_dir + project.root_object.project_dir_path
+    path = combine_path(group, path) if group != project.root_object
+
+    queue_group = [group]
+    queue_parent_group = [nil]
+    queue_current_path = [path]
+    head_queue = 0
+    while head_queue < queue_group.length
+      group = queue_group[head_queue]
+      parent_group = queue_parent_group[head_queue]
+      current_path = queue_current_path[head_queue]
+      head_queue += 1
+
+      catch(:prune) do
+        yield(group, parent_group, current_path.cleanpath, GroupType::GROUP)
+        group.children.each do |child|
+          # if child is a file reference with folder type, print it as folder reference
+          child_path = combine_path(child, current_path)
+          if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
+               is_folder_reference(child)
+            yield(child, group, child_path, GroupType::FOLDER_REFERENCE)
+          elsif child.kind_of?(
+                Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
+              )
+            yield(child, group, child_path, GroupType::SYNCHRONIZED_GROUP)
+          elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
+            queue_group << child
+            queue_parent_group << group
+            queue_current_path << child_path
+          end
+        end
       end
     end
   end
 
-  group = project.main_group
-  path = project.project_dir + project.root_object.project_dir_path
+  def prune
+    throw :prune
+  end
 
-  path = combine_path(group, path) if group != project.root_object
-
-  all_group_paths_rec(project, group, nil, path, &block)
+  module_function :traverse_all_group, :prune
 end
 
 def parent_group_of_group(project, target_group)
-  traverse_all_group(project) do |group, parent, _group_path, _type|
+  Traverse.traverse_all_group(project) do |group, parent, _group_path, _type|
     return parent if group == target_group
   end
   nil
 end
 
 def get_path_of_group(project, folder)
-  traverse_all_group(project) do |group, _parent, group_path, type|
+  Traverse.traverse_all_group(project) do |group, _parent, group_path, type|
     return group_path if group == folder
   end
   nil
@@ -138,7 +157,9 @@ end
 
 def find_group_by_absolute_dir_path(project, path)
   path = Pathname.new(path).cleanpath
-  traverse_all_group(project) do |group, parent_group, group_path, _type|
+  Traverse.traverse_all_group(
+    project
+  ) do |group, parent_group, group_path, _type|
     return group if group_path == path
   end
   nil
@@ -154,7 +175,9 @@ def first_folder_by_absolute_dir_path(project, path)
     all_pref_paths[current_path.to_s] = true
   end
 
-  traverse_all_group(project) do |group, parent_group, group_path, type|
+  Traverse.traverse_all_group(
+    project
+  ) do |group, parent_group, group_path, type|
     return group if all_pref_paths.key?(group_path.to_s) && is_folder(group)
   end
   nil
@@ -175,7 +198,9 @@ def furthest_group_by_absolute_dir_path(project, path)
     all_pref_paths[current_path.to_s] = current_path.to_s.split("/").length
   end
 
-  traverse_all_group(project) do |group, parent_group, group_path, _type|
+  Traverse.traverse_all_group(
+    project
+  ) do |group, parent_group, group_path, _type|
     group_path = group_path.to_s
     if all_pref_paths.key?(group_path)
       group_path_components = group_path.split("/").length

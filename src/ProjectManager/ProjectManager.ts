@@ -79,7 +79,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
 
         this.disposable.push(
             vscode.workspace.onDidRenameFiles(e => {
-                this.renameFile(
+                this.renameFileInXcodeProject(
                     e.files.map(f => {
                         return f.oldUri;
                     }),
@@ -440,7 +440,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         return true;
     }
 
-    private async renameFile(oldFiles: vscode.Uri[], files: vscode.Uri[]) {
+    private async renameFileInXcodeProject(oldFiles: vscode.Uri[], files: vscode.Uri[]) {
         if (!this.isAllowed()) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
@@ -451,6 +451,8 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
 
         const modifiedProjects = new Set<string>();
         const release = await this.projectFileEditMutex.acquire();
+        // adding algorithm works by grouping files by projects and then adding them one by one, so we need to collect all files which needs to be added during move operation
+        const filesToAdd = [] as vscode.Uri[];
         try {
             const projectFiles = this.projectCache.getProjects();
             for (let i = 0; i < oldFiles.length; ++i) {
@@ -459,15 +461,22 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                 const newProjects = await this.determineProjectFile(file.fsPath, projectFiles);
                 const oldProjects = await this.determineProjectFile(oldFile.fsPath, projectFiles);
 
-                // for the case when file was moved from one project to another, we need to remove it for the old project
+                // for the case when file was moved from one project to another, we need to remove it for the old project and add to the new one
+                let isMovingBetweenProjects = false;
                 for (const project of oldProjects) {
                     if (!newProjects.includes(project)) {
-                        modifiedProjects.add(project);
-                        await this.rubyProjectFilesManager.deleteFileFromProject(
-                            getFilePathInWorkspace(project),
-                            oldFile.fsPath
-                        );
+                        filesToAdd.push(file);
+
+                        const delModified = await this.deleteFileFromXcodeProjectImp([oldFile]);
+                        for (const project of delModified) {
+                            modifiedProjects.add(project);
+                        }
+                        isMovingBetweenProjects = true;
+                        break;
                     }
+                }
+                if (isMovingBetweenProjects) {
+                    continue;
                 }
 
                 for (const project of newProjects) {
@@ -508,6 +517,15 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                     }
                 }
             }
+            // now add files which were moved between projects
+            try {
+                const addModified = await this.addAFileToXcodeProjectImp(filesToAdd);
+                for (const project of addModified) {
+                    modifiedProjects.add(project);
+                }
+            } catch (err) {
+                this.log.error(`Failed to add moved files to new project: ${String(err)}`);
+            }
         } finally {
             await this.saveProjects(modifiedProjects);
             release();
@@ -520,6 +538,36 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         await this.generateWorkspace();
     }
 
+    private async deleteFileFromXcodeProjectImp(files: vscode.Uri[]) {
+        const projectFiles = this.projectCache.getProjects();
+        const modifiedProjects = new Set<string>();
+        for (const file of files) {
+            const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
+
+            for (const project of selectedProject) {
+                modifiedProjects.add(project);
+                try {
+                    const list = await this.projectCache.getList(project, true);
+                    if (list.has(file.fsPath)) {
+                        await this.rubyProjectFilesManager.deleteFileFromProject(
+                            getFilePathInWorkspace(project),
+                            file.fsPath
+                        );
+                    } else {
+                        // folder
+                        await this.rubyProjectFilesManager.deleteFolderFromProject(
+                            getFilePathInWorkspace(project),
+                            file.fsPath
+                        );
+                    }
+                } catch (err) {
+                    this.log.error(`Failed to delete file from project: ${String(err)}`);
+                }
+            }
+        }
+        return modifiedProjects;
+    }
+
     async deleteFileFromXcodeProject(files: vscode.Uri[]) {
         if (!this.isAllowed()) {
             if (await isActivated()) {
@@ -528,36 +576,11 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
             }
             return;
         }
-        const projectFiles = this.projectCache.getProjects();
-        const modifiedProjects = new Set<string>();
         const release = await this.projectFileEditMutex.acquire();
         try {
-            for (const file of files) {
-                const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
-
-                for (const project of selectedProject) {
-                    modifiedProjects.add(project);
-                    try {
-                        const list = await this.projectCache.getList(project);
-                        if (list.has(file.fsPath)) {
-                            await this.rubyProjectFilesManager.deleteFileFromProject(
-                                getFilePathInWorkspace(project),
-                                file.fsPath
-                            );
-                        } else {
-                            // folder
-                            await this.rubyProjectFilesManager.deleteFolderFromProject(
-                                getFilePathInWorkspace(project),
-                                file.fsPath
-                            );
-                        }
-                    } catch (err) {
-                        this.log.error(`Failed to delete file from project: ${String(err)}`);
-                    }
-                }
-            }
-        } finally {
+            const modifiedProjects = await this.deleteFileFromXcodeProjectImp(files);
             await this.saveProjects(modifiedProjects);
+        } finally {
             release();
         }
     }
@@ -679,6 +702,137 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         }
     }
 
+    private async addAFileToXcodeProjectImp(files: vscode.Uri | vscode.Uri[] | undefined) {
+        if (files === undefined) {
+            return new Set<string>();
+        }
+        let fileList: vscode.Uri[] = [];
+        if (files instanceof vscode.Uri) {
+            fileList = [files as vscode.Uri];
+        } else {
+            fileList = files as vscode.Uri[];
+            if (fileList.length === 0) {
+                return new Set<string>();
+            }
+        }
+
+        const projectFiles = this.projectCache.getProjects();
+        if (projectFiles.length === 0) {
+            throw new Error(
+                "No project files found to add a new file. Please wait until projects are loaded."
+            );
+        }
+        const selectedProject: string | undefined = await this.selectBestFitProject(
+            "Select A Project File to Add a new Files",
+            fileList[0],
+            projectFiles
+        );
+        if (selectedProject === undefined) {
+            return new Set<string>();
+        }
+
+        const paths = fileList.map(file => {
+            return { path: file, isFolder: isFolder(file.fsPath) };
+        });
+
+        for (const path of paths) {
+            if (path.isFolder) {
+                // add all files in subfolders
+                const files = await glob.glob("**", {
+                    absolute: true,
+                    cwd: path.path.fsPath,
+                    dot: true,
+                    nodir: false,
+                    ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
+                });
+                for (const file of files) {
+                    if (file !== path.path.fsPath) {
+                        paths.push({
+                            path: vscode.Uri.file(file),
+                            isFolder: isFolder(file),
+                        });
+                    }
+                }
+            }
+        }
+
+        const foldersToAdd = new Set<string>();
+        const filesToAdd = new Set<string>();
+        const allFilesInProject = await this.projectCache.getList(selectedProject, false);
+        for (const filePath of paths) {
+            if (!filePath.isFolder) {
+                const localFolder = filePath.path.fsPath
+                    .split(path.sep)
+                    .slice(0, -1)
+                    .join(path.sep);
+                if (!allFilesInProject.has(localFolder)) {
+                    foldersToAdd.add(localFolder);
+                }
+                if (!allFilesInProject.has(filePath.path.fsPath)) {
+                    filesToAdd.add(filePath.path.fsPath);
+                }
+            } else if (!allFilesInProject.has(filePath.path.fsPath)) {
+                foldersToAdd.add(filePath.path.fsPath);
+            }
+        }
+        if (filesToAdd.size === 0 && foldersToAdd.size === 0) {
+            return new Set<string>();
+        }
+
+        let selectedTargets: string | undefined;
+        let shouldAskForTargets = false;
+        for (const file of filesToAdd) {
+            const typeOfPath = (
+                await this.rubyProjectFilesManager.typeOfPath(
+                    getFilePathInWorkspace(selectedProject),
+                    file
+                )
+            ).at(-1);
+            if (typeOfPath !== undefined && typeOfPath.startsWith("file:")) {
+                shouldAskForTargets = true;
+                break;
+            }
+        }
+        if (filesToAdd.size > 0 && shouldAskForTargets) {
+            const proposedTargets = await this.determineTargetForFile(
+                [...filesToAdd][0],
+                selectedProject
+            );
+            const targets = await this.rubyProjectFilesManager.getProjectTargets(
+                getFilePathInWorkspace(selectedProject)
+            );
+            const items = sortTargets(targets, proposedTargets);
+            const selectedTargetsArray = await showPicker(
+                items,
+                `Adding to '${selectedProject}': Select Targets for The Files`,
+                "",
+                true,
+                true,
+                false
+            );
+            if (selectedTargetsArray === undefined) {
+                return new Set<string>();
+            }
+            selectedTargets = selectedTargetsArray.join(",");
+        }
+
+        for (const folder of foldersToAdd) {
+            await this.rubyProjectFilesManager.addFolderToProject(
+                getFilePathInWorkspace(selectedProject),
+                folder
+            );
+        }
+
+        for (const file of filesToAdd) {
+            await this.rubyProjectFilesManager.addFileToProject(
+                getFilePathInWorkspace(selectedProject),
+                selectedTargets || "",
+                file
+            );
+        }
+        return new Set([selectedProject]);
+    }
+
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
         if (!this.isAllowed()) {
             if (await isActivated()) {
@@ -687,134 +841,10 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
             }
             return;
         }
-        if (files === undefined) {
-            return;
-        }
         const release = await this.projectFileEditMutex.acquire();
         try {
-            let fileList: vscode.Uri[] = [];
-            if (files instanceof vscode.Uri) {
-                fileList = [files as vscode.Uri];
-            } else {
-                fileList = files as vscode.Uri[];
-                if (fileList.length === 0) {
-                    return;
-                }
-            }
-
-            const projectFiles = this.projectCache.getProjects();
-            if (projectFiles.length === 0) {
-                throw new Error(
-                    "No project files found to add a new file. Please wait until projects are loaded."
-                );
-            }
-            const selectedProject: string | undefined = await this.selectBestFitProject(
-                "Select A Project File to Add a new Files",
-                fileList[0],
-                projectFiles
-            );
-            if (selectedProject === undefined) {
-                return;
-            }
-
-            const paths = fileList.map(file => {
-                return { path: file, isFolder: isFolder(file.fsPath) };
-            });
-
-            for (const path of paths) {
-                if (path.isFolder) {
-                    // add all files in subfolders
-                    const files = await glob.glob("**", {
-                        absolute: true,
-                        cwd: path.path.fsPath,
-                        dot: true,
-                        nodir: false,
-                        ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
-                    });
-                    for (const file of files) {
-                        if (file !== path.path.fsPath) {
-                            paths.push({ path: vscode.Uri.file(file), isFolder: isFolder(file) });
-                        }
-                    }
-                }
-            }
-
-            const foldersToAdd = new Set<string>();
-            const filesToAdd = new Set<string>();
-            const allFilesInProject = await this.projectCache.getList(selectedProject, false);
-            for (const filePath of paths) {
-                if (!filePath.isFolder) {
-                    const localFolder = filePath.path.fsPath
-                        .split(path.sep)
-                        .slice(0, -1)
-                        .join(path.sep);
-                    if (!allFilesInProject.has(localFolder)) {
-                        foldersToAdd.add(localFolder);
-                    }
-                    if (!allFilesInProject.has(filePath.path.fsPath)) {
-                        filesToAdd.add(filePath.path.fsPath);
-                    }
-                } else if (!allFilesInProject.has(filePath.path.fsPath)) {
-                    foldersToAdd.add(filePath.path.fsPath);
-                }
-            }
-            if (filesToAdd.size === 0 && foldersToAdd.size === 0) {
-                return;
-            }
-
-            let selectedTargets: string | undefined;
-            let shouldAskForTargets = false;
-            for (const file of filesToAdd) {
-                const typeOfPath = (
-                    await this.rubyProjectFilesManager.typeOfPath(
-                        getFilePathInWorkspace(selectedProject),
-                        file
-                    )
-                ).at(-1);
-                if (typeOfPath !== undefined && typeOfPath.startsWith("file:")) {
-                    shouldAskForTargets = true;
-                    break;
-                }
-            }
-            if (filesToAdd.size > 0 && shouldAskForTargets) {
-                const proposedTargets = await this.determineTargetForFile(
-                    [...filesToAdd][0],
-                    selectedProject
-                );
-                const targets = await this.rubyProjectFilesManager.getProjectTargets(
-                    getFilePathInWorkspace(selectedProject)
-                );
-                const items = sortTargets(targets, proposedTargets);
-                const selectedTargetsArray = await showPicker(
-                    items,
-                    "Select Targets for The Files",
-                    "",
-                    true,
-                    true,
-                    false
-                );
-                if (selectedTargetsArray === undefined) {
-                    return;
-                }
-                selectedTargets = selectedTargetsArray.join(",");
-            }
-
-            for (const folder of foldersToAdd) {
-                await this.rubyProjectFilesManager.addFolderToProject(
-                    getFilePathInWorkspace(selectedProject),
-                    folder
-                );
-            }
-
-            for (const file of filesToAdd) {
-                await this.rubyProjectFilesManager.addFileToProject(
-                    getFilePathInWorkspace(selectedProject),
-                    selectedTargets || "",
-                    file
-                );
-            }
-
-            await this.saveProjects(new Set([selectedProject]));
+            const modifiedProjects = await this.addAFileToXcodeProjectImp(files);
+            await this.saveProjects(modifiedProjects);
         } finally {
             release();
         }
@@ -833,9 +863,11 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                     // ignore
                 }
             }
-            await sleep(250);
-            // notify about changes
-            await this.touch();
+            if (projects.size > 0) {
+                await sleep(250);
+                // notify about changes
+                await this.touch();
+            }
         } finally {
             this.isSavingProjects = false;
         }

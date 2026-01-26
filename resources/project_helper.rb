@@ -205,7 +205,9 @@ end
 
 def list_files(project)
   def print_all_group_paths(project)
-    traverse_all_group(project) do |group, parent_group, group_path, _type|
+    Traverse.traverse_all_group(
+      project
+    ) do |group, parent_group, group_path, _type|
       if _type == GroupType::SYNCHRONIZED_GROUP
         puts "folder:#{group_path}"
         all_files_in_folder(project, group).each do |file_in_folder|
