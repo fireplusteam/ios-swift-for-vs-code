@@ -802,18 +802,19 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                 getFilePathInWorkspace(selectedProject)
             );
             const items = sortTargets(targets, proposedTargets);
-            const selectedTargetsArray = await showPicker(
-                items,
-                `Adding to '${selectedProject}': Select Targets for The Files`,
-                "",
-                true,
-                true,
-                false
-            );
-            if (selectedTargetsArray === undefined) {
-                return new Set<string>();
+            if (items.length > 1) {
+                const selectedTargetsArray = await showPicker(
+                    items,
+                    `Adding to '${selectedProject}': Select Targets for The Files`,
+                    "",
+                    true,
+                    true,
+                    false
+                );
+                selectedTargets = selectedTargetsArray.join(",");
+            } else {
+                selectedTargets = items.map(i => i.value).join(",");
             }
-            selectedTargets = selectedTargetsArray.join(",");
         }
 
         for (const folder of foldersToAdd) {
