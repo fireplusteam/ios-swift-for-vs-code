@@ -508,7 +508,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
             return buildDir;
         }
         try {
-            const schemes = await commandContext.projectSettingsProvider.fetchSchemes();
+            const schemes = await commandContext.projectSettingsProvider.rootProjectSchemes();
             // try all other targets from the root project first as they are more relevant
             for (const scheme of schemes) {
                 try {

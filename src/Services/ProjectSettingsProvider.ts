@@ -1,5 +1,6 @@
 import { CommandContext } from "../CommandManagement/CommandContext";
 import {
+    getFilePathInWorkspace,
     getProjectType,
     isPlatformValid,
     NoAvailableSchemesForProjectError,
@@ -9,6 +10,9 @@ import {
 import { ExecutorMode } from "../Executor";
 import { getRootProjectFilePath } from "../ProjectManager/ProjectManager";
 import { CustomError } from "../utils";
+import * as path from "path";
+import * as glob from "glob";
+import * as fs from "fs";
 
 export interface XCodeSettings {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,6 +59,28 @@ export class ProjectSettingsProvider implements XCodeSettings {
             throw NoAvailableSchemesForProjectError;
         }
         return json.project.schemes;
+    }
+
+    async rootProjectSchemes(): Promise<string[]> {
+        const relativeProjectPath = await getRootProjectFilePath();
+        if (relativeProjectPath === undefined) {
+            throw ProjectFileMissedError;
+        }
+        const schemeDir = path.join(
+            getFilePathInWorkspace(relativeProjectPath),
+            "xcshareddata",
+            "xcschemes"
+        );
+        const schemes: string[] = [];
+
+        if (fs.existsSync(schemeDir)) {
+            const globPattern = path.join(schemeDir, "*.xcscheme");
+            const files = await glob.glob(globPattern);
+            for (const file of files) {
+                schemes.push(path.basename(file, ".xcscheme"));
+            }
+        }
+        return schemes;
     }
 
     async fetchConfigurations(): Promise<string[]> {
@@ -175,8 +201,13 @@ export class ProjectSettingsProvider implements XCodeSettings {
         }
     }
 
+    static cleanCache() {
+        ProjectSettingsProvider.cachedSettings = [];
+        ProjectSettingsProvider.cachedTestPlans = undefined;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private static cachedSettings: [string, string, string, any] | undefined = undefined;
+    private static cachedSettings: [string, string, string, any][] = [];
     private async fetchProjectXcodeBuildSettings(scheme?: string) {
         const projectEnv = this.projectEnv?.deref();
         if (projectEnv === undefined) {
@@ -187,9 +218,11 @@ export class ProjectSettingsProvider implements XCodeSettings {
         const buildConfiguration = await projectEnv.projectConfiguration;
 
         if (ProjectSettingsProvider.cachedSettings) {
-            const [_pF, _pS, _bC, _settings] = ProjectSettingsProvider.cachedSettings;
-            if (_pF === projectFile && _pS === scheme && _bC === buildConfiguration) {
-                return _settings;
+            for (const cachedSetting of ProjectSettingsProvider.cachedSettings) {
+                const [_pF, _pS, _bC, _settings] = cachedSetting;
+                if (_pF === projectFile && _pS === scheme && _bC === buildConfiguration) {
+                    return _settings;
+                }
             }
         }
 
@@ -210,12 +243,12 @@ export class ProjectSettingsProvider implements XCodeSettings {
             mode: ExecutorMode.onlyCommandNameAndResult,
         });
         const jsonSettings = JSON.parse(settings.stdout);
-        ProjectSettingsProvider.cachedSettings = [
+        ProjectSettingsProvider.cachedSettings.push([
             projectFile,
             scheme,
             buildConfiguration,
             jsonSettings,
-        ];
+        ]);
 
         return jsonSettings;
     }

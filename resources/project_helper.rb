@@ -674,6 +674,7 @@ if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
 end
 
 # READ-EVAL-PRINT LOOP
+$stdout.sync = false
 while (input = STDIN.gets.chomp)
   break if input == "exit"
 
