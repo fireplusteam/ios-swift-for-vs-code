@@ -113,7 +113,7 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 ## Launching and Debugging
 
--   There's ios launch configuration that can be added to `launch.json` file to run and debug ios project (there's also `Xcode: Run App & Debug` snippet)
+-   There's ios launch configuration that can be added to `launch.json` file to run and debug ios project located in '.vscode' folder (there's also `Xcode: Run App & Debug` snippet)
 
 ```json
 "configurations": [
@@ -141,7 +141,7 @@ This's just needed to override the **continueBuildingAfterError** property when 
 
 ## User Defined Tasks
 
-Extensions adds the tasks for clean/build/autocomplete watcher tasks which a user may override and add extra configuration as a regular vs code task:
+Extensions adds the tasks for clean/build/autocomplete watcher tasks which a user may override and add extra configuration as a regular vs code task in 'tasks.json' file located in '.vscode' folder:
 
 ```json
 {
