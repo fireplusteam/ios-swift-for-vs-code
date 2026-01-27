@@ -15,7 +15,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Extension Activation
 
-To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**.
+To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**. Create `launch.json` and `tasks.json` and `settings.json` files in `.vscode` folder if they don't exist to add launch configurations, tasks and settings for your project. By default it adds `Xcode Workspace: Run App & Debug` launch configuration for debugging/running the app.
 
 <hr/>
 

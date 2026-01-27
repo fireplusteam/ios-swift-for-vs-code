@@ -337,6 +337,19 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                 // tell vs code not to recommend it as it interfere with this extension
                 unwantedRecommendations: ["sswg.swift-lang", "swiftlang.swift-vscode"],
             },
+            launch: {
+                configurations: [
+                    {
+                        type: "xcode-lldb",
+                        name: "Xcode Workspace: Run App & Debug",
+                        request: "launch",
+                        target: "app",
+                        isDebuggable: true,
+                        buildBeforeLaunch: "always",
+                        lldbCommands: [],
+                    },
+                ],
+            },
         };
         const buildRootPath = await getBuildRootPath();
         if (buildRootPath !== undefined) {
