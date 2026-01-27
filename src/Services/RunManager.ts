@@ -4,7 +4,7 @@ import {
     UserTerminalCloseError,
     UserTerminatedError,
 } from "../CommandManagement/CommandContext";
-import { DeviceID, getLogRelativePath } from "../env";
+import { BundleAppNameMissedError, DeviceID, getLogRelativePath } from "../env";
 import { sleep } from "../utils";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
@@ -275,8 +275,8 @@ export class RunManager {
         sessionID: string,
         deviceId: string
     ) {
-        const bundleAppName = await commandContext.projectEnv.bundleAppName;
         try {
+            const bundleAppName = await commandContext.projectEnv.bundleAppName;
             // wait for 6 seconds to terminate the app, and reboot simulator if it's not launched
             await promiseWithTimeout(10000, async () => {
                 await commandContext.execShell(
@@ -289,6 +289,8 @@ export class RunManager {
             if (err === TimeoutError) {
                 // we should cancel it in a new executor as it can not be executed
                 await this.shutdownSimulator(commandContext, deviceId);
+            } else if (err === BundleAppNameMissedError) {
+                // skip, nothing to terminate as running tests
             }
         }
     }
