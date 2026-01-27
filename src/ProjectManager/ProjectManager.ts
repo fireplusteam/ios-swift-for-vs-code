@@ -460,17 +460,25 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         const filesToAdd = [] as vscode.Uri[];
         try {
             const projectFiles = this.projectCache.getProjects();
+            const prevChoices = new Map<string, string>(); // cache previous choices to not ask user multiple times for files which determines for the same project
             for (let i = 0; i < oldFiles.length; ++i) {
                 const file = files[i];
                 const oldFile = oldFiles[i];
-                const newProjects = await this.determineProjectFile(file.fsPath, projectFiles);
+                const newProject = await this.selectBestFitProject(
+                    `'${oldFile}' was moved. Can not determine automatically new Project. Please select a project to move the file to.`,
+                    file,
+                    projectFiles,
+                    prevChoices
+                );
                 const oldProjects = await this.determineProjectFile(oldFile.fsPath, projectFiles);
 
                 // for the case when file was moved from one project to another, we need to remove it for the old project and add to the new one
                 let isMovingBetweenProjects = false;
                 for (const project of oldProjects) {
-                    if (!newProjects.includes(project)) {
-                        filesToAdd.push(file);
+                    if (newProject !== project) {
+                        if (newProject !== undefined) {
+                            filesToAdd.push(file);
+                        }
 
                         const delModified = await this.deleteFileFromXcodeProjectImp([oldFile]);
                         for (const project of delModified) {
@@ -480,51 +488,49 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                         break;
                     }
                 }
-                if (isMovingBetweenProjects) {
+                if (isMovingBetweenProjects || newProject === undefined) {
                     continue;
                 }
 
-                for (const project of newProjects) {
-                    try {
-                        modifiedProjects.add(project);
-                        if (isFolder(file.fsPath)) {
-                            // rename folder
-                            if (isFileMoved(oldFile.fsPath, file.fsPath)) {
-                                await this.rubyProjectFilesManager.moveFolderToProject(
-                                    getFilePathInWorkspace(project),
-                                    oldFile.fsPath,
-                                    file.fsPath
-                                );
-                            } else {
-                                await this.rubyProjectFilesManager.renameFolderToProject(
-                                    getFilePathInWorkspace(project),
-                                    oldFile.fsPath,
-                                    file.fsPath
-                                );
-                            }
+                try {
+                    modifiedProjects.add(newProject);
+                    if (isFolder(file.fsPath)) {
+                        // rename folder
+                        if (isFileMoved(oldFile.fsPath, file.fsPath)) {
+                            await this.rubyProjectFilesManager.moveFolderToProject(
+                                getFilePathInWorkspace(newProject),
+                                oldFile.fsPath,
+                                file.fsPath
+                            );
                         } else {
-                            if (isFileMoved(oldFile.fsPath, file.fsPath)) {
-                                await this.rubyProjectFilesManager.moveFileToProject(
-                                    getFilePathInWorkspace(project),
-                                    oldFile.fsPath,
-                                    file.fsPath
-                                );
-                            } else {
-                                await this.rubyProjectFilesManager.renameFileToProject(
-                                    getFilePathInWorkspace(project),
-                                    oldFile.fsPath,
-                                    file.fsPath
-                                );
-                            }
+                            await this.rubyProjectFilesManager.renameFolderToProject(
+                                getFilePathInWorkspace(newProject),
+                                oldFile.fsPath,
+                                file.fsPath
+                            );
                         }
-                    } catch (err) {
-                        this.log.error(`Failed to rename file in project: ${String(err)}`);
+                    } else {
+                        if (isFileMoved(oldFile.fsPath, file.fsPath)) {
+                            await this.rubyProjectFilesManager.moveFileToProject(
+                                getFilePathInWorkspace(newProject),
+                                oldFile.fsPath,
+                                file.fsPath
+                            );
+                        } else {
+                            await this.rubyProjectFilesManager.renameFileToProject(
+                                getFilePathInWorkspace(newProject),
+                                oldFile.fsPath,
+                                file.fsPath
+                            );
+                        }
                     }
+                } catch (err) {
+                    this.log.error(`Failed to rename file in project: ${String(err)}`);
                 }
             }
             // now add files which were moved between projects
             try {
-                const addModified = await this.addAFileToXcodeProjectImp(filesToAdd);
+                const addModified = await this.addAFileToXcodeProjectImp(filesToAdd, prevChoices);
                 for (const project of addModified) {
                     modifiedProjects.add(project);
                 }
@@ -631,12 +637,21 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         }
         const release = await this.projectFileEditMutex.acquire();
         try {
-            const projectFiles = this.projectCache.getProjects();
-            const selectedProject = await this.determineProjectFile(file.fsPath, projectFiles);
-            if (selectedProject.length !== 1) {
-                return;
+            let selectedProject = await this.getProjectForFile(file.fsPath);
+            if (selectedProject === undefined) {
+                const candidates = await this.determineProjectFile(
+                    file.fsPath,
+                    this.projectCache.getProjects()
+                );
+                if (candidates.length !== 1) {
+                    vscode.window.showInformationMessage(
+                        "This file does not belong to any project in the workspace."
+                    );
+                    return;
+                }
+                selectedProject = candidates[0];
             }
-            const selectedProjectPath = getFilePathInWorkspace(selectedProject[0]);
+            const selectedProjectPath = getFilePathInWorkspace(selectedProject);
 
             // for Package.swift a file can belong only to one target which is defined by file path
             if (path.basename(selectedProjectPath) === "Package.swift") {
@@ -657,10 +672,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
 
             const typeOfPath =
                 (
-                    await this.rubyProjectFilesManager.typeOfPath(
-                        getFilePathInWorkspace(selectedProject[0]),
-                        file.fsPath
-                    )
+                    await this.rubyProjectFilesManager.typeOfPath(selectedProjectPath, file.fsPath)
                 ).at(-1) ?? `file:${file.fsPath}`;
 
             const fileTargets = await this.rubyProjectFilesManager.listTargetsForFile(
@@ -707,7 +719,10 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         }
     }
 
-    private async addAFileToXcodeProjectImp(files: vscode.Uri | vscode.Uri[] | undefined) {
+    private async addAFileToXcodeProjectImp(
+        files: vscode.Uri | vscode.Uri[] | undefined,
+        prevChoices: Map<string, string> = new Map<string, string>()
+    ) {
         if (files === undefined) {
             return new Set<string>();
         }
@@ -730,7 +745,8 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         const selectedProject: string | undefined = await this.selectBestFitProject(
             "Select A Project File to Add a new Files",
             fileList[0],
-            projectFiles
+            projectFiles,
+            prevChoices
         );
         if (selectedProject === undefined) {
             return new Set<string>();
@@ -1024,8 +1040,17 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         );
     }
 
-    private async selectBestFitProject(title: string, file: vscode.Uri, projectFiles: string[]) {
+    private async selectBestFitProject(
+        title: string,
+        file: vscode.Uri,
+        projectFiles: string[],
+        prevChoices: Map<string, string> = new Map()
+    ) {
         const bestFitProject = await this.determineProjectFile(file.fsPath, projectFiles);
+        const key = JSON.stringify(bestFitProject);
+        if (prevChoices.has(key)) {
+            return prevChoices.get(key);
+        }
         let selectedProject: string | undefined;
         if (bestFitProject.length === 0) {
             selectedProject = await vscode.window.showQuickPick(projectFiles, {
@@ -1043,6 +1068,9 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
             } else {
                 selectedProject = bestFitProject[0];
             }
+        }
+        if (selectedProject !== undefined) {
+            prevChoices.set(key, selectedProject);
         }
         return selectedProject;
     }
