@@ -5,9 +5,10 @@ import sys
 import os
 import json
 import fcntl
-import asyncio
 import psutil  # pip install psutil
 import subprocess
+import threading
+import time
 from MessageReader import MessageReader, MsgStatus
 
 
@@ -28,6 +29,8 @@ DEBUG_FROM_FILE = 0
 input = None
 output = None
 command = None
+
+SHOULD_EXIT = False
 
 
 def configure(serviceName: str):
@@ -168,18 +171,24 @@ class STDFeeder:
         self.msg_reader = MessageReader()
         self.is_fed = not is_behave_like_proxy()
 
-    async def write_stdin_bytes(self, stdin: asyncio.StreamWriter, byte):
+    def write_stdin_bytes(self, stdin, byte):
         if byte:
             stdin.write(byte)
-            await stdin.drain()  # flush
+            stdin.flush()
 
-    async def feed_stdin(self, stdin):
+    def feed_stdin(self, stdin):
         byte = None
         while True:
+            if SHOULD_EXIT or stdin.closed:
+                break
+
             byte = sys.stdin.buffer.read(1)
 
             if not byte:
-                break
+                if SHOULD_EXIT:
+                    break
+                time.sleep(0.03)
+                continue
 
             if DEBUG_FROM_FILE == 2:
                 input.write(byte)
@@ -187,7 +196,7 @@ class STDFeeder:
 
             match MODE:
                 case 0:
-                    await self.write_stdin_bytes(stdin, byte)
+                    self.write_stdin_bytes(stdin, byte)
                 case 1:
                     self.msg_reader.feed(byte)
 
@@ -218,7 +227,7 @@ class STDFeeder:
                                 if is_fed:
                                     self.is_fed = True
 
-                        await self.write_stdin_bytes(stdin, self.msg_reader.buffer)
+                        self.write_stdin_bytes(stdin, self.msg_reader.buffer)
                         log(f"CLIENT: {str(self.msg_reader.buffer[13:])}")
                         self.msg_reader.reset()
 
@@ -237,7 +246,7 @@ def is_parent_process_alive():
         return False
 
 
-async def check_for_exit():
+def check_for_exit():
     if not is_parent_process_alive():
         return True
 
@@ -250,28 +259,24 @@ class STDOuter:
     def __init__(self) -> None:
         self.msg_reader = MessageReader()
 
-    async def on_error_of_reading_data(self):
-        await asyncio.sleep(0.1)
+    def on_error_of_reading_data(self):
+        time.sleep(0.03)
 
-    async def write_stdout(self, out):
-        len_of_out = len(out)
-        len_written = 0
-        while len_written != len_of_out:
-            written = sys.stdout.buffer.write(out[len_written:])
-            await asyncio.sleep(0.01)
-            len_written += written
-
+    def write_stdout(self, out):
+        sys.stdout.buffer.write(out)
         sys.stdout.flush()
         if DEBUG_FROM_FILE == 2:
             output.write(out)
             output.flush()
 
-    async def read_server_data(self, stdout: asyncio.StreamReader):
+    def read_server_data(self, stdout):
         while True:
             try:
-                out = await asyncio.wait_for(stdout.read(20000), 0.1)
+                if SHOULD_EXIT or stdout.closed:
+                    break
+                out = stdout.read(1)
                 if out:
-                    await self.write_stdout(out)
+                    self.write_stdout(out)
 
                     if DEBUG_FROM_FILE != 0:
                         for x in out:
@@ -281,29 +286,49 @@ class STDOuter:
                                 self.msg_reader.reset()
 
                 else:
-                    await self.on_error_of_reading_data()
-                    return
+                    self.on_error_of_reading_data()
+            # stream closed exception
+            except ValueError:
+                break
             except:
-                await self.on_error_of_reading_data()
-                return
+                self.on_error_of_reading_data()
 
 
-async def main():
-    process = await asyncio.create_subprocess_exec(
-        *command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
+def main():
+    global SHOULD_EXIT
+    process = subprocess.Popen(
+        command,
+        cwd=os.getcwd(),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=os.environ,
     )
+
+    make_unblocking(process.stdin)
+    make_unblocking(process.stdout)
+    make_unblocking(process.stderr)
 
     log(os.environ)
     log("START")
 
     reader = STDFeeder()
     outer = STDOuter()
+
+    reading_thread = threading.Thread(target=lambda: reader.feed_stdin(process.stdin))
+    writing_thread = threading.Thread(
+        target=lambda: outer.read_server_data(process.stdout)
+    )
+    reading_thread.start()
+    writing_thread.start()
+
     while True:
-        await reader.feed_stdin(process.stdin)
-        # await asyncio.sleep(0.01)
-        await outer.read_server_data(process.stdout)
-        if await check_for_exit():
+        time.sleep(0.5)
+        if check_for_exit():
             break
+    SHOULD_EXIT = True
+    reading_thread.join()
+    writing_thread.join()
 
 
 def make_unblocking(stream):
@@ -314,5 +339,6 @@ def make_unblocking(stream):
 def run():
     make_unblocking(sys.stdin)
     make_unblocking(sys.stdout)
+    make_unblocking(sys.stderr)
 
-    asyncio.run(main())
+    main()
