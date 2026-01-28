@@ -31,6 +31,8 @@ interface ProjectFileWatcherImp {
     notify(projectFilePath: string): Promise<boolean>;
 }
 
+export const watcherStabilityThreshold = 500;
+
 export class ProjectWatcher
     implements ProjectWatcherInterface, ProjectWatcherTimestamp, ProjectWatcherTouchInterface
 {
@@ -55,7 +57,7 @@ export class ProjectWatcher
                 ignoreInitial: true,
                 depth: 32,
                 awaitWriteFinish: {
-                    stabilityThreshold: 200,
+                    stabilityThreshold: watcherStabilityThreshold,
                     pollInterval: 100,
                 },
             });

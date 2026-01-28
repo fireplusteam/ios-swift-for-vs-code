@@ -26,7 +26,11 @@ import { Mutex } from "async-mutex";
 import { RubyProjectFilesManagerInterface } from "./RubyProjectFilesManager";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import * as touch from "touch";
-import { ProjectWatcherInterface, ProjectWatcherTouchInterface } from "./ProjectWatcher";
+import {
+    ProjectWatcherInterface,
+    ProjectWatcherTouchInterface,
+    watcherStabilityThreshold,
+} from "./ProjectWatcher";
 
 export interface ProjectManagerInterface {
     getRootProjectTargets(): Promise<string[]>;
@@ -899,7 +903,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
                 }
             }
             if (projects.size > 0) {
-                await sleep(250);
+                await sleep(watcherStabilityThreshold + 120); // wait until file watchers are stable
                 // notify about changes
                 await this.touch();
             }
