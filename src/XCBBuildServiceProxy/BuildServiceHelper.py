@@ -306,11 +306,13 @@ async def main():
             break
 
 
-def run():
-    orig_fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
-    fcntl.fcntl(sys.stdin, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
+def make_unblocking(stream):
+    orig_fl = fcntl.fcntl(stream, fcntl.F_GETFL)
+    fcntl.fcntl(stream, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
 
-    orig_fl = fcntl.fcntl(sys.stdout, fcntl.F_GETFL)
-    fcntl.fcntl(sys.stdout, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
+
+def run():
+    make_unblocking(sys.stdin)
+    make_unblocking(sys.stdout)
 
     asyncio.run(main())
