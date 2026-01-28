@@ -32,6 +32,13 @@ command = None
 
 SHOULD_EXIT = False
 
+out_debug_log_path = (
+    sys.argv[sys.argv.index("--stdout-log-path") + 1]
+    if "--stdout-log-path" in sys.argv
+    else None
+)
+stdout_file = None
+
 
 def configure(serviceName: str):
     """
@@ -185,8 +192,6 @@ class STDFeeder:
             byte = sys.stdin.buffer.read(1)
 
             if not byte:
-                if SHOULD_EXIT:
-                    break
                 time.sleep(0.03)
                 continue
 
@@ -265,6 +270,11 @@ class STDOuter:
     def write_stdout(self, out):
         sys.stdout.buffer.write(out)
         sys.stdout.flush()
+
+        if stdout_file:
+            stdout_file.write(out)
+            stdout_file.flush()
+
         if DEBUG_FROM_FILE == 2:
             output.write(out)
             output.flush()
@@ -296,6 +306,11 @@ class STDOuter:
 
 def main():
     global SHOULD_EXIT
+
+    make_unblocking(sys.stdin)
+    make_unblocking(sys.stdout)
+    make_unblocking(sys.stderr)
+
     process = subprocess.Popen(
         command,
         cwd=os.getcwd(),
@@ -337,8 +352,11 @@ def make_unblocking(stream):
 
 
 def run():
-    make_unblocking(sys.stdin)
-    make_unblocking(sys.stdout)
-    make_unblocking(sys.stderr)
+    global stdout_file
 
-    main()
+    if out_debug_log_path:
+        with open(out_debug_log_path, "wb") as file:
+            stdout_file = file
+            main()
+    else:
+        main()
