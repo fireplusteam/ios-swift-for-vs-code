@@ -103,6 +103,7 @@ export class BuildManager {
                 await context.projectEnv.projectFile,
                 "-checkFirstLaunchStatus",
             ],
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.verbose,
         });
 
@@ -115,6 +116,7 @@ export class BuildManager {
                 "-scheme",
                 await context.projectEnv.projectScheme,
             ],
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
