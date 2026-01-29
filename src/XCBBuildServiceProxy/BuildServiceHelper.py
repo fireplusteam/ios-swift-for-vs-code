@@ -29,6 +29,8 @@ input = None
 output = None
 command = None
 
+SHOULD_EXIT = False
+
 
 def configure(serviceName: str):
     """
@@ -176,10 +178,14 @@ class STDFeeder:
     async def feed_stdin(self, stdin):
         byte = None
         while True:
+            if SHOULD_EXIT:
+                break
+
             byte = sys.stdin.buffer.read(1)
 
             if not byte:
-                break
+                await asyncio.sleep(0.03)
+                continue
 
             if DEBUG_FROM_FILE == 2:
                 input.write(byte)
@@ -251,7 +257,7 @@ class STDOuter:
         self.msg_reader = MessageReader()
 
     async def on_error_of_reading_data(self):
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
 
     async def write_stdout(self, out):
         len_of_out = len(out)
@@ -269,7 +275,10 @@ class STDOuter:
     async def read_server_data(self, stdout: asyncio.StreamReader):
         while True:
             try:
-                out = await asyncio.wait_for(stdout.read(20000), 0.1)
+                if SHOULD_EXIT:
+                    break
+
+                out = await stdout.read(1024)
                 if out:
                     await self.write_stdout(out)
 
@@ -282,28 +291,32 @@ class STDOuter:
 
                 else:
                     await self.on_error_of_reading_data()
-                    return
             except:
                 await self.on_error_of_reading_data()
-                return
 
 
 async def main():
+    global SHOULD_EXIT
     process = await asyncio.create_subprocess_exec(
         *command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
     )
 
-    log(os.environ)
-    log("START")
+    try:
+        log(os.environ)
+        log("START")
 
-    reader = STDFeeder()
-    outer = STDOuter()
-    while True:
-        await reader.feed_stdin(process.stdin)
-        # await asyncio.sleep(0.01)
-        await outer.read_server_data(process.stdout)
-        if await check_for_exit():
-            break
+        reader = STDFeeder()
+        outer = STDOuter()
+        read_task = asyncio.create_task(reader.feed_stdin(process.stdin))
+        write_task = asyncio.create_task(outer.read_server_data(process.stdout))
+        while True:
+            await asyncio.sleep(0.3)
+            if await check_for_exit():
+                break
+    finally:
+        process.terminate()
+        SHOULD_EXIT = True
+        sys.exit(0)
 
 
 def run():
