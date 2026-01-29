@@ -5,10 +5,9 @@ import sys
 import os
 import json
 import fcntl
+import asyncio
 import psutil  # pip install psutil
 import subprocess
-import threading
-import time
 from MessageReader import MessageReader, MsgStatus
 
 
@@ -24,20 +23,11 @@ MODE = 1
 # 0 - no debug files
 # 1 - read from input
 # 2 - write logs from server to input files
-DEBUG_FROM_FILE = 0
+DEBUG_FROM_FILE = 2
 
 input = None
 output = None
 command = None
-
-SHOULD_EXIT = False
-
-out_debug_log_path = (
-    sys.argv[sys.argv.index("--stdout-log-path") + 1]
-    if "--stdout-log-path" in sys.argv
-    else None
-)
-stdout_file = None
 
 
 def configure(serviceName: str):
@@ -75,13 +65,9 @@ def configure(serviceName: str):
     )
 
     command = [f"{build_service_path}/{serviceName}-origin"]
-    i = 1
-    while i < len(sys.argv):
-        if sys.argv[i] == "--stdout-log-path":
-            i += 2  # skip next argument
-            continue
+    for i in range(1, len(sys.argv)):
         command.append(sys.argv[i])
-        i += 1
+
     match DEBUG_FROM_FILE:
         case 0:
             pass
@@ -182,63 +168,65 @@ class STDFeeder:
         self.msg_reader = MessageReader()
         self.is_fed = not is_behave_like_proxy()
 
-    def write_stdin_bytes(self, stdin, byte):
+    async def write_stdin_bytes(self, stdin: asyncio.StreamWriter, byte):
         if byte:
             stdin.write(byte)
-            stdin.flush()
+            await stdin.drain()  # flush
 
-    def feed_stdin(self, stdin):
+    async def feed_stdin(self, stdin):
         byte = None
         while True:
-            if SHOULD_EXIT or stdin.closed:
-                break
+            try:
+                byte = sys.stdin.buffer.read(1)
 
-            byte = sys.stdin.buffer.read(1)
+                if not byte:
+                    await asyncio.sleep(0.03)
+                    continue
 
-            if not byte:
-                time.sleep(0.03)
-                continue
+                if DEBUG_FROM_FILE == 2:
+                    input.write(byte)
+                    input.flush()
 
-            if DEBUG_FROM_FILE == 2:
-                input.write(byte)
-                input.flush()
+                match MODE:
+                    case 0:
+                        await self.write_stdin_bytes(stdin, byte)
+                    case 1:
+                        self.msg_reader.feed(byte)
 
-            match MODE:
-                case 0:
-                    self.write_stdin_bytes(stdin, byte)
-                case 1:
-                    self.msg_reader.feed(byte)
+                        if self.msg_reader.status == MsgStatus.MsgEnd:
+                            if not self.is_fed:
+                                # manipulate message
+                                # there can be multiple occurrence of C5 byte, so we need to get the last one
+                                json_start = self.msg_reader.buffer[13:].find(b"\xc5")
+                                log(f"CLIENT: JSON_INDEX: {json_start}")
 
-                    if self.msg_reader.status == MsgStatus.MsgEnd:
-                        if not self.is_fed:
-                            # manipulate message
-                            # there can be multiple occurrence of C5 byte, so we need to get the last one
-                            json_start = self.msg_reader.buffer[13:].find(b"\xc5")
-                            log(f"CLIENT: JSON_INDEX: {json_start}")
+                                if json_start != -1:
+                                    json_start += 13
+                                    json_len = int.from_bytes(
+                                        self.msg_reader.buffer[
+                                            json_start + 1 : json_start + 3
+                                        ],
+                                        "big",
+                                    )
+                                    new_content, is_fed = modify_json_content(
+                                        self.msg_reader.buffer[
+                                            json_start : json_start + 3 + json_len
+                                        ],
+                                        json_len,
+                                    )
+                                    self.msg_reader.modify_body(
+                                        new_content,
+                                        json_start,
+                                        json_start + 3 + json_len,
+                                    )
+                                    if is_fed:
+                                        self.is_fed = True
 
-                            if json_start != -1:
-                                json_start += 13
-                                json_len = int.from_bytes(
-                                    self.msg_reader.buffer[
-                                        json_start + 1 : json_start + 3
-                                    ],
-                                    "big",
-                                )
-                                new_content, is_fed = modify_json_content(
-                                    self.msg_reader.buffer[
-                                        json_start : json_start + 3 + json_len
-                                    ],
-                                    json_len,
-                                )
-                                self.msg_reader.modify_body(
-                                    new_content, json_start, json_start + 3 + json_len
-                                )
-                                if is_fed:
-                                    self.is_fed = True
-
-                        self.write_stdin_bytes(stdin, self.msg_reader.buffer)
-                        log(f"CLIENT: {str(self.msg_reader.buffer[13:])}")
-                        self.msg_reader.reset()
+                            await self.write_stdin_bytes(stdin, self.msg_reader.buffer)
+                            log(f"CLIENT: {str(self.msg_reader.buffer[13:])}")
+                            self.msg_reader.reset()
+            except Exception as e:
+                await asyncio.sleep(0.01)
 
 
 def is_parent_process_alive():
@@ -255,7 +243,7 @@ def is_parent_process_alive():
         return False
 
 
-def check_for_exit():
+async def check_for_exit():
     if not is_parent_process_alive():
         return True
 
@@ -268,29 +256,28 @@ class STDOuter:
     def __init__(self) -> None:
         self.msg_reader = MessageReader()
 
-    def on_error_of_reading_data(self):
-        time.sleep(0.03)
+    async def on_error_of_reading_data(self):
+        await asyncio.sleep(0.1)
 
-    def write_stdout(self, out):
-        sys.stdout.buffer.write(out)
+    async def write_stdout(self, out):
+        len_of_out = len(out)
+        len_written = 0
+        while len_written != len_of_out:
+            written = sys.stdout.buffer.write(out[len_written:])
+            await asyncio.sleep(0.01)
+            len_written += written
+
         sys.stdout.flush()
-
-        if stdout_file:
-            stdout_file.write(out)
-            stdout_file.flush()
-
         if DEBUG_FROM_FILE == 2:
             output.write(out)
             output.flush()
 
-    def read_server_data(self, stdout):
+    async def read_server_data(self, stdout: asyncio.StreamReader):
         while True:
             try:
-                if SHOULD_EXIT or stdout.closed:
-                    break
-                out = stdout.read(1)
+                out = await stdout.read(20000)
                 if out:
-                    self.write_stdout(out)
+                    await self.write_stdout(out)
 
                     if DEBUG_FROM_FILE != 0:
                         for x in out:
@@ -300,33 +287,15 @@ class STDOuter:
                                 self.msg_reader.reset()
 
                 else:
-                    self.on_error_of_reading_data()
-            # stream closed exception
-            except ValueError:
-                break
-            except:
-                self.on_error_of_reading_data()
+                    await self.on_error_of_reading_data()
+            except Exception as e:
+                await self.on_error_of_reading_data()
 
 
-def main():
-    global SHOULD_EXIT
-
-    make_unblocking(sys.stdin)
-    make_unblocking(sys.stdout)
-    make_unblocking(sys.stderr)
-
-    process = subprocess.Popen(
-        command,
-        cwd=os.getcwd(),
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=os.environ,
+async def main():
+    process = await asyncio.create_subprocess_exec(
+        *command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
     )
-
-    make_unblocking(process.stdin)
-    make_unblocking(process.stdout)
-    make_unblocking(process.stderr)
 
     log(os.environ)
     log("START")
@@ -334,20 +303,18 @@ def main():
     reader = STDFeeder()
     outer = STDOuter()
 
-    reading_thread = threading.Thread(target=lambda: reader.feed_stdin(process.stdin))
-    writing_thread = threading.Thread(
-        target=lambda: outer.read_server_data(process.stdout)
-    )
-    reading_thread.start()
-    writing_thread.start()
+    # worker = AsyncWorker()
+    # worker.submit(outer.read_server_data(process.stdout))
+    # worker.submit(reader.feed_stdin(process.stdin))
+    read_task = asyncio.create_task(reader.feed_stdin(process.stdin))
+    outer_task = asyncio.create_task(outer.read_server_data(process.stdout))
 
     while True:
-        time.sleep(0.5)
-        if check_for_exit():
+        # await reader.feed_stdin(process.stdin)
+        await asyncio.sleep(0.1)
+        # await outer.read_server_data(process.stdout)
+        if await check_for_exit():
             break
-    SHOULD_EXIT = True
-    reading_thread.join()
-    writing_thread.join()
 
 
 def make_unblocking(stream):
@@ -356,11 +323,7 @@ def make_unblocking(stream):
 
 
 def run():
-    global stdout_file
+    make_unblocking(sys.stdin)
+    make_unblocking(sys.stdout)
 
-    if out_debug_log_path:
-        with open(out_debug_log_path, "wb") as file:
-            stdout_file = file
-            main()
-    else:
-        main()
+    asyncio.run(main())

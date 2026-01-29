@@ -1,40 +1,12 @@
 #!/usr/bin/env python3
 import sys
-import subprocess
 import os
-import time
-import threading
-import time
+import asyncio
 from BuildServiceHelper import check_for_exit
 from BuildServiceHelper import make_unblocking
 
 # to build standalone executable use pyinstaller:
 # pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildServiceRunner.py --name SWBBuildService
-
-
-def redirect_in(src, dst):
-    while True:
-        if hasattr(src, "buffer"):
-            data = src.buffer.read(1)
-        else:
-            data = src.read(1)
-        if data:
-            dst.write(data)
-            if hasattr(dst, "flush"):
-                dst.flush()
-        else:
-            time.sleep(0.01)
-
-
-def redirect(src, dst):
-    while True:
-        data = src.read(1)
-        if data:
-            dst.buffer.write(data)
-            if hasattr(dst, "flush"):
-                dst.flush()
-        else:
-            time.sleep(0.01)
 
 
 if __name__ == "__main__":
@@ -53,8 +25,6 @@ if __name__ == "__main__":
         "/opt/anaconda3/bin/python3",
         "-u",
         python_script,
-        "--stdout-log-path",
-        stdout_file_path,
     ] + sys.argv[1:]
     sys.stderr.writelines(f"SWBBUILD_SERVICE_PROXY_PATH: {python_script}\n")
     sys.stderr.writelines(f"Command: {' '.join(command)}\n")
@@ -66,48 +36,71 @@ if __name__ == "__main__":
     make_unblocking(sys.stdout)
     make_unblocking(sys.stderr)
 
-    if not os.path.exists(os.path.dirname(stdout_file_path)):
-        os.makedirs(os.path.dirname(stdout_file_path), exist_ok=True)
-    # create file empty file
-    if not os.path.exists(stdout_file_path):
-        # open(stdout_file_path, "wb").close()
-        # fifo for binary output
-        os.mkfifo(stdout_file_path)
-    proc = subprocess.Popen(
-        command,
-        cwd=os.getcwd(),
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=os.environ,
-    )
+    async def run_loop():
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
 
-    try:
-        with open(stdout_file_path, "rb") as std_out_file:
-            threading.Thread(
-                target=redirect, args=(std_out_file, sys.stdout), daemon=True
-            ).start()
-            threading.Thread(
-                target=redirect, args=(proc.stderr, sys.stderr), daemon=True
-            ).start()
-            threading.Thread(
-                target=redirect_in, args=(sys.stdin, proc.stdin), daemon=True
-            ).start()
-
+        # read stdout and stderr and stdin in different run loops to avoid blocking
+        async def read_stdout():
+            sys.stderr.writelines("Started reading stdout...\n")
             while True:
-                if proc.poll() is not None:
-                    break
-                time.sleep(0.5)
-                # check if parent process asked to exit
+                data = await process.stdout.read(20000)
+                if data:
+                    # sys.stderr.buffer.write(data)
+                    # sys.stderr.buffer.flush()
+                    sys.stdout.buffer.write(data)
+                    sys.stdout.buffer.flush()
+                else:
+                    await asyncio.sleep(0.1)
 
+        async def read_stderr():
+            sys.stderr.writelines("Started reading stderr...\n")
+            while True:
+                data = await process.stderr.read(1)
+                if data:
+                    pass
+                    # sys.stderr.buffer.write(data)
+                    # sys.stderr.buffer.flush()
+                else:
+                    await asyncio.sleep(0.1)
+
+        async def write_stdin():
+            sys.stderr.writelines("Started writing stdin...\n")
+            while True:
+                data = sys.stdin.buffer.read(1)
+                if data:
+                    # sys.stderr.buffer.write(data)
+                    # sys.stderr.buffer.flush()
+                    process.stdin.write(data)
+                    await process.stdin.drain()
+                else:
+                    await asyncio.sleep(0.1)
+
+        asyncio.create_task(read_stdout())
+        asyncio.create_task(read_stderr())
+        asyncio.create_task(write_stdin())
+        try:
+            while True:
+                if process.returncode is not None:
+                    break
+                await asyncio.sleep(0.5)
+
+                # check if parent process asked to exit
                 if sys.stdin.closed:
                     break
-                sys.stderr.writelines(
-                    f"Check Exit: {check_for_exit()}, pid: {proc.pid}, poll: {proc.poll()}\n"
-                )
-                if check_for_exit():
+                # sys.stderr.writelines(
+                #     f"Check Exit: {await check_for_exit()}, pid: {process.pid}, returncode: {process.returncode}\n"
+                # )
+                if await check_for_exit():
                     break
             sys.stderr.writelines("Terminating SWBBuildService proxy subprocess...\n")
-            proc.terminate()
-    finally:
-        os.remove(stdout_file_path)
+            process.terminate()
+        finally:
+            pass
+            # os.remove(stdout_file_path)
+
+    asyncio.run(run_loop())
