@@ -82,7 +82,10 @@ export class ToolsManager {
         if (version === undefined) {
             return false;
         }
-        return XCRunHelper.isVersionGreaterOrEqual([version[0], version[1], version[2]], [1, 27, 0]);
+        return XCRunHelper.isVersionGreaterOrEqual(
+            [version[0], version[1], version[2]],
+            [1, 27, 0]
+        );
     }
 
     private async installHomebrew() {
@@ -183,7 +186,7 @@ export class ToolsManager {
         const hostPlatform = process.platform;
         if (hostPlatform !== "darwin") {
             throw Error(
-                `Xcode iOS Swift IDE extension only works on macOS, current platform is ${hostPlatform}. This extension depends on Xcode which is available only on macOS`
+                `Swift iOS Xcode IDE extension only works on macOS, current platform is ${hostPlatform}. This extension depends on Xcode which is available only on macOS`
             );
         }
 

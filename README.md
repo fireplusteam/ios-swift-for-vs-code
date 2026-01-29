@@ -1,4 +1,4 @@
-# Xcode iOS Swift IDE <img valign="middle" alt="Xcode iOS Swift IDE logo" width="40" src="./icons/icon.png" />
+# Swift iOS Xcode IDE<img valign="middle" alt="Swift iOS Xcode IDE logo" width="40" src="./icons/icon.png" />
 
 📦[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=FirePlusTeam.vscode-ios) | 🐞
 [Github Issues](https://github.com/fireplusteam/ios_vs_code/issues)
@@ -9,7 +9,7 @@ You can support this project by giving a star on GitHub ⭐️
 [![Github Sponsors](https://img.shields.io/badge/Github%20Sponsors-%E2%9D%A4-red?style=flat&logo=github)](https://github.com/sponsors/ios_vs_code)
 
 <hr/>
-Develop/Build/Debug/Test your xCode projects in VS Code with your favorite extensions.
+Develop/Build/Debug/Test your Xcode projects in VS Code with your favorite extensions for iOS/macOS/watchOS/tvOS/VisionOS using Swift/Objective-C/C++.
 
 Before use it make sure you've installed all **dependencies** required for this extension.
 

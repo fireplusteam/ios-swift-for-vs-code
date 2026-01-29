@@ -1,5 +1,9 @@
 # Change Log
 
+### 0.6.10 - 2026-02-05
+
+-   Cosmetic changes to the extension name from "Xcode iOS Swift IDE" to "Swift iOS Xcode IDE" to better reflect its purpose and functionality.
+
 ### 0.6.9 - 2026-01-29
 
 ### Added
