@@ -75,9 +75,13 @@ def configure(serviceName: str):
     )
 
     command = [f"{build_service_path}/{serviceName}-origin"]
-    for i in range(1, len(sys.argv)):
+    i = 1
+    while i < len(sys.argv):
+        if sys.argv[i] == "--stdout-log-path":
+            i += 2  # skip next argument
+            continue
         command.append(sys.argv[i])
-
+        i += 1
     match DEBUG_FROM_FILE:
         case 0:
             pass
