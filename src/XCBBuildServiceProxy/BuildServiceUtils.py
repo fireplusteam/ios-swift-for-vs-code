@@ -3,6 +3,7 @@ import psutil
 import base64
 import fcntl
 import asyncio
+import json
 
 
 def is_behave_like_proxy():
