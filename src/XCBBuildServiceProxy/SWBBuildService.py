@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 # This program is for proxy of SWBBuildService, allows you to manipulate with XCode build on low level
 
-# import debugpy
+import debugpy
 
-# debugpy.listen(5679)
-# print("Waiting for debugger attach...")
-# debugpy.wait_for_client()
+debugpy.listen(5679)
+print("Waiting for debugger attach...")
+debugpy.wait_for_client()
 
 
 # import after debugger is attached
-from BuildServiceHelper import configure, run
-
-configure("SWBBuildService")
+from BuildServiceHelper import Context, run
 
 if __name__ == "__main__":
-    run()
+    context = Context("SWBBuildService")
+    run(context)

@@ -4,9 +4,9 @@ import os
 import asyncio
 import aiofiles
 import tempfile
-from BuildServiceHelper import push_data_to_stdout
-from BuildServiceHelper import check_for_exit
-from BuildServiceHelper import make_unblocking
+from BuildServiceUtils import push_data_to_stdout
+from BuildServiceUtils import check_for_exit
+from BuildServiceUtils import make_unblocking
 from MessageReader import MessageReader, MsgStatus
 
 # to build standalone executable use pyinstaller:
@@ -69,9 +69,7 @@ if __name__ == "__main__":
             while True:
                 data = await process.stderr.read(1)
                 if data:
-                    pass
-                    # sys.stderr.buffer.write(data)
-                    # sys.stderr.buffer.flush()
+                    await push_data_to_stdout(data, sys.stderr)
                 else:
                     await asyncio.sleep(0.1)
 
@@ -80,8 +78,6 @@ if __name__ == "__main__":
             while True:
                 data = sys.stdin.buffer.read(1)
                 if data:
-                    # sys.stderr.buffer.write(data)
-                    # sys.stderr.buffer.flush()
                     process.stdin.write(data)
                     await process.stdin.drain()
                 else:
