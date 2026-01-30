@@ -23,7 +23,7 @@ MODE = 1
 # 0 - no debug files
 # 1 - read from input
 # 2 - write logs from server to input files
-DEBUG_FROM_FILE = 0
+DEBUG_FROM_FILE = 2
 
 input = None
 output = None
@@ -233,9 +233,11 @@ class STDFeeder:
                                 if is_fed:
                                     self.is_fed = True
 
-                        await self.write_stdin_bytes(stdin, self.msg_reader.buffer)
-                        log(f"CLIENT: {str(self.msg_reader.buffer[13:])}")
+                        buffer = self.msg_reader.buffer.copy()
                         self.msg_reader.reset()
+
+                        await self.write_stdin_bytes(stdin, buffer)
+                        log(f"CLIENT: {str(buffer[13:])}")
 
 
 def is_parent_process_alive():
@@ -259,6 +261,20 @@ async def check_for_exit():
     return False
 
 
+async def push_data_to_stdout(out, stdout):
+    already_written = 0
+    while already_written < len(out):
+        written = stdout.buffer.write(out[already_written : already_written + 8192])
+        assert written is not None
+        already_written += written
+        while True:
+            try:
+                stdout.flush()
+                break
+            except BlockingIOError:
+                await asyncio.sleep(0.1)
+
+
 # Write to stdout all got reponse from XCBBuildService
 class STDOuter:
 
@@ -269,43 +285,35 @@ class STDOuter:
         await asyncio.sleep(0.05)
 
     async def write_stdout(self, out):
-        len_of_out = len(out)
-        len_written = 0
-        while len_written != len_of_out:
-            written = sys.stdout.buffer.write(out[len_written:])
-            await asyncio.sleep(0.01)
-            len_written += written
+        if STDOUT_FILE is None:
+            await push_data_to_stdout(out, sys.stdout)
 
-        sys.stdout.flush()
-
-        if STDOUT_FILE:
-            STDOUT_FILE.write(out)
+        if STDOUT_FILE is not None:
+            written = STDOUT_FILE.write(out)
+            assert written == len(out)
             STDOUT_FILE.flush()
 
         if DEBUG_FROM_FILE == 2:
-            output.write(out)
+            written = output.write(out)
+            assert written == len(out)
             output.flush()
 
     async def read_server_data(self, stdout: asyncio.StreamReader):
         while True:
-            try:
-                if SHOULD_EXIT:
-                    break
+            if SHOULD_EXIT:
+                break
+            out = await stdout.read(self.msg_reader.expecting_bytes_from_io())
+            if out:
+                for b in out:
+                    self.msg_reader.feed(b.to_bytes(1))
+                    if self.msg_reader.status == MsgStatus.MsgEnd:
+                        buffer = self.msg_reader.buffer.copy()
+                        self.msg_reader.reset()
 
-                out = await stdout.read(20000)
-                if out:
-                    await self.write_stdout(out)
-
-                    if DEBUG_FROM_FILE != 0:
-                        for x in out:
-                            self.msg_reader.feed(x.to_bytes(1))
-                            if self.msg_reader.status == MsgStatus.MsgEnd:
-                                log(f"\tSERVER: {self.msg_reader.buffer[13:150]}")
-                                self.msg_reader.reset()
-
-                else:
-                    await self.on_error_of_reading_data()
-            except:
+                        if DEBUG_FROM_FILE != 0:
+                            log(f"\tSERVER: {buffer[13:150]}")
+                        await self.write_stdout(buffer)
+            else:
                 await self.on_error_of_reading_data()
 
 
@@ -344,7 +352,7 @@ def run():
     make_unblocking(sys.stdout)
 
     if STDOUT_FILE_NAME is not None:
-        with open(STDOUT_FILE_NAME, "wb", buffering=0) as temp_file:
+        with open(STDOUT_FILE_NAME, "wb") as temp_file:
             STDOUT_FILE = temp_file
             asyncio.run(main())
     else:
