@@ -70,7 +70,7 @@ def configure(serviceName: str):
     )
 
     command = [f"{build_service_path}/{serviceName}-origin"]
-    i = 0
+    i = 1
     while i < len(sys.argv):
         if sys.argv[i] == "-log-file-name-proxy":
             STDOUT_FILE_NAME = sys.argv[i + 1]
@@ -292,7 +292,7 @@ class STDOuter:
                 if SHOULD_EXIT:
                     break
 
-                out = await stdout.read(1024)
+                out = await stdout.read(20000)
                 if out:
                     await self.write_stdout(out)
 
