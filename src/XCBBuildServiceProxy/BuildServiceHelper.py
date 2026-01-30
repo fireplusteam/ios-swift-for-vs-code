@@ -31,6 +31,9 @@ command = None
 
 SHOULD_EXIT = False
 
+STDOUT_FILE_NAME = None
+STDOUT_FILE = None
+
 
 def configure(serviceName: str):
     """
@@ -39,7 +42,7 @@ def configure(serviceName: str):
     :param serviceName: Description
     :type serviceName: str
     """
-    global log_file, MODE, DEBUG_FROM_FILE, cache_path, input, output, command
+    global log_file, MODE, DEBUG_FROM_FILE, cache_path, input, output, command, STDOUT_FILE_NAME
     cache_path = os.path.join(
         os.path.expanduser(f"~/Library/Caches/{serviceName}Proxy"),
     )
@@ -67,8 +70,14 @@ def configure(serviceName: str):
     )
 
     command = [f"{build_service_path}/{serviceName}-origin"]
-    for i in range(1, len(sys.argv)):
-        command.append(sys.argv[i])
+    i = 0
+    while i < len(sys.argv):
+        if sys.argv[i] == "-log-file-name-proxy":
+            STDOUT_FILE_NAME = sys.argv[i + 1]
+            i += 2
+        else:
+            command.append(sys.argv[i])
+            i += 1
 
     match DEBUG_FROM_FILE:
         case 0:
@@ -268,6 +277,11 @@ class STDOuter:
             len_written += written
 
         sys.stdout.flush()
+
+        if STDOUT_FILE:
+            STDOUT_FILE.write(out)
+            STDOUT_FILE.flush()
+
         if DEBUG_FROM_FILE == 2:
             output.write(out)
             output.flush()
@@ -319,11 +333,19 @@ async def main():
         sys.exit(0)
 
 
+def make_unblocking(stream):
+    orig_fl = fcntl.fcntl(stream, fcntl.F_GETFL)
+    fcntl.fcntl(stream, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
+
+
 def run():
-    orig_fl = fcntl.fcntl(sys.stdin, fcntl.F_GETFL)
-    fcntl.fcntl(sys.stdin, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
+    global STDOUT_FILE
+    make_unblocking(sys.stdin)
+    make_unblocking(sys.stdout)
 
-    orig_fl = fcntl.fcntl(sys.stdout, fcntl.F_GETFL)
-    fcntl.fcntl(sys.stdout, fcntl.F_SETFL, orig_fl | os.O_NONBLOCK)
-
-    asyncio.run(main())
+    if STDOUT_FILE_NAME is not None:
+        with open(STDOUT_FILE_NAME, "wb", buffering=0) as temp_file:
+            STDOUT_FILE = temp_file
+            asyncio.run(main())
+    else:
+        asyncio.run(main())
