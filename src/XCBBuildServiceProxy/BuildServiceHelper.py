@@ -300,13 +300,12 @@ class STDOuter:
 
     async def read_server_data(self, stdout: asyncio.StreamReader):
         while True:
-            try:
-                if SHOULD_EXIT:
-                    break
-
-                out = await stdout.read(1)
-                if out:
-                    self.msg_reader.feed(out)
+            if SHOULD_EXIT:
+                break
+            out = await stdout.read(self.msg_reader.expecting_bytes_from_io())
+            if out:
+                for b in out:
+                    self.msg_reader.feed(b.to_bytes(1))
                     if self.msg_reader.status == MsgStatus.MsgEnd:
                         buffer = self.msg_reader.buffer.copy()
                         self.msg_reader.reset()
@@ -314,9 +313,7 @@ class STDOuter:
                         if DEBUG_FROM_FILE != 0:
                             log(f"\tSERVER: {buffer[13:150]}")
                         await self.write_stdout(buffer)
-                else:
-                    await self.on_error_of_reading_data()
-            except:
+            else:
                 await self.on_error_of_reading_data()
 
 

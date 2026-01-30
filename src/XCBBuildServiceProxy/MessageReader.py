@@ -16,6 +16,10 @@ class MessageReader:
         self.read_index = 0
         self.msg_len = 0
         self.offset = 0
+        self.left_read_io_bytes = 12
+
+    def expecting_bytes_from_io(self) -> int:
+        return self.left_read_io_bytes
 
     # feed with only a single byte
     # first 8 bytes are the message id as a counter number, the next 4 bytes are the length of the message
@@ -25,6 +29,10 @@ class MessageReader:
     def feed(self, byte: bytes):
         self.offset += 1
         self.buffer += byte
+        self.left_read_io_bytes -= 1
+
+        assert len(byte) == 1, "feed method only accepts single byte"
+
         match self.status:
             case MsgStatus.DetermineStart:
                 self.read_index += 1
@@ -37,6 +45,10 @@ class MessageReader:
                 self.read_index += 1
                 if self.read_index == 4:
                     self.msg_len = int.from_bytes(self.buffer[8 : 8 + 4], "little")
+                    assert (
+                        self.left_read_io_bytes == 0
+                    ), "left_read_io_bytes should be 0 when reading length"
+                    self.left_read_io_bytes = self.msg_len
                     self.read_index = 0
                     self.status = MsgStatus.MsgReadingBody
 
@@ -49,6 +61,10 @@ class MessageReader:
         self.read_index = 0
         self.buffer = bytearray()
         self.msg_len = 0
+        assert (
+            self.left_read_io_bytes == 0
+        ), "left_read_io_bytes should be 0 when resetting"
+        self.left_read_io_bytes = 12
         self.status = MsgStatus.DetermineStart
 
     def modify_body(
