@@ -261,6 +261,20 @@ async def check_for_exit():
     return False
 
 
+async def push_data_to_stdout(out, stdout):
+    already_written = 0
+    while already_written < len(out):
+        written = stdout.buffer.write(out[already_written : already_written + 1024])
+        assert written is not None
+        already_written += written
+        while True:
+            try:
+                stdout.flush()
+                break
+            except BlockingIOError:
+                await asyncio.sleep(0.1)
+
+
 # Write to stdout all got reponse from XCBBuildService
 class STDOuter:
 
@@ -272,14 +286,7 @@ class STDOuter:
 
     async def write_stdout(self, out):
         if STDOUT_FILE is None:
-            already_written = 0
-            while already_written < len(out):
-                written = sys.stdout.buffer.write(
-                    out[already_written : already_written + 1024]
-                )
-                assert written is not None
-                already_written += written
-                sys.stdout.flush()
+            await push_data_to_stdout(out, sys.stdout)
 
         if STDOUT_FILE is not None:
             written = STDOUT_FILE.write(out)

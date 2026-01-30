@@ -4,6 +4,7 @@ import os
 import asyncio
 import aiofiles
 import tempfile
+from BuildServiceHelper import push_data_to_stdout
 from BuildServiceHelper import check_for_exit
 from BuildServiceHelper import make_unblocking
 from MessageReader import MessageReader, MsgStatus
@@ -58,9 +59,9 @@ if __name__ == "__main__":
                     if data:
                         msg.feed(data)
                         if msg.status == MsgStatus.MsgEnd:
-                            sys.stdout.buffer.write(msg.buffer)
-                            sys.stdout.buffer.flush()
+                            buffer = msg.buffer.copy()
                             msg.reset()
+                            await push_data_to_stdout(buffer, sys.stdout)
                     else:
                         await asyncio.sleep(0.1)
 
