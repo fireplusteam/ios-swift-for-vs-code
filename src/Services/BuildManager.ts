@@ -6,6 +6,7 @@ import { getWorkspaceFolder, ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
+import * as path from "path";
 
 function isBuildIndexesWhileBuildingEnabled() {
     return vscode.workspace
@@ -37,6 +38,19 @@ export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
 
     constructor() {}
+
+    static commonEnv() {
+        const env = {} as { [name: string]: string };
+        env["SWBBUILD_SERVICE_PROXY_PATH"] = path.join(
+            __dirname,
+            "..",
+            "src",
+            "XCBBuildServiceProxy",
+            "SWBBuildService.py"
+        );
+
+        return env;
+    }
 
     static async commonArgs(projectEnv: ProjectEnv, bundle: BundlePath) {
         const deviceid = await projectEnv.debugDeviceID;
@@ -89,6 +103,7 @@ export class BuildManager {
                 await context.projectEnv.projectFile,
                 "-checkFirstLaunchStatus",
             ],
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.verbose,
         });
 
@@ -101,6 +116,7 @@ export class BuildManager {
                 "-scheme",
                 await context.projectEnv.projectScheme,
             ],
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
@@ -125,6 +141,7 @@ export class BuildManager {
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
             args: await BuildManager.args(context.projectEnv, context.bundle),
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },
@@ -190,6 +207,7 @@ export class BuildManager {
                     jobsCountForWatcher().toString(),
                 ],
                 env: {
+                    ...BuildManager.commonEnv(),
                     continueBuildingAfterErrors: "True", // build even if there's an error triggered
                 },
                 mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
@@ -270,6 +288,7 @@ export class BuildManager {
                 ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),
                 ...extraArguments,
             ],
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             pipe: {
                 scriptOrCommand: { command: "tee" },

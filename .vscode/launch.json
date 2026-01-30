@@ -142,13 +142,24 @@
             "justMyCode": true
         },
         {
-            "name": "Debug: Attach XCBBuildService",
+            "name": "Debug: Attach Xcode-build-server",
             "type": "debugpy",
             "request": "attach",
             "connect": {
                 "host": "localhost",
                 "port": 5678
-            }
+            },
+            "redirectOutput": true
+        },
+        {
+            "name": "Debug: Attach XCBBuildService",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5679
+            },
+            "redirectOutput": false
         }
     ]
 }

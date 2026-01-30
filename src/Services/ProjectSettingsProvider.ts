@@ -13,6 +13,7 @@ import { CustomError } from "../utils";
 import * as path from "path";
 import * as glob from "glob";
 import * as fs from "fs";
+import { BuildManager } from "./BuildManager";
 
 export interface XCodeSettings {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,6 +112,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
             mode: ExecutorMode.verbose,
+            env: { ...BuildManager.commonEnv() },
         });
 
         const devices = result.stdout.split("\n").filter(e => e.indexOf("platform:") !== -1);
@@ -176,6 +178,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     "-disableAutomaticPackageResolution",
                     "-skipPackageUpdates",
                 ],
+                env: { ...BuildManager.commonEnv() },
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
             // this._context.log.appendLine(result.stdout);
@@ -240,6 +243,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 "-disableAutomaticPackageResolution",
                 "-skipPackageUpdates",
             ],
+            env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.onlyCommandNameAndResult,
         });
         const jsonSettings = JSON.parse(settings.stdout);
@@ -260,6 +264,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
             mode: ExecutorMode.onlyCommandNameAndResult,
+            env: { ...BuildManager.commonEnv() },
         });
         const json = JSON.parse(result.stdout);
 
