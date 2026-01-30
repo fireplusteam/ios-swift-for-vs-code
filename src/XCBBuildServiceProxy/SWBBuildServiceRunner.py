@@ -50,18 +50,17 @@ if __name__ == "__main__":
         # read stdout and stderr and stdin in different run loops to avoid blocking
         async def read_stdout():
             sys.stderr.writelines("Started reading stdout...\n")
-            async with aiofiles.open(
-                stdout_file_path, mode="rb", buffering=0
-            ) as stdout_file:
+            async with aiofiles.open(stdout_file_path, mode="rb") as stdout_file:
                 msg = MessageReader()
                 while True:
-                    data = await stdout_file.read(1)
+                    data = await stdout_file.read(msg.expecting_bytes_from_io())
                     if data:
-                        msg.feed(data)
-                        if msg.status == MsgStatus.MsgEnd:
-                            buffer = msg.buffer.copy()
-                            msg.reset()
-                            await push_data_to_stdout(buffer, sys.stdout)
+                        for b in data:
+                            msg.feed(b.to_bytes(1))
+                            if msg.status == MsgStatus.MsgEnd:
+                                buffer = msg.buffer.copy()
+                                msg.reset()
+                                await push_data_to_stdout(buffer, sys.stdout)
                     else:
                         await asyncio.sleep(0.1)
 

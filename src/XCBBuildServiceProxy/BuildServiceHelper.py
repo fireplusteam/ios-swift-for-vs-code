@@ -264,7 +264,7 @@ async def check_for_exit():
 async def push_data_to_stdout(out, stdout):
     already_written = 0
     while already_written < len(out):
-        written = stdout.buffer.write(out[already_written : already_written + 1024])
+        written = stdout.buffer.write(out[already_written : already_written + 8192])
         assert written is not None
         already_written += written
         while True:
@@ -352,7 +352,7 @@ def run():
     make_unblocking(sys.stdout)
 
     if STDOUT_FILE_NAME is not None:
-        with open(STDOUT_FILE_NAME, "wb", buffering=0) as temp_file:
+        with open(STDOUT_FILE_NAME, "wb") as temp_file:
             STDOUT_FILE = temp_file
             asyncio.run(main())
     else:
