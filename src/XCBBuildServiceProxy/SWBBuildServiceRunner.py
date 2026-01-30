@@ -6,6 +6,7 @@ import aiofiles
 import tempfile
 from BuildServiceHelper import check_for_exit
 from BuildServiceHelper import make_unblocking
+from MessageReader import MessageReader, MsgStatus
 
 # to build standalone executable use pyinstaller:
 # pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildServiceRunner.py --name SWBBuildService
@@ -51,14 +52,15 @@ if __name__ == "__main__":
             async with aiofiles.open(
                 stdout_file_path, mode="rb", buffering=0
             ) as stdout_file:
+                msg = MessageReader()
                 while True:
-                    data = await stdout_file.read(1024)
+                    data = await stdout_file.read(1)
                     if data:
-                        # sys.stderr.buffer.write(data)
-                        # sys.stderr.buffer.flush()
-
-                        sys.stdout.buffer.write(data)
-                        sys.stdout.buffer.flush()
+                        msg.feed(data)
+                        if msg.status == MsgStatus.MsgEnd:
+                            sys.stdout.buffer.write(msg.buffer)
+                            sys.stdout.buffer.flush()
+                            msg.reset()
                     else:
                         await asyncio.sleep(0.1)
 

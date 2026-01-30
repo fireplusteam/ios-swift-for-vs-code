@@ -23,7 +23,7 @@ MODE = 1
 # 0 - no debug files
 # 1 - read from input
 # 2 - write logs from server to input files
-DEBUG_FROM_FILE = 0
+DEBUG_FROM_FILE = 2
 
 input = None
 output = None
@@ -70,7 +70,7 @@ def configure(serviceName: str):
     )
 
     command = [f"{build_service_path}/{serviceName}-origin"]
-    i = 0
+    i = 1
     while i < len(sys.argv):
         if sys.argv[i] == "-log-file-name-proxy":
             STDOUT_FILE_NAME = sys.argv[i + 1]
@@ -233,9 +233,11 @@ class STDFeeder:
                                 if is_fed:
                                     self.is_fed = True
 
-                        await self.write_stdin_bytes(stdin, self.msg_reader.buffer)
-                        log(f"CLIENT: {str(self.msg_reader.buffer[13:])}")
+                        buffer = self.msg_reader.buffer.copy()
                         self.msg_reader.reset()
+
+                        await self.write_stdin_bytes(stdin, buffer)
+                        log(f"CLIENT: {str(buffer[13:])}")
 
 
 def is_parent_process_alive():
@@ -269,21 +271,24 @@ class STDOuter:
         await asyncio.sleep(0.05)
 
     async def write_stdout(self, out):
-        len_of_out = len(out)
-        len_written = 0
-        while len_written != len_of_out:
-            written = sys.stdout.buffer.write(out[len_written:])
-            await asyncio.sleep(0.01)
-            len_written += written
+        if STDOUT_FILE is None:
+            already_written = 0
+            while already_written < len(out):
+                written = sys.stdout.buffer.write(
+                    out[already_written : already_written + 1024]
+                )
+                assert written is not None
+                already_written += written
+                sys.stdout.flush()
 
-        sys.stdout.flush()
-
-        if STDOUT_FILE:
-            STDOUT_FILE.write(out)
+        if STDOUT_FILE is not None:
+            written = STDOUT_FILE.write(out)
+            assert written == len(out)
             STDOUT_FILE.flush()
 
         if DEBUG_FROM_FILE == 2:
-            output.write(out)
+            written = output.write(out)
+            assert written == len(out)
             output.flush()
 
     async def read_server_data(self, stdout: asyncio.StreamReader):
@@ -292,17 +297,16 @@ class STDOuter:
                 if SHOULD_EXIT:
                     break
 
-                out = await stdout.read(1024)
+                out = await stdout.read(1)
                 if out:
-                    await self.write_stdout(out)
+                    self.msg_reader.feed(out)
+                    if self.msg_reader.status == MsgStatus.MsgEnd:
+                        buffer = self.msg_reader.buffer.copy()
+                        self.msg_reader.reset()
 
-                    if DEBUG_FROM_FILE != 0:
-                        for x in out:
-                            self.msg_reader.feed(x.to_bytes(1))
-                            if self.msg_reader.status == MsgStatus.MsgEnd:
-                                log(f"\tSERVER: {self.msg_reader.buffer[13:150]}")
-                                self.msg_reader.reset()
-
+                        if DEBUG_FROM_FILE != 0:
+                            log(f"\tSERVER: {buffer[13:150]}")
+                        await self.write_stdout(buffer)
                 else:
                     await self.on_error_of_reading_data()
             except:
