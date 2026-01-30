@@ -307,8 +307,8 @@ async def main():
 
         reader = STDFeeder()
         outer = STDOuter()
-        read_task = asyncio.create_task(reader.feed_stdin(process.stdin))
-        write_task = asyncio.create_task(outer.read_server_data(process.stdout))
+        asyncio.create_task(reader.feed_stdin(process.stdin))
+        asyncio.create_task(outer.read_server_data(process.stdout))
         while True:
             await asyncio.sleep(0.3)
             if await check_for_exit():
