@@ -15,6 +15,7 @@ class Context:
 
         self.serviceName = serviceName
         self.should_exit = False
+        self.stdout_file_name = None
 
         cache_path = os.path.join(
             os.path.expanduser(f"~/Library/Caches/{serviceName}Proxy"),
@@ -61,11 +62,13 @@ class Context:
         self.command = [f"{build_service_path}/{serviceName}-origin"] + filter_args()
 
     def __enter__(self):
-        self.stdout_file = open(self.stdout_file_name, "wb")
+        if self.stdout_file_name:
+            self.stdout_file = open(self.stdout_file_name, "wb")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.stdout_file.close()
+        if self.stdout_file:
+            self.stdout_file.close()
 
     def log(self, *args, **kwargs):
         if self.debug_mode != 0:
