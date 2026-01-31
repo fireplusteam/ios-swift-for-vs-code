@@ -19,11 +19,11 @@ export class BuildServerLogParser {
                 this.buffer += line;
             })
         );
-        this.disposable.push(
-            token.onCancellationRequested(() => {
-                this.endParsing(UserTerminatedError);
-            })
-        );
+        // this.disposable.push(
+        //     token.onCancellationRequested(() => {
+        //         this.endParsing(UserTerminatedError);
+        //     })
+        // );
     }
 
     async endParsing(error: any) {
