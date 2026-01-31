@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # This program is for proxy of SWBBuildService, allows you to manipulate with XCode build on low level
 import sys
-
-DEBUG = True
+import os
 
 from BuildServiceUtils import make_unblocking
 
@@ -12,9 +11,15 @@ make_unblocking(sys.stderr)
 
 _stdin, _stdout, _stderr = sys.stdin, sys.stdout, sys.stderr
 
-if __name__ == "__main__":
 
-    if DEBUG:
+def is_debug():
+    if "SWBBUILD_SERVICE_PROXY_DEBUG" in os.environ:
+        return os.environ["SWBBUILD_SERVICE_PROXY_DEBUG"] == "1"
+    return False
+
+
+if __name__ == "__main__":
+    if is_debug():
         import debugpy
 
         debugpy.listen(5679)

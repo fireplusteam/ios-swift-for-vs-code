@@ -1,3 +1,2 @@
-asyncio
 aiofiles
 psutil

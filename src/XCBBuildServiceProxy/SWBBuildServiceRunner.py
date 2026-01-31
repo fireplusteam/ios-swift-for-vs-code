@@ -26,6 +26,10 @@ if __name__ == "__main__":
     sys.stderr.writelines(f"SWBBUILD_SERVICE_PROXY_PATH: {python_script}\n")
     sys.stderr.writelines(f"Command: {' '.join(command)}\n")
 
+    os.environ["SWBBUILD_SERVICE_PROXY_DEBUG"] = (
+        "1"  # enable debug mode in the subprocess
+    )
+
     # create subprocess to run the actual SWBBuildService proxy script with redirected stdin/stdout/stderr
 
     make_unblocking(sys.stdin)
