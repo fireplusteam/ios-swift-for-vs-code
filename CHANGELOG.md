@@ -1,5 +1,11 @@
 # Change Log
 
+### 0.6.11 - 2026-02-12
+
+### Fixed
+
+-   Improved stability of SWBBuildServiceProxy, mainly in message redirecting between original service and the extension
+
 ### 0.6.10 - 2026-02-05
 
 -   Cosmetic changes to the extension name from "Xcode iOS Swift IDE" to "Swift iOS Xcode IDE" to better reflect its purpose and functionality.
