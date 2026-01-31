@@ -4,7 +4,8 @@
 
 ### Fixed
 
--   Improved stability of SWBBuildServiceProxy, mainly in message redirecting between original service and the extension
+-   Improved stability of **SWBBuildServiceProxy**, mainly in message redirecting between original service and the extension
+-   Updated README.md with more detailed instructions on how to enable and use **SWBBuildServiceProxy** feature
 -   Fixed race condition in xcode-build-server log parsing which could lead to missing lsp diagnostics in some cases
 
 ### 0.6.10 - 2026-02-05

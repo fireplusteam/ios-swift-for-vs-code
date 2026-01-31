@@ -103,10 +103,6 @@ Use the following guide to install them manually if any it doesn't work for you:
     gem install xcodeproj
     ```
 
-**Note:**
-As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **XCBBuildService** automatically when an extension is activated.
-This's just needed to override the **continueBuildingAfterError** property when you build the app and gives you all errors in the project and compile flags possible used by sourcekit for indexing.
-
 ## How to use
 
 -   Once you installed all the dependencies, you can open a folder which contains the iOS project. If project or workspace is located in the local folder then an extension will ask you if you want to configure it, otherwise you need to perform command **"Xcode: Select Project/Workspace"** and pick the right project/workspace to work with. You can also switch between multiple projects if they are located in the same folder/subfolders
@@ -188,6 +184,27 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 
 -   To make autocompletion to work you may need to clean the project and build it entirely for the first time.
 
+## SWBBuildService Proxy (Continue Building After Error while building for LSP Autocomplete)
+
+This feature is optional and disabled by default. It requires sudo password and security permissions to work correctly. Use it on your own risk.
+
+As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **SWBBuildService** automatically when an extension is activated.
+This's just needed to override the **continueBuildingAfterError** property when you build the app and gives you all errors in the project and compile flags possible used by sourcekit for indexing. This behaviour is only activated for `watcher` builds which are used to provide up-to-date indexes for LSP client while you modify files in the project. Regular builds/debugging runs are not affected by this proxy service and works as usual.
+
+When you enable `vscode-ios.swb.build.service` feature in the settings, the extension will ask you for your sudo password to install the proxy service. This is required because the service needs to run with elevated privileges to replace the original SWBBuildService in Xcode app folder which is called by `xcodebuild` tool each time when you build.
+When you run the first time after enabling this feature and installing the service, you may face the alert pop-up that the app is blocked from opening. To fix it, you need to follow those steps to allow the service to run:
+
+**Privacy & Security Settings**
+
+1. Attempt to open the app and click `Done` on the alert pop-up.
+2. Go to `System Settings > Privacy & Security`.
+3. Scroll down to the `Security` section.
+4. Click `Open Anyway` next to the message about the blocked app.
+5. Enter your administrator password to confirm.
+6. Try to build app again and confirm that you want to open the service.
+
+Now the service should be running and you can check it via Activity Monitor app by searching for `SWBBuildService` and `SWBBuildService-origin` processes while building the project.
+
 ## Extension Settings
 
 This extension contributes the following settings:
@@ -196,7 +213,7 @@ This extension contributes the following settings:
 -   `vscode-ios.watcher.jobs`: Number of parallel jobs for xcodebuild watcher which builds the project in background to provide up-to-date indexes for LSP client.
 -   `vscode-ios.build.compilationCache` : Enable/disable the compilation cache to speed up the building time.
 -   `vscode-ios.lsp.buildIndexesWhileBuilding`: Enable/disable building indexes while building the project to keep indexes up to date.
--   `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace XCBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
+-   `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 -   `vscode-ios.swiftui.runtimeWarnings`: Enable/disable SwiftUI runtime warnings in the sidebar Xcode panel of this extension.
 -   `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
 -   `vscode-ios.lsp.c_family`: Enable/disable C/C++/Objective-C language server support for header files to provide better autocomplete for such files.

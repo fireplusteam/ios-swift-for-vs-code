@@ -40,6 +40,8 @@ if isProxyInjected:
     exit(1)
 
 # inject proxy server
+# to remove quarantine attribute from app use:
+# xattr -d -r com.apple.quarantine <app_path>
 
 if is_install:
     if not os.path.exists(service_origin_path):
