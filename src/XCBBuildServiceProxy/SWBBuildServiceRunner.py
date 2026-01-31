@@ -2,8 +2,6 @@
 import sys
 import os
 import asyncio
-import aiofiles
-import tempfile
 from BuildServiceUtils import push_data_to_stdout
 from BuildServiceUtils import check_for_exit
 from BuildServiceUtils import make_unblocking
@@ -20,18 +18,13 @@ if __name__ == "__main__":
     else:
         python_script = os.environ["SWBBUILD_SERVICE_PROXY_PATH"]
 
-    temp_file = tempfile.NamedTemporaryFile()
-
     command = [
         "/opt/anaconda3/bin/python3",
         "-u",
         python_script,
-        "-log-file-name-proxy",
-        temp_file.name,
     ] + sys.argv[1:]
     sys.stderr.writelines(f"SWBBUILD_SERVICE_PROXY_PATH: {python_script}\n")
     sys.stderr.writelines(f"Command: {' '.join(command)}\n")
-    sys.stderr.writelines(f"Stdout file path: {temp_file.name}\n")
 
     # create subprocess to run the actual SWBBuildService proxy script with redirected stdin/stdout/stderr
 
@@ -39,7 +32,7 @@ if __name__ == "__main__":
     make_unblocking(sys.stdout)
     make_unblocking(sys.stderr)
 
-    async def run_loop(stdout_file_path):
+    async def run_loop():
         process = await asyncio.create_subprocess_exec(
             *command,
             stdin=asyncio.subprocess.PIPE,
@@ -50,19 +43,19 @@ if __name__ == "__main__":
         # read stdout and stderr and stdin in different run loops to avoid blocking
         async def read_stdout():
             sys.stderr.writelines("Started reading stdout...\n")
-            async with aiofiles.open(stdout_file_path, mode="rb") as stdout_file:
-                msg = MessageReader()
-                while True:
-                    data = await stdout_file.read(msg.expecting_bytes_from_io())
-                    if data:
-                        for b in data:
-                            msg.feed(b.to_bytes(1))
-                            if msg.status == MsgStatus.MsgEnd:
-                                buffer = msg.buffer.copy()
-                                msg.reset()
-                                await push_data_to_stdout(buffer, sys.stdout)
-                    else:
-                        await asyncio.sleep(0.1)
+            msg = MessageReader()
+            while True:
+                data = await process.stdout.read(msg.expecting_bytes_from_io())
+                if data:
+                    # sys.stderr.writelines(f"Read {len(data)} bytes from stdout\n")
+                    for b in data:
+                        msg.feed(b.to_bytes(1))
+                        if msg.status == MsgStatus.MsgEnd:
+                            buffer = msg.buffer.copy()
+                            msg.reset()
+                            await push_data_to_stdout(buffer, sys.stdout)
+                else:
+                    await asyncio.sleep(0.1)
 
         async def read_stderr():
             sys.stderr.writelines("Started reading stderr...\n")
@@ -93,8 +86,6 @@ if __name__ == "__main__":
                 await asyncio.sleep(0.5)
 
                 # check if parent process asked to exit
-                if sys.stdin.closed:
-                    break
                 # sys.stderr.writelines(
                 #     f"Check Exit: {await check_for_exit()}, pid: {process.pid}, returncode: {process.returncode}\n"
                 # )
@@ -105,4 +96,4 @@ if __name__ == "__main__":
         finally:
             pass
 
-    asyncio.run(run_loop(temp_file.name))
+    asyncio.run(run_loop())

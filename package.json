@@ -23,7 +23,7 @@
         "ipad",
         "apple",
         "simulator",
-        "lldb",
+        "lldb"
     ],
     "recommendation": [
         "connor4312.esbuild-problem-matchers"
@@ -38,6 +38,7 @@
     "categories": [
         "Debuggers",
         "Extension Packs",
+        "Testing",
         "Programming Languages",
         "Other"
     ],

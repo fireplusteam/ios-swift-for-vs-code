@@ -83,7 +83,8 @@ async def push_data_to_stdout(out, stdout):
     already_written = 0
     while already_written < len(out):
         written = stdout.buffer.write(out[already_written : already_written + 8192])
-        assert written is not None
+        if written is None:
+            written = 0
         already_written += written
         while True:
             try:

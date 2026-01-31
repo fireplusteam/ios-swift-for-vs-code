@@ -9,9 +9,13 @@ from MessageReader import MessageReader, MsgStatus
 
 class Context:
 
-    def __init__(self, serviceName: str):
+    def __init__(self, serviceName: str, stdin, stdout, stderr):
         # non zero - write logs from server to input files
         self.debug_mode = 0
+
+        self.stdin = stdin
+        self.stdout = stdout
+        self.stderr = stderr
 
         self.serviceName = serviceName
         self.should_exit = False
@@ -50,25 +54,18 @@ class Context:
             i = 1
             ret = []
             while i < len(sys.argv):
-                if sys.argv[i] == "-log-file-name-proxy":
-                    self.stdout_file_name = sys.argv[i + 1]
-                    i += 2
-                else:
-                    ret.append(sys.argv[i])
-                    i += 1
+                ret.append(sys.argv[i])
+                i += 1
             return ret
 
-        self.stdout_file = None
         self.command = [f"{build_service_path}/{serviceName}-origin"] + filter_args()
 
     def __enter__(self):
-        if self.stdout_file_name:
-            self.stdout_file = open(self.stdout_file_name, "wb")
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.stdout_file:
-            self.stdout_file.close()
+        if self.log_file:
+            self.log_file.close()
 
     def log(self, *args, **kwargs):
         if self.debug_mode != 0:
@@ -187,10 +184,8 @@ async def main(context: Context):
         context.log(os.environ)
         context.log("START")
 
-        reader = STDFeeder(sys.stdin, context)
-        outer = STDOuter(
-            sys.stdout if context.stdout_file is None else context.stdout_file, context
-        )
+        reader = STDFeeder(context.stdin, context)
+        outer = STDOuter(context.stdout, context)
         asyncio.create_task(reader.feed_stdin(process.stdin))
         asyncio.create_task(outer.read_server_data(process.stdout))
         while True:
@@ -204,10 +199,4 @@ async def main(context: Context):
 
 
 def run(context: Context):
-    from BuildServiceUtils import make_unblocking
-
-    make_unblocking(sys.stdin)
-    make_unblocking(sys.stdout)
-
-    with context as c:
-        asyncio.run(main(c))
+    asyncio.run(main(context))
