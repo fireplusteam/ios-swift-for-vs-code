@@ -254,7 +254,7 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
         projectTree.addIncluded(getFilePathInWorkspace((await getRootProjectFilePath()) || ""));
         projectTree.addIncluded(getFilePathInWorkspace(".vscode"));
         projectTree.addIncluded(getLogPath());
-        // projectTree.addIncluded(getFilePathInWorkspace("Package.swift"));
+        projectTree.addIncluded(getFilePathInWorkspace("Package.swift"));
 
         // add all project first as they are visible
         const workspacePath = getWorkspacePath() + "/";
