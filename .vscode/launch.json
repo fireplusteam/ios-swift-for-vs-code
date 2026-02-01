@@ -152,7 +152,7 @@
             "redirectOutput": true
         },
         {
-            "name": "Debug: Attach XCBBuildService",
+            "name": "Debug: Attach SWBBuildService",
             "type": "debugpy",
             "request": "attach",
             "connect": {

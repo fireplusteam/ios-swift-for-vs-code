@@ -186,7 +186,15 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 
 ## SWBBuildService Proxy (Continue Building After Error while building for LSP Autocomplete)
 
-This feature is optional and disabled by default. It requires sudo password and security permissions to work correctly. Use it on your own risk.
+This feature is optional and EXPERIMENTAL and disabled by default. It requires sudo password and security permissions to work correctly. Use it on your own risk. Also make sure that you read the instructions below carefully before enabling it.
+Also you can build that proxy service from source code in `src/Services/SWBBuildServiceProxy` folder by cd into that folder and running:
+
+```bash
+brew install pyinstaller
+pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildService.py
+```
+
+Then you need to copy the generated binary from `dist/SWBBuildService` to `Application/Xcode.app/Contents/Developer/SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/MacOS` path to make it work.
 
 As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **SWBBuildService** automatically when an extension is activated.
 This's just needed to override the **continueBuildingAfterError** property when you build the app and gives you all errors in the project and compile flags possible used by sourcekit for indexing. This behaviour is only activated for `watcher` builds which are used to provide up-to-date indexes for LSP client while you modify files in the project. Regular builds/debugging runs are not affected by this proxy service and works as usual.
