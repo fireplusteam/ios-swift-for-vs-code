@@ -29,6 +29,7 @@ interface CommandOptions {
     pipeToDebugConsole?: boolean;
     pipeToParseBuildErrors?: boolean;
     pipe?: CommandOptions;
+    kill?: { signal: NodeJS.Signals; allSubProcesses: boolean };
 }
 
 export class CommandContext {

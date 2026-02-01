@@ -156,6 +156,7 @@ export class RunManager {
                 scriptOrCommand: { command: "xcrun" },
                 args: ["simctl", "launch", "--console-pty", deviceId.id, bundleAppName],
                 pipeToDebugConsole: true,
+                kill: { signal: "SIGKILL", allSubProcesses: true },
             })
             .catch(async error => {
                 context.log.error(`Session ID: ${this.sessionID}, terminated with error: ${error}`);
@@ -184,6 +185,7 @@ export class RunManager {
             await context.execShellWithOptions({
                 scriptOrCommand: { command: "xcrun" },
                 args: ["simctl", "boot", deviceId.id],
+                kill: { signal: "SIGKILL", allSubProcesses: true },
             });
         } catch {
             /* empty */

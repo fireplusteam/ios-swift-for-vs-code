@@ -105,6 +105,7 @@ export class BuildManager {
             ],
             env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.verbose,
+            kill: { signal: "SIGINT", allSubProcesses: false },
         });
 
         await context.execShellWithOptions({
@@ -118,6 +119,7 @@ export class BuildManager {
             ],
             env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+            kill: { signal: "SIGINT", allSubProcesses: false },
             pipe: {
                 scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
                 mode: ExecutorMode.stdout,
@@ -143,6 +145,7 @@ export class BuildManager {
             args: await BuildManager.args(context.projectEnv, context.bundle),
             env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+            kill: { signal: "SIGINT", allSubProcesses: false },
             pipe: {
                 scriptOrCommand: { command: "tee" },
                 args: [logFilePath],
@@ -211,6 +214,7 @@ export class BuildManager {
                     continueBuildingAfterErrors: "True", // build even if there's an error triggered
                 },
                 mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                kill: { signal: "SIGINT", allSubProcesses: false },
                 pipe: {
                     scriptOrCommand: { command: "tee" },
                     args: [logFilePath],
@@ -290,6 +294,7 @@ export class BuildManager {
             ],
             env: { ...BuildManager.commonEnv() },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+            kill: { signal: "SIGINT", allSubProcesses: false },
             pipe: {
                 scriptOrCommand: { command: "tee" },
                 args: [logFilePath],

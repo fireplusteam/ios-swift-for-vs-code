@@ -3,9 +3,9 @@ import { getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
 import { killAll } from "./utils";
 import { UserTerminalCloseError, UserTerminatedError } from "./CommandManagement/CommandContext";
-import { error } from "console";
 import { TerminalMessageStyle, TerminalShell } from "./TerminalShell";
 import { PassThrough } from "stream";
+import { kill } from "process";
 
 export class ExecutorTerminated extends Error {
     public constructor(message: string) {
@@ -66,6 +66,7 @@ export interface ShellExec {
     stderrCallback?: (err: string) => void;
     terminal?: TerminalShell;
     pipe?: ShellExec;
+    kill?: { signal: NodeJS.Signals; allSubProcesses: boolean };
 }
 
 export interface ShellResult {
@@ -193,6 +194,21 @@ export class Executor {
             }
         });
 
+        const killAction = () => {
+            if (proc.pid !== undefined) {
+                if (shell.kill) {
+                    if (shell.kill.allSubProcesses) {
+                        killAll(proc.pid, shell.kill.signal);
+                    } else {
+                        kill(proc.pid, shell.kill.signal);
+                    }
+                } else {
+                    // by default send SIGINT to all subprocesses to allow graceful termination
+                    killAll(proc.pid, "SIGINT");
+                }
+            }
+        };
+
         return {
             proc: proc,
             result: new Promise((resolve, reject) => {
@@ -204,7 +220,7 @@ export class Executor {
                         return;
                     }
 
-                    killAll(proc.pid, "SIGKILL");
+                    killAction();
                 });
                 const terminalClose = terminal?.onExitEvent(() => {
                     userCancel?.dispose();
@@ -214,7 +230,7 @@ export class Executor {
                         return;
                     }
 
-                    killAll(proc.pid, "SIGKILL");
+                    killAction();
                 });
                 if (cancellationToken?.isCancellationRequested) {
                     reject(UserTerminatedError);
@@ -241,7 +257,7 @@ export class Executor {
                     if (signal !== null) {
                         reject(
                             new ExecutorTerminated(
-                                `${displayCommandName} is terminated with SIGNAL : ${error}`
+                                `${displayCommandName} is terminated with SIGNAL : ${signal}`
                             )
                         );
                         return;
