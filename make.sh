@@ -19,7 +19,7 @@ npm run test
 # locally package and install the extension
 vsce package --target darwin-arm64
 vsce package
-code --install-extension vscode-ios-0.6.11.vsix
+code --install-extension vscode-ios-0.6.12.vsix
 
 # to publish the extension, uncomment the following line
 # https://code.visualstudio.com/api/working-with-extensions/publishing-extension#platformspecific-extensions
