@@ -30,13 +30,13 @@ To activate extension you need to open a folder which contains your Xcode projec
 -   Swift/Objective-C/C++ autocompletion
 -   Compatibility with CodeLLDB/lldb-dap
 -   Debug/Run app on Simulators (physical device is currently is not supported)
--   Debug/Run unit/snapshot/UI tests/test plans. Support running single/multiple tests for a class/target/set of classes
+-   Debug/Run unit/snapshot/UI tests/test plans. Support running single/multiple tests for a class/target/set of classes/subprojects
 -   Support code coverage
 -   Run an application on multiple simulator with a single command
 -   Support project/workspace
 -   Support launch configuration for app
 -   Support diff snapshots testing
--   Add/Delete/Rename/Move files/folders inside vscode
+-   Add/Delete/Rename/Move files/folders inside vscode and reflect changes in Xcode project
 -   VS Code workspace generation based on Xcode project/workspace
 -   Parsing build/test logs and display in real time
 -   File tree explorer based on Xcode project structure
@@ -90,7 +90,7 @@ Use the following guide to install them manually if any it doesn't work for you:
     brew install xcbeautify
     ```
 
--   **tuist** tool to generate Xcode workspace for Package.swift:
+-   **tuist** tool to generate Xcode workspace for `Package.swift`:
 
     ```bash
     brew install tuist
@@ -101,6 +101,12 @@ Use the following guide to install them manually if any it doesn't work for you:
     ```bash
     brew install ruby # if you don't have ruby installed, but it's preinstalled on macOS
     gem install xcodeproj
+    ```
+
+-   **pyinstaller** tool to build SWBBuildServiceProxy if you want to enable that feature (optional and only if you enable swb build service proxy feature in settings):
+
+    ```bash
+    brew install pyinstaller
     ```
 
 ## How to use
@@ -251,6 +257,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.6.9
+### 0.6.12
 
 It's still under development, so you can face some bugs
