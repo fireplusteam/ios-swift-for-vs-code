@@ -5,7 +5,15 @@ import os
 import asyncio
 import subprocess
 from MessageReader import MessageReader, MsgStatus
-from BuildServiceUtils import get_session_id
+from BuildServiceUtils import (
+    get_session_id,
+    check_for_exit,
+    push_data_to_stdout,
+    mtime_of_config_file,
+    server_get_message_from_client,
+    make_unblocking,
+)
+from RequestModifiers import RequestModifierBase, ClientRequestModifier
 
 
 class Context:
@@ -89,11 +97,12 @@ class Context:
 # READ from std input and feed to SWBBuildService
 class STDFeeder:
 
-    def __init__(self, stdin, context: Context):
-        from BuildServiceUtils import is_behave_like_proxy
+    def __init__(
+        self, stdin, context: Context, request_modifier: RequestModifierBase = None
+    ):
 
         self.msg_reader = MessageReader()
-        self.is_fed = not is_behave_like_proxy()
+        self.request_modifier = request_modifier
         self.context = context
         self._stdin = stdin
 
@@ -128,8 +137,6 @@ class STDFeeder:
                 stdin.flush()
 
     async def feed_stdin(self, proc_stdin):
-        from BuildServiceUtils import modify_json_content
-
         byte = None
         while True:
             if self.context.should_exit:
@@ -151,29 +158,8 @@ class STDFeeder:
             self.msg_reader.feed(byte)
 
             if self.msg_reader.status == MsgStatus.MsgEnd:
-                if not self.is_fed:
-                    # manipulate message
-                    # there can be multiple occurrence of C5 byte, so we need to get the last one
-                    json_start = self.msg_reader.buffer[13:].find(b"\xc5")
-                    # log(f"CLIENT: JSON_INDEX: {json_start}")
-
-                    if json_start != -1:
-                        json_start += 13
-                        json_len = int.from_bytes(
-                            self.msg_reader.buffer[json_start + 1 : json_start + 3],
-                            "big",
-                        )
-                        new_content, is_fed = modify_json_content(
-                            self.msg_reader.buffer[
-                                json_start : json_start + 3 + json_len
-                            ],
-                            json_len,
-                        )
-                        self.msg_reader.modify_body(
-                            new_content, json_start, json_start + 3 + json_len
-                        )
-                        if is_fed:
-                            self.is_fed = True
+                if self.request_modifier:
+                    self.request_modifier.modify_content(self.msg_reader)
 
                 buffer = self.msg_reader.buffer.copy()
                 self.msg_reader.reset()
@@ -211,8 +197,6 @@ class STDOuter:
             self._stdout = None
 
     async def write_stdout_bytes(self, out):
-        from BuildServiceUtils import push_data_to_stdout
-
         if hasattr(self.stdout, "buffer"):  # sys.stdout
             await push_data_to_stdout(out, self.stdout)
         else:  # regular file object
@@ -220,7 +204,6 @@ class STDOuter:
             self.stdout.flush()
 
     async def read_server_data(self, proc_stdout):
-
         while True:
             if self.context.should_exit:
                 break
@@ -247,12 +230,11 @@ class STDOuter:
 # CLIENT side
 async def main_client(context: Context):
     try:
-        from BuildServiceUtils import check_for_exit
 
         context.log(os.environ)
         context.log("START")
 
-        reader = STDFeeder(context.stdin, context)
+        reader = STDFeeder(context.stdin, context, ClientRequestModifier())
         outer = STDOuter(context.stdout, context)
         asyncio.create_task(reader.feed_stdin(context.stdin_file))
         asyncio.create_task(outer.read_server_data(context.stdout_file))
@@ -276,12 +258,6 @@ async def main_server(context: Context):
     )
 
     try:
-        from BuildServiceUtils import (
-            mtime_of_config_file,
-            server_get_message_from_client,
-            make_unblocking,
-        )
-
         context.log(os.environ)
         context.log("START")
 
