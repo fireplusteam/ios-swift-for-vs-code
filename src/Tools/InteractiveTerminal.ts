@@ -27,7 +27,17 @@ export class InteractiveTerminal {
 
     constructor(log: LogChannelInterface, name: string) {
         this.log = log;
-        this.terminal = vscode.window.createTerminal({ name: name, hideFromUser: true });
+        let existingTerminal: vscode.Terminal | undefined = undefined;
+        vscode.window.terminals.forEach(terminal => {
+            if (terminal.name === name) {
+                existingTerminal = terminal;
+            }
+        });
+        if (existingTerminal === undefined) {
+            this.terminal = vscode.window.createTerminal({ name: name, hideFromUser: true });
+        } else {
+            this.terminal = existingTerminal;
+        }
         this.closeDisposal = vscode.window.onDidCloseTerminal(event => {
             if (event === this.terminal) {
                 this.terminal = vscode.window.createTerminal({ name: name, hideFromUser: true });

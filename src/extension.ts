@@ -120,6 +120,7 @@ async function initialize(
             await atomicCommand.userCommand(
                 async context => {
                     // add BuildAll target root project if not exists (hide it with checkbox in settings)
+                    await enableSWBBuildService(shouldInjectSWBBuildService(), tools);
                     await checkWorkspace(context, true);
                 },
                 "Initialize",
@@ -140,7 +141,6 @@ async function initialize(
 
     lsp.start();
     fs.mkdir(getLogPath(), () => {});
-    await enableSWBBuildService(shouldInjectSWBBuildService(), tools);
     await projectManager.loadProjectFiles(true);
     await projectManager.cleanAutocompleteSchemes();
     autocompleteWatcher.triggerIncrementalBuild();

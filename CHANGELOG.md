@@ -1,5 +1,15 @@
 # Change Log
 
+### 0.6.12 - 2026-02-19
+
+### Added
+
+-   **BREAKING CHANGE**: Implemented compiler of SWBBuildServiceProxy as a standalone executable using PyInstaller to simplify installation and usage for end users and remove dependency on the version of this extension itself. Now if enabled it will be rebuild and resigned with a user signing identity on every extension activation to ensure compatibility with the current system and Xcode version and avoid system security issues.
+
+### Fixed
+
+-   Added missed Package.swift file to Package.swift generated workspace to ensure proper lsp diagnostics and autocompletion for swift packages
+
 ### 0.6.11 - 2026-02-12
 
 ### Fixed

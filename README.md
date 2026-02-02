@@ -196,11 +196,14 @@ pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildService.py
 
 Then you need to copy the generated binary from `dist/SWBBuildService` to `Application/Xcode.app/Contents/Developer/SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/MacOS` path to make it work.
 
+Or you can just **enable the feature in the settings and let the extension do it for you automatically**. It utilizes `pyinstaller` to build the proxy service on the fly and resign it with your signing identity to avoid macOS security issues.
+
 As [sourcekit-lsp](https://github.com/apple/sourcekit-lsp) updates indexes while building, If you want to have indexes updating even if you have compile errors, you need to give **a full disk control** to Visual Studio Code in Security Settings which allows to install a proxy service for Apple **SWBBuildService** automatically when an extension is activated.
 This's just needed to override the **continueBuildingAfterError** property when you build the app and gives you all errors in the project and compile flags possible used by sourcekit for indexing. This behaviour is only activated for `watcher` builds which are used to provide up-to-date indexes for LSP client while you modify files in the project. Regular builds/debugging runs are not affected by this proxy service and works as usual.
 
 When you enable `vscode-ios.swb.build.service` feature in the settings, the extension will ask you for your sudo password to install the proxy service. This is required because the service needs to run with elevated privileges to replace the original SWBBuildService in Xcode app folder which is called by `xcodebuild` tool each time when you build.
-When you run the first time after enabling this feature and installing the service, you may face the alert pop-up that the app is blocked from opening. To fix it, you need to follow those steps to allow the service to run:
+
+The following message should not be happen but if you get it you should either **rebuild** proxy service to refresh signature or do the next steps: When you run the first time after enabling this feature and installing the service, you may face the alert pop-up that the app is blocked from opening. To fix it, you need to follow those steps to allow the service to run:
 
 **Privacy & Security Settings**
 

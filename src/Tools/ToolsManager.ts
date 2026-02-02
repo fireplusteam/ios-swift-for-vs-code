@@ -12,7 +12,7 @@ export class ToolsManager {
 
     constructor(log: LogChannelInterface) {
         this.log = log;
-        this.terminal = new InteractiveTerminal(log, "Install Dependencies");
+        this.terminal = new InteractiveTerminal(log, "Xcode: Install Tool Dependencies");
     }
 
     private async isToolInstalled(name: string, version = "--version"): Promise<boolean> {
