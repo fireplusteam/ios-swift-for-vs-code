@@ -227,12 +227,37 @@ class STDOuter:
                 await asyncio.sleep(0.03)
 
 
+# Xcode CLIENT
+async def xcode_client(context: Context):
+    process = await asyncio.create_subprocess_exec(
+        *context.command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
+    )
+    try:
+        context.log(os.environ)
+        context.log("START XCODE CLIENT")
+
+        reader = STDFeeder(context.stdin, context)
+        outer = STDOuter(context.stdout, context)
+        asyncio.create_task(reader.feed_stdin(process.stdin))
+        asyncio.create_task(outer.read_server_data(process.stdout))
+        while True:
+            await asyncio.sleep(0.3)
+            if await check_for_exit():
+                break
+    finally:
+        context.should_exit = True
+        sys.exit(0)
+
+
+def run_xcode_client(context: Context):
+    asyncio.run(xcode_client(context))
+
+
 # CLIENT side
 async def main_client(context: Context):
     try:
-
         context.log(os.environ)
-        context.log("START")
+        context.log("START CLIENT")
 
         reader = STDFeeder(context.stdin, context, ClientRequestModifier())
         outer = STDOuter(context.stdout, context)
@@ -259,7 +284,7 @@ async def main_server(context: Context):
 
     try:
         context.log(os.environ)
-        context.log("START")
+        context.log("START SERVER")
 
         with STDFeeder(None, context) as reader, STDOuter(None, context) as outer:
             asyncio.create_task(reader.feed_stdin(process.stdin))

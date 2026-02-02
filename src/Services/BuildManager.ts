@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getFilePathInWorkspace, getWorkspaceFolder, ProjectEnv } from "../env";
+import { getWorkspaceFolder, ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
@@ -66,7 +66,7 @@ export class BuildManager {
         const env = await BuildManager.commonEnv();
         const configPath = env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] as string;
         if (configPath !== undefined && fs.existsSync(configPath)) {
-            fs.writeFile(configPath, JSON.stringify({ command: "stop" }), err => {
+            fs.writeFile(configPath, JSON.stringify({ command: "stop" }), () => {
                 // ignore errors
             });
         }

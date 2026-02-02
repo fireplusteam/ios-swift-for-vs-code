@@ -6,8 +6,12 @@
 import sys
 import os
 
-
-from BuildServiceUtils import make_unblocking
+from BuildServiceUtils import (
+    make_unblocking,
+    check_if_server_exists,
+    client_put_message_to_server,
+)
+from BuildServiceHelper import Context, run_client, run_server, run_xcode_client
 
 make_unblocking(sys.stdin)
 make_unblocking(sys.stdout)
@@ -22,10 +26,7 @@ def is_debug():
     return False
 
 
-if __name__ == "__main__":
-    # import after debugger is attached
-    from BuildServiceHelper import Context, run_client, run_server
-
+def main():
     with Context("SWBBuildService", _stdin, _stdout, _stderr) as context:
         if context.is_client:
             if is_debug():
@@ -34,10 +35,11 @@ if __name__ == "__main__":
                 debugpy.listen(5679)
                 debugpy.wait_for_client()
 
-            from BuildServiceUtils import (
-                check_if_server_exists,
-                client_put_message_to_server,
-            )
+            if "SWBBUILD_SERVICE_PROXY_SESSION_ID" not in os.environ:
+                # xcode version as proxy session id is not set, just run client as is
+                run_xcode_client(context)
+                return
+
             import subprocess
             import tempfile
 
@@ -65,7 +67,7 @@ if __name__ == "__main__":
                         context.session_id,
                     ]
                     server_command[0] = server_command[0].replace("-origin", "")
-                server = subprocess.Popen(
+                subprocess.Popen(
                     server_command,
                     close_fds=True,
                     start_new_session=True,
@@ -83,3 +85,8 @@ if __name__ == "__main__":
                 debugpy.listen(5680)
                 debugpy.wait_for_client()
             run_server(context)
+
+
+if __name__ == "__main__":
+    # import after debugger is attached
+    main()
