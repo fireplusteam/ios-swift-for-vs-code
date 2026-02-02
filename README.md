@@ -193,6 +193,8 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 
 ## SWBBuildService Proxy (Continue Building After Error while building for LSP Autocomplete)
 
+**READ THIS SECTION CAREFULLY BEFORE ENABLING THIS FEATURE AND MAKE SURE YOU UNDERSTAND ALL THE RISKS.**
+
 This feature is optional and EXPERIMENTAL and disabled by default. It requires sudo password and security permissions to work correctly. Use it on your own risk. Also make sure that you read the instructions below carefully before enabling it.
 Also you can build that proxy service from source code in `src/Services/SWBBuildServiceProxy` folder by cd into that folder and running:
 
@@ -222,6 +224,8 @@ The following message should not be happen but if you get it you should either *
 6. Try to build app again and confirm that you want to open the service.
 
 Now the service should be running and you can check it via Activity Monitor app by searching for `SWBBuildService` and `SWBBuildService-origin` processes while building the project.
+
+**If you find it's not working or want to restore original service back, at any time you can disable this feature in the settings and the original SWBBuildService will be restored automatically. You can also do it manually by going to the `Application/Xcode.app/Contents/Developer/SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/MacOS` folder and replacing the `SWBBuildService-origin` file back to `SWBBuildService`.**
 
 ## Extension Settings
 
