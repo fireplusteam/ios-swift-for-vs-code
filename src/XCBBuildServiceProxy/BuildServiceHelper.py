@@ -245,6 +245,7 @@ async def xcode_client(context: Context):
             if await check_for_exit():
                 break
     finally:
+        process.terminate()
         context.should_exit = True
         sys.exit(0)
 
