@@ -67,9 +67,13 @@ if __name__ == "__main__":
                     server_command[0] = server_command[0].replace("-origin", "")
                 server = subprocess.Popen(
                     server_command,
+                    close_fds=True,
                     start_new_session=True,
                     cwd=os.getcwd(),
                     env=os.environ,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                 )
             run_client(context)
         else:  # server
