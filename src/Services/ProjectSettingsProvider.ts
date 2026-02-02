@@ -112,7 +112,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
             mode: ExecutorMode.verbose,
-            env: { ...BuildManager.commonEnv() },
+            env: { ...(await BuildManager.commonEnv(projectEnv)) },
         });
 
         const devices = result.stdout.split("\n").filter(e => e.indexOf("platform:") !== -1);
@@ -178,7 +178,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                     "-disableAutomaticPackageResolution",
                     "-skipPackageUpdates",
                 ],
-                env: { ...BuildManager.commonEnv() },
+                env: { ...(await BuildManager.commonEnv(await this._context.projectEnv)) },
                 mode: ExecutorMode.onlyCommandNameAndResult,
             });
             // this._context.log.appendLine(result.stdout);
@@ -243,7 +243,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
                 "-disableAutomaticPackageResolution",
                 "-skipPackageUpdates",
             ],
-            env: { ...BuildManager.commonEnv() },
+            env: { ...(await BuildManager.commonEnv(await this._context.projectEnv)) },
             mode: ExecutorMode.onlyCommandNameAndResult,
         });
         const jsonSettings = JSON.parse(settings.stdout);
@@ -264,7 +264,7 @@ export class ProjectSettingsProvider implements XCodeSettings {
             scriptOrCommand: { command: "xcodebuild" },
             args: args,
             mode: ExecutorMode.onlyCommandNameAndResult,
-            env: { ...BuildManager.commonEnv() },
+            env: { ...(await BuildManager.commonEnv(await this._context.projectEnv)) },
         });
         const json = JSON.parse(result.stdout);
 

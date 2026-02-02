@@ -5,13 +5,14 @@ import os
 import asyncio
 import subprocess
 from MessageReader import MessageReader, MsgStatus
+from BuildServiceUtils import get_session_id
 
 
 class Context:
 
     def __init__(self, serviceName: str, stdin, stdout, stderr):
         # non zero - write logs from server to input files
-        self.debug_mode = 0
+        self.debug_mode = 1
 
         self.stdin = stdin
         self.stdout = stdout
@@ -19,15 +20,8 @@ class Context:
 
         self.serviceName = serviceName
         self.should_exit = False
-        self.stdout_file_name = None
 
-        cache_path = os.path.join(
-            os.path.expanduser(f"~/Library/Caches/{serviceName}Proxy"),
-        )
-
-        os.makedirs(cache_path, exist_ok=True)
         # log file for debug info
-        self.log_file = open(f"{cache_path}/xcbuild.log", "w+")
 
         xcode_dev_path = (
             subprocess.run(
@@ -50,17 +44,36 @@ class Context:
             ),
         )
 
+        self.is_client = True
+        self.session_id = get_session_id()
+
         def filter_args():
             i = 1
             ret = []
             while i < len(sys.argv):
+                if sys.argv[i] == "-proxy-server":
+                    self.is_client = False
+                    i += 2
+                    continue
                 ret.append(sys.argv[i])
                 i += 1
             return ret
 
+        self.log_file = None
+
         self.command = [f"{build_service_path}/{serviceName}-origin"] + filter_args()
 
     def __enter__(self):
+        cache_path = os.path.join(
+            os.path.expanduser(f"~/Library/Caches/{self.serviceName}Proxy"),
+        )
+
+        os.makedirs(cache_path, exist_ok=True)
+        self.log_file = open(
+            f"{cache_path}/xcbuild_{"server" if not self.is_client else "client"}.log",
+            "w+",
+            encoding="utf-8",
+        )
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -82,12 +95,37 @@ class STDFeeder:
         self.msg_reader = MessageReader()
         self.is_fed = not is_behave_like_proxy()
         self.context = context
-        self.stdin = stdin
+        self._stdin = stdin
+
+    @property
+    def stdin(self):
+        return self._stdin
+
+    @stdin.setter
+    def stdin(self, value):
+        if self._stdin:
+            # if it's a file object, close it
+            if not hasattr(self._stdin, "buffer"):  # not sys.stdin
+                self._stdin.close()
+        self._stdin = value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._stdin:
+            # if it's a file object, close it
+            if not hasattr(self._stdin, "buffer"):  # not sys.stdin
+                self._stdin.close()
+            self._stdin = None
 
     async def write_stdin_bytes(self, stdin: asyncio.StreamWriter, byte):
         if byte:
             stdin.write(byte)
-            await stdin.drain()  # flush
+            if isinstance(stdin, asyncio.StreamWriter):
+                await stdin.drain()  # flush
+            else:
+                stdin.flush()
 
     async def feed_stdin(self, proc_stdin):
         from BuildServiceUtils import modify_json_content
@@ -97,7 +135,14 @@ class STDFeeder:
             if self.context.should_exit:
                 break
 
-            byte = self.stdin.buffer.read(1)
+            if self.stdin is None:
+                await asyncio.sleep(0.03)
+                continue
+
+            if hasattr(self.stdin, "buffer"):  # sys.stdin
+                byte = self.stdin.buffer.read(1)
+            else:  # regular file object
+                byte = self.stdin.read(1)
 
             if not byte:
                 await asyncio.sleep(0.03)
@@ -143,7 +188,27 @@ class STDOuter:
     def __init__(self, stdout, context: Context) -> None:
         self.msg_reader = MessageReader()
         self.context = context
-        self.stdout = stdout
+        self._stdout = stdout
+
+    @property
+    def stdout(self):
+        return self._stdout
+
+    @stdout.setter
+    def stdout(self, value):
+        if self._stdout:
+            self._stdout.close()
+        self._stdout = value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._stdout:
+            # if it's a file object, close it
+            if not hasattr(self._stdout, "buffer"):  # not sys.stdout
+                self._stdout.close()
+            self._stdout = None
 
     async def write_stdout_bytes(self, out):
         from BuildServiceUtils import push_data_to_stdout
@@ -154,12 +219,18 @@ class STDOuter:
             self.stdout.write(out)
             self.stdout.flush()
 
-    async def read_server_data(self, proc_stdout: asyncio.StreamReader):
+    async def read_server_data(self, proc_stdout):
 
         while True:
             if self.context.should_exit:
                 break
-            out = await proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
+            if self.stdout is None:
+                await asyncio.sleep(0.03)
+                continue
+            if isinstance(proc_stdout, asyncio.StreamReader):
+                out = await proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
+            else:
+                out = proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
             if out:
                 for b in out:
                     self.msg_reader.feed(b.to_bytes(1))
@@ -169,15 +240,12 @@ class STDOuter:
 
                         self.context.log(f"\tSERVER: {buffer[:150]}")
                         await self.write_stdout_bytes(buffer)
-            else:
-                break  # EOF
+            else:  # no data
+                await asyncio.sleep(0.03)
 
 
-async def main(context: Context):
-    process = await asyncio.create_subprocess_exec(
-        *context.command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
-    )
-
+# CLIENT side
+async def main_client(context: Context):
     try:
         from BuildServiceUtils import check_for_exit
 
@@ -186,17 +254,73 @@ async def main(context: Context):
 
         reader = STDFeeder(context.stdin, context)
         outer = STDOuter(context.stdout, context)
-        asyncio.create_task(reader.feed_stdin(process.stdin))
-        asyncio.create_task(outer.read_server_data(process.stdout))
+        asyncio.create_task(reader.feed_stdin(context.stdin_file))
+        asyncio.create_task(outer.read_server_data(context.stdout_file))
         while True:
             await asyncio.sleep(0.3)
             if await check_for_exit():
                 break
+    finally:
+        context.should_exit = True
+        sys.exit(0)
+
+
+def run_client(context: Context):
+    asyncio.run(main_client(context))
+
+
+# SERVER side
+async def main_server(context: Context):
+    process = await asyncio.create_subprocess_exec(
+        *context.command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE
+    )
+
+    try:
+        from BuildServiceUtils import (
+            mtime_of_config_file,
+            server_get_message_from_client,
+            make_unblocking,
+        )
+
+        context.log(os.environ)
+        context.log("START")
+
+        with STDFeeder(None, context) as reader, STDOuter(None, context) as outer:
+            asyncio.create_task(reader.feed_stdin(process.stdin))
+            asyncio.create_task(outer.read_server_data(process.stdout))
+            last_mtime = None
+            while True:
+                await asyncio.sleep(0.3)
+                new_mtime = mtime_of_config_file()
+                if new_mtime != last_mtime:
+                    last_mtime = new_mtime
+                    try:
+                        message = server_get_message_from_client()
+                    except Exception as e:
+                        context.log(
+                            f"SERVER: Exception getting message from client: {str(e)}"
+                        )
+                        message = None
+                    if not message:
+                        continue
+                    # expected messages:
+                    # { "command": "build", "stdin_file": "...", "stdout_file": "..." }
+                    # { "command": "stop" }
+                    if message["command"] == "build":
+                        stdin_file_path = message["stdin_file"]
+                        stdout_file_path = message["stdout_file"]
+                        reader.stdin = open(stdin_file_path, "rb")
+                        outer.stdout = open(stdout_file_path, "wb")
+                        make_unblocking(reader.stdin)
+                        make_unblocking(outer.stdout)
+                    elif message["command"] == "stop":
+                        break
+
     finally:
         process.terminate()
         context.should_exit = True
         sys.exit(0)
 
 
-def run(context: Context):
-    asyncio.run(main(context))
+def run_server(context: Context):
+    asyncio.run(main_server(context))

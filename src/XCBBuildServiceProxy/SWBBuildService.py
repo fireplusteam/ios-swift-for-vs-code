@@ -23,14 +23,59 @@ def is_debug():
 
 
 if __name__ == "__main__":
-    if is_debug():
-        import debugpy
-
-        debugpy.listen(5679)
-        debugpy.wait_for_client()
-
     # import after debugger is attached
-    from BuildServiceHelper import Context, run
+    from BuildServiceHelper import Context, run_client, run_server
 
     with Context("SWBBuildService", _stdin, _stdout, _stderr) as context:
-        run(context)
+        if context.is_client:
+            if is_debug():
+                import debugpy
+
+                debugpy.listen(5679)
+                debugpy.wait_for_client()
+
+            from BuildServiceUtils import (
+                check_if_server_exists,
+                client_put_message_to_server,
+            )
+            import subprocess
+            import tempfile
+
+            stdin_temp = tempfile.NamedTemporaryFile()
+            stdout_temp = tempfile.NamedTemporaryFile()
+            message = {
+                "command": "build",
+                "stdin_file": stdin_temp.name,
+                "stdout_file": stdout_temp.name,
+            }
+            client_put_message_to_server(message)
+
+            context.stdin_file = open(stdin_temp.name, "wb")
+            context.stdout_file = open(
+                stdout_temp.name, "rb"
+            )  # read out of server's stdout
+            make_unblocking(context.stdout_file)
+            make_unblocking(context.stdin_file)
+
+            if not check_if_server_exists(context.session_id):
+                server_command = sys.argv + ["-proxy-server", context.session_id]
+                if is_debug():
+                    server_command = context.command + [
+                        "-proxy-server",
+                        context.session_id,
+                    ]
+                    server_command[0] = server_command[0].replace("-origin", "")
+                server = subprocess.Popen(
+                    server_command,
+                    start_new_session=True,
+                    cwd=os.getcwd(),
+                    env=os.environ,
+                )
+            run_client(context)
+        else:  # server
+            if is_debug():
+                import debugpy
+
+                debugpy.listen(5680)
+                debugpy.wait_for_client()
+            run_server(context)

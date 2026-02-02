@@ -1,11 +1,15 @@
 import os
 
-# to update psutil: cd src/XCBBuildServiceProxy && pip install -t lib/ psutil
-import lib.psutil as psutil
 import base64
 import fcntl
 import asyncio
 import json
+
+# to update psutil: cd src/XCBBuildServiceProxy && pip install -t lib/ psutil
+import lib.psutil as psutil
+
+# to update psutil: cd src/XCBBuildServiceProxy && pip install -t lib/ filelock
+import lib.filelock as filelock
 
 
 def is_behave_like_proxy():
@@ -13,6 +17,75 @@ def is_behave_like_proxy():
         "continueBuildingAfterErrors" in os.environ
         or "BUILD_XCODE_SINGLE_FILE_PATH" in os.environ
     ):
+        return True
+    return False
+
+
+def get_session_id():
+    if "SWBBUILD_SERVICE_PROXY_SESSION_ID" in os.environ:
+        return os.environ["SWBBUILD_SERVICE_PROXY_SESSION_ID"]
+    return "TEST_SESSION_ID_12345"
+
+
+def config_file():
+    if "SWBBUILD_SERVICE_PROXY_CONFIG_PATH" in os.environ:
+        return os.environ["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"]
+    return "/tmp/SWBBUILD_SERVICE_PROXY_CONFIG_PATH.json"
+
+
+def client_put_message_to_server(message: str):
+    config_file_path = config_file()
+    if config_file_path is None:
+        return
+
+    os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
+    lock_path = config_file_path + ".lock"
+    with filelock.FileLock(lock_path, timeout=5):
+        with open(config_file_path, "w", encoding="utf-8") as f:
+            json.dump(message, f)
+
+
+def mtime_of_config_file():
+    config_file_path = config_file()
+    if config_file_path is None:
+        return None
+
+    if not os.path.exists(config_file_path):
+        return None
+
+    return os.path.getmtime(config_file_path)
+
+
+def server_get_message_from_client():
+    config_file_path = config_file()
+    if config_file_path is None:
+        return None
+
+    lock_path = config_file_path + ".lock"
+    with filelock.FileLock(lock_path, timeout=5):
+        if not os.path.exists(config_file_path):
+            return None
+        with open(config_file_path, "r", encoding="utf-8") as f:
+            cnt = f.read()
+            return json.loads(cnt)
+
+
+def check_if_server_exists(session_id: str):
+    if session_id is None:
+        return False
+    # find pid of server with command line argument session_id
+    for proc in psutil.process_iter(["pid", "cmdline"]):
+        try:
+            cmdline = proc.info["cmdline"]
+            if cmdline and session_id in " ".join(cmdline):
+                pid = proc.info["pid"]
+                break
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+    else:
+        return False
+
+    if psutil.pid_exists(pid):
         return True
     return False
 

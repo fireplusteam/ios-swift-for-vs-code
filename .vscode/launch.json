@@ -152,7 +152,17 @@
             "redirectOutput": true
         },
         {
-            "name": "Debug: Attach SWBBuildService",
+            "name": "Debug: Attach Server SWBBuildService",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5680
+            },
+            "redirectOutput": false
+        },
+        {
+            "name": "Debug: Attach Client SWBBuildService",
             "type": "debugpy",
             "request": "attach",
             "connect": {
