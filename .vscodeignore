@@ -7,6 +7,7 @@ node_modules
 out
 src
 !src/XCBBuildServiceProxy
+src/XCBBuildServiceProxy/**/__pycache__
 dist/extension.js.map
 esbuild.js
 Gemfile

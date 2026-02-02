@@ -2,17 +2,12 @@
 
 # insall dependencies or update them
 npm install # resolve dependencies
-npm install --save @types/ps-tree
-npm install --save @types/find-process
-npm install --save @types/lockfile
-npm install vscode-languageserver-protocol
-npm install vscode-languageclient
-npm install @vscode/test-cli
-npm install --save-dev sinon @types/sinon
 
-pip install psutil
-pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildService.py
+# remove cached python files for build service
+rm -rf src/XCBBuildServiceProxy/__pycache__
+rm -rf src/XCBBuildServiceProxy/lib/psutil/__pycache__
 
+# compile and run tests
 npm run compile
 npm run test
 
