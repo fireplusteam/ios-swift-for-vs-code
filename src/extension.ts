@@ -74,7 +74,13 @@ function watchSWBBuildServiceSetting() {
     return vscode.workspace.onDidChangeConfiguration(async event => {
         if (event.affectsConfiguration("vscode-ios.swb.build.service")) {
             const shouldEnable = shouldInjectSWBBuildService();
-            await enableSWBBuildService(shouldEnable);
+            try {
+                await enableSWBBuildService(shouldEnable, tools);
+            } catch (error) {
+                vscode.window.showErrorMessage(
+                    `SWB Build Service was not updated due to error: ${JSON.stringify(error)}`
+                );
+            }
         }
     });
 }
@@ -134,7 +140,7 @@ async function initialize(
 
     lsp.start();
     fs.mkdir(getLogPath(), () => {});
-    await enableSWBBuildService(shouldInjectSWBBuildService());
+    await enableSWBBuildService(shouldInjectSWBBuildService(), tools);
     await projectManager.loadProjectFiles(true);
     await projectManager.cleanAutocompleteSchemes();
     autocompleteWatcher.triggerIncrementalBuild();
@@ -142,6 +148,7 @@ async function initialize(
 }
 
 const logChannel = new LogChannel("VSCode-iOS");
+const tools = new ToolsManager(logChannel);
 const projectWatcher = new ProjectWatcher(logChannel);
 const problemDiagnosticResolver = new ProblemDiagnosticResolver(logChannel);
 const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
@@ -174,7 +181,6 @@ export async function activate(context: vscode.ExtensionContext) {
     logChannel.mode = context.extensionMode;
     logChannel.appendLine("Activated");
 
-    const tools = new ToolsManager(logChannel);
     await tools.resolveThirdPartyTools();
 
     projectManager.onUpdateDeps = async () => {

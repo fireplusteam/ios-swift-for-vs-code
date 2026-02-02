@@ -1,5 +1,7 @@
 import os
-import psutil
+
+# to update psutil: cd src/XCBBuildServiceProxy && pip install -t lib/ psutil
+import lib.psutil as psutil
 import base64
 import fcntl
 import asyncio

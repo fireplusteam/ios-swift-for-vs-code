@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as vscode from "vscode";
 import * as fs from "fs";
+import * as os from "os";
 import { CustomError, emptyLog } from "./utils";
 import { XCodeSettings } from "./Services/ProjectSettingsProvider";
 import { ProjectWatcherInterface } from "./ProjectManager/ProjectWatcher";
@@ -392,6 +393,10 @@ export function getScriptPath(script: string | undefined = undefined) {
     return path.join(__dirname, "..", "resources", script);
 }
 
+export function getSWBBuildServiceScriptPath() {
+    return path.join(__dirname, "..", "src", "XCBBuildServiceProxy", "SWBBuildService.py");
+}
+
 export function getFilePathInWorkspace(fileName: string) {
     return path.join(getWorkspacePath(), fileName);
 }
@@ -464,7 +469,13 @@ export function getXCodeBuildServerPath() {
 }
 
 export function getSWBBuildServicePath() {
-    return path.join(__dirname, "..", "dist", "SWBBuildService");
+    return path.join(
+        os.homedir(),
+        "Library",
+        "Application Support",
+        "SWBBuildServiceProxy",
+        "SWBBuildService"
+    );
 }
 
 function readEnvFileToDict() {

@@ -6,6 +6,7 @@ build
 node_modules
 out
 src
+!src/XCBBuildServiceProxy
 dist/extension.js.map
 esbuild.js
 Gemfile

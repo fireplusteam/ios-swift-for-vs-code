@@ -8,7 +8,7 @@ from BuildServiceUtils import make_unblocking
 from MessageReader import MessageReader, MsgStatus
 
 # to build standalone executable use pyinstaller:
-# pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildServiceRunner.py --name SWBBuildService
+# pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildServiceRunner.py --name SWBBuildService --distpath ~/Library/Application\ Support/SWBBuildServiceProxy/
 
 
 if __name__ == "__main__":

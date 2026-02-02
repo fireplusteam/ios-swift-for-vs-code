@@ -2,7 +2,7 @@ import { exec } from "child_process";
 import * as fs from "fs";
 import * as vscode from "vscode";
 import { InteractiveTerminal } from "./InteractiveTerminal";
-import { getScriptPath } from "../env";
+import { getScriptPath, getSWBBuildServiceScriptPath } from "../env";
 import { XCRunHelper } from "./XCRunHelper";
 import { LogChannelInterface } from "../Logs/LogChannel";
 
@@ -94,6 +94,26 @@ export class ToolsManager {
         await this.terminal.executeCommand(installScript);
     }
 
+    async installPyInstaller() {
+        this.terminal.show();
+        return await this.installTool("pyinstaller");
+    }
+
+    async compileSWBBuildService(distPath: string) {
+        this.terminal.show();
+        await this.terminal.executeCommand(
+            `pyinstaller --onefile '${getSWBBuildServiceScriptPath()}' --distpath '${distPath}'`
+        );
+        try {
+            // remove quarantine attribute to allow execution without user interaction as it was generated from python script by user
+            await this.terminal.executeCommand(
+                `xattr -d -r com.apple.quarantine '${distPath}/SWBBuildService'`
+            );
+        } catch {
+            // ignore error
+        }
+    }
+
     private async installTool(name: string, toolName = "brew") {
         const command = `${toolName} install ${name}`;
         this.terminal.show();
@@ -103,6 +123,10 @@ export class ToolsManager {
     private async isLLDBStubExeCompiled() {
         const lldb_exe_stub = getScriptPath("lldb_exe_stub");
         return fs.existsSync(lldb_exe_stub);
+    }
+
+    async isPyInstallerInstalled() {
+        return await this.isToolInstalled("pyinstaller", "--version");
     }
 
     private async compileLLDStubExe() {

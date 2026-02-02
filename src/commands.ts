@@ -31,6 +31,7 @@ import { TestPlanIsNotConfigured } from "./Services/ProjectSettingsProvider";
 import { PackageWorkspaceGenerator } from "./ProjectManager/PackageWorkspaceGenerator";
 import { LogChannelInterface } from "./Logs/LogChannel";
 import { TestProvider } from "./TestsProvider/TestProvider";
+import { ToolsManager } from "./Tools/ToolsManager";
 
 function filterDevices(
     devices: { [name: string]: string }[],
@@ -681,11 +682,40 @@ export async function runAndDebugTests(
     await runManager.runTests(commandContext, tests, xctestrun, isCoverage);
 }
 
-export async function enableSWBBuildService(enabled: boolean) {
+export async function enableSWBBuildService(enabled: boolean, tools: ToolsManager | undefined) {
     try {
+        if (tools !== undefined && !(await tools.isPyInstallerInstalled()) && enabled) {
+            const option = await vscode.window.showInformationMessage(
+                "SWBBuildService Proxy requires 'pyinstaller' to be installed. Do you want to install it via homebrew now?",
+                "Yes",
+                "No"
+            );
+            if (option === "Yes") {
+                try {
+                    await tools.installPyInstaller();
+                    vscode.window.showInformationMessage(
+                        "'pyinstaller' was installed successfully."
+                    );
+                } catch (error) {
+                    vscode.window.showErrorMessage(
+                        `Failed to install 'pyinstaller'. Please install it manually via 'brew install pyinstaller'. Error: ${error}`
+                    );
+                    throw error;
+                }
+            } else {
+                throw new Error(
+                    "'pyinstaller' is required to enable SWBBuildService Proxy. Operation cancelled by user."
+                );
+            }
+        }
+        const swbbuildServicePath = getSWBBuildServicePath();
+        if (tools !== undefined && enabled) {
+            await tools.compileSWBBuildService(path.dirname(swbbuildServicePath));
+        }
+
         let checkSWBService: string | undefined = undefined;
         try {
-            checkSWBService = await checkSWBBuildServiceEnabled(enabled, getSWBBuildServicePath());
+            checkSWBService = await checkSWBBuildServiceEnabled(enabled, swbbuildServicePath);
         } catch {
             // do nothing
         }
@@ -693,16 +723,16 @@ export async function enableSWBBuildService(enabled: boolean) {
             return;
         }
         const password = await requestSudoPasswordForSWBBuildService(enabled);
-        if (password === undefined) {
+        if (password === undefined || password === "") {
             throw new Error("User cancelled sudo password input");
         }
         try {
             if (checkSWBService !== undefined) {
-                await installUninstallBuildService(enabled, password, getSWBBuildServicePath());
+                await installUninstallBuildService(enabled, password, swbbuildServicePath);
             }
         } catch (error) {
             if (error instanceof Error && error.message === "Retry") {
-                return await enableSWBBuildService(enabled);
+                return await enableSWBBuildService(enabled, undefined);
             } else {
                 throw error;
             }
@@ -716,7 +746,7 @@ export async function enableSWBBuildService(enabled: boolean) {
 }
 
 async function checkSWBBuildServiceEnabled(enabled: boolean, servicePath: string) {
-    const checkIfInjectedCommand = `python3 ${getScriptPath("xcode_service_setup.py")} -isProxyInjected ${servicePath}`;
+    const checkIfInjectedCommand = `python3 '${getScriptPath("xcode_service_setup.py")}' -isProxyInjected '${servicePath}'`;
     return new Promise<string>((resolve, reject) => {
         exec(checkIfInjectedCommand, error => {
             if ((enabled && error === null) || (!enabled && error !== null)) {
@@ -744,7 +774,7 @@ async function installUninstallBuildService(
     servicePath: string
 ) {
     const install = enabled ? "-install" : "-uninstall";
-    const command = `echo '${password}' | sudo -S python3 ${getScriptPath("xcode_service_setup.py")} ${install} ${servicePath} `;
+    const command = `echo '${password}' | sudo -S python3 '${getScriptPath("xcode_service_setup.py")}' ${install} '${servicePath}'`;
     const serviceName = servicePath.split(path.sep).at(-1);
     return new Promise<void>((resolve, reject) => {
         exec(command, error => {
