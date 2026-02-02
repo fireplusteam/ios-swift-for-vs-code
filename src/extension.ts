@@ -60,6 +60,7 @@ import { buildSelectedTarget, cleanDerivedData } from "./buildCommands";
 import { RubyProjectFilesManager } from "./ProjectManager/RubyProjectFilesManager";
 import { ProjectWatcher } from "./ProjectManager/ProjectWatcher";
 import { ProjectSettingsProvider } from "./Services/ProjectSettingsProvider";
+import { BuildManager } from "./Services/BuildManager";
 
 // SETTINGS WATCHER
 
@@ -582,6 +583,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 // This method is called when your extension is deactivated
 export async function deactivate() {
+    BuildManager.stop();
     autocompleteWatcher?.terminate();
     atomicCommand.cancel();
     runtimeWarningLogWatcher.disposeWatcher();

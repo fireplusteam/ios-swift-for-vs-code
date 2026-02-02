@@ -42,7 +42,7 @@ export class BuildManager {
 
     static sessionId = randomUUID();
 
-    static async commonEnv(projectEnv: ProjectEnv) {
+    static async commonEnv() {
         const env = {} as { [name: string]: string };
         env["SWBBUILD_SERVICE_PROXY_PATH"] = path.join(
             __dirname,
@@ -51,9 +51,7 @@ export class BuildManager {
             "XCBBuildServiceProxy",
             "SWBBuildService.py"
         );
-        const projectId = await projectEnv.projectFile;
-        env["SWBBUILD_SERVICE_PROXY_SESSION_ID"] =
-            getFilePathInWorkspace(projectId) + "_" + BuildManager.sessionId.toString();
+        env["SWBBUILD_SERVICE_PROXY_SESSION_ID"] = BuildManager.sessionId.toString();
         env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] = path.join(
             getWorkspaceFolder()?.fsPath || "",
             ".vscode",
@@ -62,6 +60,16 @@ export class BuildManager {
         );
 
         return env;
+    }
+
+    static async stop() {
+        const env = await BuildManager.commonEnv();
+        const configPath = env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] as string;
+        if (configPath !== undefined && fs.existsSync(configPath)) {
+            fs.writeFile(configPath, JSON.stringify({ command: "stop" }), err => {
+                // ignore errors
+            });
+        }
     }
 
     static async commonArgs(projectEnv: ProjectEnv, bundle: BundlePath) {
@@ -115,7 +123,7 @@ export class BuildManager {
                 await context.projectEnv.projectFile,
                 "-checkFirstLaunchStatus",
             ],
-            env: { ...(await BuildManager.commonEnv(await context.projectEnv)) },
+            env: { ...(await BuildManager.commonEnv()) },
             mode: ExecutorMode.verbose,
             kill: { signal: "SIGINT", allSubProcesses: false },
         });
@@ -129,7 +137,7 @@ export class BuildManager {
                 "-scheme",
                 await context.projectEnv.projectScheme,
             ],
-            env: { ...(await BuildManager.commonEnv(await context.projectEnv)) },
+            env: { ...(await BuildManager.commonEnv()) },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             kill: { signal: "SIGINT", allSubProcesses: false },
             pipe: {
@@ -155,7 +163,7 @@ export class BuildManager {
             scriptOrCommand: { command: "xcodebuild" },
             pipeToParseBuildErrors: true,
             args: await BuildManager.args(context.projectEnv, context.bundle),
-            env: { ...(await BuildManager.commonEnv(await context.projectEnv)) },
+            env: { ...(await BuildManager.commonEnv()) },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             kill: { signal: "SIGINT", allSubProcesses: false },
             pipe: {
@@ -222,7 +230,7 @@ export class BuildManager {
                     jobsCountForWatcher().toString(),
                 ],
                 env: {
-                    ...(await BuildManager.commonEnv(await context.projectEnv)),
+                    ...(await BuildManager.commonEnv()),
                     continueBuildingAfterErrors: "True", // build even if there's an error triggered
                 },
                 mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
@@ -304,7 +312,7 @@ export class BuildManager {
                 ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),
                 ...extraArguments,
             ],
-            env: { ...(await BuildManager.commonEnv(await context.projectEnv)) },
+            env: { ...(await BuildManager.commonEnv()) },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             kill: { signal: "SIGINT", allSubProcesses: false },
             pipe: {
