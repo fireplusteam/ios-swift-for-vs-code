@@ -96,7 +96,7 @@ export class BuildManager {
             "-skipPackageUpdates", // to speed up the build
             "-disableAutomaticPackageResolution",
             "-onlyUsePackageVersionsFromResolvedFile",
-            // "-showBuildTimingSummary",
+            "-showBuildTimingSummary",
             ...extra,
         ];
     }
