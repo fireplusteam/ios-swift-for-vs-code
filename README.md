@@ -195,7 +195,7 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 
 **READ THIS SECTION CAREFULLY BEFORE ENABLING THIS FEATURE AND MAKE SURE YOU UNDERSTAND ALL THE RISKS.**
 
-This feature is optional and EXPERIMENTAL and disabled by default. It requires sudo password and security permissions to work correctly. Use it on your own risk. Also make sure that you read the instructions below carefully before enabling it.
+This feature is optional and EXPERIMENTAL and disabled by default but it provides **fast incremental builds** as in Xcode due to not terminated SWBBuildService session between builds. It requires sudo password and security permissions to work correctly. Use it on your own risk. Also make sure that you read the instructions below carefully before enabling it.
 Also you can build that proxy service from source code in `src/Services/SWBBuildServiceProxy` folder by cd into that folder and running:
 
 ```bash

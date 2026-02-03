@@ -133,7 +133,7 @@
                     "type": "boolean",
                     "default": false,
                     "title": "Enable SWBBuildService Proxy",
-                    "description": "EXPERIMENTAL: if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch). Full instructions in the README.md file.",
+                    "description": "EXPERIMENTAL: Fast incremental builds like in Xcode. If Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature (Warning: Also you need to give it the permission in a Settings/Privacy & Security at first launch). Full instructions in the README.md file.",
                     "scope": "machine"
                 },
                 "vscode-ios.lsp.buildIndexesWhileBuilding": {

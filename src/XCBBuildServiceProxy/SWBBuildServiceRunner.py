@@ -19,7 +19,7 @@ if __name__ == "__main__":
         python_script = os.environ["SWBBUILD_SERVICE_PROXY_PATH"]
 
     command = [
-        "/opt/anaconda3/bin/python3",
+        "/usr/bin/python3",
         "-u",
         python_script,
     ] + sys.argv[1:]

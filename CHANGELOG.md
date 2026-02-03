@@ -2,6 +2,9 @@
 
 ## 0.6.13 - 2026-02-26
 
+### Added
+- SWBBuildServiceProxy now persistently works in the background and is not terminated after each build which allows to have fast incremental builds like in Xcode and better support of autocompletion for large projects. Full instructions in the README.md file.
+
 ### Fixed
 
 
