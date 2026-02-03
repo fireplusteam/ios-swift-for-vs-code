@@ -218,7 +218,7 @@ class STDOuter:
                 out = proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
             if out:
                 for b in out:
-                    self.msg_reader.feed(b.to_bytes(1))
+                    self.msg_reader.feed(b.to_bytes(1, "big"))
                     if self.msg_reader.status == MsgStatus.MsgEnd:
                         buffer = self.msg_reader.buffer.copy()
                         self.msg_reader.reset()

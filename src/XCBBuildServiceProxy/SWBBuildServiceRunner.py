@@ -12,23 +12,26 @@ from MessageReader import MessageReader, MsgStatus
 
 
 if __name__ == "__main__":
-    if "SWBBUILD_SERVICE_PROXY_PATH" not in os.environ:
-        # default path to the SWBBuildService proxy script
-        python_script = "/Users/Ievgenii_Mykhalevskyi/repos/fireplusteam/ios_vs_code/src/XCBBuildServiceProxy/SWBBuildService.py"
-    else:
-        python_script = os.environ["SWBBUILD_SERVICE_PROXY_PATH"]
+    # if "SWBBUILD_SERVICE_PROXY_PATH" not in os.environ:
+    # default path to the SWBBuildService proxy script
+    python_script = "/Users/Ievgenii_Mykhalevskyi/repos/fireplusteam/ios_vs_code/src/XCBBuildServiceProxy/SWBBuildService.py"
+    # else:
+    #     python_script = os.environ["SWBBUILD_SERVICE_PROXY_PATH"]
+
+    # setup virtual environment path
+    venv_path = "/Users/Ievgenii_Mykhalevskyi/repos/fireplusteam/ios_vs_code/venv"
+    env = os.environ.copy()
+    env["VENV_PATH"] = venv_path
+    # enable debug mode in the subprocess
+    env["SWBBUILD_SERVICE_PROXY_DEBUG"] = "1"
 
     command = [
-        "/usr/bin/python3",
+        f"{venv_path}/bin/python3",
         "-u",
         python_script,
     ] + sys.argv[1:]
     sys.stderr.writelines(f"SWBBUILD_SERVICE_PROXY_PATH: {python_script}\n")
     sys.stderr.writelines(f"Command: {' '.join(command)}\n")
-
-    os.environ["SWBBUILD_SERVICE_PROXY_DEBUG"] = (
-        "1"  # enable debug mode in the subprocess
-    )
 
     # create subprocess to run the actual SWBBuildService proxy script with redirected stdin/stdout/stderr
 
@@ -42,6 +45,7 @@ if __name__ == "__main__":
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=env,
         )
 
         # read stdout and stderr and stdin in different run loops to avoid blocking
@@ -53,7 +57,7 @@ if __name__ == "__main__":
                 if data:
                     # sys.stderr.writelines(f"Read {len(data)} bytes from stdout\n")
                     for b in data:
-                        msg.feed(b.to_bytes(1))
+                        msg.feed(b.to_bytes(1, "big"))
                         if msg.status == MsgStatus.MsgEnd:
                             buffer = msg.buffer.copy()
                             msg.reset()
@@ -93,6 +97,8 @@ if __name__ == "__main__":
                 # sys.stderr.writelines(
                 #     f"Check Exit: {await check_for_exit()}, pid: {process.pid}, returncode: {process.returncode}\n"
                 # )
+                if "-proxy-server" in sys.argv:
+                    continue  # in server mode do not check for exit
                 if await check_for_exit():
                     break
             sys.stderr.writelines("Terminating SWBBuildService proxy subprocess...\n")

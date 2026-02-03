@@ -4,6 +4,7 @@
 build
 **/__pycache__
 node_modules
+venv
 out
 src
 !src/XCBBuildServiceProxy
