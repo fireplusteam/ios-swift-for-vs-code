@@ -80,7 +80,7 @@ class Context:
 
         os.makedirs(cache_path, exist_ok=True)
         self.log_file = open(
-            f"{cache_path}/xcbuild_{"server" if not self.is_client else "client"}.log",
+            f"{cache_path}/xcbuild_{'server' if not self.is_client else 'client'}.log",
             "w+",
             encoding="utf-8",
         )

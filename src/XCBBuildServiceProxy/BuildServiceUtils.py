@@ -79,7 +79,7 @@ def is_pid_alive(pid: int):
     return False
 
 
-def get_server_pid_by_session_id(session_id: str) -> int | None:
+def get_server_pid_by_session_id(session_id: str):
     if session_id is None:
         return False
     # find pid of server with command line argument session_id

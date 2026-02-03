@@ -33,29 +33,28 @@ class MessageReader:
 
         assert len(byte) == 1, "feed method only accepts single byte"
 
-        match self.status:
-            case MsgStatus.DetermineStart:
-                self.read_index += 1
-                if self.read_index == 8:
-                    self.status = MsgStatus.MsgReadingLen
-                    self.read_index = 0
-                    self.msg_len = 0
+        if self.status == MsgStatus.DetermineStart:
+            self.read_index += 1
+            if self.read_index == 8:
+                self.status = MsgStatus.MsgReadingLen
+                self.read_index = 0
+                self.msg_len = 0
 
-            case MsgStatus.MsgReadingLen:
-                self.read_index += 1
-                if self.read_index == 4:
-                    self.msg_len = int.from_bytes(self.buffer[8 : 8 + 4], "little")
-                    assert (
-                        self.left_read_io_bytes == 0
-                    ), "left_read_io_bytes should be 0 when reading length"
-                    self.left_read_io_bytes = self.msg_len
-                    self.read_index = 0
-                    self.status = MsgStatus.MsgReadingBody
+        elif self.status == MsgStatus.MsgReadingLen:
+            self.read_index += 1
+            if self.read_index == 4:
+                self.msg_len = int.from_bytes(self.buffer[8 : 8 + 4], "little")
+                assert (
+                    self.left_read_io_bytes == 0
+                ), "left_read_io_bytes should be 0 when reading length"
+                self.left_read_io_bytes = self.msg_len
+                self.read_index = 0
+                self.status = MsgStatus.MsgReadingBody
 
-            case MsgStatus.MsgReadingBody:
-                self.read_index += 1
-                if self.read_index == self.msg_len:
-                    self.status = MsgStatus.MsgEnd
+        elif self.status == MsgStatus.MsgReadingBody:
+            self.read_index += 1
+            if self.read_index == self.msg_len:
+                self.status = MsgStatus.MsgEnd
 
     def reset(self):
         self.read_index = 0
