@@ -31,6 +31,11 @@ def config_file():
     return "/tmp/SWBBUILD_SERVICE_PROXY_CONFIG_PATH.json"
 
 
+def is_host_app_alive():
+    pid = os.environ["SWBBUILD_SERVICE_PROXY_HOST_APP_PROCESS_ID"]
+    return is_pid_alive(int(pid))
+
+
 def client_put_message_to_server(message: str):
     config_file_path = config_file()
     if config_file_path is None:
@@ -68,7 +73,13 @@ def server_get_message_from_client():
             return json.loads(cnt)
 
 
-def check_if_server_exists(session_id: str):
+def is_pid_alive(pid: int):
+    if psutil.pid_exists(pid):
+        return True
+    return False
+
+
+def get_server_pid_by_session_id(session_id: str) -> int | None:
     if session_id is None:
         return False
     # find pid of server with command line argument session_id
@@ -77,15 +88,10 @@ def check_if_server_exists(session_id: str):
             cmdline = proc.info["cmdline"]
             if cmdline and session_id in " ".join(cmdline):
                 pid = proc.info["pid"]
-                break
+                return pid
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             continue
-    else:
-        return False
-
-    if psutil.pid_exists(pid):
-        return True
-    return False
+    return None
 
 
 async def push_data_to_stdout(out, stdout):

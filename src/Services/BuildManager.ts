@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
 import { CommandContext } from "../CommandManagement/CommandContext";
-import { getWorkspaceFolder, ProjectEnv } from "../env";
+import { getSWBBuildServiceConfigTempFile, getWorkspaceFolder, ProjectEnv } from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
@@ -43,6 +43,7 @@ export class BuildManager {
     static sessionId = randomUUID();
 
     static async commonEnv() {
+        const pid = process.pid;
         const env = {} as { [name: string]: string };
         env["SWBBUILD_SERVICE_PROXY_PATH"] = path.join(
             __dirname,
@@ -51,14 +52,11 @@ export class BuildManager {
             "XCBBuildServiceProxy",
             "SWBBuildService.py"
         );
+        env["SWBBUILD_SERVICE_PROXY_HOST_APP_PROCESS_ID"] = pid.toString();
         env["SWBBUILD_SERVICE_PROXY_SESSION_ID"] = BuildManager.sessionId.toString();
-        env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] = path.join(
-            getWorkspaceFolder()?.fsPath || "",
-            ".vscode",
-            "xcode",
-            "swbbuild_proxy_config.json"
+        env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] = getSWBBuildServiceConfigTempFile(
+            this.sessionId
         );
-
         return env;
     }
 

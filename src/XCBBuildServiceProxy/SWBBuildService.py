@@ -8,7 +8,7 @@ import os
 
 from BuildServiceUtils import (
     make_unblocking,
-    check_if_server_exists,
+    get_server_pid_by_session_id,
     client_put_message_to_server,
 )
 from BuildServiceHelper import Context, run_client, run_server, run_xcode_client
@@ -43,41 +43,43 @@ def main():
             import subprocess
             import tempfile
 
-            stdin_temp = tempfile.NamedTemporaryFile()
-            stdout_temp = tempfile.NamedTemporaryFile()
-            message = {
-                "command": "build",
-                "stdin_file": stdin_temp.name,
-                "stdout_file": stdout_temp.name,
-            }
-            client_put_message_to_server(message)
+            # create pipes communication with server, delete temp files after communication done
+            with tempfile.NamedTemporaryFile(
+                "wb"
+            ) as stdin_temp, tempfile.NamedTemporaryFile("rb") as stdout_temp:
+                message = {
+                    "command": "build",
+                    "stdin_file": stdin_temp.name,
+                    "stdout_file": stdout_temp.name,
+                }
+                client_put_message_to_server(message)
 
-            context.stdin_file = open(stdin_temp.name, "wb")
-            context.stdout_file = open(
-                stdout_temp.name, "rb"
-            )  # read out of server's stdout
-            make_unblocking(context.stdout_file)
-            make_unblocking(context.stdin_file)
+                context.stdin_file = stdin_temp
+                context.stdout_file = stdout_temp  # read out of server's stdout
+                make_unblocking(context.stdout_file)
+                make_unblocking(context.stdin_file)
 
-            if not check_if_server_exists(context.session_id):
-                server_command = sys.argv + ["-proxy-server", context.session_id]
-                if is_debug():
-                    server_command = context.command + [
-                        "-proxy-server",
-                        context.session_id,
-                    ]
-                    server_command[0] = server_command[0].replace("-origin", "")
-                subprocess.Popen(
-                    server_command,
-                    close_fds=True,
-                    start_new_session=True,
-                    cwd=os.getcwd(),
-                    env=os.environ,
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            run_client(context)
+                context.server_pid = get_server_pid_by_session_id(context.session_id)
+                if not context.server_pid:
+                    server_command = sys.argv + ["-proxy-server", context.session_id]
+                    if is_debug():
+                        server_command = context.command + [
+                            "-proxy-server",
+                            context.session_id,
+                        ]
+                        server_command[0] = server_command[0].replace("-origin", "")
+                    server = subprocess.Popen(
+                        server_command,
+                        close_fds=True,
+                        start_new_session=True,
+                        cwd=os.getcwd(),
+                        env=os.environ,
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    context.server_pid = server.pid
+                run_client(context)
         else:  # server
             if is_debug():
                 import debugpy

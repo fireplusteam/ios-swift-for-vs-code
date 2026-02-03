@@ -12,6 +12,8 @@ from BuildServiceUtils import (
     mtime_of_config_file,
     server_get_message_from_client,
     make_unblocking,
+    is_pid_alive,
+    is_host_app_alive,
 )
 from RequestModifiers import RequestModifierBase, ClientRequestModifier
 
@@ -242,10 +244,11 @@ async def xcode_client(context: Context):
         asyncio.create_task(outer.read_server_data(process.stdout))
         while True:
             await asyncio.sleep(0.3)
-            if await check_for_exit():
+            if await check_for_exit() or process.returncode is not None:
                 break
     finally:
-        process.terminate()
+        if process.returncode is None:
+            process.terminate()
         context.should_exit = True
         sys.exit(0)
 
@@ -266,7 +269,7 @@ async def main_client(context: Context):
         asyncio.create_task(outer.read_server_data(context.stdout_file))
         while True:
             await asyncio.sleep(0.3)
-            if await check_for_exit():
+            if await check_for_exit() or not is_pid_alive(context.server_pid):
                 break
     finally:
         context.should_exit = True
@@ -317,9 +320,16 @@ async def main_server(context: Context):
                         make_unblocking(outer.stdout)
                     elif message["command"] == "stop":
                         break
+                else:
+                    if process.returncode is not None or not is_host_app_alive():
+                        context.log(
+                            f"SERVER: SWBBuildService Process exited with {process.returncode}, or host app not alive"
+                        )
+                        break
 
     finally:
-        process.terminate()
+        if process.returncode is None:
+            process.terminate()
         context.should_exit = True
         sys.exit(0)
 

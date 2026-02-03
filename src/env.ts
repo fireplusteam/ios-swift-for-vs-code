@@ -478,6 +478,13 @@ export function getSWBBuildServicePath() {
     );
 }
 
+export function getSWBBuildServiceConfigTempFile(sessionId: string) {
+    return path.join(
+        os.tmpdir(),
+        `swb_build_service_proxy_config_${sessionId.replaceAll("-", "_")}.json`
+    );
+}
+
 function readEnvFileToDict() {
     if (fs.existsSync(getEnvFilePath()) === false) {
         return {};
