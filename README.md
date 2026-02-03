@@ -6,7 +6,6 @@
 You can support this project by giving a star on GitHub ⭐️
 
 [![GitHub](https://img.shields.io/github/stars/fireplusteam/ios_vs_code?style=social)](https://github.com/fireplusteam/ios_vs_code)
-[![Github Sponsors](https://img.shields.io/badge/Github%20Sponsors-%E2%9D%A4-red?style=flat&logo=github)](https://github.com/sponsors/ios_vs_code)
 
 ---
 
@@ -234,8 +233,9 @@ This extension contributes the following settings:
 - `vscode-ios.watcher.enabled`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file.
 - `vscode-ios.watcher.jobs`: Number of parallel jobs for xcodebuild watcher which builds the project in background to provide up-to-date indexes for LSP client.
 - `vscode-ios.build.compilationCache` : Enable/disable the compilation cache to speed up the building time.
-- `vscode-ios.lsp.buildIndexesWhileBuilding`: Enable/disable building indexes while building the project to keep indexes up to date.
 - `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
+- `vscode-ios.build.gccPrecompiledHeaders`: When on this's causing issue with C++/Objective-C LSP client on incremental builds. If it works for you, enables the use of precompiled headers (PCH) in the build process. Precompiled headers can reduce compilation times by allowing frequently used headers to be compiled once and reused across multiple source files.
+- `vscode-ios.lsp.buildIndexesWhileBuilding`: Enable/disable building indexes while building the project to keep indexes up to date.
 - `vscode-ios.swiftui.runtimeWarnings`: Enable/disable SwiftUI runtime warnings in the sidebar Xcode panel of this extension.
 - `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
 - `vscode-ios.lsp.c_family`: Enable/disable C/C++/Objective-C language server support for header files to provide better autocomplete for such files.
@@ -259,6 +259,7 @@ This extension contributes the following settings:
 - When you use 'mixedWithXcode' building system mode, it may lead to some unpredictable behavior, use it on your own risk
 - Xcode folder references are supported only for adding folders,renaming/moving/deleting folder references. Also added some basic support of editing targets for such folder references, but it may not work in some complex cases when you need to add/remove files individually from such folder references in targets.
 - If you change some tests in Xcode while VS code is opened, you may need to refresh the test explorer or refresh a cache via "Xcode: Project: Reload" command to reflect the changes in the test explorer as implementing file watcher for tests explorer has performance issues for large projects currently.
+- Precompiled headers may cause issues with C++/Objective-C LSP client on incremental builds, so it's disabled by default. You can try to enable it in the settings and see if it works for you.
 
 ## Release Notes
 

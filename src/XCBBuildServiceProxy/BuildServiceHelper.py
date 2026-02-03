@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# This program is for proxy of SWBBuildService, allows you to manipulate with XCode build on low level
+# This program is for proxy of SWBBuildService, allows you to manipulate with Xcode build on low level
 import sys
 import os
 import asyncio
@@ -47,11 +47,7 @@ class Context:
             build_service_path = os.path.sep.join(xcode_dev_path_components)
         build_service_path = os.path.join(
             build_service_path,
-            (
-                "SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/MacOS"
-                if serviceName == "SWBBuildService"
-                else "SharedFrameworks/XCBuild.framework/Versions/A/PlugIns/XCBBuildService.bundle/Contents/MacOS"
-            ),
+            "SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/MacOS",
         )
 
         self.is_client = True
@@ -167,7 +163,8 @@ class STDFeeder:
                 self.msg_reader.reset()
 
                 await self.write_stdin_bytes(proc_stdin, buffer)
-                self.context.log(f"CLIENT: {str(buffer)}")
+                if self.context.debug_mode:
+                    self.context.log(f"CLIENT: {str(buffer[12:])}")
 
 
 # READ from SWBBuildService and write to std output
@@ -223,7 +220,8 @@ class STDOuter:
                         buffer = self.msg_reader.buffer.copy()
                         self.msg_reader.reset()
 
-                        self.context.log(f"\tSERVER: {buffer[:150]}")
+                        if self.context.debug_mode:
+                            self.context.log(f"\tSERVER: {buffer[12:]}")
                         await self.write_stdout_bytes(buffer)
             else:  # no data
                 await asyncio.sleep(0.03)

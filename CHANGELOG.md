@@ -3,10 +3,11 @@
 ## 0.6.13 - 2026-02-26
 
 ### Added
+
 - SWBBuildServiceProxy now persistently works in the background and is not terminated after each build which allows to have fast incremental builds like in Xcode and better support of autocompletion for large projects. Full instructions in the README.md file.
+- Added setting `vscode-ios.build.gccPrecompiledHeaders` to enable/disable the use of precompiled headers (PCH) in the build process. Precompiled headers can reduce compilation times by allowing frequently used headers to be compiled once and reused across multiple source files. Note that enabling this option may cause issues with the C++/Objective-C LSP client on incremental builds, so it is disabled by default.
 
 ### Fixed
-
 
 ## 0.6.12 - 2026-02-19
 
