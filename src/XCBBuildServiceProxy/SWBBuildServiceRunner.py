@@ -12,14 +12,16 @@ from MessageReader import MessageReader, MsgStatus
 
 
 if __name__ == "__main__":
-    # if "SWBBUILD_SERVICE_PROXY_PATH" not in os.environ:
-    # default path to the SWBBuildService proxy script
-    python_script = "/Users/Ievgenii_Mykhalevskyi/repos/fireplusteam/ios_vs_code/src/XCBBuildServiceProxy/SWBBuildService.py"
-    # else:
-    #     python_script = os.environ["SWBBUILD_SERVICE_PROXY_PATH"]
+    # before running this script make sure to setup virtual environment with required packages
+    # python3 -m venv .venv
+    # source .venv/bin/activate
+    # pip install -r requirements.txt
+
+    root = "/Users/Ievgenii_Mykhalevskyi/repos/fireplusteam/ios_vs_code"
+    venv_path = f"{root}/.venv"
+    python_script = f"{root}/src/XCBBuildServiceProxy/SWBBuildService.py"
 
     # setup virtual environment path
-    venv_path = "/Users/Ievgenii_Mykhalevskyi/repos/fireplusteam/ios_vs_code/venv"
     env = os.environ.copy()
     env["VENV_PATH"] = venv_path
     # enable debug mode in the subprocess

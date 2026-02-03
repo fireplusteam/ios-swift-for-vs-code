@@ -1,2 +1,1 @@
-aiofiles
-psutil
+debugpy
