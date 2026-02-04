@@ -228,6 +228,10 @@ export class BuildManager {
                     "-skipUnavailableActions", // for autocomplete, skip if it fails
                     "-jobs",
                     jobsCountForWatcher().toString(),
+                    // "CODE_SIGN_IDENTITY=",
+                    // "CODE_SIGNING_REQUIRED=NO",
+                    // "CODE_SIGN_ENTITLEMENTS=",
+                    // "CODE_SIGNING_ALLOWED=NO",
                 ],
                 env: {
                     ...(await BuildManager.commonEnv()),
