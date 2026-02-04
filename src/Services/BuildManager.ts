@@ -28,12 +28,6 @@ function jobsCountForWatcher(): number {
     return Math.min(Math.max(jobs, 1), 16);
 }
 
-function isGccPrecompiledHeadersEnabled() {
-    return vscode.workspace
-        .getConfiguration("vscode-ios", getWorkspaceFolder())
-        .get<boolean>("build.gccPrecompiledHeaders", false);
-}
-
 export interface BuildTestsInput {
     projectFile: string;
     tests: string[];
@@ -89,10 +83,8 @@ export class BuildManager {
         if (isCompilationCacheEnabled()) {
             extra.push("COMPILATION_CACHE_ENABLE_CACHING=YES"); // Caches the results of compilations for a particular set of inputs.
         }
-        if (isGccPrecompiledHeadersEnabled()) {
-            // precompiled header breaks C++ autocompletion after incremental builds, so disable them by default
-            extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
-        }
+        // precompiled header breaks C++ autocompletion after incremental builds, so disable them by default
+        extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
         return [
             "-configuration",
             await projectEnv.projectConfiguration,

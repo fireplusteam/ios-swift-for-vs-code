@@ -150,13 +150,6 @@
                     "description": "Caches the results of compilations for a particular set of inputs. Enabling this option can significantly speed up subsequent builds by reusing previously compiled outputs when the same inputs are encountered again.",
                     "scope": "resource"
                 },
-                "vscode-ios.build.gccPrecompiledHeaders": {
-                    "type": "boolean",
-                    "default": false,
-                    "title": "Enable GCC Precompiled Headers. Not Recommended as it may cause issues with lsp client",
-                    "description": "When on this's causing issue with C++/Objective-C LSP client on incremental builds. If it works for you, enables the use of precompiled headers (PCH) in the build process. Precompiled headers can reduce compilation times by allowing frequently used headers to be compiled once and reused across multiple source files.",
-                    "scope": "resource"
-                },
                 "vscode-ios.watcher.enabled": {
                     "type": "boolean",
                     "default": true,
