@@ -5,7 +5,7 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand } from "./CommandManagement/AtomicCommand";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { sleep } from "./utils";
-import { AutocompleteWatcher } from "./AutocompleteWatcher";
+import { AutocompleteWatcher } from "./BackgroundIndexing/AutocompleteWatcher";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     command: string;

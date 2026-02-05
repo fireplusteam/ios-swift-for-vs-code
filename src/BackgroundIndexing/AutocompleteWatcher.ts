@@ -1,15 +1,15 @@
 import * as vscode from "vscode";
-import { getLogRelativePath, getWorkspaceFolder, isActivated } from "./env";
-import { emptyAutobuildLog } from "./utils";
-import { sleep } from "./utils";
-import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
-import { AtomicCommand, UserCommandIsExecuting } from "./CommandManagement/AtomicCommand";
-import { BuildManager } from "./Services/BuildManager";
-import { CommandContext, UserTerminatedError } from "./CommandManagement/CommandContext";
-import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
-import { LogChannelInterface } from "./Logs/LogChannel";
+import { getLogRelativePath, getWorkspaceFolder, isActivated } from "../env";
+import { emptyAutobuildLog } from "../utils";
+import { sleep } from "../utils";
+import { ProblemDiagnosticResolver } from "../ProblemDiagnosticResolver";
+import { AtomicCommand, UserCommandIsExecuting } from "../CommandManagement/AtomicCommand";
+import { BuildManager } from "../Services/BuildManager";
+import { CommandContext, UserTerminatedError } from "../CommandManagement/CommandContext";
+import { BuildServerLogParser } from "../LSP/LSPBuildServerLogParser";
+import { LogChannelInterface } from "../Logs/LogChannel";
 import * as path from "path";
-import { ProjectManagerProjectDependency, TargetDependency } from "./ProjectManager/ProjectManager";
+import { SemanticManagerInterface, TargetIndexStatus } from "./SemanticManager";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -30,7 +30,7 @@ export class AutocompleteWatcher {
     constructor(
         atomicCommand: AtomicCommand,
         problemResolver: ProblemDiagnosticResolver,
-        private semanticManager: SemanticManager,
+        private semanticManager: SemanticManagerInterface,
         private log: LogChannelInterface
     ) {
         this.atomicCommand = atomicCommand;
@@ -67,7 +67,9 @@ export class AutocompleteWatcher {
                 // file content changed, mark dependent targets out of date
                 this.changedFiles.set(doc.uri.fsPath, textOfDoc);
                 const fileTargets = new Set(
-                    this.semanticManager.statusOf(doc.uri.fsPath).map(target => target.id || "")
+                    this.semanticManager
+                        .statusOfTargetsForFile(doc.uri.fsPath)
+                        .map(target => target.id || "")
                 );
 
                 // all dependent targets except the file targets
@@ -93,8 +95,8 @@ export class AutocompleteWatcher {
             return;
         }
         const statusEntry = this.semanticManager
-            .statusOf(file.fsPath)
-            .filter(entry => entry.targetStatus !== Status.UpToDate);
+            .statusOfTargetsForFile(file.fsPath)
+            .filter(entry => entry.targetStatus !== TargetIndexStatus.UpToDate);
         const dependencies = this.semanticManager.getAllTargetsDependencies(
             this.activelyBuildingTargetsIds
         );
@@ -247,175 +249,4 @@ export class AutocompleteWatcher {
 
 function removeAllWhiteSpaces(str: string) {
     return str.replace(/\s/g, "");
-}
-
-enum Status {
-    Unknown,
-    OutOfDate,
-    UpToDate,
-}
-
-export class SemanticManager {
-    private status = new Map<string, { targetStatus: Status; lastTouchTime: number }>();
-
-    private graph = new Map<string, TargetDependency>();
-    private inverseGraph = new Map<string, Set<string>>();
-
-    private filesToTargets = new Map<string, Set<string>>();
-
-    constructor(private targetGraphResolver: ProjectManagerProjectDependency) {}
-
-    statusOf(
-        filePath: string
-    ): { id: string | undefined; targetStatus: Status; lastTouchTime: number }[] {
-        const targets = this.filesToTargets.get(filePath);
-        if (targets === undefined) {
-            return [{ id: undefined, targetStatus: Status.UpToDate, lastTouchTime: Date.now() }];
-        }
-        return Array.from(targets).map(targetId => {
-            const statusEntry = this.status.get(targetId);
-            if (statusEntry === undefined) {
-                return { id: targetId, targetStatus: Status.Unknown, lastTouchTime: 0 };
-            }
-            return {
-                id: targetId,
-                targetStatus: statusEntry.targetStatus,
-                lastTouchTime: statusEntry.lastTouchTime,
-            };
-        });
-    }
-
-    getTargetById(targetId: string): TargetDependency | undefined {
-        return this.graph.get(targetId);
-    }
-
-    getTargetIdsByNames(targetNames: string[]): Set<string> {
-        const result = new Set<string>();
-        for (const [targetId, deps] of this.graph.entries()) {
-            if (targetNames.includes(deps.targetName)) {
-                result.add(targetId);
-            }
-        }
-        return result;
-    }
-
-    async refreshSemanticGraph() {
-        const newGraph = await this.targetGraphResolver.getTargetDependenciesGraph();
-
-        const changedTargets = new Set<string>();
-        this.filesToTargets.clear();
-        for (const [targetId, deps] of newGraph.entries()) {
-            const oldTarget = this.graph.get(targetId);
-            if (oldTarget !== undefined && oldTarget.files !== deps.files) {
-                changedTargets.add(targetId);
-            } else if (oldTarget === undefined) {
-                changedTargets.add(targetId);
-            }
-            for (const file of deps.files) {
-                let targets = this.filesToTargets.get(file);
-                if (!targets) {
-                    targets = new Set<string>();
-                    this.filesToTargets.set(file, targets);
-                }
-                targets.add(targetId);
-            }
-        }
-
-        this.graph = newGraph;
-
-        this.inverseGraph.clear();
-        for (const [targetId, deps] of this.graph.entries()) {
-            for (const dependencyId of deps.dependencies) {
-                let inverseDeps = this.inverseGraph.get(dependencyId);
-                if (!inverseDeps) {
-                    inverseDeps = new Set<string>();
-                    this.inverseGraph.set(dependencyId, inverseDeps);
-                }
-                inverseDeps.add(targetId);
-            }
-        }
-
-        const allChangedTargets = this.getAllDependentTargets(changedTargets);
-        this.markTargetOutOfDate(allChangedTargets);
-    }
-
-    markTargetOutOfDate(targetIds: Set<string>) {
-        const lastTouchTime = Date.now();
-        for (const targetId of targetIds) {
-            const statusEntry = this.status.get(targetId);
-            if (statusEntry) {
-                statusEntry.targetStatus = Status.OutOfDate;
-                statusEntry.lastTouchTime = lastTouchTime;
-            } else {
-                this.status.set(targetId, {
-                    targetStatus: Status.OutOfDate,
-                    lastTouchTime: lastTouchTime,
-                });
-            }
-        }
-    }
-
-    markTargetUpToDate(targetIds: Set<string>, touchTime: number) {
-        for (const targetId of targetIds) {
-            const statusEntry = this.status.get(targetId);
-            if (statusEntry) {
-                if (
-                    statusEntry.targetStatus === Status.OutOfDate &&
-                    statusEntry.lastTouchTime > touchTime
-                ) {
-                    // if the target was modified later, skip updating to UpToDate as we need another build
-                    continue;
-                }
-                statusEntry.targetStatus = Status.UpToDate;
-                statusEntry.lastTouchTime = touchTime;
-            } else {
-                this.status.set(targetId, {
-                    targetStatus: Status.UpToDate,
-                    lastTouchTime: touchTime,
-                });
-            }
-        }
-    }
-
-    getAllTargetsDependencies(targetIds: Set<string>): Set<string> {
-        const result = new Set<string>();
-        const visitQueue = Array.from(targetIds);
-        while (visitQueue.length > 0) {
-            const currentTargetId = visitQueue.pop()!;
-            if (result.has(currentTargetId)) {
-                continue;
-            }
-            result.add(currentTargetId);
-            const targetDep = this.graph.get(currentTargetId);
-            if (targetDep) {
-                for (const childTargetId of targetDep.dependencies) {
-                    if (!result.has(childTargetId)) {
-                        visitQueue.push(childTargetId);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    getAllDependentTargets(targetIds: Set<string>): Set<string> {
-        const result = new Set<string>();
-        const visitQueue = Array.from(targetIds);
-        while (visitQueue.length > 0) {
-            const currentTargetId = visitQueue.pop()!;
-            if (result.has(currentTargetId)) {
-                continue;
-            }
-            result.add(currentTargetId);
-            const dependents = this.inverseGraph.get(currentTargetId);
-            if (dependents) {
-                for (const dependentTargetId of dependents) {
-                    if (!result.has(dependentTargetId)) {
-                        visitQueue.push(dependentTargetId);
-                    }
-                }
-            }
-        }
-        return result;
-    }
 }
