@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import { buildAutocomplete, buildSelectedTarget, cleanDerivedData } from "./buildCommands";
+import { buildSelectedTarget, cleanDerivedData } from "./buildCommands";
 import { isActivated } from "./env";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { AtomicCommand } from "./CommandManagement/AtomicCommand";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { sleep } from "./utils";
+import { AutocompleteWatcher } from "./AutocompleteWatcher";
 
 interface BuildTaskDefinition extends vscode.TaskDefinition {
     command: string;
@@ -29,7 +30,8 @@ export class BuildTaskProvider implements vscode.TaskProvider {
     constructor(
         private type: BuildTaskType,
         problemResolver: ProblemDiagnosticResolver,
-        atomicCommand: AtomicCommand
+        atomicCommand: AtomicCommand,
+        private autocompleteWatcher: AutocompleteWatcher
     ) {
         this.type = type;
         this.problemResolver = problemResolver;
@@ -72,7 +74,14 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                         "buildForAutocomplete",
                         vscode.TaskGroup.Build,
                         async context => {
-                            await buildAutocomplete(context, this.problemResolver);
+                            await this.autocompleteWatcher.triggerIncrementalBuild(
+                                vscode.window.activeTextEditor?.document.uri,
+                                {
+                                    commandContext: context,
+                                    includeTargets: [],
+                                    excludeTargets: [],
+                                }
+                            );
                         }
                     ),
                 ];
@@ -152,11 +161,13 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                                 await buildSelectedTarget(context, this.problemResolver);
                                 break;
                             case "buildForAutocomplete":
-                                await buildAutocomplete(
-                                    context,
-                                    this.problemResolver,
-                                    taskDefinition.includeTargets ?? [],
-                                    taskDefinition.excludeTargets ?? []
+                                await this.autocompleteWatcher.triggerIncrementalBuild(
+                                    vscode.window.activeTextEditor?.document.uri,
+                                    {
+                                        commandContext: context,
+                                        includeTargets: taskDefinition.includeTargets ?? [],
+                                        excludeTargets: taskDefinition.excludeTargets ?? [],
+                                    }
                                 );
                                 break;
                             case "cleanDerivedData":

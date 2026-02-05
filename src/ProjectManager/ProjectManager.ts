@@ -35,10 +35,9 @@ import {
 export interface ProjectManagerInterface {
     getRootProjectTargets(): Promise<string[]>;
 
-    addBuildAllTargetToProjects(
+    addBuildAllDependentTargetsOfProjects(
         rootTargetName: string,
         includeTargets: string[],
-        excludeTargets: string[],
         shouldTouch: boolean
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 
@@ -50,14 +49,10 @@ export interface ProjectManagerInterface {
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 }
 
-export interface ProjectTarget {
-    name: string;
+export interface TargetDependency {
+    targetName: string;
     projectPath: string;
     id: string;
-}
-
-export interface TargetDependency {
-    target: ProjectTarget;
     files: Set<string>;
     dependencies: string[]; // list of target ids
 }
@@ -1031,10 +1026,9 @@ export class ProjectManager
         }
     }
 
-    async addBuildAllTargetToProjects(
+    async addBuildAllDependentTargetsOfProjects(
         rootTargetName: string,
         includeTargets: string[],
-        excludeTargets: string[],
         shouldTouch: boolean
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
         // root project should be the first one
@@ -1048,8 +1042,7 @@ export class ProjectManager
                     projectFiles,
                     schemeName,
                     rootTargetName,
-                    includeTargets.join(","),
-                    excludeTargets.join(",")
+                    includeTargets.join(",")
                 ),
             shouldTouch
         );
@@ -1198,8 +1191,15 @@ export class ProjectManager
 
             for (const target of targets) {
                 const depTarget: TargetDependency = {
-                    target: { name: target, projectPath: project, id: `${project}::${target}` },
-                    files: await this.projectCache.getList(project, true),
+                    targetName: target,
+                    projectPath: project,
+                    id: `${getFilePathInWorkspace(project)}::${target}`,
+                    files: new Set(
+                        await this.rubyProjectFilesManager.listFilesFromTarget(
+                            getFilePathInWorkspace(project),
+                            target
+                        )
+                    ),
                     dependencies: [],
                 };
                 projectsByTargetName.set(target, [
@@ -1207,19 +1207,20 @@ export class ProjectManager
                     project,
                 ]);
 
-                graph.set(depTarget.target.id, depTarget);
+                graph.set(depTarget.id, depTarget);
             }
         }
 
         // resolve dependencies
         for (const [, targetDep] of graph) {
             const dependencies = await this.rubyProjectFilesManager.listDependenciesForTarget(
-                getFilePathInWorkspace(targetDep.target.projectPath),
-                targetDep.target.name
+                getFilePathInWorkspace(targetDep.projectPath),
+                targetDep.targetName
             );
             for (const depTargetName of dependencies) {
                 for (const project of projectsByTargetName.get(depTargetName) || []) {
-                    const depTargetId = `${project}::${depTargetName}`;
+                    // do not change the order of id, as it's parsed in project_helper.rb by splitting with "::"
+                    const depTargetId = `${getFilePathInWorkspace(project)}::${depTargetName}`;
                     if (graph.has(depTargetId)) {
                         targetDep.dependencies.push(depTargetId);
                     }

@@ -181,8 +181,7 @@ export class BuildManager {
     async buildAutocomplete(
         context: CommandContext,
         logFilePath: string,
-        includeTargets: string[] = [],
-        excludeTargets: string[] = []
+        includeTargets: string[] = []
     ) {
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
@@ -190,12 +189,12 @@ export class BuildManager {
                 await this.xcodeBuildExecutor.canStartBuildInXcode(context);
             try {
                 if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
-                    const scheme = await context.projectManager.addBuildAllTargetToProjects(
-                        await context.projectEnv.projectScheme,
-                        includeTargets,
-                        excludeTargets,
-                        canStartBuildInXcode // touch project only if we are going to build in Xcode
-                    );
+                    const scheme =
+                        await context.projectManager.addBuildAllDependentTargetsOfProjects(
+                            await context.projectEnv.projectScheme,
+                            includeTargets,
+                            canStartBuildInXcode // touch project only if we are going to build in Xcode
+                        );
                     context.projectEnv.setBuildScheme(scheme);
                     if (scheme) {
                         allBuildScheme = scheme.scheme;

@@ -106,7 +106,7 @@ export class ToolsManager {
         );
         try {
             // remove quarantine attribute to allow execution without user interaction as it was generated from python script by user
-            await this.terminal.executeCommand(
+            this.terminal.executeCommand(
                 `xattr -d -r com.apple.quarantine '${distPath}/SWBBuildService'`
             );
         } catch {

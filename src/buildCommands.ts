@@ -60,45 +60,6 @@ export async function buildSelectedTarget(
     }
 }
 
-// AUTOCOMPLETE
-
-export async function buildAutocomplete(
-    context: CommandContext,
-    problemResolver: ProblemDiagnosticResolver,
-    includeTargets: string[] = [],
-    excludeTargets: string[] = []
-) {
-    await checkWorkspace(context);
-    const buildManager = new BuildManager();
-    const filePath = getFileNameLog();
-    const buildServer = new BuildServerLogParser(context.log);
-    buildServer.startParsing(context.cancellationToken, context.buildEvent);
-    const rawParser = problemResolver.parseAsyncLogs(filePath, context.buildEvent);
-    try {
-        const build = async () => {
-            try {
-                await buildManager.buildAutocomplete(
-                    context,
-                    filePath,
-                    includeTargets,
-                    excludeTargets
-                );
-            } catch (error) {
-                await handleValidationErrors(context, error, async () => {
-                    await checkWorkspace(context);
-                    await build();
-                });
-            }
-        };
-        await build();
-    } catch (error) {
-        buildServer.endParsing(error);
-        throw error;
-    } finally {
-        await problemResolver.end(context.bundle, rawParser);
-    }
-}
-
 // TESTS
 
 export async function buildTestsForCurrentFile(

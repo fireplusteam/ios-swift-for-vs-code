@@ -34,8 +34,7 @@ export interface RubyProjectFilesManagerInterface {
         projectFiles: string[],
         schemeName: string,
         rootTargetName: string,
-        includeTargets: string,
-        excludeTargets: string
+        includeTargets: string
     ): Promise<string[]>;
     generateTestSchemeDependOnTarget(
         projectFile: string,
@@ -152,12 +151,11 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
         projectFiles: string[],
         tag: string,
         rootTargetName: string,
-        includeTargets: string,
-        excludeTargets: string
+        includeTargets: string
     ) {
         return await this.executeRuby(
             projectFiles.join(":::"),
-            `generate_scheme_depend_on_target|^|^|${tag}|^|^|${rootTargetName}|^|^|${includeTargets}|^|^|${excludeTargets}`
+            `generate_scheme_depend_on_target|^|^|${tag}|^|^|${rootTargetName}|^|^|${includeTargets}`
         );
     }
 

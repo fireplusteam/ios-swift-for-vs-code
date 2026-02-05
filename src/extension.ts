@@ -144,7 +144,8 @@ async function initialize(
     fs.mkdir(getLogPath(), () => {});
     await projectManager.loadProjectFiles(true);
     await projectManager.cleanAutocompleteSchemes();
-    autocompleteWatcher.triggerIncrementalBuild();
+    await semanticManager.refreshSemanticGraph();
+    autocompleteWatcher.triggerIncrementalBuild(vscode.window.activeTextEditor?.document.uri);
     return true;
 }
 
@@ -162,6 +163,7 @@ const projectManager = new ProjectManager(
 const atomicCommand = new AtomicCommand(sourceLsp, projectManager, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;
+const semanticManager = new SemanticManager(projectManager);
 let autocompleteWatcher: AutocompleteWatcher | undefined;
 let testProvider: TestProvider | undefined;
 
@@ -190,7 +192,7 @@ export async function activate(context: vscode.ExtensionContext) {
     autocompleteWatcher = new AutocompleteWatcher(
         atomicCommand,
         problemDiagnosticResolver,
-        new SemanticManager(projectManager),
+        semanticManager,
         logChannel
     );
 
@@ -207,7 +209,9 @@ export async function activate(context: vscode.ExtensionContext) {
                         throw Error("Project Manager is not initialized");
                     }
                     await selectProjectFile(context, projectManager);
-                    autocompleteWatcher?.triggerIncrementalBuild();
+                    autocompleteWatcher?.triggerIncrementalBuild(
+                        vscode.window.activeTextEditor?.document.uri
+                    );
                 }, "Select Project");
             } catch {
                 vscode.window.showErrorMessage("Project was not loaded due to error");
@@ -304,9 +308,12 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 
     context.subscriptions.push(
-        projectManager.onProjectUpdate.event(() => {
+        projectManager.onProjectUpdate.event(async () => {
             testProvider?.findInitialFiles();
-            autocompleteWatcher?.triggerIncrementalBuild();
+            await semanticManager.refreshSemanticGraph();
+            autocompleteWatcher?.triggerIncrementalBuild(
+                vscode.window.activeTextEditor?.document.uri
+            );
         })
     );
 
@@ -320,13 +327,23 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.tasks.registerTaskProvider(
             "xcode",
-            new BuildTaskProvider("xcode", problemDiagnosticResolver, atomicCommand)
+            new BuildTaskProvider(
+                "xcode",
+                problemDiagnosticResolver,
+                atomicCommand,
+                autocompleteWatcher
+            )
         )
     );
     context.subscriptions.push(
         vscode.tasks.registerTaskProvider(
             "xcode-watch",
-            new BuildTaskProvider("xcode-watch", problemDiagnosticResolver, atomicCommand)
+            new BuildTaskProvider(
+                "xcode-watch",
+                problemDiagnosticResolver,
+                atomicCommand,
+                autocompleteWatcher
+            )
         )
     );
 

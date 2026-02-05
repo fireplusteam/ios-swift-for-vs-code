@@ -304,49 +304,24 @@ def generate_scheme_depend_on_target(
   projects,
   generated_scheme_name,
   original_scheme_name,
-  include_targets,
-  exclude_targets
+  include_targets
 )
   include_targets_list =
     include_targets.nil? == false ? include_targets.split(",") : []
-  exclude_targets_list =
-    exclude_targets.nil? == false ? exclude_targets.split(",") : []
+  # format of id = {project_path}::{target_name}
+  include_targets_list = include_targets_list.map { |id| id.split("::") }
 
   # root target scheme can be a scheme, load it if exists
   result_scheme_load = load_scheme_if_exists(projects, original_scheme_name)
   scheme = result_scheme_load[:scheme]
   project = result_scheme_load[:project]
 
-  root_targets = []
   if project.nil?
-    projects.each do |proj|
-      proj.targets.each do |target|
-        if target.name == original_scheme_name
-          root_targets = [target]
-          project = proj
-          break
-        end
-      end
-      break unless project.nil?
-    end
-  else
-    all_targets = get_all_targets_from_scheme(scheme)
-    root_targets =
-      all_targets
-        .map do |target|
-          get_target_by_name(project, target[:name], target[:uuid])
-        end
-        .reject(&:nil?)
-  end
-
-  if project.nil? || root_targets.empty?
     puts "scheme_does_not_exist"
     return
   end
 
   root_project_dir_path = project.path.dirname
-
-  visited = {}
 
   is_different_from_existing = false
 
@@ -354,56 +329,15 @@ def generate_scheme_depend_on_target(
   # remove "Testables" from test action
   scheme.test_action.testables = [] if not scheme.test_action.nil?
 
-  # use bfs to find all deps of the original_scheme_name target
-  # build inverted dependency graph
-  dep_graph = {}
-  project.targets.each do |target|
-    target.dependencies.each do |dep|
-      next if dep.target.nil? || dep.target.name.nil? || dep.target.name.empty?
+  # remove all buildable references from build action
+  scheme.build_action.entries = [] if not scheme.build_action.nil?
 
-      dep_graph[dep.target.name] ||= []
-      dep_graph[dep.target.name] << target
-    end
-  end
-
-  # bfs to find all dependent targets of the root_target
-  queue = root_targets.dup
-  queue.each { |target| visited[target.uuid] = true }
-  root_targets.each do |target|
-    if add_target_to_scheme(scheme, target, false, root_project_dir_path)
-      is_different_from_existing = true
-    end
-  end
-
-  while !queue.empty?
-    current = queue.shift
-    if dep_graph.key?(current.name)
-      dep_graph[current.name].each do |neighbor|
-        next if neighbor.nil? || neighbor.name.nil? || neighbor.name.empty?
-
-        if !visited.key?(neighbor.uuid) &&
-             exclude_targets_list.include?(neighbor.name) == false
-          visited[neighbor.uuid] = true
-          queue << neighbor
-          if add_target_to_scheme(
-               scheme,
-               neighbor,
-               false,
-               root_project_dir_path
-             )
-            is_different_from_existing = true
-          end
-        end
-      end
-    end
-  end
-
-  # add all other targets from include_targets_list
-  projects.each do |project|
-    project.targets.each do |target|
-      if !visited.key?(target.uuid) &&
-           include_targets_list.include?(target.name) &&
-           exclude_targets_list.include?(target.name) == false
+  # add all targets from include_targets_list
+  include_targets_list.each do |project_path, target_name|
+    target_project = projects.find { |p| p.path.to_s == project_path }
+    next if target_project.nil?
+    target_project.targets.each do |target|
+      if target.name == target_name
         if add_target_to_scheme(scheme, target, false, root_project_dir_path)
           is_different_from_existing = true
         end
@@ -614,7 +548,7 @@ def handle_action(project, action, arg)
   end
 
   if action == "generate_scheme_depend_on_target"
-    generate_scheme_depend_on_target(project, arg[1], arg[2], arg[3], arg[4])
+    generate_scheme_depend_on_target(project, arg[1], arg[2], arg[3])
     return
   end
 

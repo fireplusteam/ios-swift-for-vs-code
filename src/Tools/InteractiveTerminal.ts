@@ -1,11 +1,13 @@
 import * as vscode from "vscode";
-import { sleep } from "../utils";
 import { LogChannelInterface } from "../Logs/LogChannel";
 
 export class InteractiveTerminal {
     private terminal: vscode.Terminal;
     private log: LogChannelInterface;
     private closeDisposal: vscode.Disposable;
+    private onDidEndTerminalShellExecutionDisposal: vscode.Disposable | undefined;
+    private commands: Map<string, (event: vscode.TerminalShellExecutionEndEvent) => Promise<void>> =
+        new Map();
 
     private async shellIntegration(): Promise<vscode.TerminalShellIntegration> {
         return new Promise(resolve => {
@@ -22,6 +24,11 @@ export class InteractiveTerminal {
                 disposal?.dispose();
                 disposal = undefined;
             });
+            this.onDidEndTerminalShellExecutionDisposal =
+                vscode.window.onDidEndTerminalShellExecution(event => {
+                    this.log.info(`Terminal shell execution ended: ${event.execution.commandLine}`);
+                    this.commands.get(event.execution.commandLine.value)?.(event);
+                });
         });
     }
 
@@ -50,16 +57,15 @@ export class InteractiveTerminal {
     }
 
     async executeCommand(installScript: string): Promise<void> {
-        this.log.info(installScript);
+        this.log.info(`Executing command in terminal: ${installScript}`);
         return new Promise(async (resolver, reject) => {
             try {
-                let command: vscode.TerminalShellExecution | undefined = undefined;
                 let dispose: vscode.Disposable | undefined = undefined;
                 const localTerminal = this.terminal;
                 let closeDisposal: vscode.Disposable | undefined;
-                dispose = vscode.window.onDidEndTerminalShellExecution(async event => {
-                    await sleep(100); // wait for read to be ready
-                    if (command === event.execution) {
+                this.commands.set(
+                    installScript,
+                    async (event: vscode.TerminalShellExecutionEndEvent) => {
                         try {
                             for await (const data of event.execution.read()) {
                                 this.log.info(data);
@@ -80,7 +86,7 @@ export class InteractiveTerminal {
                             closeDisposal = undefined;
                         }
                     }
-                });
+                );
                 closeDisposal = vscode.window.onDidCloseTerminal(event => {
                     if (event === localTerminal) {
                         this.log.info(`Terminal is Closed`);
@@ -91,7 +97,7 @@ export class InteractiveTerminal {
                         reject(Error("Terminal is closed"));
                     }
                 });
-                command = (await this.shellIntegration()).executeCommand(installScript);
+                (await this.shellIntegration()).executeCommand(installScript);
             } catch (err) {
                 this.log.error(`Error executing command ${installScript} with error: ${err}`);
                 reject(err);
