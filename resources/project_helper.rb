@@ -286,6 +286,18 @@ def type_of_path(project, path)
   end
 end
 
+def list_dependencies_for_target(project, target_name)
+  project.targets.each do |target|
+    if target.name == target_name
+      # Local and Subprojects and Products dependencies
+      target.dependencies.each do |dep|
+        name = dep.name || dep.target&.name || dep.product_ref&.product_name
+        puts name if name
+      end
+    end
+  end
+end
+
 # SCHEME MANAGEMENT
 
 def generate_scheme_depend_on_target(
@@ -503,6 +515,10 @@ def handle_action(project, action, arg)
       generate_test_scheme_depend_on_target(project, arg[1], arg[2], arg[3])
       return
     end
+    if action == "list_dependencies_for_target"
+      package_list_dependencies_for_target(project, arg[1])
+      return
+    end
     return
   end
 
@@ -584,6 +600,11 @@ def handle_action(project, action, arg)
 
   if action == "list_targets_for_file"
     list_targets_for_file(project, arg[1])
+    return
+  end
+
+  if action == "list_dependencies_for_target"
+    list_dependencies_for_target(project, arg[1])
     return
   end
 

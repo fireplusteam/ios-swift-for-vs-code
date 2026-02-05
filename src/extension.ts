@@ -35,7 +35,7 @@ import { DebugConfigurationProvider } from "./Debug/DebugConfigurationProvider";
 import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { askIfDebuggable, initializeWithError, setContext } from "./inputPicker";
 import { deleteFile, emptyLog, getSessionId } from "./utils";
-import { AutocompleteWatcher } from "./AutocompleteWatcher";
+import { AutocompleteWatcher, SemanticManager } from "./AutocompleteWatcher";
 import { ProjectManager } from "./ProjectManager/ProjectManager";
 import { TestProvider } from "./TestsProvider/TestProvider";
 import { ToolsManager } from "./Tools/ToolsManager";
@@ -190,6 +190,7 @@ export async function activate(context: vscode.ExtensionContext) {
     autocompleteWatcher = new AutocompleteWatcher(
         atomicCommand,
         problemDiagnosticResolver,
+        new SemanticManager(projectManager),
         logChannel
     );
 

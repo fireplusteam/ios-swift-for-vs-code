@@ -9,6 +9,7 @@ import { UserTerminatedError } from "./CommandManagement/CommandContext";
 import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
 import { LogChannelInterface } from "./Logs/LogChannel";
 import * as path from "path";
+import { ProjectManagerProjectDependency, TargetDependency } from "./ProjectManager/ProjectManager";
 
 // Workaround to use build to update index, sourcekit doesn't support updating indexes in background
 export class AutocompleteWatcher {
@@ -26,6 +27,7 @@ export class AutocompleteWatcher {
     constructor(
         atomicCommand: AtomicCommand,
         problemResolver: ProblemDiagnosticResolver,
+        private semanticManager: SemanticManager,
         private log: LogChannelInterface
     ) {
         this.atomicCommand = atomicCommand;
@@ -55,7 +57,7 @@ export class AutocompleteWatcher {
                     return;
                 }
                 this.changedFiles.set(doc.uri.fsPath, textOfDoc);
-                this.triggerIncrementalBuild().catch(() => {});
+                // this.triggerIncrementalBuild().catch(() => {});
             })
         );
         this.problemResolver = problemResolver;
@@ -66,6 +68,7 @@ export class AutocompleteWatcher {
             return;
         }
         this.buildId++;
+        await this.semanticManager.refreshSemanticGraph();
         await this.incrementalBuild(this.buildId);
     }
 
@@ -166,4 +169,13 @@ export class AutocompleteWatcher {
 
 function removeAllWhiteSpaces(str: string) {
     return str.replace(/\s/g, "");
+}
+
+export class SemanticManager {
+    graph: Map<string, TargetDependency> | undefined;
+    constructor(private targetGraphResolver: ProjectManagerProjectDependency) {}
+
+    async refreshSemanticGraph() {
+        this.graph = await this.targetGraphResolver.getTargetDependenciesGraph();
+    }
 }

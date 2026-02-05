@@ -50,7 +50,24 @@ export interface ProjectManagerInterface {
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined>;
 }
 
-export class ProjectManager implements ProjectManagerInterface, vscode.Disposable {
+export interface ProjectTarget {
+    name: string;
+    projectPath: string;
+    id: string;
+}
+
+export interface TargetDependency {
+    target: ProjectTarget;
+    files: Set<string>;
+    dependencies: string[]; // list of target ids
+}
+export interface ProjectManagerProjectDependency {
+    getTargetDependenciesGraph(): Promise<Map<string, TargetDependency>>;
+}
+
+export class ProjectManager
+    implements ProjectManagerInterface, vscode.Disposable, ProjectManagerProjectDependency
+{
     private disposable: vscode.Disposable[] = [];
     private projectWatcherDisposable: vscode.Disposable[] = [];
 
@@ -1167,6 +1184,50 @@ export class ProjectManager implements ProjectManagerInterface, vscode.Disposabl
             }
         }
         return undefined;
+    }
+
+    async getTargetDependenciesGraph(): Promise<Map<string, TargetDependency>> {
+        const graph = new Map<string, TargetDependency>();
+
+        const projectsByTargetName = new Map<string, string[]>();
+
+        const projectFiles = this.projectCache.getProjects();
+        for (const project of projectFiles) {
+            const projectPath = getFilePathInWorkspace(project);
+            const targets = await this.rubyProjectFilesManager.getProjectTargets(projectPath);
+
+            for (const target of targets) {
+                const depTarget: TargetDependency = {
+                    target: { name: target, projectPath: project, id: `${project}::${target}` },
+                    files: await this.projectCache.getList(project, true),
+                    dependencies: [],
+                };
+                projectsByTargetName.set(target, [
+                    ...(projectsByTargetName.get(target) || []),
+                    project,
+                ]);
+
+                graph.set(depTarget.target.id, depTarget);
+            }
+        }
+
+        // resolve dependencies
+        for (const [, targetDep] of graph) {
+            const dependencies = await this.rubyProjectFilesManager.listDependenciesForTarget(
+                getFilePathInWorkspace(targetDep.target.projectPath),
+                targetDep.target.name
+            );
+            for (const depTargetName of dependencies) {
+                for (const project of projectsByTargetName.get(depTargetName) || []) {
+                    const depTargetId = `${project}::${depTargetName}`;
+                    if (graph.has(depTargetId)) {
+                        targetDep.dependencies.push(depTargetId);
+                    }
+                }
+            }
+        }
+
+        return graph;
     }
 }
 

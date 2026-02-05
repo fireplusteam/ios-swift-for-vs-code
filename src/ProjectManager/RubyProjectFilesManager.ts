@@ -27,6 +27,7 @@ export interface RubyProjectFilesManagerInterface {
     deleteFileFromProject(projectFile: string, file: string): Promise<string[]>;
     deleteFolderFromProject(projectFile: string, folder: string): Promise<string[]>;
     listTargetsForFile(projectFile: string, file: string): Promise<string[]>;
+    listDependenciesForTarget(projectFile: string, targetName: string): Promise<string[]>;
     typeOfPath(projectFile: string, path: string): Promise<string[]>;
     saveProject(projectFile: string): Promise<string[]>;
     generateSchemeDependOnTarget(
@@ -130,6 +131,13 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
 
     async listTargetsForFile(projectFile: string, file: string) {
         return await this.executeRuby(projectFile, `list_targets_for_file|^|^|${file}`);
+    }
+
+    async listDependenciesForTarget(projectFile: string, targetName: string) {
+        return await this.executeRuby(
+            projectFile,
+            `list_dependencies_for_target|^|^|${targetName}`
+        );
     }
 
     async typeOfPath(projectFile: string, path: string) {

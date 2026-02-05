@@ -11,9 +11,10 @@ $tests_dir = "Tests"
 class SwiftPackage
   class Target
     class Dependency
-      attr_accessor :target
-      def initialize(target)
+      attr_accessor :target, :product_name
+      def initialize(target, product_name)
         @target = target
+        @product_name = product_name
       end
     end
 
@@ -160,9 +161,16 @@ class SwiftPackage
               added_deps[dep_name] = true
               if targets.key?(dep_name)
                 resolved_dependencies << Target::Dependency.new(
-                  targets[dep_name]
+                  targets[dep_name],
+                  nil
                 )
               end
+            end
+          elsif dep_info.key?("product")
+            dep_info["product"].each do |product_name|
+              next if product_name.nil? || added_deps.key?(product_name)
+              added_deps[product_name] = true
+              resolved_dependencies << Target::Dependency.new(nil, product_name)
             end
           end
         end
@@ -245,6 +253,17 @@ def package_list_files_for_target(project, target_name)
     full_dir_path = (project.project_dir_path + dir_path).cleanpath
     if File.exist?(full_dir_path) && File.directory?(full_dir_path)
       find_files(full_dir_path).each { |file_path| puts file_path }
+    end
+  end
+end
+
+def package_list_dependencies_for_target(project, target_name)
+  project.targets.each do |target|
+    if target.name == target_name
+      target.dependencies.each do |dep|
+        name = dep.target&.name || dep.product_name
+        puts name if name
+      end
     end
   end
 end
