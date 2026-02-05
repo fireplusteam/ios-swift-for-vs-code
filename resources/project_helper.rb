@@ -311,7 +311,7 @@ def generate_scheme_depend_on_target(
   # format of id = {project_path}::{target_name}
   include_targets_list = include_targets_list.map { |id| id.split("::") }
 
-  # root target scheme can be a scheme, load it if exists
+  # load a scheme which is selected by a user to take base config if exists like codeCoverage, etc, so it builds in configuration close to user building for running an app. It forces less rebuilds between autocomplete and user builds
   result_scheme_load = load_scheme_if_exists(projects, original_scheme_name)
   scheme = result_scheme_load[:scheme]
   project = result_scheme_load[:project]
@@ -326,8 +326,15 @@ def generate_scheme_depend_on_target(
   is_different_from_existing = false
 
   # remove all test targets from scheme first and then add back only required ones as buildable references
-  # remove "Testables" from test action
+  # use selected by a user scheme as a base but we clear all testables and buildable references including pre/post actions
+  # as we only need compile flags
   scheme.test_action.testables = [] if not scheme.test_action.nil?
+  scheme.test_action.post_actions = [] if not scheme.test_action.nil?
+  scheme.test_action.pre_actions = [] if not scheme.test_action.nil?
+
+  scheme.build_action.entries = [] if not scheme.build_action.nil?
+  scheme.build_action.post_actions = [] if not scheme.build_action.nil?
+  scheme.build_action.pre_actions = [] if not scheme.build_action.nil?
 
   # remove all buildable references from build action
   scheme.build_action.entries = [] if not scheme.build_action.nil?
@@ -374,6 +381,7 @@ def generate_test_scheme_depend_on_target(
   test_targets_list = test_targets_list.uniq
   root_project_dir_path = project.path.dirname
 
+  # load a scheme which is selected by a user to take base config if exists like codeCoverage, etc, so it builds in configuration close to user building for running an app. It forces less rebuilds between autocomplete and user builds
   scheme = load_scheme_if_exists(project, original_scheme_name)[:scheme]
 
   is_different_from_existing = false
