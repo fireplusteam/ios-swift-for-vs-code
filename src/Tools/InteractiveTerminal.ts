@@ -53,7 +53,7 @@ export class InteractiveTerminal {
         this.log.info(installScript);
         return new Promise(async (resolver, reject) => {
             try {
-                const command = (await this.shellIntegration()).executeCommand(installScript);
+                let command: vscode.TerminalShellExecution | undefined = undefined;
                 let dispose: vscode.Disposable | undefined = undefined;
                 const localTerminal = this.terminal;
                 let closeDisposal: vscode.Disposable | undefined;
@@ -91,6 +91,7 @@ export class InteractiveTerminal {
                         reject(Error("Terminal is closed"));
                     }
                 });
+                command = (await this.shellIntegration()).executeCommand(installScript);
             } catch (err) {
                 this.log.error(`Error executing command ${installScript} with error: ${err}`);
                 reject(err);
