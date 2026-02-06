@@ -24,6 +24,8 @@ export interface SemanticManagerInterface {
 
     getAllTargetsDependencies(targetIds: Set<string>): Set<string>;
     getAllDependentTargets(targetIds: Set<string>): Set<string>;
+
+    markAllTargetsOutOfDate(): void;
 }
 
 export class SemanticManager implements SemanticManagerInterface {
@@ -194,5 +196,12 @@ export class SemanticManager implements SemanticManagerInterface {
             }
         }
         return result;
+    }
+
+    markAllTargetsOutOfDate(): void {
+        for (const statusEntry of this.status.values()) {
+            statusEntry.targetStatus = TargetIndexStatus.OutOfDate;
+            statusEntry.lastTouchTime = Date.now();
+        }
     }
 }

@@ -344,6 +344,8 @@ export class ProjectManager
                 "swift.sourcekit-lsp.disable": true,
                 "swift.disableSwiftPackageManagerIntegration": true,
                 "swift.searchSubfoldersForPackages": false,
+                "swift.disableSwiftlyInstallPrompt": true,
+                "swift.backgroundCompilation": false,
                 // "swift.sourcekit-lsp.supported-languages": [], // cause throwing activation error event which is not good, simply disable lsp should be enough
                 "swift.sourcekit-lsp.backgroundIndexing": "off",
                 "lldb-dap.serverMode": true, // use server mode for lldb-dap to improve performance on running tests and debugging multiple sessions

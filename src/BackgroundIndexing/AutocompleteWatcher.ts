@@ -30,7 +30,7 @@ export class AutocompleteWatcher {
     constructor(
         atomicCommand: AtomicCommand,
         problemResolver: ProblemDiagnosticResolver,
-        private semanticManager: SemanticManagerInterface,
+        readonly semanticManager: SemanticManagerInterface,
         private log: LogChannelInterface
     ) {
         this.atomicCommand = atomicCommand;
@@ -72,11 +72,13 @@ export class AutocompleteWatcher {
                         .map(target => target.id || "")
                 );
 
-                // all dependent targets except the file targets
+                // mark all dependent targets out of date
                 const dependentTargets = Array.from(
                     this.semanticManager.getAllDependentTargets(fileTargets)
-                ).filter(targetId => !fileTargets.has(targetId));
+                );
                 this.semanticManager.markTargetOutOfDate(new Set(dependentTargets));
+                // trigger build for the file to update index
+                this.triggerIncrementalBuild(doc.uri);
             })
         );
         this.problemResolver = problemResolver;
@@ -181,17 +183,15 @@ export class AutocompleteWatcher {
             buildServer.startParsing(context.cancellationToken, context.buildEvent);
             const rawParser = this.problemResolver.parseAsyncLogs(fileLog, context.buildEvent);
             let shouldCleanPreviousBuildErrors = true; // by default, clean previous errors
+            const excludedTargetIds = this.semanticManager.getTargetIdsByNames(excludeTargets);
+            const allBuildingTargetIds = new Set(
+                [
+                    ...Array.from(this.semanticManager.getTargetIdsByNames(includeTargets)),
+                    ...Array.from(toBuildTargetIds),
+                ].filter(name => name.length > 0 && !excludedTargetIds.has(name))
+            );
+            this.activelyBuildingTargetsIds = allBuildingTargetIds;
             try {
-                const excludedTargetIds = this.semanticManager.getTargetIdsByNames(excludeTargets);
-                const allBuildingTargetIds = new Set(
-                    [
-                        ...Array.from(this.semanticManager.getTargetIdsByNames(includeTargets)),
-                        ...Array.from(toBuildTargetIds),
-                    ].filter(name => name.length > 0 && !excludedTargetIds.has(name))
-                );
-
-                this.activelyBuildingTargetsIds = allBuildingTargetIds;
-
                 this.buildTouchTime = Date.now();
                 const buildManager = new BuildManager();
                 await buildManager.buildAutocomplete(
@@ -199,12 +199,6 @@ export class AutocompleteWatcher {
                     fileLog,
                     Array.from(allBuildingTargetIds)
                 );
-
-                // mark all built targets and their dependencies as up to date if they were not modified during the build
-                const allBuiltTargetsIds =
-                    this.semanticManager.getAllTargetsDependencies(allBuildingTargetIds);
-                this.semanticManager.markTargetUpToDate(allBuiltTargetsIds, this.buildTouchTime);
-                this.activelyBuildingTargetsIds.clear();
             } catch (error) {
                 buildServer.endParsing(error);
                 if (error === UserTerminatedError) {
@@ -212,6 +206,10 @@ export class AutocompleteWatcher {
                 }
                 throw error;
             } finally {
+                const allBuiltTargetsIds =
+                    this.semanticManager.getAllTargetsDependencies(allBuildingTargetIds);
+                // mark all built targets and their dependencies as up to date if they were not modified during the build
+                this.semanticManager.markTargetUpToDate(allBuiltTargetsIds, this.buildTouchTime);
                 this.activelyBuildingTargetsIds.clear();
                 await this.problemResolver.end(
                     context.bundle,

@@ -466,7 +466,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.build.clean", async () => {
             await atomicCommand.userCommandWithoutThrowingException(async context => {
-                await cleanDerivedData(context);
+                await cleanDerivedData(context, semanticManager);
             }, "Clean Derived Data");
         })
     );

@@ -62,7 +62,10 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                         "cleanDerivedData",
                         undefined,
                         async context => {
-                            await cleanDerivedData(context);
+                            await cleanDerivedData(
+                                context,
+                                this.autocompleteWatcher.semanticManager
+                            );
                         }
                     ),
                 ];
@@ -171,7 +174,10 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                                 );
                                 break;
                             case "cleanDerivedData":
-                                await cleanDerivedData(context);
+                                await cleanDerivedData(
+                                    context,
+                                    this.autocompleteWatcher.semanticManager
+                                );
                                 break;
                         }
                     },

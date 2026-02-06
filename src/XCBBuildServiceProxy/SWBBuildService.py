@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # This program is for proxy of SWBBuildService, allows you to manipulate with XCode build on low level
 # to build standalone executable use pyinstaller:
-# pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildServiceRunner.py --name SWBBuildService --distpath ~/Library/Application\ Support/SWBBuildServiceProxy/
+# pyinstaller --onefile src/XCBBuildServiceProxy/SWBBuildService.py --name SWBBuildService --distpath ~/Library/Application\ Support/SWBBuildServiceProxy/
 
 import sys
 import os

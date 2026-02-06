@@ -6,12 +6,16 @@ import { BuildManager, BuildTestsInput } from "./Services/BuildManager";
 import { ExecutorMode } from "./Executor";
 import { handleValidationErrors } from "./extension";
 import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
+import { SemanticManagerInterface } from "./BackgroundIndexing/SemanticManager";
 
 export function getFileNameLog() {
     return getLogRelativePath("build.log");
 }
 
-export async function cleanDerivedData(context: CommandContext) {
+export async function cleanDerivedData(
+    context: CommandContext,
+    semanticManager: SemanticManagerInterface
+) {
     await checkWorkspace(context);
 
     const buildRootPath = await getBuildRootPath();
@@ -22,6 +26,8 @@ export async function cleanDerivedData(context: CommandContext) {
     ) {
         throw new Error("Can only clean DerivedData folder");
     }
+
+    semanticManager.markAllTargetsOutOfDate();
 
     await context.execShellWithOptions({
         scriptOrCommand: { command: "rm" },
