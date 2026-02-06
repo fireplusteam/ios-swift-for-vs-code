@@ -147,6 +147,22 @@ export class BuildManager {
         });
     }
 
+    async clean(context: CommandContext) {
+        context.bundle.generateNext();
+        const projectEnv = context.projectEnv;
+        await context.execShellWithOptions({
+            scriptOrCommand: { command: "xcodebuild" },
+            args: ["clean", await projectEnv.projectType, await projectEnv.projectFile],
+            env: { ...(await BuildManager.commonEnv()) },
+            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+            kill: { signal: "SIGINT", allSubProcesses: false },
+            pipe: {
+                scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Clean" },
+                mode: ExecutorMode.stdout,
+            },
+        });
+    }
+
     async build(context: CommandContext, logFilePath: string) {
         if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
             // at the moment build-for-testing does not work with opened Xcode workspace/project

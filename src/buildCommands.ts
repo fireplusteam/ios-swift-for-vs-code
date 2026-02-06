@@ -3,7 +3,6 @@ import { ProblemDiagnosticResolver } from "./ProblemDiagnosticResolver";
 import { getBuildRootPath, getLogRelativePath } from "./env";
 import { CommandContext } from "./CommandManagement/CommandContext";
 import { BuildManager, BuildTestsInput } from "./Services/BuildManager";
-import { ExecutorMode } from "./Executor";
 import { handleValidationErrors } from "./extension";
 import { BuildServerLogParser } from "./LSP/LSPBuildServerLogParser";
 import { SemanticManagerInterface } from "./BackgroundIndexing/SemanticManager";
@@ -28,12 +27,13 @@ export async function cleanDerivedData(
     }
 
     semanticManager.markAllTargetsOutOfDate();
-
-    await context.execShellWithOptions({
-        scriptOrCommand: { command: "rm" },
-        args: ["-rf", buildRootPath],
-        mode: ExecutorMode.onlyCommandNameAndResult,
-    });
+    const buildManager = new BuildManager();
+    await buildManager.clean(context);
+    // await context.execShellWithOptions({
+    //     scriptOrCommand: { command: "rm" },
+    //     args: ["-rf", buildRootPath],
+    //     mode: ExecutorMode.onlyCommandNameAndResult,
+    // });
 }
 
 export async function buildSelectedTarget(
