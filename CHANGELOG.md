@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.0 - 2026-03-04
+
+### Added
+
+- Completely reworked background indexing logic, now it uses dependency graph of the project to determine which files need to be re-indexed after each build, significantly improving indexing speed and reducing resource consumption for large projects. Full instructions in the README.md file.
+
 ## 0.6.13 - 2026-02-26
 
 ### Added

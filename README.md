@@ -190,6 +190,16 @@ Extensions adds the tasks for clean/build/autocomplete watcher tasks which a use
 
 - To make autocompletion to work you may need to clean the project and build it entirely for the first time.
 
+## Test Explorer
+
+Tests are fully supported. You can run/debug any test from the project/subproject or swift package in the test explorer view or by navigating to the test file and running/debugging tests from the code lens above the test functions/classes. As long as the selected destination is supported by test target, you can run/debug it.
+
+## Background Indexing for Autocomplete
+
+As source-lsp gets indexes while the project is building, the extension provides a background watcher build task which builds the project in the background to provide up-to-date indexes for LSP client to improve autocompletion experience. It uses dependency graph of the project to determine which files need to be re-indexed after each build, significantly improving indexing speed and reducing resource consumption for large modular projects. You can enable/disable it via `vscode-ios.watcher.enabled` setting. By default it's enabled. For best performance and experience of background indexing you need to setup **SWBBuildService Proxy** feature described below.
+One of the side effects is that when you want to run the application, it may be already built because of the watcher build, so it will run faster.
+Thus it's **recommended to move any scripts from the build phases to a separate target** which then can be excluded from the watcher build via `excludeTargets` property in the user defined watcher task to avoid running scripts each time when the watcher build is triggered.
+
 ## SWBBuildService Proxy (Continue Building After Error while building for LSP Autocomplete)
 
 **READ THIS SECTION CAREFULLY BEFORE ENABLING THIS FEATURE AND MAKE SURE YOU UNDERSTAND ALL THE RISKS.**
@@ -262,6 +272,6 @@ This extension contributes the following settings:
 
 ## Release Notes
 
-### 0.6.12
+### 0.7.0
 
 It's still under development, so you can face some bugs
