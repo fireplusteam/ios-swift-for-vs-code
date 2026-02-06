@@ -313,6 +313,10 @@ export class AtomicCommand {
         }
     }
 
+    currentContext() {
+        return this._prevCommandContext;
+    }
+
     cancel() {
         if (this._mutex.isLocked()) {
             this._prevCommandContext?.cancel();

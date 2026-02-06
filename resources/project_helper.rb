@@ -336,13 +336,14 @@ def generate_scheme_depend_on_target(
   scheme.build_action.post_actions = [] if not scheme.build_action.nil?
   scheme.build_action.pre_actions = [] if not scheme.build_action.nil?
 
-  scheme.launch_action.post_actions = [] if not scheme.launch_action.nil?
-  scheme.launch_action.pre_actions = [] if not scheme.launch_action.nil?
-  scheme.launch_action.buildable_product_runnable =
-    nil if not scheme.launch_action.nil?
+  # leave launch action and profile action as is because if it has buildable reference it would not be build but all compiled frameworks data for selected by a user scheme would not be deleted during incremental build, so we want to keep it.
+  # scheme.launch_action.post_actions = [] if not scheme.launch_action.nil?
+  # scheme.launch_action.pre_actions = [] if not scheme.launch_action.nil?
+  # scheme.launch_action.buildable_product_runnable =
+  #   nil if not scheme.launch_action.nil?
 
-  scheme.profile_action.buildable_product_runnable =
-    nil if not scheme.profile_action.nil?
+  # scheme.profile_action.buildable_product_runnable =
+  #   nil if not scheme.profile_action.nil?
 
   # remove all buildable references from build action
   scheme.build_action.entries = [] if not scheme.build_action.nil?

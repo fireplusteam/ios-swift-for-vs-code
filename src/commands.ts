@@ -682,7 +682,11 @@ export async function runAndDebugTests(
     await runManager.runTests(commandContext, tests, xctestrun, isCoverage);
 }
 
-export async function enableSWBBuildService(enabled: boolean, tools: ToolsManager | undefined) {
+export async function enableSWBBuildService(
+    context: CommandContext,
+    enabled: boolean,
+    tools: ToolsManager | undefined
+) {
     try {
         if (tools !== undefined && !(await tools.isPyInstallerInstalled()) && enabled) {
             const option = await vscode.window.showInformationMessage(
@@ -692,7 +696,7 @@ export async function enableSWBBuildService(enabled: boolean, tools: ToolsManage
             );
             if (option === "Yes") {
                 try {
-                    await tools.installPyInstaller();
+                    await tools.installPyInstaller(context);
                     vscode.window.showInformationMessage(
                         "'pyinstaller' was installed successfully."
                     );
@@ -710,7 +714,7 @@ export async function enableSWBBuildService(enabled: boolean, tools: ToolsManage
         }
         const swbbuildServicePath = getSWBBuildServicePath();
         if (tools !== undefined && enabled) {
-            await tools.compileSWBBuildService(path.dirname(swbbuildServicePath));
+            await tools.compileSWBBuildService(context, path.dirname(swbbuildServicePath));
         }
 
         let checkSWBService: string | undefined = undefined;
@@ -732,7 +736,7 @@ export async function enableSWBBuildService(enabled: boolean, tools: ToolsManage
             }
         } catch (error) {
             if (error instanceof Error && error.message === "Retry") {
-                return await enableSWBBuildService(enabled, undefined);
+                return await enableSWBBuildService(context, enabled, tools);
             } else {
                 throw error;
             }

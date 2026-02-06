@@ -77,7 +77,9 @@ function watchSWBBuildServiceSetting() {
         if (event.affectsConfiguration("vscode-ios.swb.build.service")) {
             const shouldEnable = shouldInjectSWBBuildService();
             try {
-                await enableSWBBuildService(shouldEnable, tools);
+                atomicCommand.userCommand(async context => {
+                    await enableSWBBuildService(context, shouldEnable, tools);
+                }, "Update SWB Build Service Setting");
             } catch (error) {
                 vscode.window.showErrorMessage(
                     `SWB Build Service was not updated due to error: ${JSON.stringify(error)}`
@@ -91,6 +93,7 @@ function watchSWBBuildServiceSetting() {
 
 async function initialize(
     atomicCommand: AtomicCommand,
+    tools: ToolsManager,
     projectManager: ProjectManager,
     autocompleteWatcher: AutocompleteWatcher,
     lsp: SwiftLSPClient
@@ -100,6 +103,7 @@ async function initialize(
             let result: boolean | undefined;
             if ((await isWorkspaceOpened()) === false) {
                 await atomicCommand.userCommand(async context => {
+                    await tools.resolveThirdPartyTools(context);
                     if ((await selectProjectFile(context, projectManager, true, true)) === false) {
                         result = false;
                     }
@@ -121,8 +125,9 @@ async function initialize(
         try {
             await atomicCommand.userCommand(
                 async context => {
+                    await tools.resolveThirdPartyTools(context);
                     // add BuildAll target root project if not exists (hide it with checkbox in settings)
-                    await enableSWBBuildService(shouldInjectSWBBuildService(), tools);
+                    await enableSWBBuildService(context, shouldInjectSWBBuildService(), tools);
                     await checkWorkspace(context, true);
                 },
                 "Initialize",
@@ -165,7 +170,13 @@ const atomicCommand = new AtomicCommand(sourceLsp, projectManager, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;
 const semanticManager = new SemanticManager(projectManager);
-let autocompleteWatcher: AutocompleteWatcher | undefined;
+const autocompleteWatcher = new AutocompleteWatcher(
+    atomicCommand,
+    problemDiagnosticResolver,
+    semanticManager,
+    logChannel
+);
+
 let testProvider: TestProvider | undefined;
 
 const runtimeWarningsDataProvider = new RuntimeWarningsDataProvider();
@@ -185,18 +196,12 @@ export async function activate(context: vscode.ExtensionContext) {
     logChannel.mode = context.extensionMode;
     logChannel.appendLine("Activated");
 
-    await tools.resolveThirdPartyTools();
-
     projectManager.onUpdateDeps = async () => {
-        await tools.updateThirdPartyTools();
+        const context = atomicCommand.currentContext();
+        if (context) {
+            await tools.updateThirdPartyTools(context);
+        }
     };
-    autocompleteWatcher = new AutocompleteWatcher(
-        atomicCommand,
-        problemDiagnosticResolver,
-        semanticManager,
-        logChannel
-    );
-
     // initialise code
     context.subscriptions.push(sourceLsp);
 
@@ -221,7 +226,8 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     if (
-        (await initialize(atomicCommand, projectManager, autocompleteWatcher, sourceLsp)) === false
+        (await initialize(atomicCommand, tools, projectManager, autocompleteWatcher, sourceLsp)) ===
+        false
     ) {
         vscode.commands.executeCommand("setContext", "vscode-ios.activated", false);
         // only available task to activate extension
@@ -361,15 +367,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.install", async () => {
-            await tools.resolveThirdPartyTools(true);
-            await vscode.window.showInformationMessage(
-                "All Dependencies are installed successfully!"
-            );
+            atomicCommand.userCommand(async context => {
+                await tools.resolveThirdPartyTools(context, true);
+                await vscode.window.showInformationMessage(
+                    "All Dependencies are installed successfully!"
+                );
+            }, "Install Dependency Tools");
         })
     );
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.update", async () => {
-            await tools.updateThirdPartyTools();
+            atomicCommand.userCommand(async context => {
+                await tools.updateThirdPartyTools(context);
+            }, "Update Dependency Tools");
         })
     );
 
