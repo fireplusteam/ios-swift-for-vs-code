@@ -2,6 +2,7 @@ import {
     TargetDependency,
     ProjectManagerProjectDependency,
 } from "../ProjectManager/ProjectManager";
+import { setsAreEqual } from "../utils";
 
 export enum TargetIndexStatus {
     Unknown,
@@ -85,7 +86,7 @@ export class SemanticManager implements SemanticManagerInterface {
         this.filesToTargets.clear();
         for (const [targetId, deps] of newGraph.entries()) {
             const oldTarget = this.graph.get(targetId);
-            if (oldTarget !== undefined && oldTarget.files !== deps.files) {
+            if (oldTarget !== undefined && !setsAreEqual(oldTarget.files, deps.files)) {
                 changedTargets.add(targetId);
             } else if (oldTarget === undefined) {
                 changedTargets.add(targetId);
