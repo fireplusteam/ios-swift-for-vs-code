@@ -37,9 +37,9 @@ if __name__ == "__main__":
 
     # create subprocess to run the actual SWBBuildService proxy script with redirected stdin/stdout/stderr
 
-    make_unblocking(sys.stdin)
-    make_unblocking(sys.stdout)
-    make_unblocking(sys.stderr)
+    # make_unblocking(sys.stdin)
+    # make_unblocking(sys.stdout)
+    # make_unblocking(sys.stderr)
 
     async def run_loop():
         process = await asyncio.create_subprocess_exec(
@@ -77,9 +77,10 @@ if __name__ == "__main__":
                     await asyncio.sleep(0.1)
 
         async def write_stdin():
+            loop = asyncio.get_running_loop()
             sys.stderr.writelines("Started writing stdin...\n")
             while True:
-                data = sys.stdin.buffer.read(1)
+                data = await loop.run_in_executor(None, sys.stdin.buffer.read, 1)
                 if data:
                     process.stdin.write(data)
                     await process.stdin.drain()

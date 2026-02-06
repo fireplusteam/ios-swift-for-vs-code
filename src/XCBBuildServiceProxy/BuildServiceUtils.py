@@ -96,14 +96,17 @@ def get_server_pid_by_session_id(session_id: str):
 
 async def push_data_to_stdout(out, stdout):
     already_written = 0
+    loop = asyncio.get_running_loop()
     while already_written < len(out):
-        written = stdout.buffer.write(out[already_written : already_written + 8192])
+        written = await loop.run_in_executor(
+            None, stdout.buffer.write, out[already_written : already_written + 8192]
+        )
         if written is None:
             written = 0
         already_written += written
         while True:
             try:
-                stdout.flush()
+                await loop.run_in_executor(None, stdout.flush)
                 break
             except BlockingIOError:
                 await asyncio.sleep(0.1)

@@ -22,7 +22,7 @@ class Context:
 
     def __init__(self, serviceName: str, stdin, stdout, stderr):
         # non zero - write logs from server to input files
-        self.debug_mode = 0
+        self.debug_mode = 1
 
         self.stdin = stdin
         self.stdout = stdout
@@ -127,15 +127,17 @@ class STDFeeder:
             self._stdin = None
 
     async def write_stdin_bytes(self, stdin: asyncio.StreamWriter, byte):
+        loop = asyncio.get_running_loop()
         if byte:
             stdin.write(byte)
             if isinstance(stdin, asyncio.StreamWriter):
                 await stdin.drain()  # flush
             else:
-                stdin.flush()
+                await loop.run_in_executor(None, stdin.flush)  # flush
 
     async def feed_stdin(self, proc_stdin):
         byte = None
+        loop = asyncio.get_running_loop()
         while True:
             if self.context.should_exit:
                 break
@@ -145,15 +147,22 @@ class STDFeeder:
                 continue
 
             if hasattr(self.stdin, "buffer"):  # sys.stdin
-                byte = self.stdin.buffer.read(1)
+                byte = await loop.run_in_executor(
+                    None,
+                    self.stdin.buffer.read,
+                    self.msg_reader.expecting_bytes_from_io(),
+                )
             else:  # regular file object
-                byte = self.stdin.read(1)
+                byte = await loop.run_in_executor(
+                    None, self.stdin.read, self.msg_reader.expecting_bytes_from_io()
+                )
 
             if not byte:
                 await asyncio.sleep(0.03)
                 continue
 
-            self.msg_reader.feed(byte)
+            for b in byte:
+                self.msg_reader.feed(b.to_bytes(1, "big"))
 
             if self.msg_reader.status == MsgStatus.MsgEnd:
                 if self.request_modifier:
@@ -196,13 +205,15 @@ class STDOuter:
             self._stdout = None
 
     async def write_stdout_bytes(self, out):
+        loop = asyncio.get_running_loop()
         if hasattr(self.stdout, "buffer"):  # sys.stdout
             await push_data_to_stdout(out, self.stdout)
         else:  # regular file object
-            self.stdout.write(out)
-            self.stdout.flush()
+            await loop.run_in_executor(None, self.stdout.write, out)
+            await loop.run_in_executor(None, self.stdout.flush)
 
     async def read_server_data(self, proc_stdout):
+        loop = asyncio.get_running_loop()
         while True:
             if self.context.should_exit:
                 break
@@ -212,7 +223,9 @@ class STDOuter:
             if isinstance(proc_stdout, asyncio.StreamReader):
                 out = await proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
             else:
-                out = proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
+                out = await loop.run_in_executor(
+                    None, proc_stdout.read, self.msg_reader.expecting_bytes_from_io()
+                )
             if out:
                 for b in out:
                     self.msg_reader.feed(b.to_bytes(1, "big"))
@@ -282,6 +295,8 @@ async def main_client(context: Context):
                 break
     finally:
         context.should_exit = True
+        context.stdin_file.close()
+        context.stdout_file.close()
         sys.exit(0)
 
 

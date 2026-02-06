@@ -240,9 +240,10 @@ export class BuildManager {
         buildTouchTime: number,
         error: Error | undefined
     ) {
-        const allBuiltTargetsIds = context.semanticManager.getAllTargetsDependencies(
-            new Set(builtTargetIds)
-        );
+        // if error was generated, we don't want to mark all dependencies as up to date with error, because it will cause rebuild for success targets, instead we mark only built targets and leave dependencies to be rebuilt upon their individual status
+        const allBuiltTargetsIds = error
+            ? builtTargetIds
+            : context.semanticManager.getAllTargetsDependencies(new Set(builtTargetIds));
         // mark all built targets and their dependencies as up to date if they were not modified during the build
         context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime, error);
     }
