@@ -86,7 +86,10 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     onDidSendMessage(message: any) {
         // this.log?.debug(`Sent: ${JSON.stringify(message)}`);
         if (message.command === "continue") {
-            this.simulatorInteractor.focus();
+            if (this.debugSession.configuration.target !== "tests") {
+                // for tests we don't focus simulator on continue as tests run quickly and focusing back and forth is annoying
+                this.simulatorInteractor.focus();
+            }
         }
     }
 

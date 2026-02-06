@@ -265,8 +265,19 @@ async def main_client(context: Context):
         outer = STDOuter(context.stdout, context)
         asyncio.create_task(reader.feed_stdin(context.stdin_file))
         asyncio.create_task(outer.read_server_data(context.stdout_file))
+        last_mtime = None
         while True:
             await asyncio.sleep(0.3)
+            new_mtime = mtime_of_config_file()
+            if new_mtime != last_mtime:
+                message = server_get_message_from_client()
+                # check if pipes are not changed by new client request, if changed - need to close current communication
+                if (
+                    context.stdin_file.name != message["stdin_file"]
+                    or context.stdout_file.name != message["stdout_file"]
+                ):
+                    break
+
             if await check_for_exit() or not is_pid_alive(context.server_pid):
                 break
     finally:

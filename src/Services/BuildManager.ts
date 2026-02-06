@@ -424,7 +424,7 @@ export class BuildManager {
             });
             markUpToDate();
         } catch (error) {
-            if (error !== UserTerminatedError || error !== UserTerminalCloseError) {
+            if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
                 markUpToDate();
             }
             throw error;
