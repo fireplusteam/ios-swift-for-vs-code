@@ -151,7 +151,7 @@ async function initialize(
     await projectManager.loadProjectFiles(true);
     await projectManager.cleanAutocompleteSchemes();
     await semanticManager.refreshSemanticGraph();
-    autocompleteWatcher.triggerIncrementalBuild(vscode.window.activeTextEditor?.document.uri);
+    autocompleteWatcher.triggerIncrementalBuild(vscode.window.activeTextEditor?.document.uri, true);
     return true;
 }
 
@@ -216,7 +216,8 @@ export async function activate(context: vscode.ExtensionContext) {
                     }
                     await selectProjectFile(context, projectManager);
                     autocompleteWatcher?.triggerIncrementalBuild(
-                        vscode.window.activeTextEditor?.document.uri
+                        vscode.window.activeTextEditor?.document.uri,
+                        true
                     );
                 }, "Select Project");
             } catch {
@@ -319,7 +320,8 @@ export async function activate(context: vscode.ExtensionContext) {
             testProvider?.findInitialFiles();
             await semanticManager.refreshSemanticGraph();
             autocompleteWatcher?.triggerIncrementalBuild(
-                vscode.window.activeTextEditor?.document.uri
+                vscode.window.activeTextEditor?.document.uri,
+                true
             );
         })
     );

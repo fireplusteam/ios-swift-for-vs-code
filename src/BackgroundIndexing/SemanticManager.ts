@@ -8,6 +8,7 @@ export enum TargetIndexStatus {
     Unknown,
     OutOfDate,
     UpToDate,
+    UpToDateWithError, // build was not successful
 }
 
 export interface SemanticManagerInterface {
@@ -21,7 +22,7 @@ export interface SemanticManagerInterface {
     refreshSemanticGraph(): Promise<void>;
 
     markTargetOutOfDate(targetIds: Set<string>): void;
-    markTargetUpToDate(targetIds: Set<string>, buildTime: number): void;
+    markTargetUpToDate(targetIds: Set<string>, buildTime: number, error: Error | undefined): void;
 
     getAllTargetsDependencies(targetIds: Set<string>): Set<string>;
     getAllDependentTargets(targetIds: Set<string>): Set<string>;
@@ -135,9 +136,13 @@ export class SemanticManager implements SemanticManagerInterface {
         }
     }
 
-    markTargetUpToDate(targetIds: Set<string>, buildTime: number) {
+    markTargetUpToDate(targetIds: Set<string>, buildTime: number, error: Error | undefined) {
         for (const targetId of targetIds) {
             const statusEntry = this.status.get(targetId);
+            const toUpdateStatus =
+                error === undefined
+                    ? TargetIndexStatus.UpToDate
+                    : TargetIndexStatus.UpToDateWithError;
             if (statusEntry) {
                 if (
                     statusEntry.targetStatus === TargetIndexStatus.OutOfDate &&
@@ -146,11 +151,11 @@ export class SemanticManager implements SemanticManagerInterface {
                     // if the target was modified later, skip updating to UpToDate as we need another build
                     continue;
                 }
-                statusEntry.targetStatus = TargetIndexStatus.UpToDate;
+                statusEntry.targetStatus = toUpdateStatus;
                 statusEntry.lastTouchTime = buildTime;
             } else {
                 this.status.set(targetId, {
-                    targetStatus: TargetIndexStatus.UpToDate,
+                    targetStatus: toUpdateStatus,
                     lastTouchTime: buildTime,
                 });
             }

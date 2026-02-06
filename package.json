@@ -153,8 +153,8 @@
                 "vscode-ios.watcher.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "title": "Autocomplete Watcher Mode",
-                    "description": "Xcodebuild Watch. Build automatically while editing project files anywhere. Needed for updating indexes for LSP client while editing. Disable it if you want to manually build the project to update indexes. For example you can configure watcher task and run it manually when needed.",
+                    "title": "Background Indexing Enabled",
+                    "description": "Enable/Disable Background Indexing feature. Keep indexing up to date automatically while editing project files anywhere. Disable it if you want to manually build the project to update indexes. For example you can configure watcher task and run it manually when needed.",
                     "scope": "resource"
                 },
                 "vscode-ios.watcher.jobs": {
@@ -162,8 +162,8 @@
                     "default": 2,
                     "minimum": 1,
                     "maximum": 16,
-                    "title": "Autocomplete Watcher Jobs",
-                    "description": "Number of parallel jobs for xcodebuild watcher which builds the project in background to provide up-to-date indexes for LSP client.",
+                    "title": "Background Indexing Number of Jobs",
+                    "description": "Number of parallel jobs for xcodebuild background indexing watcher which builds the project in background to provide up-to-date indexes for LSP client.",
                     "scope": "resource"
                 },
                 "vscode-ios.building.system.mode": {
@@ -173,7 +173,7 @@
                         "mixedWithXcode"
                     ],
                     "default": "xcodebuild",
-                    "title": "Autocomplete Watcher Mode",
+                    "title": "Building System Mode",
                     "description": "Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.",
                     "scope": "resource"
                 },

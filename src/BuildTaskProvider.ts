@@ -79,6 +79,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                         async context => {
                             await this.autocompleteWatcher.triggerIncrementalBuild(
                                 vscode.window.activeTextEditor?.document.uri,
+                                true,
                                 {
                                     commandContext: context,
                                     includeTargets: [],
@@ -166,6 +167,7 @@ export class BuildTaskProvider implements vscode.TaskProvider {
                             case "buildForAutocomplete":
                                 await this.autocompleteWatcher.triggerIncrementalBuild(
                                     vscode.window.activeTextEditor?.document.uri,
+                                    true, // force build via user task command
                                     {
                                         commandContext: context,
                                         includeTargets: taskDefinition.includeTargets ?? [],

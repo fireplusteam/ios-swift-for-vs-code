@@ -215,13 +215,19 @@ export class BuildManager {
                     },
                 },
             });
-            this.markTargetUpToDateAfterBuild(context, new Set(buildtableTargets), buildTouchTime);
+            this.markTargetUpToDateAfterBuild(
+                context,
+                new Set(buildtableTargets),
+                buildTouchTime,
+                undefined
+            );
         } catch (error) {
             if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
                 this.markTargetUpToDateAfterBuild(
                     context,
                     new Set(buildtableTargets),
-                    buildTouchTime
+                    buildTouchTime,
+                    error instanceof Error ? error : new Error(String(error))
                 );
             }
             throw error;
@@ -231,13 +237,14 @@ export class BuildManager {
     private markTargetUpToDateAfterBuild(
         context: CommandContext,
         builtTargetIds: Set<string>,
-        buildTouchTime: number
+        buildTouchTime: number,
+        error: Error | undefined
     ) {
         const allBuiltTargetsIds = context.semanticManager.getAllTargetsDependencies(
             new Set(builtTargetIds)
         );
         // mark all built targets and their dependencies as up to date if they were not modified during the build
-        context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime);
+        context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime, error);
     }
 
     async buildAutocomplete(
@@ -307,10 +314,20 @@ export class BuildManager {
                     mode: ExecutorMode.none,
                 },
             });
-            this.markTargetUpToDateAfterBuild(context, new Set(includeTargets), buildTouchTime);
+            this.markTargetUpToDateAfterBuild(
+                context,
+                new Set(includeTargets),
+                buildTouchTime,
+                undefined
+            );
         } catch (error) {
             if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
-                this.markTargetUpToDateAfterBuild(context, new Set(includeTargets), buildTouchTime);
+                this.markTargetUpToDateAfterBuild(
+                    context,
+                    new Set(includeTargets),
+                    buildTouchTime,
+                    error instanceof Error ? error : new Error(String(error))
+                );
             }
             throw error;
         } finally {
@@ -339,7 +356,7 @@ export class BuildManager {
         context.bundle.generateNext();
 
         const buildTouchTime = Date.now();
-        const markUpToDate = () => {
+        const markUpToDate = (error: Error | undefined) => {
             const builtTargetIds = new Set<string>(
                 input.tests
                     .map(test => {
@@ -352,7 +369,7 @@ export class BuildManager {
                     })
                     .filter(id => id.length > 0)
             );
-            this.markTargetUpToDateAfterBuild(context, builtTargetIds, buildTouchTime);
+            this.markTargetUpToDateAfterBuild(context, builtTargetIds, buildTouchTime, error);
         };
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
@@ -422,10 +439,10 @@ export class BuildManager {
                     },
                 },
             });
-            markUpToDate();
+            markUpToDate(undefined);
         } catch (error) {
             if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
-                markUpToDate();
+                markUpToDate(error instanceof Error ? error : new Error(String(error)));
             }
             throw error;
         }

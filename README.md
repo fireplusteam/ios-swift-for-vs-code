@@ -15,7 +15,9 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Extension Activation
 
-To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**. Create `launch.json` and `tasks.json` and `settings.json` files in `.vscode` folder if they don't exist to add launch configurations, tasks and settings for your project. By default it adds `Xcode Workspace: Run App & Debug` launch configuration for debugging/running the app.
+To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**. Create `launch.json` and `tasks.json` and `settings.json` files in `.vscode` folder if they don't exist to add launch configurations, tasks and settings for your project. By default it adds `Xcode Workspace: Run App & Debug` launch configuration for debugging/running the app. 
+
+**Make sure that you have clean build of the project for the first time to make autocompletion to work**.
 
 ---
 
@@ -240,8 +242,8 @@ Now the service should be running and you can check it via Activity Monitor app 
 
 This extension contributes the following settings:
 
-- `vscode-ios.watcher.enabled`: Enable/disable the autocomplete watch build to update indexes whenever a you modified a file.
-- `vscode-ios.watcher.jobs`: Number of parallel jobs for xcodebuild watcher which builds the project in background to provide up-to-date indexes for LSP client.
+- `vscode-ios.watcher.enabled`: Enable/disable the Background Indexing feature. Keep indexing up to date automatically while editing project files anywhere. Disable it if you want to manually build the project to update indexes. For example you can configure watcher task and run it manually when needed.
+- `vscode-ios.watcher.jobs`: Number of parallel jobs for xcodebuild background indexing watcher which builds the project in background to provide up-to-date indexes for LSP client.
 - `vscode-ios.build.compilationCache` : Enable/disable the compilation cache to speed up the building time.
 - `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 - `vscode-ios.lsp.buildIndexesWhileBuilding`: Enable/disable building indexes while building the project to keep indexes up to date.

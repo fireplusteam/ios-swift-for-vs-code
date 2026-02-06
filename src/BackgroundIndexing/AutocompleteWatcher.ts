@@ -47,7 +47,7 @@ export class AutocompleteWatcher {
                     removeAllWhiteSpaces(doc.document.getText())
                 );
 
-                this.triggerIncrementalBuild(doc.document.uri);
+                this.triggerIncrementalBuild(doc.document.uri, false);
             })
         );
         this.disposable.push(
@@ -66,19 +66,28 @@ export class AutocompleteWatcher {
                 }
                 // file content changed, mark dependent targets out of date
                 this.changedFiles.set(doc.uri.fsPath, textOfDoc);
-                const fileTargets = new Set(
+                const fileTargets = new Map(
                     this.semanticManager
                         .statusOfTargetsForFile(doc.uri.fsPath)
-                        .map(target => target.id || "")
+                        .map(target => [target.id || "", target.targetStatus])
                 );
 
-                // mark all dependent targets out of date
+                // mark all dependent targets out of date but not for the targets of that file, as onces we have sucessful build and compile flags are enough to retrigger indexes
                 const dependentTargets = Array.from(
-                    this.semanticManager.getAllDependentTargets(fileTargets)
-                );
+                    this.semanticManager.getAllDependentTargets(new Set(fileTargets.keys()))
+                ).filter(id => {
+                    if (id.length === 0) {
+                        return false;
+                    }
+                    // we don't want to rebuild up to date targets, as we have all required compile flags and indexes until a new file is added or deleted for the target or there's a change in one of the dependencies of that target
+                    if (fileTargets.has(id) && fileTargets.get(id) === TargetIndexStatus.UpToDate) {
+                        return false;
+                    }
+                    return true;
+                });
                 this.semanticManager.markTargetOutOfDate(new Set(dependentTargets));
                 // trigger build for the file to update index
-                this.triggerIncrementalBuild(doc.uri);
+                this.triggerIncrementalBuild(doc.uri, true);
             })
         );
         this.problemResolver = problemResolver;
@@ -86,6 +95,7 @@ export class AutocompleteWatcher {
 
     async triggerIncrementalBuild(
         file: vscode.Uri | undefined,
+        wasFileModified: boolean,
         context:
             | { commandContext: CommandContext; includeTargets: string[]; excludeTargets: string[] }
             | undefined = undefined
@@ -98,7 +108,16 @@ export class AutocompleteWatcher {
         }
         const statusEntry = this.semanticManager
             .statusOfTargetsForFile(file.fsPath)
-            .filter(entry => entry.targetStatus !== TargetIndexStatus.UpToDate);
+            .filter(entry => {
+                if (wasFileModified) {
+                    return entry.targetStatus !== TargetIndexStatus.UpToDate;
+                }
+                // if content of file was not changed, no need to rebuild if the target is already up to date with errors, as the result would be the same.
+                return (
+                    entry.targetStatus !== TargetIndexStatus.UpToDate &&
+                    entry.targetStatus !== TargetIndexStatus.UpToDateWithError
+                );
+            });
         const dependencies = this.semanticManager.getAllTargetsDependencies(
             this.activelyBuildingTargetsIds
         );
