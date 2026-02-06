@@ -300,6 +300,22 @@ end
 
 # SCHEME MANAGEMENT
 
+def list_all_buildable_targets_ids_for_scheme(projects, scheme_name)
+  scheme = load_scheme_if_exists(projects, scheme_name)
+  all_targets = get_all_targets_from_scheme(scheme[:scheme])
+  all_targets.each do |target|
+    target_name = target[:name]
+    target_uuid = target[:uuid]
+    projects.each do |project|
+      project.targets.each do |target|
+        if target.name == target_name && target.uuid == target_uuid
+          puts "#{project.path.cleanpath}::#{target_name}"
+        end
+      end
+    end
+  end
+end
+
 def generate_scheme_depend_on_target(
   projects,
   generated_scheme_name,
@@ -564,6 +580,11 @@ def handle_action(project, action, arg)
     return
   end
 
+  if action == "list_all_buildable_targets_ids_for_scheme"
+    list_all_buildable_targets_ids_for_scheme(project, arg[1])
+    return
+  end
+
   if action == "generate_scheme_depend_on_target"
     generate_scheme_depend_on_target(project, arg[1], arg[2], arg[3])
     return
@@ -612,7 +633,8 @@ def perform_action_on_project(project_path, action, arg)
     project
   end
 
-  if action == "generate_scheme_depend_on_target"
+  if action == "generate_scheme_depend_on_target" ||
+       action == "list_all_buildable_targets_ids_for_scheme"
     project_path = project_path.split(":::")
     projects = project_path.map { |path| get_latest_project(path) }
     handle_action(projects, action, arg)

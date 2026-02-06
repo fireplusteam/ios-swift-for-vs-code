@@ -8,6 +8,7 @@ import { CustomError, sleep } from "../utils";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
+import { SemanticManagerInterface } from "../BackgroundIndexing/SemanticManager";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -38,6 +39,7 @@ export class AtomicCommand {
     constructor(
         private readonly lspClient: LSPClientContext,
         private readonly projectManager: ProjectManagerInterface,
+        private readonly semanticManager: SemanticManagerInterface,
         private readonly log: LogChannelInterface
     ) {}
 
@@ -108,6 +110,7 @@ export class AtomicCommand {
                 watcherTerminal,
                 this.lspClient,
                 this.projectManager,
+                this.semanticManager,
                 new BundlePath("autowatcher"),
                 this.log
             );
@@ -220,6 +223,7 @@ export class AtomicCommand {
                 userTerminal,
                 this.lspClient,
                 this.projectManager,
+                this.semanticManager,
                 new BundlePath("bundle"),
                 this.log
             );

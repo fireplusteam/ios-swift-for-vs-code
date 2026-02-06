@@ -1,8 +1,17 @@
 import * as vscode from "vscode";
 import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
-import { CommandContext } from "../CommandManagement/CommandContext";
-import { getSWBBuildServiceConfigTempFile, getWorkspaceFolder, ProjectEnv } from "../env";
+import {
+    CommandContext,
+    UserTerminalCloseError,
+    UserTerminatedError,
+} from "../CommandManagement/CommandContext";
+import {
+    getFilePathInWorkspace,
+    getSWBBuildServiceConfigTempFile,
+    getWorkspaceFolder,
+    ProjectEnv,
+} from "../env";
 import { ExecutorMode } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
@@ -164,34 +173,71 @@ export class BuildManager {
     }
 
     async build(context: CommandContext, logFilePath: string) {
-        if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
-            // at the moment build-for-testing does not work with opened Xcode workspace/project
-            await this.xcodeBuildExecutor.startBuildInXcode(
-                context,
-                logFilePath,
+        const buildTouchTime = Date.now();
+
+        let buildtableTargets: string[] = [];
+        try {
+            buildtableTargets = await context.projectManager.getTargetsForScheme(
                 await context.projectEnv.projectScheme
             );
-            return;
+        } catch (error) {
+            console.log(
+                `Failed to get targets for scheme with error: ${error}, fallback to build without scheme targets info`
+            );
         }
 
-        context.bundle.generateNext();
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToParseBuildErrors: true,
-            args: await BuildManager.args(context.projectEnv, context.bundle),
-            env: { ...(await BuildManager.commonEnv()) },
-            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
-            kill: { signal: "SIGINT", allSubProcesses: false },
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: [logFilePath],
-                mode: ExecutorMode.none,
+        try {
+            if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+                // at the moment build-for-testing does not work with opened Xcode workspace/project
+                await this.xcodeBuildExecutor.startBuildInXcode(
+                    context,
+                    logFilePath,
+                    await context.projectEnv.projectScheme
+                );
+                return;
+            }
+
+            context.bundle.generateNext();
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                pipeToParseBuildErrors: true,
+                args: await BuildManager.args(context.projectEnv, context.bundle),
+                env: { ...(await BuildManager.commonEnv()) },
+                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                kill: { signal: "SIGINT", allSubProcesses: false },
                 pipe: {
-                    scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
-                    mode: ExecutorMode.stdout,
+                    scriptOrCommand: { command: "tee" },
+                    args: [logFilePath],
+                    mode: ExecutorMode.none,
+                    pipe: {
+                        scriptOrCommand: { command: "xcbeautify", labelInTerminal: "Build" },
+                        mode: ExecutorMode.stdout,
+                    },
                 },
-            },
-        });
+            });
+            this.markTargetUpToDateAfterBuild(context, new Set(buildtableTargets), buildTouchTime);
+        } catch (error) {
+            if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
+                this.markTargetUpToDateAfterBuild(
+                    context,
+                    new Set(buildtableTargets),
+                    buildTouchTime
+                );
+            }
+            throw error;
+        }
+    }
+
+    private markTargetUpToDateAfterBuild(
+        context: CommandContext,
+        builtTargetIds: Set<string>,
+        buildTouchTime: number
+    ) {
+        const allBuiltTargetsIds = context.semanticManager.getAllTargetsDependencies(
+            new Set(builtTargetIds)
+        );
+        // mark all built targets and their dependencies as up to date if they were not modified during the build
+        context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime);
     }
 
     async buildAutocomplete(
@@ -199,6 +245,7 @@ export class BuildManager {
         logFilePath: string,
         includeTargets: string[] = []
     ) {
+        const buildTouchTime = Date.now();
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
             const canStartBuildInXcode =
@@ -260,6 +307,12 @@ export class BuildManager {
                     mode: ExecutorMode.none,
                 },
             });
+            this.markTargetUpToDateAfterBuild(context, new Set(includeTargets), buildTouchTime);
+        } catch (error) {
+            if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
+                this.markTargetUpToDateAfterBuild(context, new Set(includeTargets), buildTouchTime);
+            }
+            throw error;
         } finally {
             // clean up build target scheme if it was created
             try {
@@ -285,67 +338,96 @@ export class BuildManager {
     ) {
         context.bundle.generateNext();
 
-        let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+        const buildTouchTime = Date.now();
+        const markUpToDate = () => {
+            const builtTargetIds = new Set<string>(
+                input.tests
+                    .map(test => {
+                        const targetName = test.split("/").at(0);
+                        if (targetName) {
+                            const targetId = `${getFilePathInWorkspace(input.projectFile)}::${targetName}`;
+                            return targetId;
+                        }
+                        return "";
+                    })
+                    .filter(id => id.length > 0)
+            );
+            this.markTargetUpToDateAfterBuild(context, builtTargetIds, buildTouchTime);
+        };
         try {
-            if (input.tests.length > 0 && input.testPlan === undefined) {
-                const testsTargets = input.tests.map(test => test.split("/").at(0));
-                const scheme = await context.projectManager.addTestSchemeDependOnTargetToProjects(
-                    input.projectFile,
-                    await context.projectEnv.projectScheme,
-                    testsTargets.join(","),
-                    false
-                );
-                context.projectEnv.setBuildScheme(scheme);
-                if (scheme) {
-                    allBuildScheme = scheme.scheme;
+            let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
+            try {
+                if (input.tests.length > 0 && input.testPlan === undefined) {
+                    const testsTargets = input.tests.map(test => test.split("/").at(0));
+                    const scheme =
+                        await context.projectManager.addTestSchemeDependOnTargetToProjects(
+                            input.projectFile,
+                            await context.projectEnv.projectScheme,
+                            testsTargets.join(","),
+                            false
+                        );
+                    context.projectEnv.setBuildScheme(scheme);
+                    if (scheme) {
+                        allBuildScheme = scheme.scheme;
+                    }
                 }
+            } catch (error) {
+                // ignore errors
             }
-        } catch (error) {
-            // ignore errors
-        }
 
-        // can not use Xcode to build-for-testing as the purpose of such build is to produce .xctestrun files, Xcode does not support that
-        // if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
-        //     // at the moment build-for-testing does not work with opened Xcode workspace/project
-        //     await this.xcodeBuildExecutor.startBuildInXcode(
-        //         context,
-        //         logFilePath,
-        //         allBuildScheme
-        //     );
-        //     return;
-        // }
+            // can not use Xcode to build-for-testing as the purpose of such build is to produce .xctestrun files, Xcode does not support that
+            // if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+            //     // at the moment build-for-testing does not work with opened Xcode workspace/project
+            //     await this.xcodeBuildExecutor.startBuildInXcode(
+            //         context,
+            //         logFilePath,
+            //         allBuildScheme
+            //     );
+            //     return;
+            // }
 
-        const extraArguments: string[] = [];
-        if (input.isCoverage) {
-            extraArguments.push(...["-enableCodeCoverage", "YES"]);
-        }
+            const extraArguments: string[] = [];
+            if (input.isCoverage) {
+                extraArguments.push(...["-enableCodeCoverage", "YES"]);
+            }
 
-        await context.execShellWithOptions({
-            scriptOrCommand: { command: "xcodebuild" },
-            pipeToParseBuildErrors: true,
-            args: [
-                "build-for-testing",
-                ...input.tests.map(test => {
-                    return `-only-testing:${test}`;
-                }),
-                ...(await BuildManager.args(context.projectEnv, context.bundle, allBuildScheme)),
-                ...extraArguments,
-            ],
-            env: { ...(await BuildManager.commonEnv()) },
-            mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
-            kill: { signal: "SIGINT", allSubProcesses: false },
-            pipe: {
-                scriptOrCommand: { command: "tee" },
-                args: [logFilePath],
-                mode: ExecutorMode.none,
+            await context.execShellWithOptions({
+                scriptOrCommand: { command: "xcodebuild" },
+                pipeToParseBuildErrors: true,
+                args: [
+                    "build-for-testing",
+                    ...input.tests.map(test => {
+                        return `-only-testing:${test}`;
+                    }),
+                    ...(await BuildManager.args(
+                        context.projectEnv,
+                        context.bundle,
+                        allBuildScheme
+                    )),
+                    ...extraArguments,
+                ],
+                env: { ...(await BuildManager.commonEnv()) },
+                mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
+                kill: { signal: "SIGINT", allSubProcesses: false },
                 pipe: {
-                    scriptOrCommand: {
-                        command: "xcbeautify",
-                        labelInTerminal: "Build For Testing",
+                    scriptOrCommand: { command: "tee" },
+                    args: [logFilePath],
+                    mode: ExecutorMode.none,
+                    pipe: {
+                        scriptOrCommand: {
+                            command: "xcbeautify",
+                            labelInTerminal: "Build For Testing",
+                        },
+                        mode: ExecutorMode.stdout,
                     },
-                    mode: ExecutorMode.stdout,
                 },
-            },
-        });
+            });
+            markUpToDate();
+        } catch (error) {
+            if (error !== UserTerminatedError || error !== UserTerminalCloseError) {
+                markUpToDate();
+            }
+            throw error;
+        }
     }
 }

@@ -166,10 +166,10 @@ const projectManager = new ProjectManager(
     projectWatcher,
     new RubyProjectFilesManager(logChannel)
 );
-const atomicCommand = new AtomicCommand(sourceLsp, projectManager, logChannel);
+const semanticManager = new SemanticManager(projectManager);
+const atomicCommand = new AtomicCommand(sourceLsp, projectManager, semanticManager, logChannel);
 
 let debugConfiguration: DebugConfigurationProvider;
-const semanticManager = new SemanticManager(projectManager);
 const autocompleteWatcher = new AutocompleteWatcher(
     atomicCommand,
     problemDiagnosticResolver,

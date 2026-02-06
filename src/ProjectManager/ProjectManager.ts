@@ -35,6 +35,8 @@ import {
 export interface ProjectManagerInterface {
     getRootProjectTargets(): Promise<string[]>;
 
+    getTargetsForScheme(schemeName: string): Promise<string[]>;
+
     addBuildAllDependentTargetsOfProjects(
         rootTargetName: string,
         includeTargets: string[],
@@ -1026,6 +1028,14 @@ export class ProjectManager
         } finally {
             release();
         }
+    }
+
+    async getTargetsForScheme(schemeName: string): Promise<string[]> {
+        const projects = this.projectCache.getProjects().map(proj => getFilePathInWorkspace(proj));
+        return await this.rubyProjectFilesManager.listAllBuildableTargetsIdsForScheme(
+            projects,
+            schemeName
+        );
     }
 
     async addBuildAllDependentTargetsOfProjects(

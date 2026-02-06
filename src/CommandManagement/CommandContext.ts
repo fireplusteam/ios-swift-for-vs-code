@@ -16,6 +16,7 @@ import { ProjectEnv } from "../env";
 import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
+import { SemanticManagerInterface } from "../BackgroundIndexing/SemanticManager";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -44,6 +45,11 @@ export class CommandContext {
     private _projectManager: ProjectManagerInterface;
     get projectManager(): ProjectManagerInterface {
         return this._projectManager;
+    }
+
+    private _semanticManager: SemanticManagerInterface;
+    get semanticManager(): SemanticManagerInterface {
+        return this._semanticManager;
     }
 
     readonly bundle: BundlePath;
@@ -83,6 +89,7 @@ export class CommandContext {
         terminal: TerminalShell | undefined,
         lspClient: LSPClientContext,
         projectManager: ProjectManagerInterface,
+        semanticManager: SemanticManagerInterface,
         bundle: BundlePath,
         log: LogChannelInterface
     ) {
@@ -94,6 +101,7 @@ export class CommandContext {
         this._projectManager = projectManager;
         this._terminal = terminal;
         this.lspClient = lspClient;
+        this._semanticManager = semanticManager;
         this.log = log;
     }
 

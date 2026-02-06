@@ -206,10 +206,6 @@ export class AutocompleteWatcher {
                 }
                 throw error;
             } finally {
-                const allBuiltTargetsIds =
-                    this.semanticManager.getAllTargetsDependencies(allBuildingTargetIds);
-                // mark all built targets and their dependencies as up to date if they were not modified during the build
-                this.semanticManager.markTargetUpToDate(allBuiltTargetsIds, this.buildTouchTime);
                 this.activelyBuildingTargetsIds.clear();
                 await this.problemResolver.end(
                     context.bundle,

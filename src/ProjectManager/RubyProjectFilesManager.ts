@@ -30,6 +30,10 @@ export interface RubyProjectFilesManagerInterface {
     listDependenciesForTarget(projectFile: string, targetName: string): Promise<string[]>;
     typeOfPath(projectFile: string, path: string): Promise<string[]>;
     saveProject(projectFile: string): Promise<string[]>;
+    listAllBuildableTargetsIdsForScheme(
+        projectFiles: string[],
+        schemeName: string
+    ): Promise<string[]>;
     generateSchemeDependOnTarget(
         projectFiles: string[],
         schemeName: string,
@@ -145,6 +149,13 @@ export class RubyProjectFilesManager implements RubyProjectFilesManagerInterface
 
     async saveProject(projectFile: string) {
         return await this.executeRuby(projectFile, "save");
+    }
+
+    async listAllBuildableTargetsIdsForScheme(projectFiles: string[], schemeName: string) {
+        return await this.executeRuby(
+            projectFiles.join(":::"),
+            `list_all_buildable_targets_ids_for_scheme|^|^|${schemeName}`
+        );
     }
 
     async generateSchemeDependOnTarget(
