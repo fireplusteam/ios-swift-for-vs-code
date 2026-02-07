@@ -15,7 +15,7 @@ from BuildServiceUtils import (
     is_pid_alive,
     is_host_app_alive,
 )
-from RequestModifiers import RequestModifierBase, ClientRequestModifier
+from MessageModifiers import MessageModifierBase, ClientMessageModifier
 
 
 class Context:
@@ -96,7 +96,7 @@ class Context:
 class STDFeeder:
 
     def __init__(
-        self, stdin, context: Context, request_modifier: RequestModifierBase = None
+        self, stdin, context: Context, request_modifier: MessageModifierBase = None
     ):
 
         self.msg_reader = MessageReader()
@@ -274,7 +274,7 @@ async def main_client(context: Context):
         context.log(os.environ)
         context.log("START CLIENT")
 
-        reader = STDFeeder(context.stdin, context, ClientRequestModifier())
+        reader = STDFeeder(context.stdin, context, ClientMessageModifier())
         outer = STDOuter(context.stdout, context)
         asyncio.create_task(reader.feed_stdin(context.stdin_file))
         asyncio.create_task(outer.read_server_data(context.stdout_file))

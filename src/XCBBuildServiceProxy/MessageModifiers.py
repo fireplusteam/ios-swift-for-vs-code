@@ -69,12 +69,12 @@ def modify_json_content(content, content_len):
     return (res_bytes, is_fed)
 
 
-class RequestModifierBase:
+class MessageModifierBase:
     def modify_content(self, message: MessageReader):
         pass
 
 
-class ClientRequestModifier(RequestModifierBase):
+class ClientMessageModifier(MessageModifierBase):
     def __init__(self):
         self.is_fed = not is_behave_like_proxy()
 
