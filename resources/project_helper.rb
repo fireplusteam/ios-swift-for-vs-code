@@ -341,18 +341,16 @@ def generate_scheme_depend_on_target(
 
   is_different_from_existing = false
 
-  # remove all test targets from scheme first and then add back only required ones as buildable references
-  # use selected by a user scheme as a base but we clear all testables and buildable references including pre/post actions
-  # as we only need compile flags
-  scheme.test_action.testables = [] if not scheme.test_action.nil?
-  scheme.test_action.post_actions = [] if not scheme.test_action.nil?
-  scheme.test_action.pre_actions = [] if not scheme.test_action.nil?
+  # use selected by a user scheme as a base, so a build is run with user target which is likely used to launch and debug an app. So we just add targets which needs to be updated along with a user one.
 
-  scheme.build_action.entries = [] if not scheme.build_action.nil?
-  scheme.build_action.post_actions = [] if not scheme.build_action.nil?
-  scheme.build_action.pre_actions = [] if not scheme.build_action.nil?
+  # scheme.test_action.testables = [] if not scheme.test_action.nil?
+  # scheme.test_action.post_actions = [] if not scheme.test_action.nil?
+  # scheme.test_action.pre_actions = [] if not scheme.test_action.nil?
 
-  # leave launch action and profile action as is because if it has buildable reference it would not be build but all compiled frameworks data for selected by a user scheme would not be deleted during incremental build, so we want to keep it.
+  # scheme.build_action.entries = [] if not scheme.build_action.nil?
+  # scheme.build_action.post_actions = [] if not scheme.build_action.nil?
+  # scheme.build_action.pre_actions = [] if not scheme.build_action.nil?
+
   # scheme.launch_action.post_actions = [] if not scheme.launch_action.nil?
   # scheme.launch_action.pre_actions = [] if not scheme.launch_action.nil?
   # scheme.launch_action.buildable_product_runnable =
