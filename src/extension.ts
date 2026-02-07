@@ -156,7 +156,7 @@ async function initialize(
 }
 
 const logChannel = new LogChannel("VSCode-iOS");
-const tools = new ToolsManager(logChannel);
+let tools: ToolsManager | undefined = undefined;
 const projectWatcher = new ProjectWatcher(logChannel);
 const problemDiagnosticResolver = new ProblemDiagnosticResolver(logChannel);
 const workspaceContext = new WorkspaceContextImp(problemDiagnosticResolver);
@@ -195,11 +195,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(logChannel);
     logChannel.mode = context.extensionMode;
     logChannel.appendLine("Activated");
+    tools = new ToolsManager(logChannel);
 
     projectManager.onUpdateDeps = async () => {
         const context = atomicCommand.currentContext();
         if (context) {
-            await tools.updateThirdPartyTools();
+            await tools?.updateThirdPartyTools();
         }
     };
     // initialise code
@@ -369,7 +370,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.install", async () => {
-            await tools.resolveThirdPartyTools(true);
+            await tools?.resolveThirdPartyTools(true);
             await vscode.window.showInformationMessage(
                 "All Dependencies are installed successfully!"
             );
@@ -377,7 +378,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.update", async () => {
-            await tools.updateThirdPartyTools();
+            await tools?.updateThirdPartyTools();
         })
     );
 
