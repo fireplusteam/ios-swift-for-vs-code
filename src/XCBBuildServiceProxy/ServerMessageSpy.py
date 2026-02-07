@@ -1,0 +1,4 @@
+# SERVER: bytearray(b'\xb4BUILD_TARGET_STARTED\xc5\x01r{"guid":"PACKAGE-TARGET:MyLibrary","id":0,"info":{"configurationIsDefault":false,"configurationName":"Debug","name":"MyLibrary","projectInfo":{"isNameUniqueInWorkspace":true,"isPackage":true,"name":"MyLibrary_Package","path":"/Users/Ievgenii_Mykhalevskyi/tests/out_files_project/SomeProject/MyLibrary/Package.swift"},"sdkroot":"iphonesimulator26.0","typeName":"Native"}}')
+# SERVER: bytearray(
+#     b'\xb4BUILD_TARGET_STARTED\xc5\x01\x95{"guid":"5ed01a15b7ac6a814c119741f047c8d431133c17e02351b11c14e9b11c641a93","id":1,"info":{"configurationIsDefault":false,"configurationName":"Debug","name":"SomeProject","projectInfo":{"isNameUniqueInWorkspace":true,"isPackage":false,"name":"SomeProject","path":"/Users/Ievgenii_Mykhalevskyi/tests/out_files_project/SomeProject/SomeProject.xcodeproj"},"sdkroot":"iphonesimulator26.0","typeName":"Native"}}'
+# )
