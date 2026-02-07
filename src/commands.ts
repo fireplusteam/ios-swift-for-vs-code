@@ -696,7 +696,7 @@ export async function enableSWBBuildService(
             );
             if (option === "Yes") {
                 try {
-                    await tools.installPyInstaller(context);
+                    await tools.installPyInstaller();
                     vscode.window.showInformationMessage(
                         "'pyinstaller' was installed successfully."
                     );
@@ -714,7 +714,7 @@ export async function enableSWBBuildService(
         }
         const swbbuildServicePath = getSWBBuildServicePath();
         if (tools !== undefined && enabled) {
-            await tools.compileSWBBuildService(context, path.dirname(swbbuildServicePath));
+            await tools.compileSWBBuildService(path.dirname(swbbuildServicePath));
         }
 
         let checkSWBService: string | undefined = undefined;

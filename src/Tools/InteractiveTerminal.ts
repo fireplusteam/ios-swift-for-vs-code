@@ -57,6 +57,7 @@ export class InteractiveTerminal {
     }
 
     async executeCommand(installScript: string): Promise<void> {
+        installScript = `${installScript} && sleep 0.1 && echo "Installation finished with code: $?"`;
         this.log.info(`Executing command in terminal: ${installScript}`);
         return new Promise(async (resolver, reject) => {
             try {

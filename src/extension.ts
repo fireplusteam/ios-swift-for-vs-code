@@ -103,7 +103,7 @@ async function initialize(
             let result: boolean | undefined;
             if ((await isWorkspaceOpened()) === false) {
                 await atomicCommand.userCommand(async context => {
-                    await tools.resolveThirdPartyTools(context);
+                    await tools.resolveThirdPartyTools();
                     if ((await selectProjectFile(context, projectManager, true, true)) === false) {
                         result = false;
                     }
@@ -125,7 +125,7 @@ async function initialize(
         try {
             await atomicCommand.userCommand(
                 async context => {
-                    await tools.resolveThirdPartyTools(context);
+                    await tools.resolveThirdPartyTools();
                     // add BuildAll target root project if not exists (hide it with checkbox in settings)
                     await enableSWBBuildService(context, shouldInjectSWBBuildService(), tools);
                     await checkWorkspace(context, true);
@@ -199,7 +199,7 @@ export async function activate(context: vscode.ExtensionContext) {
     projectManager.onUpdateDeps = async () => {
         const context = atomicCommand.currentContext();
         if (context) {
-            await tools.updateThirdPartyTools(context);
+            await tools.updateThirdPartyTools();
         }
     };
     // initialise code
@@ -369,19 +369,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.install", async () => {
-            atomicCommand.userCommand(async context => {
-                await tools.resolveThirdPartyTools(context, true);
-                await vscode.window.showInformationMessage(
-                    "All Dependencies are installed successfully!"
-                );
-            }, "Install Dependency Tools");
+            await tools.resolveThirdPartyTools(true);
+            await vscode.window.showInformationMessage(
+                "All Dependencies are installed successfully!"
+            );
         })
     );
     context.subscriptions.push(
         vscode.commands.registerCommand("vscode-ios.tools.update", async () => {
-            atomicCommand.userCommand(async context => {
-                await tools.updateThirdPartyTools(context);
-            }, "Update Dependency Tools");
+            await tools.updateThirdPartyTools();
         })
     );
 

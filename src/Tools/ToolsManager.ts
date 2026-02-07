@@ -1,17 +1,18 @@
 import { exec } from "child_process";
 import * as fs from "fs";
 import * as vscode from "vscode";
+import { InteractiveTerminal } from "./InteractiveTerminal";
 import { getScriptPath, getSWBBuildServiceScriptPath } from "../env";
 import { XCRunHelper } from "./XCRunHelper";
 import { LogChannelInterface } from "../Logs/LogChannel";
-import { CommandContext } from "../CommandManagement/CommandContext";
-import { ExecutorMode } from "../Executor";
 
 export class ToolsManager {
     private log: LogChannelInterface;
+    private terminal: InteractiveTerminal;
 
     constructor(log: LogChannelInterface) {
         this.log = log;
+        this.terminal = new InteractiveTerminal(log, "Xcode: Install Tool Dependencies");
     }
 
     private async isToolInstalled(name: string, version = "--version"): Promise<boolean> {
@@ -87,29 +88,25 @@ export class ToolsManager {
         );
     }
 
-    private async installHomebrew(context: CommandContext) {
+    private async installHomebrew() {
         const installScript = `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`;
-        await this.executeCommand(context, installScript);
+        this.terminal.show();
+        await this.terminal.executeCommand(installScript);
     }
 
-    async installPyInstaller(context: CommandContext) {
-        return await this.installTool(context, "pyinstaller");
+    async installPyInstaller() {
+        this.terminal.show();
+        return await this.installTool("pyinstaller");
     }
 
-    private async executeCommand(context: CommandContext, command: string): Promise<void> {
-        await context.execShell(`${command}`, { command: command }, [], ExecutorMode.verbose);
-        return;
-    }
-
-    async compileSWBBuildService(context: CommandContext, distPath: string) {
-        await this.executeCommand(
-            context,
+    async compileSWBBuildService(distPath: string) {
+        this.terminal.show();
+        await this.terminal.executeCommand(
             `pyinstaller --onefile '${getSWBBuildServiceScriptPath()}' --distpath '${distPath}'`
         );
         try {
             // remove quarantine attribute to allow execution without user interaction as it was generated from python script by user
-            await this.executeCommand(
-                context,
+            this.terminal.executeCommand(
                 `xattr -d -r com.apple.quarantine '${distPath}/SWBBuildService'`
             );
         } catch {
@@ -117,9 +114,10 @@ export class ToolsManager {
         }
     }
 
-    private async installTool(context: CommandContext, name: string, toolName = "brew") {
+    private async installTool(name: string, toolName = "brew") {
         const command = `${toolName} install ${name}`;
-        await this.executeCommand(context, command);
+        this.terminal.show();
+        await this.terminal.executeCommand(command);
     }
 
     private async isLLDBStubExeCompiled() {
@@ -131,56 +129,57 @@ export class ToolsManager {
         return await this.isToolInstalled("pyinstaller", "--version");
     }
 
-    private async compileLLDStubExe(context: CommandContext) {
+    private async compileLLDStubExe() {
         const clang = await XCRunHelper.getClangCompilerPath();
         const sdk = await XCRunHelper.getSdkPath();
         const command = `${clang} -isysroot ${sdk} "${getScriptPath("lldb_exe_stub.c")}" -o "${getScriptPath("lldb_exe_stub")}"`;
         // this.terminal.show();
-        await this.executeCommand(context, command);
+        await this.terminal.executeCommand(command);
     }
 
-    private async installTools(context: CommandContext) {
+    private async installTools() {
         if (!(await this.isHomebrewInstalled())) {
-            await this.installHomebrew(context);
+            await this.installHomebrew();
         }
 
         if (!(await this.isXcbeautifyInstalled())) {
-            await this.installTool(context, "xcbeautify");
+            await this.installTool("xcbeautify");
         }
 
         if (!(await this.isTuistInstalled())) {
-            await this.installTool(context, "tuist");
+            await this.installTool("tuist");
         }
 
         if (!(await this.isXcodeprojGemInstalled())) {
-            await this.installTool(context, "xcodeproj", "gem");
+            await this.installTool("xcodeproj", "gem");
         }
 
         if (!(await this.isLLDBStubExeCompiled())) {
-            await this.compileLLDStubExe(context);
+            await this.compileLLDStubExe();
         }
     }
 
-    public async updateThirdPartyTools(context: CommandContext) {
+    public async updateThirdPartyTools() {
+        this.terminal.show();
         try {
-            await this.installTools(context);
+            await this.installTools();
             let firstError = null;
             try {
-                await this.executeCommand(context, "brew update");
+                await this.terminal.executeCommand("brew update");
             } catch (error) {
                 const message = `Failed to update Homebrew: ${error}`;
                 this.log.error(message);
                 firstError = message;
             }
             try {
-                await this.executeCommand(context, "brew upgrade xcbeautify");
+                await this.terminal.executeCommand("brew upgrade xcbeautify");
             } catch (error) {
                 const message = `Failed to upgrade xcbeautify: ${error}`;
                 this.log.error(message);
                 firstError = firstError === null ? message : `${firstError};\n${message}`;
             }
             try {
-                await this.executeCommand(context, "brew upgrade tuist");
+                await this.terminal.executeCommand("brew upgrade tuist");
             } catch (error) {
                 const message = `Failed to upgrade tuist: ${error}`;
                 this.log.error(message);
@@ -188,7 +187,7 @@ export class ToolsManager {
             }
 
             try {
-                await this.executeCommand(context, "gem install xcodeproj");
+                await this.terminal.executeCommand("gem install xcodeproj");
             } catch (error) {
                 const message = `Failed to install xcodeproj gem: ${error}`;
                 this.log.error(message);
@@ -206,10 +205,7 @@ export class ToolsManager {
         }
     }
 
-    public async resolveThirdPartyTools(
-        context: CommandContext,
-        askUserToInstallDeps: boolean = false
-    ) {
+    public async resolveThirdPartyTools(askUserToInstallDeps: boolean = false) {
         this.log.info("Resolving Third Party Dependencies");
         const hostPlatform = process.platform;
         if (hostPlatform !== "darwin") {
@@ -225,7 +221,7 @@ export class ToolsManager {
         }
 
         try {
-            await this.compileLLDStubExe(context);
+            await this.compileLLDStubExe();
         } catch {
             if (!this.isLLDBStubExeCompiled()) {
                 throw Error("Xcode is not installed. Please install it and restart VS Code");
@@ -250,7 +246,7 @@ export class ToolsManager {
             if (option === "Yes") {
                 try {
                     // install extensions
-                    await this.installTools(context);
+                    await this.installTools();
                     this.log.info("All dependencies are installed. You are ready to go");
                 } catch (err) {
                     this.log.error(
