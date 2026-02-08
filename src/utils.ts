@@ -60,7 +60,7 @@ export async function killSpawnLaunchedProcesses(deviceID: string) {
 }
 
 export function ensureKilled(proc: ChildProcess) {
-    sleep(25000).then(() => {
+    sleep(30000).then(() => {
         // check if process is still alive after waiting for graceful termination
         if (proc.exitCode === null) {
             // if it's still running - force kill

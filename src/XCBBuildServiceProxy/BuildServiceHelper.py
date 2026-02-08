@@ -140,42 +140,45 @@ class STDFeeder:
     async def feed_stdin(self, proc_stdin):
         byte = None
         loop = asyncio.get_running_loop()
-        while True:
-            if self.context.should_exit:
-                break
+        try:
+            while True:
+                if self.context.should_exit:
+                    break
 
-            if self.stdin is None:
-                await asyncio.sleep(0.03)
-                continue
+                if self.stdin is None:
+                    await asyncio.sleep(0.03)
+                    continue
 
-            if hasattr(self.stdin, "buffer"):  # sys.stdin
-                byte = await loop.run_in_executor(
-                    None,
-                    self.stdin.buffer.read,
-                    self.msg_reader.expecting_bytes_from_io(),
-                )
-            else:  # regular file object
-                byte = await loop.run_in_executor(
-                    None, self.stdin.read, self.msg_reader.expecting_bytes_from_io()
-                )
+                if hasattr(self.stdin, "buffer"):  # sys.stdin
+                    byte = await loop.run_in_executor(
+                        None,
+                        self.stdin.buffer.read,
+                        self.msg_reader.expecting_bytes_from_io(),
+                    )
+                else:  # regular file object
+                    byte = await loop.run_in_executor(
+                        None, self.stdin.read, self.msg_reader.expecting_bytes_from_io()
+                    )
 
-            if not byte:
-                await asyncio.sleep(0.03)
-                continue
+                if not byte:
+                    await asyncio.sleep(0.03)
+                    continue
 
-            for b in byte:
-                self.msg_reader.feed(b.to_bytes(1, "big"))
+                for b in byte:
+                    self.msg_reader.feed(b.to_bytes(1, "big"))
 
-            if self.msg_reader.status == MsgStatus.MsgEnd:
-                if self.request_modifier:
-                    self.request_modifier.modify_content(self.msg_reader)
+                if self.msg_reader.status == MsgStatus.MsgEnd:
+                    if self.request_modifier:
+                        self.request_modifier.modify_content(self.msg_reader)
 
-                buffer = self.msg_reader.buffer.copy()
-                self.msg_reader.reset()
+                    buffer = self.msg_reader.buffer.copy()
+                    self.msg_reader.reset()
 
-                await self.write_stdin_bytes(proc_stdin, buffer)
-                if self.context.debug_mode:
-                    self.context.log(f"CLIENT: {str(buffer[12:])}")
+                    await self.write_stdin_bytes(proc_stdin, buffer)
+                    if self.context.debug_mode:
+                        self.context.log(f"CLIENT: {str(buffer[12:])}")
+        except:
+            self.context.should_exit = True
 
 
 # READ from SWBBuildService and write to std output
@@ -225,33 +228,40 @@ class STDOuter:
 
     async def read_server_data(self, proc_stdout):
         loop = asyncio.get_running_loop()
-        while True:
-            if self.context.should_exit:
-                break
-            if self.stdout is None:
-                await asyncio.sleep(0.03)
-                continue
-            if isinstance(proc_stdout, asyncio.StreamReader):
-                out = await proc_stdout.read(self.msg_reader.expecting_bytes_from_io())
-            else:
-                out = await loop.run_in_executor(
-                    None, proc_stdout.read, self.msg_reader.expecting_bytes_from_io()
-                )
-            if out:
-                for b in out:
-                    self.msg_reader.feed(b.to_bytes(1, "big"))
-                    if self.msg_reader.status == MsgStatus.MsgEnd:
-                        buffer = self.msg_reader.buffer.copy()
-                        if self.server_spy:
-                            self.server_spy.on_server_message(self.msg_reader)
+        try:
+            while True:
+                if self.context.should_exit:
+                    break
+                if self.stdout is None:
+                    await asyncio.sleep(0.03)
+                    continue
+                if isinstance(proc_stdout, asyncio.StreamReader):
+                    out = await proc_stdout.read(
+                        self.msg_reader.expecting_bytes_from_io()
+                    )
+                else:
+                    out = await loop.run_in_executor(
+                        None,
+                        proc_stdout.read,
+                        self.msg_reader.expecting_bytes_from_io(),
+                    )
+                if out:
+                    for b in out:
+                        self.msg_reader.feed(b.to_bytes(1, "big"))
+                        if self.msg_reader.status == MsgStatus.MsgEnd:
+                            buffer = self.msg_reader.buffer.copy()
+                            if self.server_spy:
+                                self.server_spy.on_server_message(self.msg_reader)
 
-                        self.msg_reader.reset()
+                            self.msg_reader.reset()
 
-                        if self.context.debug_mode:
-                            self.context.log(f"\tSERVER: {buffer[12:]}")
-                        await self.write_stdout_bytes(buffer)
-            else:  # no data
-                await asyncio.sleep(0.03)
+                            if self.context.debug_mode:
+                                self.context.log(f"\tSERVER: {buffer[12:]}")
+                            await self.write_stdout_bytes(buffer)
+                else:  # no data
+                    await asyncio.sleep(0.03)
+        except:
+            self.context.should_exit = True
 
 
 # Xcode CLIENT
@@ -269,7 +279,11 @@ async def xcode_client(context: Context):
         asyncio.create_task(outer.read_server_data(process.stdout))
         while True:
             await asyncio.sleep(0.3)
-            if await check_for_exit() or process.returncode is not None:
+            if (
+                await check_for_exit()
+                or process.returncode is not None
+                or context.should_exit
+            ):
                 break
     finally:
         if process.returncode is None:
@@ -317,7 +331,11 @@ async def main_client(context: Context):
                 ):
                     break
 
-            if await check_for_exit() or not is_pid_alive(context.server_pid):
+            if (
+                await check_for_exit()
+                or not is_pid_alive(context.server_pid)
+                or context.should_exit
+            ):
                 break
     finally:
         context.should_exit = True
@@ -372,7 +390,11 @@ async def main_server(context: Context):
                     elif message["command"] == "stop":
                         break
                 else:
-                    if process.returncode is not None or not is_host_app_alive():
+                    if (
+                        process.returncode is not None
+                        or not is_host_app_alive()
+                        or context.should_exit
+                    ):
                         context.log(
                             f"SERVER: SWBBuildService Process exited with {process.returncode}, or host app not alive"
                         )

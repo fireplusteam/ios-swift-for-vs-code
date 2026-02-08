@@ -214,7 +214,7 @@ export class BuildManager {
         context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime, error);
     }
 
-    private async startSpyService(
+    private async startTargetBuildingSpyService(
         context: CommandContext,
         buildEnv: { [name: string]: string },
         buildableTargetsIds: Set<string>,
@@ -283,7 +283,7 @@ export class BuildManager {
         }
 
         const buildEnv = await BuildManager.commonEnv();
-        const buildTargetSpy = await this.startSpyService(
+        const buildTargetSpy = await this.startTargetBuildingSpyService(
             context,
             buildEnv,
             builtTargetIds,
@@ -345,7 +345,7 @@ export class BuildManager {
         const buildTouchTime = Date.now();
         const buildEnv = await BuildManager.commonEnv();
         const builtTargetIds = new Set<string>(includeTargets);
-        const buildTargetSpy = await this.startSpyService(
+        const buildTargetSpy = await this.startTargetBuildingSpyService(
             context,
             buildEnv,
             builtTargetIds,
@@ -475,7 +475,7 @@ export class BuildManager {
                 .filter(id => id.length > 0)
         );
         const buildEnv = await BuildManager.commonEnv();
-        const buildTargetSpy = await this.startSpyService(
+        const buildTargetSpy = await this.startTargetBuildingSpyService(
             context,
             buildEnv,
             builtTargetIds,
