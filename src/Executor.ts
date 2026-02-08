@@ -1,7 +1,7 @@
 import { ChildProcess, spawn, SpawnOptions } from "child_process";
 import { getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
-import { killAll, sleep } from "./utils";
+import { ensureKilled, killAll, sleep } from "./utils";
 import { UserTerminalCloseError, UserTerminatedError } from "./CommandManagement/CommandContext";
 import { TerminalMessageStyle, TerminalShell } from "./TerminalShell";
 import { PassThrough } from "stream";
@@ -194,10 +194,8 @@ export class Executor {
             }
         });
 
-        let isKilled = false;
         const killAction = () => {
-            if (proc.pid !== undefined && !isKilled) {
-                isKilled = true;
+            if (proc.pid !== undefined) {
                 if (shell.kill) {
                     if (shell.kill.allSubProcesses) {
                         killAll(proc.pid, shell.kill.signal);
@@ -208,13 +206,7 @@ export class Executor {
                     // by default send SIGINT to all subprocesses to allow graceful termination
                     killAll(proc.pid, "SIGINT");
                 }
-                sleep(25000).then(() => {
-                    // check if process is still alive after waiting for graceful termination
-                    if (proc.exitCode === null) {
-                        // if it's still running - force kill
-                        killAll(proc.pid, "SIGKILL");
-                    }
-                });
+                ensureKilled(proc);
             }
         };
 

@@ -12,13 +12,13 @@ import {
     getWorkspaceFolder,
     ProjectEnv,
 } from "../env";
-import { ExecutorMode } from "../Executor";
+import { ExecutorMode, ExecutorTaskError, ShellProcessResult } from "../Executor";
 import { XcodeBuildExecutor } from "./XcodeBuildExecutor";
 import * as fs from "fs";
 import * as path from "path";
 import { randomUUID } from "crypto";
 import { createInterface } from "readline";
-import { sleep } from "../utils";
+import { ensureKilled, sleep } from "../utils";
 // import { createInterface } from "readline";
 // import { sleep } from "../utils";
 
@@ -52,6 +52,7 @@ class BuildTargetSpy {
     private end: boolean = false;
     private outfile: fs.ReadStream | undefined;
     private onReceiveMessage: (message: string) => void = () => {};
+    private isMessageSent = new Set<string>();
 
     constructor(private env: { [name: string]: string }) {}
 
@@ -80,22 +81,35 @@ class BuildTargetSpy {
 
         try {
             for await (const line of rl) {
-                this.onReceiveMessage(line);
+                if (!this.end && !this.isMessageSent.has(line)) {
+                    this.isMessageSent.add(line);
+                    this.onReceiveMessage(line);
+                }
             }
         } finally {
             outputFile.close();
         }
     }
 
-    async spy(onReceiveMessage: (message: string) => void) {
+    async spy(cancelToken: vscode.CancellationToken, onReceiveMessage: (message: string) => void) {
         this.onReceiveMessage = onReceiveMessage;
+        let disposable: vscode.Disposable | undefined = undefined;
         try {
+            disposable = cancelToken.onCancellationRequested(() => {
+                this.end = true;
+                this.outfile?.close();
+            });
             do {
-                await sleep(100);
+                this.readMessages();
+                await sleep(1000);
             } while (!this.end);
         } catch (error) {
-            onReceiveMessage(`Spy failed: ${error}`);
+            if (!this.end) {
+                onReceiveMessage(`Spy failed: ${error}`);
+            }
             throw error;
+        } finally {
+            disposable?.dispose();
         }
     }
 
@@ -108,12 +122,14 @@ class BuildTargetSpy {
 
 export class BuildManager {
     private xcodeBuildExecutor: XcodeBuildExecutor = new XcodeBuildExecutor();
+    private buildingCommand: ShellProcessResult | undefined = undefined;
+    private buildingCommandError: Error | undefined = undefined;
 
     constructor() {}
 
     static sessionId = randomUUID();
 
-    static async commonEnv(buildingTargetsIds: string[] = []) {
+    static async commonEnv() {
         const pid = process.pid;
         const env = {} as { [name: string]: string };
         env["SWBBUILD_SERVICE_PROXY_PATH"] = path.join(
@@ -128,8 +144,6 @@ export class BuildManager {
         env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] = getSWBBuildServiceConfigTempFile(
             this.sessionId
         );
-        env["SWBBUILD_SERVICE_PROXY_TARGETS_IDS"] = buildingTargetsIds.join("|^|^|");
-
         env["SWBBUILD_SERVICE_PROXY_SERVER_SPY_OUTPUT_FILE"] =
             `${getSWBBuildServiceConfigTempFile(this.sessionId)}.spy`;
         return env;
@@ -225,9 +239,17 @@ export class BuildManager {
     async clean(context: CommandContext) {
         context.bundle.generateNext();
         const projectEnv = context.projectEnv;
+        const projectType = await projectEnv.projectType;
         await context.execShellWithOptions({
             scriptOrCommand: { command: "xcodebuild" },
-            args: ["clean", await projectEnv.projectType, await projectEnv.projectFile],
+            args: [
+                "clean",
+                projectType,
+                await projectEnv.projectFile,
+                ...(projectType === "-workspace"
+                    ? ["-scheme", await projectEnv.projectScheme]
+                    : []),
+            ],
             env: { ...(await BuildManager.commonEnv()) },
             mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
             kill: { signal: "SIGINT", allSubProcesses: false },
@@ -238,15 +260,35 @@ export class BuildManager {
         });
     }
 
+    private markTargetUpToDateAfterBuild(
+        context: CommandContext,
+        builtTargetIds: Set<string>,
+        buildTouchTime: number,
+        error: Error | undefined
+    ) {
+        // if error was generated, we don't want to mark all dependencies as up to date with error, because it will cause rebuild for success targets, instead we mark only built targets and leave dependencies to be rebuilt upon their individual status
+        const allBuiltTargetsIds = error
+            ? builtTargetIds
+            : context.semanticManager.getAllTargetsDependencies(new Set(builtTargetIds));
+        // mark all built targets and their dependencies as up to date if they were not modified during the build
+        context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime, error);
+    }
+
     private async startSpyService(
         context: CommandContext,
         buildEnv: { [name: string]: string },
         buildableTargetsIds: Set<string>,
-        buildTouchTime: number
+        buildTouchTime: number,
+        shouldStopAfterGotStatusForAllTargets: boolean
     ) {
         const buildTargetSpy = new BuildTargetSpy(buildEnv);
         await buildTargetSpy.prepare();
-        buildTargetSpy.spy(message => {
+        let isEndSpyCalled = false;
+        this.buildingCommandError = undefined;
+        buildTargetSpy.spy(context.cancellationToken, message => {
+            if (isEndSpyCalled) {
+                return; // after end spy we don't want to process any messages
+            }
             if (message.startsWith("Success:")) {
                 const targetId = message.split("Success:").at(1)?.trim();
                 this.markTargetUpToDateAfterBuild(
@@ -256,8 +298,11 @@ export class BuildManager {
                     undefined
                 );
                 buildableTargetsIds.delete(targetId ?? "");
-            } else if (message.startsWith("Error:")) {
-                const targetId = message.split("Error:").at(1)?.trim();
+            } else if (message.startsWith("Fail:")) {
+                this.buildingCommandError = new Error(
+                    `Build failed for target ${message.split("Fail:").at(1)?.trim()}`
+                );
+                const targetId = message.split("Fail:").at(1)?.trim();
                 this.markTargetUpToDateAfterBuild(
                     context,
                     new Set([targetId ?? ""]),
@@ -265,6 +310,19 @@ export class BuildManager {
                     new Error(`Build failed for target ${targetId}`)
                 );
                 buildableTargetsIds.delete(targetId ?? "");
+            }
+            if (
+                buildableTargetsIds.size === 0 &&
+                shouldStopAfterGotStatusForAllTargets &&
+                !isEndSpyCalled
+            ) {
+                isEndSpyCalled = true;
+                // we got status for all interesting targets, interupt build here
+                if (this.buildingCommand) {
+                    this.buildingCommand.proc.kill("SIGINT");
+                    ensureKilled(this.buildingCommand.proc);
+                }
+                buildTargetSpy.endSpy();
             }
         });
         return buildTargetSpy;
@@ -286,12 +344,13 @@ export class BuildManager {
             );
         }
 
-        const buildEnv = await BuildManager.commonEnv([...builtTargetIds]);
+        const buildEnv = await BuildManager.commonEnv();
         const buildTargetSpy = await this.startSpyService(
             context,
             buildEnv,
             builtTargetIds,
-            buildTouchTime
+            buildTouchTime,
+            false
         );
 
         try {
@@ -306,7 +365,7 @@ export class BuildManager {
             }
 
             context.bundle.generateNext();
-            await context.execShellWithOptions({
+            this.buildingCommand = context.execShellWithOptionsAndProc({
                 scriptOrCommand: { command: "xcodebuild" },
                 pipeToParseBuildErrors: true,
                 args: await BuildManager.args(context.projectEnv, context.bundle),
@@ -323,11 +382,12 @@ export class BuildManager {
                     },
                 },
             });
+            await this.buildingCommand.result;
             await buildTargetSpy.endSpy();
             this.markTargetUpToDateAfterBuild(context, builtTargetIds, buildTouchTime, undefined);
         } catch (error) {
+            await buildTargetSpy.endSpy();
             if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
-                await buildTargetSpy.endSpy();
                 this.markTargetUpToDateAfterBuild(
                     context,
                     builtTargetIds,
@@ -339,33 +399,20 @@ export class BuildManager {
         }
     }
 
-    private markTargetUpToDateAfterBuild(
-        context: CommandContext,
-        builtTargetIds: Set<string>,
-        buildTouchTime: number,
-        error: Error | undefined
-    ) {
-        // if error was generated, we don't want to mark all dependencies as up to date with error, because it will cause rebuild for success targets, instead we mark only built targets and leave dependencies to be rebuilt upon their individual status
-        const allBuiltTargetsIds = error
-            ? builtTargetIds
-            : context.semanticManager.getAllTargetsDependencies(new Set(builtTargetIds));
-        // mark all built targets and their dependencies as up to date if they were not modified during the build
-        context.semanticManager.markTargetUpToDate(allBuiltTargetsIds, buildTouchTime, error);
-    }
-
     async buildAutocomplete(
         context: CommandContext,
         logFilePath: string,
         includeTargets: string[] = []
     ) {
         const buildTouchTime = Date.now();
-        const buildEnv = await BuildManager.commonEnv(includeTargets);
+        const buildEnv = await BuildManager.commonEnv();
         const builtTargetIds = new Set<string>(includeTargets);
         const buildTargetSpy = await this.startSpyService(
             context,
             buildEnv,
             builtTargetIds,
-            buildTouchTime
+            buildTouchTime,
+            true
         );
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
@@ -398,7 +445,7 @@ export class BuildManager {
             }
             context.bundle.generateNext();
 
-            await context.execShellWithOptions({
+            this.buildingCommand = context.execShellWithOptionsAndProc({
                 scriptOrCommand: { command: "xcodebuild" },
                 pipeToParseBuildErrors: true,
                 args: [
@@ -428,11 +475,13 @@ export class BuildManager {
                     mode: ExecutorMode.none,
                 },
             });
+            await this.buildingCommand.result;
             await buildTargetSpy.endSpy();
             this.markTargetUpToDateAfterBuild(context, builtTargetIds, buildTouchTime, undefined);
         } catch (error) {
+            await buildTargetSpy.endSpy();
+
             if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
-                await buildTargetSpy.endSpy();
                 this.markTargetUpToDateAfterBuild(
                     context,
                     builtTargetIds,
@@ -440,7 +489,15 @@ export class BuildManager {
                     error instanceof Error ? error : new Error(String(error))
                 );
             }
-            throw error;
+            if (
+                this.buildingCommandError === undefined &&
+                error instanceof ExecutorTaskError &&
+                error.code === 75
+            ) {
+                // indexes for all targets are up to date, we should not trigger error as build is successful for autocomplete purposes, but we don't want to process with other targets as they are not needed now
+            } else {
+                throw error;
+            }
         } finally {
             // clean up build target scheme if it was created
             try {
@@ -479,12 +536,13 @@ export class BuildManager {
                 })
                 .filter(id => id.length > 0)
         );
-        const buildEnv = await BuildManager.commonEnv([...builtTargetIds]);
+        const buildEnv = await BuildManager.commonEnv();
         const buildTargetSpy = await this.startSpyService(
             context,
             buildEnv,
             builtTargetIds,
-            buildTouchTime
+            buildTouchTime,
+            false
         );
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
@@ -523,7 +581,7 @@ export class BuildManager {
                 extraArguments.push(...["-enableCodeCoverage", "YES"]);
             }
 
-            await context.execShellWithOptions({
+            this.buildingCommand = context.execShellWithOptionsAndProc({
                 scriptOrCommand: { command: "xcodebuild" },
                 pipeToParseBuildErrors: true,
                 args: [
@@ -538,7 +596,7 @@ export class BuildManager {
                     )),
                     ...extraArguments,
                 ],
-                env: { ...(await BuildManager.commonEnv([...builtTargetIds])) },
+                env: { ...(await BuildManager.commonEnv()) },
                 mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
                 kill: { signal: "SIGINT", allSubProcesses: false },
                 pipe: {
@@ -554,11 +612,12 @@ export class BuildManager {
                     },
                 },
             });
+            await this.buildingCommand.result;
             await buildTargetSpy.endSpy();
             this.markTargetUpToDateAfterBuild(context, builtTargetIds, buildTouchTime, undefined);
         } catch (error) {
+            await buildTargetSpy.endSpy();
             if (error !== UserTerminatedError && error !== UserTerminalCloseError) {
-                await buildTargetSpy.endSpy();
                 this.markTargetUpToDateAfterBuild(
                     context,
                     builtTargetIds,

@@ -2,7 +2,7 @@ import * as path from "path";
 import { getLogPath, getWorkspacePath, LogFile } from "./env";
 import * as fs from "fs";
 import { lock, unlock } from "lockfile";
-import { exec } from "child_process";
+import { ChildProcess, exec } from "child_process";
 import treeKill = require("tree-kill");
 import psTree = require("ps-tree");
 import find = require("find-process");
@@ -57,6 +57,16 @@ export async function killSpawnLaunchedProcesses(deviceID: string) {
     } catch (err) {
         console.log(`Kill Spawn Processes error: ${err}`);
     }
+}
+
+export function ensureKilled(proc: ChildProcess) {
+    sleep(25000).then(() => {
+        // check if process is still alive after waiting for graceful termination
+        if (proc.exitCode === null) {
+            // if it's still running - force kill
+            killAll(proc.pid, "SIGKILL");
+        }
+    });
 }
 
 // for some reason kill function doesn't kill all child process in some cases, so we need to do it manually to make sure it's actually killed
