@@ -1,7 +1,7 @@
 import { ChildProcess, spawn, SpawnOptions } from "child_process";
 import { getScriptPath, getWorkspacePath } from "./env";
 import * as vscode from "vscode";
-import { ensureKilled, killAll, sleep } from "./utils";
+import { ensureKilled, killAll } from "./utils";
 import { UserTerminalCloseError, UserTerminatedError } from "./CommandManagement/CommandContext";
 import { TerminalMessageStyle, TerminalShell } from "./TerminalShell";
 import { PassThrough } from "stream";
