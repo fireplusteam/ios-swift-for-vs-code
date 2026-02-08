@@ -14,8 +14,10 @@ from BuildServiceUtils import (
     make_unblocking,
     is_pid_alive,
     is_host_app_alive,
+    server_spy_output_file,
 )
 from MessageModifiers import MessageModifierBase, ClientMessageModifier
+from ServerMessageSpy import ServerMessageSpyBase, ServerMessageSpy
 
 
 class Context:
@@ -183,6 +185,7 @@ class STDOuter:
         self.msg_reader = MessageReader()
         self.context = context
         self._stdout = stdout
+        self._server_spy = None
 
     @property
     def stdout(self):
@@ -193,6 +196,14 @@ class STDOuter:
         if self._stdout:
             self._stdout.close()
         self._stdout = value
+
+    @property
+    def server_spy(self):
+        return self._server_spy
+
+    @server_spy.setter
+    def server_spy(self, value: ServerMessageSpyBase):
+        self._server_spy = value
 
     def __enter__(self):
         return self
@@ -231,6 +242,9 @@ class STDOuter:
                     self.msg_reader.feed(b.to_bytes(1, "big"))
                     if self.msg_reader.status == MsgStatus.MsgEnd:
                         buffer = self.msg_reader.buffer.copy()
+                        if self.server_spy:
+                            self.server_spy.on_server_message(self.msg_reader)
+
                         self.msg_reader.reset()
 
                         if self.context.debug_mode:
@@ -276,6 +290,18 @@ async def main_client(context: Context):
 
         reader = STDFeeder(context.stdin, context, ClientMessageModifier())
         outer = STDOuter(context.stdout, context)
+
+        spy_output_file_name = server_spy_output_file()
+        if spy_output_file_name:
+            spy_output_file = (
+                open(spy_output_file_name, "w", encoding="utf-8", buffering=1)
+                if spy_output_file_name
+                else None
+            )
+        outer.server_spy = ServerMessageSpy(
+            spy_output_file
+        )  # spy target building status and log to stderr
+
         asyncio.create_task(reader.feed_stdin(context.stdin_file))
         asyncio.create_task(outer.read_server_data(context.stdout_file))
         last_mtime = None
@@ -295,6 +321,7 @@ async def main_client(context: Context):
                 break
     finally:
         context.should_exit = True
+        spy_output_file.close()
         context.stdin_file.close()
         context.stdout_file.close()
         sys.exit(0)

@@ -1,4 +1,5 @@
 from enum import Enum
+import json
 
 
 class MsgStatus(Enum):
@@ -79,3 +80,27 @@ class MessageReader:
         self.msg_len -= end_pos - start_pos
         self.msg_len += len(new_content)
         self.buffer[8 : 8 + 4] = self.msg_len.to_bytes(4, "little")
+
+    def parse_json_from_message(self) -> dict:
+        message_body = self.message_body()
+        json_start = message_body.find(b"\xc5")  # two bytes json length
+        json_offset = 0
+        if json_start == -1:
+            json_start = message_body.find(b"\xc4")  # single byte json length
+            if json_start == -1:
+                return None
+            else:
+                json_offset = 2
+        else:
+            json_offset = 3
+        json_len = int.from_bytes(
+            message_body[json_start + 1 : json_start + json_offset], "big"
+        )
+        json_bytes = message_body[
+            json_start + json_offset : json_start + json_offset + json_len
+        ]
+        json_str = json_bytes.decode("utf-8")
+        return json.loads(json_str)
+
+    def message_body(self) -> bytearray:
+        return self.buffer[12:]

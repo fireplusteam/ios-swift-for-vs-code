@@ -19,6 +19,18 @@ def is_behave_like_proxy():
     return False
 
 
+def get_targets_ids():
+    if "SWBBUILD_SERVICE_PROXY_TARGETS_IDS" in os.environ:
+        return os.environ["SWBBUILD_SERVICE_PROXY_TARGETS_IDS"].split("|^|^|")
+    return []
+
+
+def server_spy_output_file():
+    if "SWBBUILD_SERVICE_PROXY_SERVER_SPY_OUTPUT_FILE" in os.environ:
+        return os.environ["SWBBUILD_SERVICE_PROXY_SERVER_SPY_OUTPUT_FILE"]
+    return None
+
+
 def get_session_id():
     if "SWBBUILD_SERVICE_PROXY_SESSION_ID" in os.environ:
         return os.environ["SWBBUILD_SERVICE_PROXY_SESSION_ID"]
