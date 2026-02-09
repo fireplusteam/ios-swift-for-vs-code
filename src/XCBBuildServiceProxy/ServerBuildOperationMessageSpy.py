@@ -5,7 +5,7 @@ class ServerBuildOperationMessageSpy(MessageSpyBase):
     def __init__(self):
         self.is_building = False
 
-    def on_server_message(self, type: MessageType, message):
+    async def on_receive_message(self, type: MessageType, message):
         message_body = message.message_body()
         if type == MessageType.server_message:
             if message_body.startswith(b"\xb5BUILD_OPERATION_ENDED"):

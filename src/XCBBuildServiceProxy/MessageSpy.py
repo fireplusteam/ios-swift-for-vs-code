@@ -8,5 +8,5 @@ class MessageType(Enum):
 
 
 class MessageSpyBase:
-    def on_server_message(self, type: MessageType, message: MessageReader):
+    async def on_receive_message(self, type: MessageType, message: MessageReader):
         pass

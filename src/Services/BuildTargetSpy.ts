@@ -46,7 +46,7 @@ export class BuildTargetSpy {
             flags: "r",
             encoding: "utf-8",
             highWaterMark: 1,
-            autoClose: false,
+            autoClose: true,
             start: 0,
             end: Number.MAX_SAFE_INTEGER,
         });

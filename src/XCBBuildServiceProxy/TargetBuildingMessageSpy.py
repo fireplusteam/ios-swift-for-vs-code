@@ -13,6 +13,7 @@
 
 # 3. after xd3 the id of build target task which is ended. At this point we can figure out if we need to build further or not.
 # SERVER: bytearray(b'\xb2BUILD_TARGET_ENDED\x91\xd3\x00\x00\x00\x00\x00\x00\x00\x02')
+import asyncio
 from MessageReader import MessageReader
 from MessageSpy import MessageSpyBase, MessageType
 
@@ -37,16 +38,17 @@ class TargetBuildingMessageSpy(MessageSpyBase):
         self.reported_target_ids = set()
         self.is_cancelled = False
 
-    def output(self, target, status):
+    async def output(self, target, status):
         if self.output_file is None:
             return
         if target in self.reported_target_ids:
             return
+        loop = asyncio.get_running_loop()
         self.reported_target_ids.add(target)
-        self.output_file.write(f"{status}:{target}\n")
-        self.output_file.flush()
+        await loop.run_in_executor(None, self.output_file.write, f"{status}:{target}\n")
+        await loop.run_in_executor(None, self.output_file.flush)
 
-    def on_server_message(self, type: MessageType, message: MessageReader):
+    async def on_receive_message(self, type: MessageType, message: MessageReader):
         message_body = message.message_body()
         if type == MessageType.server_message:
             if message_body.startswith(b"\xb4BUILD_TARGET_STARTED"):
@@ -73,7 +75,7 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                             if (
                                 status != 0
                             ):  # if status is not 0 then it's failed building a target
-                                self.output(target_id, "Fail")
+                                await self.output(target_id, "Fail")
             elif message_body.startswith(b"\xb2BUILD_TARGET_ENDED"):
                 task_id = int.from_bytes(message_body[-8:], "big")
                 if task_id in self.build_task_id_to_guid:
@@ -82,9 +84,9 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                     target_id = self.build_target_sessions[guid]["target_id"]
                     if target_id in self.target_ids_to_guid:
                         if not self.is_cancelled:
-                            self.output(target_id, "Success")
+                            await self.output(target_id, "Success")
                         else:
-                            self.output(target_id, "Cancelled")
+                            await self.output(target_id, "Cancelled")
                         del self.target_ids_to_guid[target_id]
 
         elif type == MessageType.client_message:

@@ -183,7 +183,7 @@ class STDFeeder:
                         self.request_modifier.modify_content(self.msg_reader)
 
                     if self.message_spy:
-                        self.message_spy.on_server_message(
+                        await self.message_spy.on_receive_message(
                             MessageType.client_message, self.msg_reader
                         )
 
@@ -267,7 +267,7 @@ class STDOuter:
                         if self.msg_reader.status == MsgStatus.MsgEnd:
                             buffer = self.msg_reader.buffer.copy()
                             if self.message_spy:
-                                self.message_spy.on_server_message(
+                                await self.message_spy.on_receive_message(
                                     MessageType.server_message, self.msg_reader
                                 )
 
