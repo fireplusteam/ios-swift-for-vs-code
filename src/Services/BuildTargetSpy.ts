@@ -47,7 +47,7 @@ export class BuildTargetSpy {
             encoding: "utf-8",
             highWaterMark: 1,
             autoClose: true,
-            start: 0,
+            start: this.readCursorPosition,
             end: Number.MAX_SAFE_INTEGER,
         });
         this.outfile = outputFile;
@@ -59,9 +59,17 @@ export class BuildTargetSpy {
 
         try {
             for await (const line of rl) {
-                if (!this.end && !this.isMessageSent.has(line)) {
+                if (this.end) {
+                    break;
+                }
+                if (!line.endsWith(":end_tail")) {
+                    continue;
+                }
+                this.readCursorPosition += Buffer.byteLength(line + "\n", "utf-8");
+                if (!this.isMessageSent.has(line)) {
                     this.isMessageSent.add(line);
-                    this.onReceiveMessage(line);
+                    const message = line.split(":end_tail")[0];
+                    this.onReceiveMessage(message);
                 }
             }
         } finally {
@@ -158,11 +166,17 @@ export class BuildTargetSpy {
         }
     }
 
+    private readCursorPosition = 0;
+
     async spy(
         buildPipeEvent: vscode.Event<string>,
         cancelToken: vscode.CancellationToken,
         onReceiveMessage: (message: string) => void
     ) {
+        if (this.end) {
+            throw new Error("Spy already ended");
+        }
+
         this.onReceiveMessage = onReceiveMessage;
         let cancelableDisposable: vscode.Disposable | undefined = undefined;
         let buildPipeDisposable: vscode.Disposable | undefined = undefined;

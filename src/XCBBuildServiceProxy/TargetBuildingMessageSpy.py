@@ -46,7 +46,9 @@ class TargetBuildingMessageSpy(MessageSpyBase):
             return
         self.reported_target_ids.add(target)
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self.output_file.write, f"{status}:{target}\n")
+        await loop.run_in_executor(
+            None, self.output_file.write, f"{status}:{target}:end_tail\n"
+        )
         await loop.run_in_executor(None, self.output_file.flush)
 
     async def on_receive_message(self, type: MessageType, message: MessageReader):

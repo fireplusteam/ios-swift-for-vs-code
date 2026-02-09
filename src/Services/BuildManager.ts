@@ -19,8 +19,6 @@ import * as path from "path";
 import { randomUUID } from "crypto";
 import { ensureKilled } from "../utils";
 import { BuildTargetSpy } from "./BuildTargetSpy";
-// import { createInterface } from "readline";
-// import { sleep } from "../utils";
 
 function isBuildIndexesWhileBuildingEnabled() {
     return vscode.workspace
@@ -231,6 +229,8 @@ export class BuildManager {
             }
             if (message.startsWith("DEPENDENCY:")) {
                 const [from, to] = message.split("DEPENDENCY:").at(1)?.trim().split("|^|^|") ?? [];
+                context.log.debug("Got dependency from spy: " + from + " -> " + to);
+
                 if (from !== to) {
                     context.semanticManager.setImplicitDependencies(from, [to]);
                 }
@@ -242,6 +242,7 @@ export class BuildManager {
                     buildTouchTime,
                     undefined
                 );
+                context.log.debug(`Got success message for target ${targetId} from spy`);
                 buildableTargetsIds.delete(targetId ?? "");
             } else if (message.startsWith("Success_building_log_id:")) {
                 const buildLogTargetId = message.split("Success_building_log_id:").at(1)?.trim();
@@ -256,6 +257,7 @@ export class BuildManager {
                             undefined
                         );
                         buildableTargetsIds.delete(targetId ?? "");
+                        context.log.debug(`Got success message for target ${targetId} from spy`);
                     }
                 }
             } else if (message.startsWith("Fail:")) {
@@ -268,6 +270,7 @@ export class BuildManager {
                     new Error(`Build failed for target ${targetId}`)
                 );
                 buildableTargetsIds.delete(targetId ?? "");
+                context.log.debug(`Got fail message for target ${targetId} from spy`);
             }
             if (
                 buildableTargetsIds.size === 0 &&
