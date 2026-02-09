@@ -55,8 +55,10 @@ export interface TargetDependency {
     targetName: string;
     projectPath: string;
     id: string;
+    xcodeBuilingLogsId: string;
     files: Set<string>;
-    dependencies: string[]; // list of target ids
+    dependencies: Set<string>; // list of target ids
+    implicitDependencies: Set<string>; // list of target ids which are not direct dependencies but should be built together with the target, for example frameworks
 }
 export interface ProjectManagerProjectDependency {
     getTargetDependenciesGraph(): Promise<Map<string, TargetDependency>>;
@@ -1192,6 +1194,14 @@ export class ProjectManager
     }
 
     async getTargetDependenciesGraph(): Promise<Map<string, TargetDependency>> {
+        const buildingLogProjectName = async (project: string) => {
+            if (path.basename(project) === "Package.swift") {
+                return await this.rubyProjectFilesManager.packageName(
+                    getFilePathInWorkspace(project)
+                );
+            }
+            return path.basename(project, path.extname(project));
+        };
         const graph = new Map<string, TargetDependency>();
 
         const projectsByTargetName = new Map<string, string[]>();
@@ -1202,6 +1212,7 @@ export class ProjectManager
             const targets = await this.rubyProjectFilesManager.getProjectTargets(projectPath);
 
             for (const target of targets) {
+                const buildingLogsTargetId = `${await buildingLogProjectName(project)}::${target}`;
                 const depTarget: TargetDependency = {
                     targetName: target,
                     projectPath: project,
@@ -1212,7 +1223,9 @@ export class ProjectManager
                             target
                         )
                     ),
-                    dependencies: [],
+                    xcodeBuilingLogsId: buildingLogsTargetId,
+                    dependencies: new Set<string>(),
+                    implicitDependencies: new Set<string>(), // set later during build phase
                 };
                 projectsByTargetName.set(target, [
                     ...(projectsByTargetName.get(target) || []),
@@ -1234,7 +1247,7 @@ export class ProjectManager
                     // do not change the order of id, as it's parsed in project_helper.rb by splitting with "::"
                     const depTargetId = `${getFilePathInWorkspace(project)}::${depTargetName}`;
                     if (graph.has(depTargetId)) {
-                        targetDep.dependencies.push(depTargetId);
+                        targetDep.dependencies.add(depTargetId);
                     }
                 }
             }

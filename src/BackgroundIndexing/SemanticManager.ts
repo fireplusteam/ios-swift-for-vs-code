@@ -19,6 +19,10 @@ export interface SemanticManagerInterface {
     getTargetById(targetId: string): TargetDependency | undefined;
     getTargetIdsByNames(targetNames: string[]): Set<string>;
 
+    setImplicitDependencies(
+        xcodeBuildingLogsTargetId: string,
+        implicitDependencyTargetIds: string[]
+    ): void;
     refreshSemanticGraph(): Promise<void>;
 
     markTargetOutOfDate(targetIds: Set<string>): void;
@@ -35,8 +39,10 @@ export class SemanticManager implements SemanticManagerInterface {
 
     private graph = new Map<string, TargetDependency>();
     private inverseGraph = new Map<string, Set<string>>();
+    private inverseGraphImplicit = new Map<string, Set<string>>();
 
     private filesToTargets = new Map<string, Set<string>>();
+    private XcodeTargetsIdsToTargetIds = new Map<string, string>();
 
     constructor(private targetGraphResolver: ProjectManagerProjectDependency) {}
 
@@ -80,11 +86,38 @@ export class SemanticManager implements SemanticManagerInterface {
         return result;
     }
 
+    setImplicitDependencies(
+        xcodeBuildingLogsTargetId: string,
+        implicitDependencyTargetIds: string[]
+    ): void {
+        const targetId = this.XcodeTargetsIdsToTargetIds.get(xcodeBuildingLogsTargetId);
+        if (!targetId) {
+            return;
+        }
+        const targetDep = this.graph.get(targetId);
+        if (targetDep) {
+            for (const implicitDepId of implicitDependencyTargetIds) {
+                const implicitTargetDepId = this.XcodeTargetsIdsToTargetIds.get(implicitDepId);
+                if (!implicitTargetDepId || targetDep.dependencies.has(implicitTargetDepId)) {
+                    continue;
+                }
+                targetDep.implicitDependencies.add(implicitTargetDepId);
+                let inverseDeps = this.inverseGraphImplicit.get(implicitTargetDepId);
+                if (!inverseDeps) {
+                    inverseDeps = new Set<string>();
+                    this.inverseGraphImplicit.set(implicitTargetDepId, inverseDeps);
+                }
+                inverseDeps.add(targetId);
+            }
+        }
+    }
+
     async refreshSemanticGraph() {
         const newGraph = await this.targetGraphResolver.getTargetDependenciesGraph();
 
         const changedTargets = new Set<string>();
         this.filesToTargets.clear();
+        this.XcodeTargetsIdsToTargetIds.clear();
         for (const [targetId, deps] of newGraph.entries()) {
             const oldTarget = this.graph.get(targetId);
             if (oldTarget !== undefined && !setsAreEqual(oldTarget.files, deps.files)) {
@@ -100,11 +133,13 @@ export class SemanticManager implements SemanticManagerInterface {
                 }
                 targets.add(targetId);
             }
+            this.XcodeTargetsIdsToTargetIds.set(deps.xcodeBuilingLogsId, targetId);
         }
 
         this.graph = newGraph;
 
         this.inverseGraph.clear();
+        this.inverseGraphImplicit.clear();
         for (const [targetId, deps] of this.graph.entries()) {
             for (const dependencyId of deps.dependencies) {
                 let inverseDeps = this.inverseGraph.get(dependencyId);
@@ -178,6 +213,11 @@ export class SemanticManager implements SemanticManagerInterface {
                         visitQueue.push(childTargetId);
                     }
                 }
+                for (const childTargetId of targetDep.implicitDependencies) {
+                    if (!result.has(childTargetId)) {
+                        visitQueue.push(childTargetId);
+                    }
+                }
             }
         }
         return result;
@@ -195,6 +235,14 @@ export class SemanticManager implements SemanticManagerInterface {
             const dependents = this.inverseGraph.get(currentTargetId);
             if (dependents) {
                 for (const dependentTargetId of dependents) {
+                    if (!result.has(dependentTargetId)) {
+                        visitQueue.push(dependentTargetId);
+                    }
+                }
+            }
+            const implicitDependents = this.inverseGraphImplicit.get(currentTargetId);
+            if (implicitDependents) {
+                for (const dependentTargetId of implicitDependents) {
                     if (!result.has(dependentTargetId)) {
                         visitQueue.push(dependentTargetId);
                     }

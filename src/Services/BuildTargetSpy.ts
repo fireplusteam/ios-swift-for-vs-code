@@ -11,6 +11,12 @@ function enabledSpyService() {
     return true;
 }
 
+enum BuildTargetParsingStatus {
+    findGraphStart = 0,
+    parsingGraph = 1,
+    endGraph = 2,
+}
+
 export class BuildTargetSpy {
     private end: boolean = false;
     private outfile: fs.ReadStream | undefined;
@@ -63,14 +69,87 @@ export class BuildTargetSpy {
         }
     }
 
-    async spy(cancelToken: vscode.CancellationToken, onReceiveMessage: (message: string) => void) {
-        if (!this.isProxyServerEnabled) {
-            return;
+    private parsingStatus = BuildTargetParsingStatus.findGraphStart;
+    private parsingIndex = 0;
+    private data = "";
+    private bufferLines: string[] = [];
+    private currentTargetId = "";
+
+    private parse() {
+        switch (this.parsingStatus) {
+            case BuildTargetParsingStatus.findGraphStart: {
+                const startPattern = "ComputeTargetDependencyGraph";
+                const startIndex = this.data.indexOf(startPattern);
+                if (startIndex !== -1) {
+                    this.parsingIndex = startIndex + startPattern.length;
+                    this.parsingStatus = BuildTargetParsingStatus.parsingGraph;
+                }
+                break;
+            }
+            case BuildTargetParsingStatus.parsingGraph: {
+                for (; this.parsingIndex < this.data.length; this.parsingIndex++) {
+                    if (this.data[this.parsingIndex] === "\n") {
+                        this.bufferLines.push("");
+                    } else if (this.bufferLines.length > 0) {
+                        this.bufferLines[this.bufferLines.length - 1] +=
+                            this.data[this.parsingIndex];
+                    }
+                }
+                while (this.bufferLines.length > 1) {
+                    const line = this.bufferLines[0];
+                    if (line.trim() === "") {
+                        this.parsingStatus = BuildTargetParsingStatus.endGraph;
+                    } else {
+                        if (line.includes("➜")) {
+                            //        ➜ Explicit dependency on target 'project_lib' in project 'project_lib'
+                            const explicitDependencyPattern =
+                                /dependency on target '(.+)' in project '(.+)'/;
+                            const match = line.match(explicitDependencyPattern);
+                            if (match && match.length === 3) {
+                                const targetName = match[1];
+                                const projectName = match[2];
+                                const depTargetId = `${projectName}::${targetName}`;
+                                this.onReceiveMessage(
+                                    `DEPENDENCY:${this.currentTargetId}|^|^|${depTargetId}`
+                                );
+                            }
+                        } else {
+                            //     Target 'SomeProject' in project 'SomeProject'
+                            const targetPattern = /Target '(.+)' in project '(.+)'/;
+                            const match = line.match(targetPattern);
+                            if (match && match.length === 3) {
+                                const targetName = match[1];
+                                const projectName = match[2];
+                                this.currentTargetId = `${projectName}::${targetName}`;
+                            }
+                        }
+                    }
+                    // previous line is parsed
+                    this.bufferLines.shift();
+                }
+                break;
+            }
+            case BuildTargetParsingStatus.endGraph: {
+                // TODO: parse failed and success linked targets if not proxy server is enabled
+                break;
+            }
         }
+    }
+
+    async spy(
+        buildPipeEvent: vscode.Event<string>,
+        cancelToken: vscode.CancellationToken,
+        onReceiveMessage: (message: string) => void
+    ) {
         this.onReceiveMessage = onReceiveMessage;
-        let disposable: vscode.Disposable | undefined = undefined;
+        let cancelableDisposable: vscode.Disposable | undefined = undefined;
+        let buildPipeDisposable: vscode.Disposable | undefined = undefined;
         try {
-            disposable = cancelToken.onCancellationRequested(() => {
+            buildPipeDisposable = buildPipeEvent(message => {
+                this.data += message;
+                this.parse();
+            });
+            cancelableDisposable = cancelToken.onCancellationRequested(() => {
                 this.end = true;
                 this.outfile?.close();
             });
@@ -84,7 +163,8 @@ export class BuildTargetSpy {
             }
             throw error;
         } finally {
-            disposable?.dispose();
+            buildPipeDisposable?.dispose();
+            cancelableDisposable?.dispose();
         }
     }
 

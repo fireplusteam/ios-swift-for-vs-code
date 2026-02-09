@@ -225,11 +225,16 @@ export class BuildManager {
         await buildTargetSpy.prepare();
         let isEndSpyCalled = false;
         this.builtTargetIdsWithError.clear();
-        buildTargetSpy.spy(context.cancellationToken, message => {
+        buildTargetSpy.spy(context.buildEvent, context.cancellationToken, message => {
             if (isEndSpyCalled) {
                 return; // after end spy we don't want to process any messages
             }
-            if (message.startsWith("Success:")) {
+            if (message.startsWith("DEPENDENCY:")) {
+                const [from, to] = message.split("DEPENDENCY:").at(1)?.trim().split("|^|^|") ?? [];
+                if (from !== to) {
+                    context.semanticManager.setImplicitDependencies(from, [to]);
+                }
+            } else if (message.startsWith("Success:")) {
                 const targetId = message.split("Success:").at(1)?.trim();
                 this.markTargetUpToDateAfterBuild(
                     context,
