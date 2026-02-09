@@ -103,7 +103,7 @@ export class BuildTargetSpy {
                         if (line.includes("➜")) {
                             //        ➜ Explicit dependency on target 'project_lib' in project 'project_lib'
                             const explicitDependencyPattern =
-                                /dependency on target '(.+)' in project '(.+)'/;
+                                /dependency on target '(.+?)' in project '(.+?)'/;
                             const match = line.match(explicitDependencyPattern);
                             if (match && match.length === 3) {
                                 const targetName = match[1];
@@ -115,7 +115,7 @@ export class BuildTargetSpy {
                             }
                         } else {
                             //     Target 'SomeProject' in project 'SomeProject'
-                            const targetPattern = /Target '(.+)' in project '(.+)'/;
+                            const targetPattern = /Target '(.+?)' in project '(.+?)'/;
                             const match = line.match(targetPattern);
                             if (match && match.length === 3) {
                                 const targetName = match[1];

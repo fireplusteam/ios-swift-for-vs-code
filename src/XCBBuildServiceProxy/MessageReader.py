@@ -26,7 +26,7 @@ class MessageReader:
     # first 8 bytes are the message id as a counter number, the next 4 bytes are the length of the message
     # message form: 00 00 00 00 00 00 00 00 xx xx xx xx message
     # where xx is little endian 4 bytes int to indicate the length of message
-    # json data starts with c5 yy yy, where c5 indicates starts of json and yy yy the length of json
+    # json data starts with c4, yy | c5 yy yy | c6 yy yy yy yy, where c5 indicates starts of json and yy yy the length of json
     def feed(self, byte: bytes):
         self.offset += 1
         self.buffer += byte
@@ -84,29 +84,202 @@ class MessageReader:
     def parse_json_from_message(self) -> dict:
         message_body = self.message_body()
         # need the last occurrence
-        json_start = message_body.rfind(b"\xc5")  # two bytes json length
+        json_start = message_body[1:].find(b"\xc5")  # two bytes json length
         json_offset = 0
         if json_start == -1:
-            json_start = message_body.rfind(b"\xc4")  # single byte json length
+            json_start = message_body[1:].find(b"\xc4")  # single byte json length
             if json_start == -1:
                 # \xb9DEPENDENCY_GRAPH_RESPONSE\xc6\x00\x03\xc3Q{"adjacencyList":
-                json_start = message_body.rfind(b"\xc6")  # four bytes json length
+                json_start = message_body[1:].find(b"\xc6")  # four bytes json length
                 if json_start == -1:
                     return None
                 else:
-                    json_offset = 4
+                    json_offset = 5
             else:
                 json_offset = 2
         else:
             json_offset = 3
+        json_start += 1  # skip the first byte which is the json length indicator
         json_len = int.from_bytes(
             message_body[json_start + 1 : json_start + json_offset], "big"
         )
         json_bytes = message_body[
             json_start + json_offset : json_start + json_offset + json_len
         ]
-        json_str = json_bytes.decode("utf-8")
+        json_str = json_bytes
         return json.loads(json_str)
 
     def message_body(self) -> bytearray:
         return self.buffer[12:]
+
+
+if __name__ == "__main__":
+    msg = MessageReader()
+    # tests
+    buffer = bytearray()
+    test = [
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        147,
+        0,
+        0,
+        0,
+        176,
+        66,
+        85,
+        73,
+        76,
+        68,
+        95,
+        84,
+        65,
+        83,
+        75,
+        95,
+        69,
+        78,
+        68,
+        69,
+        68,
+        196,
+        128,
+        123,
+        34,
+        105,
+        100,
+        34,
+        58,
+        49,
+        44,
+        34,
+        115,
+        105,
+        103,
+        110,
+        97,
+        108,
+        108,
+        101,
+        100,
+        34,
+        58,
+        102,
+        97,
+        108,
+        115,
+        101,
+        44,
+        34,
+        115,
+        105,
+        103,
+        110,
+        97,
+        116,
+        117,
+        114,
+        101,
+        34,
+        58,
+        91,
+        49,
+        44,
+        57,
+        57,
+        44,
+        49,
+        49,
+        49,
+        44,
+        49,
+        48,
+        57,
+        44,
+        49,
+        49,
+        50,
+        44,
+        49,
+        49,
+        55,
+        44,
+        49,
+        49,
+        54,
+        44,
+        49,
+        48,
+        49,
+        44,
+        57,
+        53,
+        44,
+        49,
+        49,
+        54,
+        44,
+        57,
+        55,
+        44,
+        49,
+        49,
+        52,
+        44,
+        49,
+        48,
+        51,
+        44,
+        49,
+        48,
+        49,
+        44,
+        49,
+        49,
+        54,
+        44,
+        57,
+        53,
+        44,
+        49,
+        48,
+        51,
+        44,
+        49,
+        49,
+        52,
+        44,
+        57,
+        55,
+        44,
+        49,
+        49,
+        50,
+        44,
+        49,
+        48,
+        52,
+        93,
+        44,
+        34,
+        115,
+        116,
+        97,
+        116,
+        117,
+        115,
+        34,
+        58,
+        48,
+        125,
+    ]
+
+    for i in test:
+        buffer += i.to_bytes(1, "big")
+    msg.buffer = buffer
+    msg.parse_json_from_message()

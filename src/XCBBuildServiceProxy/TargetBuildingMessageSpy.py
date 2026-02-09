@@ -37,58 +37,62 @@ class TargetBuildingMessageSpy(MessageSpyBase):
         self.target_ids_to_guid = {}
         self.reported_target_ids = set()
         self.is_cancelled = False
+        self.sync_lock = asyncio.Lock()
 
     async def output(self, target, status):
         if self.output_file is None:
             return
         if target in self.reported_target_ids:
             return
-        loop = asyncio.get_running_loop()
         self.reported_target_ids.add(target)
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self.output_file.write, f"{status}:{target}\n")
         await loop.run_in_executor(None, self.output_file.flush)
 
     async def on_receive_message(self, type: MessageType, message: MessageReader):
-        message_body = message.message_body()
-        if type == MessageType.server_message:
-            if message_body.startswith(b"\xb4BUILD_TARGET_STARTED"):
-                json_data = message.parse_json_from_message()
-                guid = json_data["guid"]
-                self.build_target_sessions[guid] = {
-                    "build_started": True,
-                    "build_ended": False,
-                    "id": json_data["id"],
-                    "target_id": f"{json_data['info']['projectInfo']['path']}::{json_data['info']['name']}",
-                }
-                self.build_task_id_to_guid[json_data["id"]] = guid
-                self.target_ids_to_guid[
-                    self.build_target_sessions[guid]["target_id"]
-                ] = guid
-            elif message_body.startswith(b"\xb0BUILD_TASK_ENDED"):
-                json_data = message.parse_json_from_message()
-                if "signature" in json_data:
-                    for target_id in self.target_ids_to_guid.keys():
-                        guid = self.target_ids_to_guid[target_id]
-                        target_signature = to_ascii_int_array(guid)
-                        if is_list_in_list(target_signature, json_data["signature"]):
-                            status = json_data["status"]
-                            if (
-                                status != 0
-                            ):  # if status is not 0 then it's failed building a target
-                                await self.output(target_id, "Fail")
-            elif message_body.startswith(b"\xb2BUILD_TARGET_ENDED"):
-                task_id = int.from_bytes(message_body[-8:], "big")
-                if task_id in self.build_task_id_to_guid:
-                    guid = self.build_task_id_to_guid[task_id]
-                    self.build_target_sessions[guid]["build_ended"] = True
-                    target_id = self.build_target_sessions[guid]["target_id"]
-                    if target_id in self.target_ids_to_guid:
-                        if not self.is_cancelled:
-                            await self.output(target_id, "Success")
-                        else:
-                            await self.output(target_id, "Cancelled")
-                        del self.target_ids_to_guid[target_id]
+        async with self.sync_lock:
+            message_body = message.message_body()
+            if type == MessageType.server_message:
+                if message_body.startswith(b"\xb4BUILD_TARGET_STARTED"):
+                    json_data = message.parse_json_from_message()
+                    guid = json_data["guid"]
+                    self.build_target_sessions[guid] = {
+                        "build_started": True,
+                        "build_ended": False,
+                        "id": json_data["id"],
+                        "target_id": f"{json_data['info']['projectInfo']['path']}::{json_data['info']['name']}",
+                    }
+                    self.build_task_id_to_guid[json_data["id"]] = guid
+                    self.target_ids_to_guid[
+                        self.build_target_sessions[guid]["target_id"]
+                    ] = guid
+                elif message_body.startswith(b"\xb0BUILD_TASK_ENDED"):
+                    json_data = message.parse_json_from_message()
+                    if "signature" in json_data:
+                        for target_id in self.target_ids_to_guid.keys():
+                            guid = self.target_ids_to_guid[target_id]
+                            target_signature = to_ascii_int_array(guid)
+                            if is_list_in_list(
+                                target_signature, json_data["signature"]
+                            ):
+                                status = json_data["status"]
+                                if (
+                                    status != 0
+                                ):  # if status is not 0 then it's failed building a target
+                                    await self.output(target_id, "Fail")
+                elif message_body.startswith(b"\xb2BUILD_TARGET_ENDED"):
+                    task_id = int.from_bytes(message_body[-8:], "big")
+                    if task_id in self.build_task_id_to_guid:
+                        guid = self.build_task_id_to_guid[task_id]
+                        self.build_target_sessions[guid]["build_ended"] = True
+                        target_id = self.build_target_sessions[guid]["target_id"]
+                        if target_id in self.target_ids_to_guid:
+                            if not self.is_cancelled:
+                                await self.output(target_id, "Success")
+                            else:
+                                await self.output(target_id, "Cancelled")
+                            del self.target_ids_to_guid[target_id]
 
-        elif type == MessageType.client_message:
-            if message_body.startswith(b"\xacBUILD_CANCEL"):
-                self.is_cancelled = True
+            elif type == MessageType.client_message:
+                if message_body.startswith(b"\xacBUILD_CANCEL"):
+                    self.is_cancelled = True

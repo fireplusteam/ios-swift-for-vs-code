@@ -96,6 +96,15 @@ class Context:
             self.log_file.flush()
 
 
+def print_raw_bytes_as_hex(byte_data):
+    sys.stderr.write("Raw bytes: [")
+    for b in byte_data:
+        # to int b
+        int_val = int(b)
+        sys.stderr.write(f"{int_val},")
+    sys.stderr.write("]\n")
+
+
 # READ from std input and feed to SWBBuildService
 class STDFeeder:
 
@@ -151,6 +160,7 @@ class STDFeeder:
     async def feed_stdin(self, proc_stdin):
         byte = None
         loop = asyncio.get_running_loop()
+        last_message = None
         try:
             while True:
                 if self.context.should_exit:
@@ -179,6 +189,8 @@ class STDFeeder:
                     self.msg_reader.feed(b.to_bytes(1, "big"))
 
                 if self.msg_reader.status == MsgStatus.MsgEnd:
+                    last_message = self.msg_reader.buffer.copy()
+
                     if self.request_modifier:
                         self.request_modifier.modify_content(self.msg_reader)
 
@@ -193,7 +205,11 @@ class STDFeeder:
                     await self.write_stdin_bytes(proc_stdin, buffer)
                     if self.context.debug_mode:
                         self.context.log(f"CLIENT: {str(buffer[12:])}")
-        except:
+        except Exception as e:
+            sys.stderr.write(
+                f"Exception in feed_stdin: {str(e)}, message: {str(last_message)}\n"
+            )
+            print_raw_bytes_as_hex(last_message)
             self.context.should_exit = True
 
 
@@ -244,6 +260,7 @@ class STDOuter:
 
     async def read_server_data(self, proc_stdout):
         loop = asyncio.get_running_loop()
+        last_message = None
         try:
             while True:
                 if self.context.should_exit:
@@ -266,6 +283,7 @@ class STDOuter:
                         self.msg_reader.feed(b.to_bytes(1, "big"))
                         if self.msg_reader.status == MsgStatus.MsgEnd:
                             buffer = self.msg_reader.buffer.copy()
+                            last_message = buffer
                             if self.message_spy:
                                 await self.message_spy.on_receive_message(
                                     MessageType.server_message, self.msg_reader
@@ -278,7 +296,11 @@ class STDOuter:
                             await self.write_stdout_bytes(buffer)
                 else:  # no data
                     await asyncio.sleep(0.03)
-        except:
+        except Exception as e:
+            sys.stderr.write(
+                f"Exception in read_server_data: {str(e)}, message: {str(last_message)}\n"
+            )
+            print_raw_bytes_as_hex(last_message)
             self.context.should_exit = True
 
 
