@@ -83,12 +83,18 @@ class MessageReader:
 
     def parse_json_from_message(self) -> dict:
         message_body = self.message_body()
-        json_start = message_body.find(b"\xc5")  # two bytes json length
+        # need the last occurrence
+        json_start = message_body.rfind(b"\xc5")  # two bytes json length
         json_offset = 0
         if json_start == -1:
-            json_start = message_body.find(b"\xc4")  # single byte json length
+            json_start = message_body.rfind(b"\xc4")  # single byte json length
             if json_start == -1:
-                return None
+                # \xb9DEPENDENCY_GRAPH_RESPONSE\xc6\x00\x03\xc3Q{"adjacencyList":
+                json_start = message_body.rfind(b"\xc6")  # four bytes json length
+                if json_start == -1:
+                    return None
+                else:
+                    json_offset = 4
             else:
                 json_offset = 2
         else:

@@ -55,14 +55,26 @@ class SwiftPackage
     end
   end
 
-  attr_accessor :path, :project_dir_path, :parsed_targets
+  attr_accessor :path, :project_dir_path, :parsed_targets, :name
 
   def initialize(package_path)
     @path = Pathname.new(package_path).expand_path
     # should be used in buildable reference to construct XCScheme only
     @project_dir_path = @path.dirname
     @parsed_targets = nil
+    @name = nil
     # swift package dump-package
+    # "cLanguageStandard" : null,
+    # "cxxLanguageStandard" : null,
+    # "dependencies" : [
+
+    # ],
+    # "name" : "MyLibrary_Package",
+    # "packageKind" : {
+    #   "root" : [
+    #     "/Users/Ievgenii_Mykhalevskyi/tests/out_files_project/SomeProject/MyLibrary"
+    #   ]
+    # },
     #   "targets" : [
     #   {
     #     "dependencies" : [
@@ -130,6 +142,15 @@ class SwiftPackage
     self
   end
 
+  def name
+    if @name
+      @name
+    else
+      parsed_targets
+      @name
+    end
+  end
+
   def parsed_targets
     return @parsed_targets if @parsed_targets
     begin
@@ -138,6 +159,7 @@ class SwiftPackage
         package_info_json = `swift package dump-package`
         package_info = JSON.parse(package_info_json)
       end
+      @name = package_info["name"]
       @parsed_targets = []
       targets = {}
       package_info["targets"].each do |target_info|
@@ -266,4 +288,8 @@ def package_list_dependencies_for_target(project, target_name)
       end
     end
   end
+end
+
+def package_name(project)
+  puts project.name
 end

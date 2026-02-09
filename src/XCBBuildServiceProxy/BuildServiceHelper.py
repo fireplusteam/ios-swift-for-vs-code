@@ -17,7 +17,9 @@ from BuildServiceUtils import (
     server_spy_output_file,
 )
 from MessageModifiers import MessageModifierBase, ClientMessageModifier
-from ServerMessageSpy import ServerMessageSpyBase, ServerMessageSpy
+from MessageSpy import MessageSpyBase, MessageType
+from TargetBuildingMessageSpy import TargetBuildingMessageSpy
+from ServerBuildOperationMessageSpy import ServerBuildOperationMessageSpy
 
 
 class Context:
@@ -105,6 +107,7 @@ class STDFeeder:
         self.request_modifier = request_modifier
         self.context = context
         self._stdin = stdin
+        self._message_spy = None
 
     @property
     def stdin(self):
@@ -117,6 +120,14 @@ class STDFeeder:
             if not hasattr(self._stdin, "buffer"):  # not sys.stdin
                 self._stdin.close()
         self._stdin = value
+
+    @property
+    def message_spy(self):
+        return self._message_spy
+
+    @message_spy.setter
+    def message_spy(self, value: MessageSpyBase):
+        self._message_spy = value
 
     def __enter__(self):
         return self
@@ -171,6 +182,11 @@ class STDFeeder:
                     if self.request_modifier:
                         self.request_modifier.modify_content(self.msg_reader)
 
+                    if self.message_spy:
+                        self.message_spy.on_server_message(
+                            MessageType.client_message, self.msg_reader
+                        )
+
                     buffer = self.msg_reader.buffer.copy()
                     self.msg_reader.reset()
 
@@ -188,7 +204,7 @@ class STDOuter:
         self.msg_reader = MessageReader()
         self.context = context
         self._stdout = stdout
-        self._server_spy = None
+        self._message_spy = None
 
     @property
     def stdout(self):
@@ -201,12 +217,12 @@ class STDOuter:
         self._stdout = value
 
     @property
-    def server_spy(self):
-        return self._server_spy
+    def message_spy(self):
+        return self._message_spy
 
-    @server_spy.setter
-    def server_spy(self, value: ServerMessageSpyBase):
-        self._server_spy = value
+    @message_spy.setter
+    def message_spy(self, value: MessageSpyBase):
+        self._message_spy = value
 
     def __enter__(self):
         return self
@@ -250,8 +266,10 @@ class STDOuter:
                         self.msg_reader.feed(b.to_bytes(1, "big"))
                         if self.msg_reader.status == MsgStatus.MsgEnd:
                             buffer = self.msg_reader.buffer.copy()
-                            if self.server_spy:
-                                self.server_spy.on_server_message(self.msg_reader)
+                            if self.message_spy:
+                                self.message_spy.on_server_message(
+                                    MessageType.server_message, self.msg_reader
+                                )
 
                             self.msg_reader.reset()
 
@@ -312,9 +330,12 @@ async def main_client(context: Context):
                 if spy_output_file_name
                 else None
             )
-        outer.server_spy = ServerMessageSpy(
+        outer.message_spy = TargetBuildingMessageSpy(
             spy_output_file
         )  # spy target building status and log to stderr
+        reader.message_spy = (
+            outer.message_spy
+        )  # also spy client messages to detect build cancellation
 
         asyncio.create_task(reader.feed_stdin(context.stdin_file))
         asyncio.create_task(outer.read_server_data(context.stdout_file))
@@ -360,13 +381,17 @@ async def main_server(context: Context):
         context.log("START SERVER")
 
         with STDFeeder(None, context) as reader, STDOuter(None, context) as outer:
+            message_spy = ServerBuildOperationMessageSpy()
+            outer.message_spy = message_spy
+            reader.message_spy = message_spy
             asyncio.create_task(reader.feed_stdin(process.stdin))
             asyncio.create_task(outer.read_server_data(process.stdout))
             last_mtime = None
             while True:
                 await asyncio.sleep(0.3)
                 new_mtime = mtime_of_config_file()
-                if new_mtime != last_mtime:
+                # we don't want to change the client while it's building as it would be wrongly report messages to new client
+                if new_mtime != last_mtime and not message_spy.is_building:
                     last_mtime = new_mtime
                     try:
                         message = server_get_message_from_client()

@@ -484,6 +484,7 @@ def handle_action(project, action, arg)
       package_list_dependencies_for_target(project, arg[1])
       return
     end
+    package_name(project) if action == "package_name"
     return
   end
 
