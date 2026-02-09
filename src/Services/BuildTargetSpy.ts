@@ -74,29 +74,35 @@ export class BuildTargetSpy {
     private data = "";
     private bufferLines: string[] = [];
     private currentTargetId = "";
+    private bufferCurrentParseLineIndx = 0;
 
-    private parse() {
+    private parseBuildingLog() {
+        for (; this.parsingIndex < this.data.length; this.parsingIndex++) {
+            if (this.data[this.parsingIndex] === "\n") {
+                this.bufferLines.push("");
+            } else if (this.bufferLines.length > 0) {
+                this.bufferLines[this.bufferLines.length - 1] += this.data[this.parsingIndex];
+            }
+        }
         switch (this.parsingStatus) {
             case BuildTargetParsingStatus.findGraphStart: {
                 const startPattern = "ComputeTargetDependencyGraph";
-                const startIndex = this.data.indexOf(startPattern);
-                if (startIndex !== -1) {
-                    this.parsingIndex = startIndex + startPattern.length;
-                    this.parsingStatus = BuildTargetParsingStatus.parsingGraph;
+                while (this.bufferCurrentParseLineIndx < this.bufferLines.length - 1) {
+                    const line = this.bufferLines[this.bufferCurrentParseLineIndx];
+                    this.bufferCurrentParseLineIndx++;
+
+                    if (line.includes(startPattern)) {
+                        this.parsingStatus = BuildTargetParsingStatus.parsingGraph;
+                        break;
+                    }
                 }
                 break;
             }
             case BuildTargetParsingStatus.parsingGraph: {
-                for (; this.parsingIndex < this.data.length; this.parsingIndex++) {
-                    if (this.data[this.parsingIndex] === "\n") {
-                        this.bufferLines.push("");
-                    } else if (this.bufferLines.length > 0) {
-                        this.bufferLines[this.bufferLines.length - 1] +=
-                            this.data[this.parsingIndex];
-                    }
-                }
-                while (this.bufferLines.length > 1) {
-                    const line = this.bufferLines[0];
+                while (this.bufferCurrentParseLineIndx < this.bufferLines.length - 1) {
+                    const line = this.bufferLines[this.bufferCurrentParseLineIndx];
+                    this.bufferCurrentParseLineIndx++;
+
                     if (line.trim() === "") {
                         this.parsingStatus = BuildTargetParsingStatus.endGraph;
                     } else {
@@ -124,13 +130,29 @@ export class BuildTargetSpy {
                             }
                         }
                     }
-                    // previous line is parsed
-                    this.bufferLines.shift();
                 }
                 break;
             }
             case BuildTargetParsingStatus.endGraph: {
-                // TODO: parse failed and success linked targets if not proxy server is enabled
+                //Ld /Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/AppSuite-dnvyirekqblvknagtchyynkmewvd/Build/Products/Debug-iphonesimulator/name.app/name normal (in target 'TargetName' from project 'AppSuite')
+                if (this.isProxyServerEnabled) {
+                    // with proxy server we have more reliable way via SWBBuildServer
+                    return;
+                }
+                // but if it's disabled then we can try to parse linker messages as it's the last step of build process after compilation, so all flags are got
+                while (this.bufferCurrentParseLineIndx < this.bufferLines.length - 1) {
+                    const line = this.bufferLines[this.bufferCurrentParseLineIndx];
+                    this.bufferCurrentParseLineIndx++;
+
+                    const linkPattern = /(^Ld).+\(in target '(.+?)' from project '(.+?)'\)/;
+                    const match = line.match(linkPattern);
+                    if (match && match.length === 4) {
+                        const targetName = match[2];
+                        const projectName = match[3];
+                        const targetId = `${projectName}::${targetName}`;
+                        this.onReceiveMessage(`Success_building_log_id:${targetId}`);
+                    }
+                }
                 break;
             }
         }
@@ -147,7 +169,7 @@ export class BuildTargetSpy {
         try {
             buildPipeDisposable = buildPipeEvent(message => {
                 this.data += message;
-                this.parse();
+                this.parseBuildingLog();
             });
             cancelableDisposable = cancelToken.onCancellationRequested(() => {
                 this.end = true;

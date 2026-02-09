@@ -31,6 +31,8 @@ export interface SemanticManagerInterface {
     getAllTargetsDependencies(targetIds: Set<string>): Set<string>;
     getAllDependentTargets(targetIds: Set<string>): Set<string>;
 
+    mapBuildLogsTargetIdToTargetId(xcodeBuildingLogsTargetId: string): string | undefined;
+
     markAllTargetsOutOfDate(): void;
 }
 
@@ -250,6 +252,10 @@ export class SemanticManager implements SemanticManagerInterface {
             }
         }
         return result;
+    }
+
+    mapBuildLogsTargetIdToTargetId(xcodeBuildingLogsTargetId: string): string | undefined {
+        return this.XcodeTargetsIdsToTargetIds.get(xcodeBuildingLogsTargetId);
     }
 
     markAllTargetsOutOfDate(): void {

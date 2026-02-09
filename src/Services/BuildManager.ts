@@ -243,6 +243,21 @@ export class BuildManager {
                     undefined
                 );
                 buildableTargetsIds.delete(targetId ?? "");
+            } else if (message.startsWith("Success_building_log_id:")) {
+                const buildLogTargetId = message.split("Success_building_log_id:").at(1)?.trim();
+                if (buildLogTargetId) {
+                    const targetId =
+                        context.semanticManager.mapBuildLogsTargetIdToTargetId(buildLogTargetId);
+                    if (targetId) {
+                        this.markTargetUpToDateAfterBuild(
+                            context,
+                            new Set([targetId ?? ""]),
+                            buildTouchTime,
+                            undefined
+                        );
+                        buildableTargetsIds.delete(targetId ?? "");
+                    }
+                }
             } else if (message.startsWith("Fail:")) {
                 const targetId = message.split("Fail:").at(1)?.trim();
                 this.builtTargetIdsWithError.add(targetId ?? "");
