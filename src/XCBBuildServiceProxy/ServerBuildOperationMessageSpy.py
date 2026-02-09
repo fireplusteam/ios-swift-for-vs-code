@@ -16,5 +16,5 @@ class ServerBuildOperationMessageSpy(MessageSpyBase):
             if type == MessageType.client_message:
                 if message_body.startswith(b"\xabBUILD_START"):
                     self.is_building = True
-                elif message_body.startswith(b"\xacBUILD_CANCEL"):
-                    self.is_building = False
+                # elif message_body.startswith(b"\xacBUILD_CANCEL"):
+                #     self.is_building = False
