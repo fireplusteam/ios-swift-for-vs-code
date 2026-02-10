@@ -62,8 +62,16 @@ if __name__ == "__main__":
             fdata = trie.search_any(signature, first_sub_signature=False)
             assert fdata == data
 
-    for i in range(100000):
-        if Random.random() < 0.5:
+    def traverse_check(node, path):
+        if node.data is not None:
+            fdata = st.get(tuple(path))
+            assert fdata == node.data
+
+        for byte, child in node.children.items():
+            traverse_check(child, path + [byte])
+
+    for i in range(1000000):
+        if Random.random() < 0.2:
             if len(st) == 0:
                 continue
             val = list(st)[Random.randint(0, len(st) - 1)]
@@ -75,3 +83,4 @@ if __name__ == "__main__":
             st[tuple(signature)] = i
             trie.insert(signature, i)
         check()
+        traverse_check(trie.root, [])
