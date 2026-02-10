@@ -25,7 +25,7 @@ class Context:
 
     def __init__(self, serviceName: str, stdin, stdout, stderr):
         # non zero - write logs from server to input files
-        self.debug_mode = 1
+        self.debug_mode = 0
 
         self.stdin = stdin
         self.stdout = stdout
