@@ -136,12 +136,18 @@ export class SemanticManager implements SemanticManagerInterface {
                 targets.add(targetId);
             }
             this.XcodeTargetsIdsToTargetIds.set(deps.xcodeBuilingLogsId, targetId);
+            // as deps are changing really rarely, we need to preserve old implicit deps to speed up watcher
+            const implicitDeps = this.graph.get(targetId)?.implicitDependencies;
+            if (implicitDeps) {
+                deps.implicitDependencies = implicitDeps;
+            }
         }
 
         this.graph = newGraph;
 
         this.inverseGraph.clear();
-        this.inverseGraphImplicit.clear();
+        // don't clear inverseGraphImplicit as implicit dependencies are changing really rarely and we want to preserve them to speed up watcher
+        // this.inverseGraphImplicit.clear();
         for (const [targetId, deps] of this.graph.entries()) {
             for (const dependencyId of deps.dependencies) {
                 let inverseDeps = this.inverseGraph.get(dependencyId);

@@ -7,15 +7,11 @@ import sys
 import os
 
 from BuildServiceUtils import (
-    make_unblocking,
     get_server_pid_by_session_id,
     client_put_message_to_server,
 )
 from BuildServiceHelper import Context, run_client, run_server, run_xcode_client
 
-# make_unblocking(sys.stdin)
-# make_unblocking(sys.stdout)
-# make_unblocking(sys.stderr)
 
 _stdin, _stdout, _stderr = sys.stdin, sys.stdout, sys.stderr
 
@@ -56,8 +52,6 @@ def main():
 
                 context.stdin_file = stdin_temp
                 context.stdout_file = stdout_temp  # read out of server's stdout
-                # make_unblocking(context.stdout_file)
-                # make_unblocking(context.stdin_file)
 
                 context.server_pid = get_server_pid_by_session_id(context.session_id)
                 if not context.server_pid:

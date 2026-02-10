@@ -11,7 +11,6 @@ from BuildServiceUtils import (
     push_data_to_stdout,
     mtime_of_config_file,
     server_get_message_from_client,
-    make_unblocking,
     is_pid_alive,
     is_host_app_alive,
     server_spy_output_file,
@@ -432,8 +431,6 @@ async def main_server(context: Context):
                         stdout_file_path = message["stdout_file"]
                         reader.stdin = open(stdin_file_path, "rb")
                         outer.stdout = open(stdout_file_path, "wb")
-                        make_unblocking(reader.stdin)
-                        make_unblocking(outer.stdout)
                     elif message["command"] == "stop":
                         break
                 else:

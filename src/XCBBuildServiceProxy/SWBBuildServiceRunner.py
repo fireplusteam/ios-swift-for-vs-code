@@ -4,7 +4,6 @@ import os
 import asyncio
 from BuildServiceUtils import push_data_to_stdout
 from BuildServiceUtils import check_for_exit
-from BuildServiceUtils import make_unblocking
 from MessageReader import MessageReader, MsgStatus
 
 # to build standalone executable use pyinstaller:
@@ -36,10 +35,6 @@ if __name__ == "__main__":
     sys.stderr.writelines(f"Command: {' '.join(command)}\n")
 
     # create subprocess to run the actual SWBBuildService proxy script with redirected stdin/stdout/stderr
-
-    # make_unblocking(sys.stdin)
-    # make_unblocking(sys.stdout)
-    # make_unblocking(sys.stderr)
 
     async def run_loop():
         process = await asyncio.create_subprocess_exec(
