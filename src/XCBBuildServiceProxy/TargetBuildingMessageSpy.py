@@ -24,7 +24,10 @@ def to_ascii_int_array(s: str):
 
 def is_list_in_list(small_list, big_list):
     for i in range(len(big_list) - len(small_list) + 1):
-        if big_list[i : i + len(small_list)] == small_list:
+        for j in range(len(small_list)):
+            if big_list[i + j] != small_list[j]:
+                break
+        else:
             return True
     return False
 
