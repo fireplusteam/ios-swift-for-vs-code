@@ -6,11 +6,8 @@ from BuildServiceUtils import is_behave_like_proxy
 
 
 # c5 xx xx - format of json data
-def modify_json_content(content, content_len):
+def modify_json_content(json_data):
     is_fed = False
-    # first two bytes is the length of json
-    assert content_len == int(content[1]) * 256 + content[2]
-
     # log(f"Original parameters: {content[3:].decode('utf-8')}")
 
     continue_while_building = os.environ.get("continueBuildingAfterErrors", "False")
@@ -18,7 +15,7 @@ def modify_json_content(content, content_len):
     # log(f"ENV BUILD_XCODE_SINGLE_FILE_PATH: {single_file_building}")
     # log(f"ENV continueBuildingAfterErrors: {continue_while_building}")
 
-    config = json.loads(content[3:])
+    config = json.loads(json_data)
 
     # if False:
     if (
@@ -60,13 +57,7 @@ def modify_json_content(content, content_len):
     json_str = json.dumps(config, separators=(",", ":"))
     # log("Modified proxy parameters: " + json_str)
     json_bytes = json_str.encode("utf-8")
-    json_bytes_len = len(json_bytes)
-
-    res_bytes = bytes([content[0]])
-    res_bytes += bytes([json_bytes_len >> 8])
-    res_bytes += bytes([json_bytes_len & ((1 << 8) - 1)])
-    res_bytes += json_bytes
-    return (res_bytes, is_fed)
+    return (json_bytes, is_fed)
 
 
 class MessageModifierBase:
@@ -78,24 +69,27 @@ class ClientMessageModifier(MessageModifierBase):
     def __init__(self):
         self.is_fed = not is_behave_like_proxy()
 
-    def modify_content(self, message: MessageReader):
+    def modify_content(self, message_reader: MessageReader):
         if self.is_fed:
             return
         # manipulate message
         # there can be multiple occurrence of C5 byte, so we need to get the last one
-        json_start = message.buffer[13:].find(b"\xc5")
-        # log(f"CLIENT: JSON_INDEX: {json_start}")
 
-        if json_start != -1:
-            json_start += 13
-            json_len = int.from_bytes(
-                message.buffer[json_start + 1 : json_start + 3],
-                "big",
+        message = message_reader.getMessage()
+        if message.message_code == b"CREATE_BUILD":
+            new_content, is_fed = modify_json_content(message.json_data)
+            message_reader.buffer[
+                message.json_section_start
+                + 1 : message.json_section_start
+                + message.json_data_offset
+            ] = len(new_content).to_bytes(message.json_data_offset - 1, "big")
+
+            message_reader.modify_body(
+                new_content,
+                message.json_section_start + message.json_data_offset,
+                message.json_section_start
+                + message.json_data_offset
+                + message.json_len,
             )
-            new_content, is_fed = modify_json_content(
-                message.buffer[json_start : json_start + 3 + json_len],
-                json_len,
-            )
-            message.modify_body(new_content, json_start, json_start + 3 + json_len)
             if is_fed:
                 self.is_fed = True

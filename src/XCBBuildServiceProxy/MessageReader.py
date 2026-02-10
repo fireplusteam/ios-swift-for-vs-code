@@ -19,33 +19,39 @@ class Message:
             elif message_data[0:1] == b"\xc6":
                 return 5
 
-        def message_code(type):
-            if type == b"\xae":
+        def has_prefix(message_data: bytearray, prefix: bytes) -> bool:
+            return message_data[0 : len(prefix)] == prefix
+
+        def message_code(message_data: bytearray) -> bytes:
+            if has_prefix(message_data, b"\xacCREATE_BUILD"):
+                return b"CREATE_BUILD"
+            if has_prefix(message_data, b"\xaeCREATE_SESSION"):
                 return b"CREATE_SESSION"
-            if type == b"\xb4":
+            if has_prefix(message_data, b"\xb4BUILD_TARGET_STARTED"):
                 return b"BUILD_TARGET_STARTED"
-            if type == b"\xb0":
+            if has_prefix(message_data, b"\xb0BUILD_TASK_ENDED"):
                 return b"BUILD_TASK_ENDED"
-            if type == b"\xb2":
+            if has_prefix(message_data, b"\xb2BUILD_TARGET_ENDED"):
                 return b"BUILD_TARGET_ENDED"
-            if type == b"\xb5":
+            if has_prefix(message_data, b"\xb5BUILD_OPERATION_ENDED"):
                 return b"BUILD_OPERATION_ENDED"
-            if type == b"\xab":
+            if has_prefix(message_data, b"\xabBUILD_START"):
                 return b"BUILD_START"
-            if type == b"\xac":
+            if has_prefix(message_data, b"\xacBUILD_CANCEL"):
                 return b"BUILD_CANCEL"
 
         self.message = buffer
         self.message_body = buffer[12:]
 
-        self.message_code_type = self.message_body[0:1]
-        self.message_code = message_code(self.message_code_type)
+        self.message_code = message_code(self.message_body)
         if self.message_code is None:
             # we only parse known message codes required for this extension
             return
         self.message_code_len = len(self.message_code)
 
         self.message_data = self.message_body[1 + self.message_code_len :]
+
+        self.json_section_start = 12 + 1 + self.message_code_len
 
         self.json_data_offset = json_offset(self.message_data)
         if self.json_data_offset is not None:
