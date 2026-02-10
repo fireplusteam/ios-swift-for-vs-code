@@ -16,20 +16,11 @@
 import asyncio
 from MessageReader import MessageReader, Message
 from MessageSpy import MessageSpyBase, MessageType
+from TrieSignature import TrieSignature
 
 
 def to_ascii_int_array(s: str):
     return [ord(c) for c in s]
-
-
-def is_list_in_list(small_list, big_list):
-    for i in range(len(big_list) - len(small_list) + 1):
-        for j in range(len(small_list)):
-            if big_list[i + j] != small_list[j]:
-                break
-        else:
-            return True
-    return False
 
 
 class TargetBuildingMessageSpy(MessageSpyBase):
@@ -41,6 +32,7 @@ class TargetBuildingMessageSpy(MessageSpyBase):
         self.reported_target_ids = set()
         self.is_cancelled = False
         self.sync_lock = asyncio.Lock()
+        self.trie_signature = TrieSignature()
 
     async def output(self, target, status):
         if self.output_file is None:
@@ -61,25 +53,25 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                 if message.message_code == b"BUILD_TARGET_STARTED":
                     json_data = message.json()
                     guid = json_data["guid"]
+                    target_id = f"{json_data['info']['projectInfo']['path']}::{json_data['info']['name']}"
                     self.build_target_sessions[guid] = {
                         "build_started": True,
                         "build_ended": False,
                         "id": json_data["id"],
-                        "target_id": f"{json_data['info']['projectInfo']['path']}::{json_data['info']['name']}",
+                        "target_id": target_id,
                     }
                     self.build_task_id_to_guid[json_data["id"]] = guid
-                    self.target_ids_to_guid[
-                        self.build_target_sessions[guid]["target_id"]
-                    ] = guid
+                    self.target_ids_to_guid[target_id] = guid
+                    target_signature = to_ascii_int_array(guid)
+                    self.trie_signature.insert(target_signature, target_id)
                 elif message.message_code == b"BUILD_TASK_ENDED":
                     json_data = message.json()
                     if "signature" in json_data:
-                        for target_id in self.target_ids_to_guid.keys():
-                            guid = self.target_ids_to_guid[target_id]
-                            target_signature = to_ascii_int_array(guid)
-                            if is_list_in_list(
-                                target_signature, json_data["signature"]
-                            ):
+                        signature = json_data["signature"]
+                        for i in range(len(signature)):
+                            target_id = self.trie_signature.search_any(signature, i)
+                            if target_id is not None:
+                                guid = self.target_ids_to_guid[target_id]
                                 status = json_data["status"]
                                 if (
                                     status != 0
@@ -92,6 +84,9 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                         self.build_target_sessions[guid]["build_ended"] = True
                         target_id = self.build_target_sessions[guid]["target_id"]
                         if target_id in self.target_ids_to_guid:
+                            target_signature = to_ascii_int_array(guid)
+                            self.trie_signature.remove_signature(target_signature)
+
                             if not self.is_cancelled:
                                 await self.output(target_id, "Success")
                             else:
