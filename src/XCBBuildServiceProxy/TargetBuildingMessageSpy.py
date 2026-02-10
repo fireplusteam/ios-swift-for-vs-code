@@ -14,7 +14,7 @@
 # 3. after xd3 the id of build target task which is ended. At this point we can figure out if we need to build further or not.
 # SERVER: bytearray(b'\xb2BUILD_TARGET_ENDED\x91\xd3\x00\x00\x00\x00\x00\x00\x00\x02')
 import asyncio
-from MessageReader import MessageReader
+from MessageReader import MessageReader, Message
 from MessageSpy import MessageSpyBase, MessageType
 
 
@@ -53,10 +53,10 @@ class TargetBuildingMessageSpy(MessageSpyBase):
 
     async def on_receive_message(self, type: MessageType, message: MessageReader):
         async with self.sync_lock:
-            message_body = message.message_body()
+            message: Message = message.getMessage()
             if type == MessageType.server_message:
-                if message_body.startswith(b"\xb4BUILD_TARGET_STARTED"):
-                    json_data = message.parse_json_from_message()
+                if message.message_code == b"BUILD_TARGET_STARTED":
+                    json_data = message.json()
                     guid = json_data["guid"]
                     self.build_target_sessions[guid] = {
                         "build_started": True,
@@ -68,8 +68,8 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                     self.target_ids_to_guid[
                         self.build_target_sessions[guid]["target_id"]
                     ] = guid
-                elif message_body.startswith(b"\xb0BUILD_TASK_ENDED"):
-                    json_data = message.parse_json_from_message()
+                elif message.message_code == b"BUILD_TASK_ENDED":
+                    json_data = message.json()
                     if "signature" in json_data:
                         for target_id in self.target_ids_to_guid.keys():
                             guid = self.target_ids_to_guid[target_id]
@@ -82,8 +82,8 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                                     status != 0
                                 ):  # if status is not 0 then it's failed building a target
                                     await self.output(target_id, "Fail")
-                elif message_body.startswith(b"\xb2BUILD_TARGET_ENDED"):
-                    task_id = int.from_bytes(message_body[-8:], "big")
+                elif message.message_code == b"BUILD_TARGET_ENDED":
+                    task_id = int.from_bytes(message.message_body[-8:], "big")
                     if task_id in self.build_task_id_to_guid:
                         guid = self.build_task_id_to_guid[task_id]
                         self.build_target_sessions[guid]["build_ended"] = True
@@ -96,5 +96,5 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                             del self.target_ids_to_guid[target_id]
 
             elif type == MessageType.client_message:
-                if message_body.startswith(b"\xacBUILD_CANCEL"):
+                if message.message_code == b"BUILD_CANCEL":
                     self.is_cancelled = True

@@ -9,6 +9,61 @@ class MsgStatus(Enum):
     MsgEnd = 5
 
 
+class Message:
+    def __init__(self, buffer: bytearray):
+        def json_offset(message_data: bytearray) -> dict:
+            if message_data[0:1] == b"\xc4":
+                return 2
+            elif message_data[0:1] == b"\xc5":
+                return 3
+            elif message_data[0:1] == b"\xc6":
+                return 5
+
+        def message_code(type):
+            if type == b"\xae":
+                return b"CREATE_SESSION"
+            if type == b"\xb4":
+                return b"BUILD_TARGET_STARTED"
+            if type == b"\xb0":
+                return b"BUILD_TASK_ENDED"
+            if type == b"\xb2":
+                return b"BUILD_TARGET_ENDED"
+            if type == b"\xb5":
+                return b"BUILD_OPERATION_ENDED"
+            if type == b"\xab":
+                return b"BUILD_START"
+            if type == b"\xac":
+                return b"BUILD_CANCEL"
+
+        self.message = buffer
+        self.message_body = buffer[12:]
+
+        self.message_code_type = self.message_body[0:1]
+        self.message_code = message_code(self.message_code_type)
+        if self.message_code is None:
+            # we only parse known message codes required for this extension
+            return
+        self.message_code_len = len(self.message_code)
+
+        self.message_data = self.message_body[1 + self.message_code_len :]
+
+        self.json_data_offset = json_offset(self.message_data)
+        if self.json_data_offset is not None:
+            self.json_len = int.from_bytes(
+                self.message_data[1 : self.json_data_offset],
+                "big",
+            )
+            self.json_data = self.message_data[
+                self.json_data_offset : self.json_data_offset + self.json_len
+            ]
+
+    def json(self):
+        if self.json_data_offset is not None:
+            return json.loads(self.json_data)
+        else:
+            return None
+
+
 class MessageReader:
 
     def __init__(self) -> None:
@@ -81,36 +136,9 @@ class MessageReader:
         self.msg_len += len(new_content)
         self.buffer[8 : 8 + 4] = self.msg_len.to_bytes(4, "little")
 
-    def parse_json_from_message(self) -> dict:
-        message_body = self.message_body()
-        # need the last occurrence
-        json_start = message_body[1:].find(b"\xc5")  # two bytes json length
-        json_offset = 0
-        if json_start == -1:
-            json_start = message_body[1:].find(b"\xc4")  # single byte json length
-            if json_start == -1:
-                # \xb9DEPENDENCY_GRAPH_RESPONSE\xc6\x00\x03\xc3Q{"adjacencyList":
-                json_start = message_body[1:].find(b"\xc6")  # four bytes json length
-                if json_start == -1:
-                    return None
-                else:
-                    json_offset = 5
-            else:
-                json_offset = 2
-        else:
-            json_offset = 3
-        json_start += 1  # skip the first byte which is the json length indicator
-        json_len = int.from_bytes(
-            message_body[json_start + 1 : json_start + json_offset], "big"
-        )
-        json_bytes = message_body[
-            json_start + json_offset : json_start + json_offset + json_len
-        ]
-        json_str = json_bytes
-        return json.loads(json_str)
-
-    def message_body(self) -> bytearray:
-        return self.buffer[12:]
+    def getMessage(self) -> Message:
+        assert self.status == MsgStatus.MsgEnd, "message is not fully read yet"
+        return Message(self.buffer)
 
 
 if __name__ == "__main__":
