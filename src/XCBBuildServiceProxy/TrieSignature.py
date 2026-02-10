@@ -16,10 +16,10 @@ class TrieSignature:
             node = node.children[byte]
         node.data = data
 
-    def search_any(self, signature, search_from_index=0):
+    def search_any(self, signature, search_from_index=0, first_sub_signature=True):
         node = self.root
         for i in range(search_from_index, len(signature)):
-            if node.data is not None:
+            if first_sub_signature and node.data is not None:
                 return node.data
             byte = signature[i]
             if not byte in node.children:
@@ -47,3 +47,31 @@ class TrieSignature:
             return False
 
         return recursive_remove(self.root, 0)
+
+
+if __name__ == "__main__":
+    # Test code for TrieSignature
+    import random as Random
+
+    trie = TrieSignature()
+
+    st = {}
+
+    def check():
+        for signature, data in st.items():
+            fdata = trie.search_any(signature, first_sub_signature=False)
+            assert fdata == data
+
+    for i in range(100000):
+        if Random.random() < 0.5:
+            if len(st) == 0:
+                continue
+            val = list(st)[Random.randint(0, len(st) - 1)]
+            trie.remove_signature(val)
+            del st[val]
+        else:
+            n = Random.randint(1, 20)
+            signature = [Random.randint(1, 10) for _ in range(n)]
+            st[tuple(signature)] = i
+            trie.insert(signature, i)
+        check()

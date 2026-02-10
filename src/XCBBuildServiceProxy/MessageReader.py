@@ -315,5 +315,6 @@ if __name__ == "__main__":
 
     for i in test:
         buffer += i.to_bytes(1, "big")
-    msg.buffer = buffer
-    msg.parse_json_from_message()
+        msg.feed(i.to_bytes(1, "big"))
+    message = msg.getMessage()
+    json = message.json()

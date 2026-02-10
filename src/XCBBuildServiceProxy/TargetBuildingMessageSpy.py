@@ -70,7 +70,10 @@ class TargetBuildingMessageSpy(MessageSpyBase):
                         signature = json_data["signature"]
                         for i in range(len(signature)):
                             target_id = self.trie_signature.search_any(signature, i)
-                            if target_id is not None:
+                            if (
+                                target_id is not None
+                                and target_id in self.target_ids_to_guid
+                            ):
                                 guid = self.target_ids_to_guid[target_id]
                                 status = json_data["status"]
                                 if (

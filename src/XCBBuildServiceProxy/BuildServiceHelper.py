@@ -206,7 +206,7 @@ class STDFeeder:
                         self.context.log(f"CLIENT: {str(buffer[12:])}")
         except Exception as e:
             sys.stderr.write(
-                f"Exception in feed_stdin: {str(e)}, message: {str(last_message)}\n"
+                f"Exception in feed_stdin: {e}, message: {str(last_message)}\n"
             )
             print_raw_bytes_as_hex(last_message)
             self.context.should_exit = True
@@ -297,7 +297,7 @@ class STDOuter:
                     await asyncio.sleep(0.03)
         except Exception as e:
             sys.stderr.write(
-                f"Exception in read_server_data: {str(e)}, message: {str(last_message)}\n"
+                f"Exception in read_server_data: {e}, message: {str(last_message)}\n"
             )
             print_raw_bytes_as_hex(last_message)
             self.context.should_exit = True
@@ -418,7 +418,7 @@ async def main_server(context: Context):
                         message = server_get_message_from_client()
                     except Exception as e:
                         context.log(
-                            f"SERVER: Exception getting message from client: {str(e)}"
+                            f"SERVER: Exception getting message from client: {e}"
                         )
                         message = None
                     if not message:
