@@ -14,25 +14,42 @@
 # 3. after xd3 the id of build target task which is ended. At this point we can figure out if we need to build further or not.
 # SERVER: bytearray(b'\xb2BUILD_TARGET_ENDED\x91\xd3\x00\x00\x00\x00\x00\x00\x00\x02')
 import asyncio
-from MessageReader import MessageReader, Message
+from MessageReader import MessageReader, Message, MsgStatus
 from MessageSpy import MessageSpyBase, MessageType
 from TrieSignature import TrieSignature
+
+LOG_TO_FILE = False
+
+LOG_FILE_NAME = "/Users/Ievgenii_Mykhalevskyi/repos/log_file.txt"
+
+LOG_FILE = None
+if LOG_TO_FILE:
+    LOG_FILE = open(LOG_FILE_NAME, "wb")
 
 
 def to_ascii_int_array(s: str):
     return [ord(c) for c in s]
 
 
+# for debug purposes
+def print_signature(signature):
+    print("".join([chr(b) for b in signature]))
+
+
 class TargetBuildingMessageSpy(MessageSpyBase):
     def __init__(self, output_file):
         self.output_file = output_file
         self.build_target_sessions = {}
-        self.build_task_id_to_guid = {}
-        self.target_ids_to_guid = {}
+        self.build_task_id_to_target_guid = {}
         self.reported_target_ids = set()
         self.is_cancelled = False
         self.sync_lock = asyncio.Lock()
         self.trie_signature = TrieSignature()
+
+    def log(self, message: Message):
+        if LOG_FILE:
+            LOG_FILE.write(message.message)
+            LOG_FILE.flush()
 
     async def output(self, target, status):
         if self.output_file is None:
@@ -51,51 +68,80 @@ class TargetBuildingMessageSpy(MessageSpyBase):
             message: Message = message.getMessage()
             if type == MessageType.server_message:
                 if message.message_code == b"BUILD_TARGET_STARTED":
+                    self.log(message)
                     json_data = message.json()
-                    guid = json_data["guid"]
+                    target_guid = json_data["guid"]
                     target_id = f"{json_data['info']['projectInfo']['path']}::{json_data['info']['name']}"
-                    self.build_target_sessions[guid] = {
+                    self.build_target_sessions[target_guid] = {
                         "build_started": True,
                         "build_ended": False,
                         "id": json_data["id"],
                         "target_id": target_id,
                     }
-                    self.build_task_id_to_guid[json_data["id"]] = guid
-                    self.target_ids_to_guid[target_id] = guid
-                    target_signature = to_ascii_int_array(guid)
-                    self.trie_signature.insert(target_signature, target_id)
+                    self.build_task_id_to_target_guid[json_data["id"]] = target_guid
+                    target_signature = to_ascii_int_array(target_guid)
+                    self.trie_signature.insert(
+                        target_signature, (target_id, target_guid)
+                    )
                 elif message.message_code == b"BUILD_TASK_ENDED":
+                    self.log(message)
                     json_data = message.json()
                     if "signature" in json_data:
                         signature = json_data["signature"]
                         for i in range(len(signature)):
-                            target_id = self.trie_signature.search_any(signature, i)
-                            if (
-                                target_id is not None
-                                and target_id in self.target_ids_to_guid
-                            ):
-                                guid = self.target_ids_to_guid[target_id]
+                            data = self.trie_signature.search_any(signature, i)
+                            if data is not None:
+                                target_id, _ = data
                                 status = json_data["status"]
                                 if (
                                     status != 0
                                 ):  # if status is not 0 then it's failed building a target
                                     await self.output(target_id, "Fail")
                 elif message.message_code == b"BUILD_TARGET_ENDED":
+                    self.log(message)
                     task_id = int.from_bytes(message.message_body[-8:], "big")
-                    if task_id in self.build_task_id_to_guid:
-                        guid = self.build_task_id_to_guid[task_id]
-                        self.build_target_sessions[guid]["build_ended"] = True
-                        target_id = self.build_target_sessions[guid]["target_id"]
-                        if target_id in self.target_ids_to_guid:
-                            target_signature = to_ascii_int_array(guid)
+                    if task_id in self.build_task_id_to_target_guid:
+                        target_guid = self.build_task_id_to_target_guid[task_id]
+                        session = self.build_target_sessions[target_guid]
+                        if not session["build_ended"]:
+                            target_id = session["target_id"]
+                            session["build_ended"] = True
+
+                            target_signature = to_ascii_int_array(target_guid)
                             self.trie_signature.remove_signature(target_signature)
 
                             if not self.is_cancelled:
                                 await self.output(target_id, "Success")
                             else:
                                 await self.output(target_id, "Cancelled")
-                            del self.target_ids_to_guid[target_id]
 
             elif type == MessageType.client_message:
                 if message.message_code == b"BUILD_CANCEL":
                     self.is_cancelled = True
+
+
+if __name__ == "__main__":
+    import time
+
+    # test from log file
+
+    async def run():
+
+        with open(LOG_FILE_NAME, "rb") as input:
+            msg = MessageReader()
+
+            spy = TargetBuildingMessageSpy(None)
+
+            while True:
+                rb = input.read(msg.expecting_bytes_from_io())
+                if not rb:
+                    break
+                for b in rb:
+                    msg.feed(b.to_bytes(1, "big"))
+                    if msg.status == MsgStatus.MsgEnd:
+                        await spy.on_receive_message(MessageType.server_message, msg)
+                        msg.reset()
+
+    start_time = time.time()
+    asyncio.run(run())
+    print(f"Time taken: {time.time() - start_time} seconds")
