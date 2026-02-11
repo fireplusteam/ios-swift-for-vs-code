@@ -360,7 +360,7 @@ def generate_scheme_depend_on_target(
   #   nil if not scheme.profile_action.nil?
 
   # remove all buildable references from build action
-  scheme.build_action.entries = [] if not scheme.build_action.nil?
+  # scheme.build_action.entries = [] if not scheme.build_action.nil?
 
   # add all targets from include_targets_list
   include_targets_list.each do |project_path, target_name|

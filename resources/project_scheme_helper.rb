@@ -158,8 +158,7 @@ def add_target_to_scheme(
   end
 
   if !build_for_testing
-    if !check_target_in_scheme(scheme, test_target) &&
-         !check_test_target_in_scheme(scheme, test_target)
+    if !check_target_in_scheme(scheme, test_target)
       apply_action_on_add_ref_to_scheme(
         test_target.project,
         root_project_dir_path
