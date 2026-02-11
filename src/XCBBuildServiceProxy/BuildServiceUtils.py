@@ -105,7 +105,7 @@ async def push_data_to_stdout(out, stdout):
     loop = asyncio.get_running_loop()
     while already_written < len(out):
         written = await loop.run_in_executor(
-            None, stdout.buffer.write, out[already_written : already_written + 8192]
+            None, stdout.buffer.write, out[already_written:]
         )
         if written is None:
             written = 0

@@ -136,11 +136,10 @@ if __name__ == "__main__":
                 rb = input.read(msg.expecting_bytes_from_io())
                 if not rb:
                     break
-                for b in rb:
-                    msg.feed(b.to_bytes(1, "big"))
-                    if msg.status == MsgStatus.MsgEnd:
-                        await spy.on_receive_message(MessageType.server_message, msg)
-                        msg.reset()
+                msg.feed(rb)
+                if msg.status == MsgStatus.MsgEnd:
+                    await spy.on_receive_message(MessageType.server_message, msg)
+                    msg.reset()
 
     start_time = time.time()
     asyncio.run(run())

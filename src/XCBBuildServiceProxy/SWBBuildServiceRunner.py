@@ -53,12 +53,11 @@ if __name__ == "__main__":
                 data = await process.stdout.read(msg.expecting_bytes_from_io())
                 if data:
                     # sys.stderr.writelines(f"Read {len(data)} bytes from stdout\n")
-                    for b in data:
-                        msg.feed(b.to_bytes(1, "big"))
-                        if msg.status == MsgStatus.MsgEnd:
-                            buffer = msg.buffer.copy()
-                            msg.reset()
-                            await push_data_to_stdout(buffer, sys.stdout)
+                    msg.feed(data)
+                    if msg.status == MsgStatus.MsgEnd:
+                        buffer = msg.buffer.copy()
+                        msg.reset()
+                        await push_data_to_stdout(buffer, sys.stdout)
                 else:
                     await asyncio.sleep(0.1)
 

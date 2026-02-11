@@ -88,33 +88,43 @@ class MessageReader:
     # message form: 00 00 00 00 00 00 00 00 xx xx xx xx message
     # where xx is little endian 4 bytes int to indicate the length of message
     # json data starts with c4, yy | c5 yy yy | c6 yy yy yy yy, where c5 indicates starts of json and yy yy the length of json
-    def feed(self, byte: bytes):
-        self.offset += 1
-        self.buffer += byte
-        self.left_read_io_bytes -= 1
+    def feed(self, all_bytes: bytes):
+        self.offset += len(all_bytes)
+        self.buffer.extend(all_bytes)
 
-        assert len(byte) == 1, "feed method only accepts single byte"
+        if (
+            self.status == MsgStatus.DetermineStart
+            or self.status == MsgStatus.MsgReadingLen
+        ):
+            for _ in all_bytes:
+                self.left_read_io_bytes -= 1
+                if self.status == MsgStatus.DetermineStart:
+                    self.read_index += 1
+                    if self.read_index == 8:
+                        self.status = MsgStatus.MsgReadingLen
+                        self.read_index = 0
+                        self.msg_len = 0
 
-        if self.status == MsgStatus.DetermineStart:
-            self.read_index += 1
-            if self.read_index == 8:
-                self.status = MsgStatus.MsgReadingLen
-                self.read_index = 0
-                self.msg_len = 0
-
-        elif self.status == MsgStatus.MsgReadingLen:
-            self.read_index += 1
-            if self.read_index == 4:
-                self.msg_len = int.from_bytes(self.buffer[8 : 8 + 4], "little")
-                assert (
-                    self.left_read_io_bytes == 0
-                ), "left_read_io_bytes should be 0 when reading length"
-                self.left_read_io_bytes = self.msg_len
-                self.read_index = 0
-                self.status = MsgStatus.MsgReadingBody
+                elif self.status == MsgStatus.MsgReadingLen:
+                    self.read_index += 1
+                    if self.read_index == 4:
+                        self.msg_len = int.from_bytes(self.buffer[8 : 8 + 4], "little")
+                        assert (
+                            self.left_read_io_bytes == 0
+                        ), "left_read_io_bytes should be 0 when reading length"
+                        self.left_read_io_bytes = self.msg_len
+                        self.read_index = 0
+                        self.status = MsgStatus.MsgReadingBody
+                elif self.status == MsgStatus.MsgReadingBody:
+                    self.left_read_io_bytes -= 1
+                    self.read_index += 1
+                    if self.read_index == self.msg_len:
+                        self.status = MsgStatus.MsgEnd
 
         elif self.status == MsgStatus.MsgReadingBody:
-            self.read_index += 1
+            self.left_read_io_bytes -= len(all_bytes)
+            self.read_index += len(all_bytes)
+
             if self.read_index == self.msg_len:
                 self.status = MsgStatus.MsgEnd
 
@@ -313,8 +323,6 @@ if __name__ == "__main__":
         125,
     ]
 
-    for i in test:
-        buffer += i.to_bytes(1, "big")
-        msg.feed(i.to_bytes(1, "big"))
+    msg.feed(test)
     message = msg.getMessage()
     json = message.json()

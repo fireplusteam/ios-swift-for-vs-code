@@ -184,8 +184,7 @@ class STDFeeder:
                     await asyncio.sleep(0.03)
                     continue
 
-                for b in byte:
-                    self.msg_reader.feed(b.to_bytes(1, "big"))
+                self.msg_reader.feed(byte)
 
                 if self.msg_reader.status == MsgStatus.MsgEnd:
                     last_message = self.msg_reader.buffer.copy()
@@ -278,21 +277,20 @@ class STDOuter:
                         self.msg_reader.expecting_bytes_from_io(),
                     )
                 if out:
-                    for b in out:
-                        self.msg_reader.feed(b.to_bytes(1, "big"))
-                        if self.msg_reader.status == MsgStatus.MsgEnd:
-                            buffer = self.msg_reader.buffer.copy()
-                            last_message = buffer
-                            if self.message_spy:
-                                await self.message_spy.on_receive_message(
-                                    MessageType.server_message, self.msg_reader
-                                )
+                    self.msg_reader.feed(out)
+                    if self.msg_reader.status == MsgStatus.MsgEnd:
+                        buffer = self.msg_reader.buffer.copy()
+                        last_message = buffer
+                        if self.message_spy:
+                            await self.message_spy.on_receive_message(
+                                MessageType.server_message, self.msg_reader
+                            )
 
-                            self.msg_reader.reset()
+                        self.msg_reader.reset()
 
-                            if self.context.debug_mode:
-                                self.context.log(f"\tSERVER: {buffer[12:]}")
-                            await self.write_stdout_bytes(buffer)
+                        if self.context.debug_mode:
+                            self.context.log(f"\tSERVER: {buffer[12:]}")
+                        await self.write_stdout_bytes(buffer)
                 else:  # no data
                     await asyncio.sleep(0.03)
         except Exception as e:
