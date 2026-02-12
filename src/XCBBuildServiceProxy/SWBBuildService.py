@@ -9,7 +9,11 @@ import os
 from BuildServiceUtils import (
     get_server_pid_by_session_id,
     client_put_message_to_server,
+    get_build_id,
+    server_get_message_from_client,
+    config_file,
 )
+import lib.filelock as filelock
 from BuildServiceHelper import Context, run_client, run_server, run_xcode_client
 
 
@@ -43,12 +47,27 @@ def main():
             with tempfile.NamedTemporaryFile(
                 "wb"
             ) as stdin_temp, tempfile.NamedTemporaryFile("rb") as stdout_temp:
-                message = {
-                    "command": "build",
-                    "stdin_file": stdin_temp.name,
-                    "stdout_file": stdout_temp.name,
-                }
-                client_put_message_to_server(message)
+
+                config_file_path = config_file()
+                lock_path = config_file_path + ".lock"
+                with filelock.FileLock(lock_path, timeout=5):
+                    try:
+                        message = server_get_message_from_client(False)
+                    except:
+                        message = None
+                    build_id = get_build_id()
+                    if message:
+                        if int(message["build_id"]) >= build_id:
+                            # this client is outdated
+                            return
+
+                    message = {
+                        "command": "build",
+                        "stdin_file": stdin_temp.name,
+                        "stdout_file": stdout_temp.name,
+                        "build_id": build_id,
+                    }
+                    client_put_message_to_server(message, False)
 
                 context.stdin_file = stdin_temp
                 context.stdout_file = stdout_temp  # read out of server's stdout

@@ -28,13 +28,16 @@ def server_spy_output_file():
 def get_session_id():
     if "SWBBUILD_SERVICE_PROXY_SESSION_ID" in os.environ:
         return os.environ["SWBBUILD_SERVICE_PROXY_SESSION_ID"]
-    return "TEST_SESSION_ID_12345"
+
+
+def get_build_id():
+    if "SWBBUILD_SERVICE_PROXY_BUILD_ID" in os.environ:
+        return int(os.environ["SWBBUILD_SERVICE_PROXY_BUILD_ID"])
 
 
 def config_file():
     if "SWBBUILD_SERVICE_PROXY_CONFIG_PATH" in os.environ:
         return os.environ["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"]
-    return "/tmp/SWBBUILD_SERVICE_PROXY_CONFIG_PATH.json"
 
 
 def is_host_app_alive():
@@ -42,16 +45,23 @@ def is_host_app_alive():
     return is_pid_alive(int(pid))
 
 
-def client_put_message_to_server(message: str):
+def client_put_message_to_server(message: str, with_lock=True):
     config_file_path = config_file()
     if config_file_path is None:
         return
 
     os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
     lock_path = config_file_path + ".lock"
-    with filelock.FileLock(lock_path, timeout=5):
+
+    def write_message():
         with open(config_file_path, "w", encoding="utf-8") as f:
             json.dump(message, f)
+
+    if with_lock:
+        with filelock.FileLock(lock_path, timeout=5):
+            write_message()
+    else:
+        write_message()
 
 
 def mtime_of_config_file():
@@ -65,18 +75,25 @@ def mtime_of_config_file():
     return os.path.getmtime(config_file_path)
 
 
-def server_get_message_from_client():
+def server_get_message_from_client(with_lock=True):
     config_file_path = config_file()
     if config_file_path is None:
         return None
 
     lock_path = config_file_path + ".lock"
-    with filelock.FileLock(lock_path, timeout=5):
+
+    def read_message():
         if not os.path.exists(config_file_path):
             return None
         with open(config_file_path, "r", encoding="utf-8") as f:
             cnt = f.read()
             return json.loads(cnt)
+
+    if with_lock:
+        with filelock.FileLock(lock_path, timeout=5):
+            return read_message()
+    else:
+        return read_message()
 
 
 def is_pid_alive(pid: int):

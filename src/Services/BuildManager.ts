@@ -54,6 +54,7 @@ export class BuildManager {
     constructor() {}
 
     static sessionId = randomUUID();
+    static buildID = 0;
 
     static async commonEnv() {
         const pid = process.pid;
@@ -70,6 +71,7 @@ export class BuildManager {
         env["SWBBUILD_SERVICE_PROXY_CONFIG_PATH"] = getSWBBuildServiceConfigTempFile(
             this.sessionId
         );
+        env["SWBBUILD_SERVICE_PROXY_BUILD_ID"] = (BuildManager.buildID++).toString();
         env["SWBBUILD_SERVICE_PROXY_SERVER_SPY_OUTPUT_FILE"] =
             `${getSWBBuildServiceConfigTempFile(this.sessionId)}.spy`;
         return env;

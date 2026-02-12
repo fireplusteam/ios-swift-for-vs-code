@@ -169,6 +169,8 @@ class STDFeeder:
                     await asyncio.sleep(0.03)
                     continue
 
+                current_reader = self.msg_reader
+
                 if hasattr(self.stdin, "buffer"):  # sys.stdin
                     byte = await loop.run_in_executor(
                         None,
@@ -180,7 +182,7 @@ class STDFeeder:
                         None, self.stdin.read, self.msg_reader.expecting_bytes_from_io()
                     )
 
-                if not byte:
+                if not byte or current_reader != self.msg_reader:
                     await asyncio.sleep(0.03)
                     continue
 
@@ -266,6 +268,7 @@ class STDOuter:
                 if self.stdout is None:
                     await asyncio.sleep(0.03)
                     continue
+                current_reader = self.msg_reader
                 if isinstance(proc_stdout, asyncio.StreamReader):
                     out = await proc_stdout.read(
                         self.msg_reader.expecting_bytes_from_io()
@@ -276,7 +279,7 @@ class STDOuter:
                         proc_stdout.read,
                         self.msg_reader.expecting_bytes_from_io(),
                     )
-                if out:
+                if out and current_reader == self.msg_reader:
                     self.msg_reader.feed(out)
                     if self.msg_reader.status == MsgStatus.MsgEnd:
                         buffer = self.msg_reader.buffer.copy()
@@ -361,15 +364,6 @@ async def main_client(context: Context):
         last_mtime = None
         while True:
             await asyncio.sleep(0.3)
-            new_mtime = mtime_of_config_file()
-            if new_mtime != last_mtime:
-                message = server_get_message_from_client()
-                # check if pipes are not changed by new client request, if changed - need to close current communication
-                if (
-                    context.stdin_file.name != message["stdin_file"]
-                    or context.stdout_file.name != message["stdout_file"]
-                ):
-                    break
 
             if (
                 await check_for_exit()
@@ -421,14 +415,31 @@ async def main_server(context: Context):
                         message = None
                     if not message:
                         continue
+
                     # expected messages:
                     # { "command": "build", "stdin_file": "...", "stdout_file": "..." }
                     # { "command": "stop" }
                     if message["command"] == "build":
                         stdin_file_path = message["stdin_file"]
                         stdout_file_path = message["stdout_file"]
+                        if (
+                            reader.stdin
+                            and outer.stdout
+                            and stdin_file_path == reader.stdin.name
+                            and stdout_file_path == outer.stdout.name
+                        ):
+                            # same client, no need to change pipes
+                            continue
+
+                        if reader.stdin:
+                            reader.stdin.close()
                         reader.stdin = open(stdin_file_path, "rb")
+                        reader.msg_reader = MessageReader()
+
+                        if outer.stdout:
+                            outer.stdout.close()
                         outer.stdout = open(stdout_file_path, "wb")
+
                     elif message["command"] == "stop":
                         break
                 else:

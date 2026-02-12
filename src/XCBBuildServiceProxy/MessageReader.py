@@ -128,6 +128,9 @@ class MessageReader:
             if self.read_index == self.msg_len:
                 self.status = MsgStatus.MsgEnd
 
+    def is_empty(self):
+        return self.status == MsgStatus.DetermineStart and self.read_index == 0
+
     def reset(self):
         self.read_index = 0
         self.buffer = bytearray()

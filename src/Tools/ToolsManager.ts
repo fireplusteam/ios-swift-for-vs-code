@@ -5,6 +5,7 @@ import { InteractiveTerminal } from "./InteractiveTerminal";
 import { getScriptPath, getSWBBuildServiceScriptPath } from "../env";
 import { XCRunHelper } from "./XCRunHelper";
 import { LogChannelInterface } from "../Logs/LogChannel";
+import * as path from "path";
 
 export class ToolsManager {
     private log: LogChannelInterface;
@@ -101,8 +102,9 @@ export class ToolsManager {
 
     async compileSWBBuildService(distPath: string) {
         this.terminal.show();
+        const workPath = path.join(distPath, "assemble");
         await this.terminal.executeCommand(
-            `pyinstaller --onefile '${getSWBBuildServiceScriptPath()}' --distpath '${distPath}'`
+            `pyinstaller --onefile '${getSWBBuildServiceScriptPath()}' --distpath '${distPath}' --workpath '${workPath}' --specpath '${workPath}'`
         );
         try {
             // remove quarantine attribute to allow execution without user interaction as it was generated from python script by user
