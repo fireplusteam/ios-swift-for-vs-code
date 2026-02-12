@@ -45,7 +45,7 @@ def is_host_app_alive():
     return is_pid_alive(int(pid))
 
 
-def client_put_message_to_server(message: str, with_lock=True):
+def update_build_status(message: str, with_lock=True):
     config_file_path = config_file()
     if config_file_path is None:
         return
@@ -75,7 +75,7 @@ def mtime_of_config_file():
     return os.path.getmtime(config_file_path)
 
 
-def server_get_message_from_client(with_lock=True):
+def build_status(with_lock=True):
     config_file_path = config_file()
     if config_file_path is None:
         return None

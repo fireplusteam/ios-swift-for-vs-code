@@ -4,16 +4,19 @@ import sys
 import os
 import asyncio
 import subprocess
+import lib.filelock as filelock
 from MessageReader import MessageReader, MsgStatus
 from BuildServiceUtils import (
     get_session_id,
     check_for_exit,
     push_data_to_stdout,
     mtime_of_config_file,
-    server_get_message_from_client,
+    build_status,
     is_pid_alive,
     is_host_app_alive,
     server_spy_output_file,
+    config_file,
+    update_build_status,
 )
 from MessageModifiers import MessageModifierBase, ClientMessageModifier
 from MessageSpy import MessageSpyBase, MessageType
@@ -25,7 +28,7 @@ class Context:
 
     def __init__(self, serviceName: str, stdin, stdout, stderr):
         # non zero - write logs from server to input files
-        self.debug_mode = 0
+        self.debug_mode = 1
 
         self.stdin = stdin
         self.stdout = stdout
@@ -365,6 +368,16 @@ async def main_client(context: Context):
         while True:
             await asyncio.sleep(0.3)
 
+            new_mtime = mtime_of_config_file()
+            if new_mtime != last_mtime:
+                build = build_status()
+                # if server accept another client to build and pipes were changed, client should be stopped
+                if build["status"] == "server_started_build" and (
+                    context.stdin_file.name != build["stdin_file"]
+                    or context.stdout_file.name != build["stdout_file"]
+                ):
+                    break
+
             if (
                 await check_for_exit()
                 or not is_pid_alive(context.server_pid)
@@ -406,42 +419,51 @@ async def main_server(context: Context):
                 # we don't want to change the client while it's building as it would be wrongly report messages to new client
                 if new_mtime != last_mtime and not message_spy.is_building:
                     last_mtime = new_mtime
-                    try:
-                        message = server_get_message_from_client()
-                    except Exception as e:
-                        context.log(
-                            f"SERVER: Exception getting message from client: {e}"
-                        )
-                        message = None
-                    if not message:
-                        continue
 
-                    # expected messages:
-                    # { "command": "build", "stdin_file": "...", "stdout_file": "..." }
-                    # { "command": "stop" }
-                    if message["command"] == "build":
-                        stdin_file_path = message["stdin_file"]
-                        stdout_file_path = message["stdout_file"]
-                        if (
-                            reader.stdin
-                            and outer.stdout
-                            and stdin_file_path == reader.stdin.name
-                            and stdout_file_path == outer.stdout.name
-                        ):
-                            # same client, no need to change pipes
+                    config_file_path = config_file()
+                    lock_path = config_file_path + ".lock"
+                    with filelock.FileLock(lock_path, timeout=5):
+                        try:
+                            build = build_status(with_lock=False)
+                        except Exception as e:
+                            context.log(
+                                f"SERVER: Exception getting message from client: {e}"
+                            )
+                            build = None
+                        if not build:
                             continue
 
-                        if reader.stdin:
-                            reader.stdin.close()
-                        reader.stdin = open(stdin_file_path, "rb")
-                        reader.msg_reader = MessageReader()
+                        # expected messages:
+                        # { "command": "build", "stdin_file": "...", "stdout_file": "..." }
+                        # { "command": "stop" }
+                        if build["command"] == "build":
+                            if build["status"] != "waiting_for_server_to_start_build":
+                                # this message was already processed by server, ignore
+                                continue
+                            stdin_file_path = build["stdin_file"]
+                            stdout_file_path = build["stdout_file"]
+                            if (
+                                reader.stdin
+                                and outer.stdout
+                                and stdin_file_path == reader.stdin.name
+                                and stdout_file_path == outer.stdout.name
+                            ):
+                                # same client, no need to change pipes
+                                continue
+                            build["status"] = "server_started_build"
+                            update_build_status(build, with_lock=False)
 
-                        if outer.stdout:
-                            outer.stdout.close()
-                        outer.stdout = open(stdout_file_path, "wb")
+                            if reader.stdin:
+                                reader.stdin.close()
+                            reader.stdin = open(stdin_file_path, "rb")
+                            reader.msg_reader = MessageReader()
 
-                    elif message["command"] == "stop":
-                        break
+                            if outer.stdout:
+                                outer.stdout.close()
+                            outer.stdout = open(stdout_file_path, "wb")
+
+                        elif build["command"] == "stop":
+                            break
                 else:
                     if (
                         process.returncode is not None

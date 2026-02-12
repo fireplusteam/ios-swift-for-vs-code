@@ -8,9 +8,9 @@ import os
 
 from BuildServiceUtils import (
     get_server_pid_by_session_id,
-    client_put_message_to_server,
+    update_build_status,
     get_build_id,
-    server_get_message_from_client,
+    build_status,
     config_file,
 )
 import lib.filelock as filelock
@@ -52,22 +52,23 @@ def main():
                 lock_path = config_file_path + ".lock"
                 with filelock.FileLock(lock_path, timeout=5):
                     try:
-                        message = server_get_message_from_client(False)
+                        build = build_status(False)
                     except:
-                        message = None
+                        build = None
                     build_id = get_build_id()
-                    if message:
-                        if int(message["build_id"]) >= build_id:
+                    if build:
+                        if int(build["build_id"]) >= build_id:
                             # this client is outdated
                             return
 
-                    message = {
+                    build = {
                         "command": "build",
                         "stdin_file": stdin_temp.name,
                         "stdout_file": stdout_temp.name,
                         "build_id": build_id,
+                        "status": "waiting_for_server_to_start_build",
                     }
-                    client_put_message_to_server(message, False)
+                    update_build_status(build, False)
 
                 context.stdin_file = stdin_temp
                 context.stdout_file = stdout_temp  # read out of server's stdout
