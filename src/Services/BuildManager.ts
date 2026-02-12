@@ -94,6 +94,7 @@ export class BuildManager {
             simulatorId += `,arch=${deviceid.arch}`;
         }
         const extra = [];
+        // all settings https://developer.apple.com/documentation/xcode/build-settings-reference
         if (isBuildIndexesWhileBuildingEnabled()) {
             extra.push("COMPILER_INDEX_STORE_ENABLE=YES"); // Control whether the compiler should emit index data while building.
         }
@@ -102,6 +103,8 @@ export class BuildManager {
         }
         // precompiled header breaks C++ autocompletion after incremental builds, so disable them by default
         extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
+        extra.push("SWIFT_ENABLE_EXPLICIT_MODULES=YES");
+        // TODO: check CLANG_ENABLE_MODULES
         return [
             "-configuration",
             await projectEnv.projectConfiguration,

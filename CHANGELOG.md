@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.7.1 - 2026-03-12
+
+### Fixed 
+
+- Improve stability of SWBBuildServiceProxy and fixed some edge cases in message redirecting between original service and the extension
+
+
 ## 0.7.0 - 2026-03-11
 
 ### Added
