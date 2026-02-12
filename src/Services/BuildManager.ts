@@ -100,10 +100,10 @@ export class BuildManager {
         }
         if (isCompilationCacheEnabled()) {
             extra.push("COMPILATION_CACHE_ENABLE_CACHING=YES"); // Caches the results of compilations for a particular set of inputs.
+            extra.push("SWIFT_ENABLE_EXPLICIT_MODULES=YES");
         }
         // precompiled header breaks C++ autocompletion after incremental builds, so disable them by default
         extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
-        extra.push("SWIFT_ENABLE_EXPLICIT_MODULES=YES");
         // TODO: check CLANG_ENABLE_MODULES
         return [
             "-configuration",
