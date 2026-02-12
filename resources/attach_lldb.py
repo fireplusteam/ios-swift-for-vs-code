@@ -567,9 +567,9 @@ def create_target(
         # breakpoint on runtime warning
         # perform_debugger_command(debugger, "breakpoint set --name os_log_fault_default_callback")
         # catch the runtime crash
-        perform_debugger_command(
-            debugger, "breakpoint set --name __exceptionPreprocess"
-        )
+        # perform_debugger_command(
+        #     debugger, "breakpoint set --name __exceptionPreprocess"
+        # )
 
     except Exception as e:
         log_message(str(e))
