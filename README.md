@@ -15,7 +15,7 @@ Before use it make sure you've installed all **dependencies** required for this 
 
 ## Extension Activation
 
-To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**. Create `launch.json` and `tasks.json` and `settings.json` files in `.vscode` folder if they don't exist to add launch configurations, tasks and settings for your project. By default it adds `Xcode Workspace: Run App & Debug` launch configuration for debugging/running the app. 
+To activate extension you need to open a folder which contains your Xcode project/workspace or Package.swift file and perform command **"Xcode: Select Project/Workspace"** to pick the project/workspace to work with. **Until you select the project/workspace/Package.swift file, extension will not be activated**. Create `launch.json` and `tasks.json` and `settings.json` files in `.vscode` folder if they don't exist to add launch configurations, tasks and settings for your project. By default it adds `Xcode Workspace: Run App & Debug` launch configuration for debugging/running the app.
 
 **Make sure that you have clean build of the project for the first time to make autocompletion to work**.
 
@@ -43,9 +43,11 @@ To activate extension you need to open a folder which contains your Xcode projec
 - Parsing build/test logs and display in real time
 - File tree explorer based on Xcode project structure
 
-Instead of xCode preview you can use hot reloading [InjectionIII](https://github.com/johnno1962/InjectionIII) which works great with this extension:
+## Hot Reloading
 
-- HotReloading & Injection with [HotReloading](https://github.com/johnno1962/HotReloading)
+Instead of xCode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) which works great with this extension, but you may need to activate **Patch Compiler** option there and do all necessary configuration for it to work:
+
+- HotReloading & Injection with [InjectionNext](https://github.com/johnno1962/InjectionNext)
 - SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
 To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
