@@ -28,7 +28,7 @@ export interface SemanticManagerInterface {
     markTargetOutOfDate(targetIds: Set<string>): void;
     markTargetUpToDate(targetIds: Set<string>, buildTime: number, error: Error | undefined): void;
 
-    getAllTargetsDependencies(targetIds: Set<string>): Set<string>;
+    getAllTargetsDependencies(targetIds: Set<string>, skipTargetIds: Set<string>): Set<string>;
     getAllDependentTargets(targetIds: Set<string>): Set<string>;
 
     mapBuildLogsTargetIdToTargetId(xcodeBuildingLogsTargetId: string): string | undefined;
@@ -205,9 +205,9 @@ export class SemanticManager implements SemanticManagerInterface {
         }
     }
 
-    getAllTargetsDependencies(targetIds: Set<string>): Set<string> {
+    getAllTargetsDependencies(targetIds: Set<string>, skipTargetIds: Set<string>): Set<string> {
         const result = new Set<string>();
-        const visitQueue = Array.from(targetIds);
+        const visitQueue = Array.from(targetIds).filter(targetId => !skipTargetIds.has(targetId));
         while (visitQueue.length > 0) {
             const currentTargetId = visitQueue.pop()!;
             if (result.has(currentTargetId)) {
@@ -217,12 +217,12 @@ export class SemanticManager implements SemanticManagerInterface {
             const targetDep = this.graph.get(currentTargetId);
             if (targetDep) {
                 for (const childTargetId of targetDep.dependencies) {
-                    if (!result.has(childTargetId)) {
+                    if (!result.has(childTargetId) && !skipTargetIds.has(childTargetId)) {
                         visitQueue.push(childTargetId);
                     }
                 }
                 for (const childTargetId of targetDep.implicitDependencies) {
-                    if (!result.has(childTargetId)) {
+                    if (!result.has(childTargetId) && !skipTargetIds.has(childTargetId)) {
                         visitQueue.push(childTargetId);
                     }
                 }

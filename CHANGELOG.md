@@ -1,11 +1,16 @@
 # Change Log
 
+## 0.7.2 - 2026-03-14
+
+### Fixed
+
+- Improve performance of dependency targets resolving algorithm on client side
+
 ## 0.7.1 - 2026-03-12
 
-### Fixed 
+### Fixed
 
 - Improve stability of SWBBuildServiceProxy and fixed some edge cases in message redirecting between original service and the extension
-
 
 ## 0.7.0 - 2026-03-11
 

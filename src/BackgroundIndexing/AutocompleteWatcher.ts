@@ -119,7 +119,8 @@ export class AutocompleteWatcher {
                 );
             });
         const dependencies = this.semanticManager.getAllTargetsDependencies(
-            this.activelyBuildingTargetsIds
+            this.activelyBuildingTargetsIds,
+            new Set<string>()
         );
         const leftTargets = statusEntry.filter(target => {
             if (target.id === undefined) {

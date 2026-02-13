@@ -29,7 +29,7 @@ To activate extension you need to open a folder which contains your Xcode projec
 
 - Supports iOS/MacOS/WatchOS/VisionOS/TvOS
 - Supports Package.swift via tuist project generation (only Package.swift in the root folder is supported)
-- Swift/Objective-C/C++ autocompletion
+- Swift/Objective-C/C++ autocompletion with background indexing
 - Compatibility with CodeLLDB/lldb-dap
 - Debug/Run app on Simulators (physical device is currently is not supported)
 - Debug/Run unit/snapshot/UI tests/test plans. Support running single/multiple tests for a class/target/set of classes/subprojects

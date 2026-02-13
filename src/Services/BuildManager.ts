@@ -191,6 +191,8 @@ export class BuildManager {
         });
     }
 
+    private alreadyMarkedTargetIds = new Set<string>();
+
     private markTargetUpToDateAfterBuild(
         context: CommandContext,
         builtTargetIds: Set<string>,
@@ -207,9 +209,15 @@ export class BuildManager {
         } else {
             // we don't want to mark any target with error as up to date, even it came later as success
             allBuiltTargetsIds = new Set(
-                [...context.semanticManager.getAllTargetsDependencies(builtTargetIds)].filter(
-                    targetId => !this.builtTargetIdsWithError.has(targetId)
-                )
+                [
+                    ...context.semanticManager.getAllTargetsDependencies(
+                        builtTargetIds,
+                        this.alreadyMarkedTargetIds
+                    ),
+                ].filter(targetId => {
+                    this.alreadyMarkedTargetIds.add(targetId);
+                    return !this.builtTargetIdsWithError.has(targetId);
+                })
             );
         }
 
@@ -228,6 +236,7 @@ export class BuildManager {
         await buildTargetSpy.prepare();
         let isEndSpyCalled = false;
         this.builtTargetIdsWithError.clear();
+        this.alreadyMarkedTargetIds.clear();
         buildTargetSpy.spy(context.buildEvent, context.cancellationToken, message => {
             if (isEndSpyCalled) {
                 return; // after end spy we don't want to process any messages

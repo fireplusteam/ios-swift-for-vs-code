@@ -562,6 +562,7 @@ def create_target(
         # Set common breakpoints, so if tests are running with debugger, so it's caught
         # deprecated
         # breakpoint on test failed
+        # TODO: should be on vs code extension side so the user can on/off it easily via user interface, disable it for now as it produces side effects
         # perform_debugger_command(debugger, "breakpoint set --selector recordFailureWithDescription:inFile:atLine:expected:")
         # perform_debugger_command(debugger, "breakpoint set --name _XCTFailureHandler")
         # breakpoint on runtime warning
