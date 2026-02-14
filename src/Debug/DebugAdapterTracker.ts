@@ -248,7 +248,13 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
                     },
                     async context => {
                         context.terminal!.terminalName = `Launching For ${this.isDebuggable ? "Debug" : "Run"}`;
-                        await runApp(context, this.sessionID, isDebuggable);
+                        await runApp(
+                            context,
+                            this.sessionID,
+                            isDebuggable,
+                            dbgConfig.args || [],
+                            dbgConfig.env || {}
+                        );
                     }
                 );
             } else if (dbgConfig.target === "tests") {

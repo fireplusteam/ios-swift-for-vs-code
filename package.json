@@ -467,6 +467,22 @@
                                     "type": "string"
                                 },
                                 "default": []
+                            },
+                            "args": {
+                                "description": "Arguments to pass to the launched app.",
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "default": []
+                            },
+                            "env": {
+                                "description": "Environment variables to set for the launched app.",
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "default": {}
                             }
                         }
                     }
@@ -479,7 +495,9 @@
                         "target": "app",
                         "isDebuggable": true,
                         "buildBeforeLaunch": "always",
-                        "lldbCommands": []
+                        "lldbCommands": [],
+                        "args": [],
+                        "env": {}
                     }
                 ],
                 "configurationSnippets": [
@@ -493,7 +511,9 @@
                             "target": "app",
                             "isDebuggable": true,
                             "buildBeforeLaunch": "always",
-                            "lldbCommands": []
+                            "lldbCommands": [],
+                            "args": [],
+                            "env": {}
                         }
                     }
                 ]

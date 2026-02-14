@@ -413,8 +413,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         const commonSettings = {
             name: dbgConfig.name,
-            args: [],
-            env: [],
+            args: dbgConfig.args || [],
+            env: dbgConfig.env || {},
             initCommands: [],
             exitCommands: [],
             cwd: getWorkspacePath(),
@@ -508,6 +508,8 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 xctestrun: dbgConfig.xctestrun,
                 isCoverage: dbgConfig.isCoverage,
                 processExe: processExe,
+                args: dbgConfig.args || [],
+                env: dbgConfig.env || {},
             };
 
             if (isLaunchingApp) {

@@ -21,12 +21,22 @@ export class RunManager {
         this.isDebuggable = isDebuggable;
     }
 
-    async runOnDebugDevice(context: CommandContext) {
+    async runOnDebugDevice(
+        context: CommandContext,
+        args: string[],
+        env: { [name: string]: string }
+    ) {
         if ((await context.projectEnv.debugDeviceID).platform === "macOS") {
             return await this.runOnMac(context);
         }
 
-        return await this.runOnSimulator(context, await context.projectEnv.debugDeviceID, true);
+        return await this.runOnSimulator(
+            context,
+            await context.projectEnv.debugDeviceID,
+            true,
+            args,
+            env
+        );
     }
 
     async runOnMultipleDevices(context: CommandContext) {
@@ -46,7 +56,7 @@ export class RunManager {
         for (const device of devices) {
             if (debugDeviceID.platform === device.platform && debugDeviceID.arch === device.arch) {
                 // we can run only on the platform that was built to
-                await this.runOnSimulator(context, device, false);
+                await this.runOnSimulator(context, device, false, [], {});
             }
         }
     }
@@ -111,7 +121,9 @@ export class RunManager {
     private async runOnSimulator(
         context: CommandContext,
         deviceId: DeviceID,
-        waitDebugger: boolean
+        waitDebugger: boolean,
+        args: string[],
+        env: { [name: string]: string }
     ) {
         await this.prepareSimulator(context, deviceId);
         try {
@@ -151,10 +163,15 @@ export class RunManager {
         const bundleAppName = await context.projectEnv.bundleAppName;
 
         let isHandled = false;
+        const launchEnv: { [key: string]: string } = {};
+        for (const [key, value] of Object.entries(env)) {
+            launchEnv[`SIMCTL_CHILD_${key}`] = value;
+        }
         context
             .execShellParallel({
                 scriptOrCommand: { command: "xcrun" },
-                args: ["simctl", "launch", "--console-pty", deviceId.id, bundleAppName],
+                args: ["simctl", "launch", "--console-pty", deviceId.id, bundleAppName, ...args],
+                env: launchEnv,
                 pipeToDebugConsole: true,
                 kill: { signal: "SIGKILL", allSubProcesses: true },
             })
@@ -166,7 +183,7 @@ export class RunManager {
                         await this.shutdownSimulator(context, deviceId.id);
                         if (context.cancellationToken.isCancellationRequested === false) {
                             isHandled = true;
-                            this.runOnSimulator(context, deviceId, waitDebugger);
+                            this.runOnSimulator(context, deviceId, waitDebugger, args, env);
                         }
                     }
                 }

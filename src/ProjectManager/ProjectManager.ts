@@ -369,6 +369,8 @@ export class ProjectManager
                         isDebuggable: true,
                         buildBeforeLaunch: "always",
                         lldbCommands: [],
+                        args: [],
+                        env: {},
                     },
                 ],
             },

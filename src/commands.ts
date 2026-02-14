@@ -593,11 +593,13 @@ export async function openXCode(activeFile: string, log: LogChannelInterface) {
 export async function runApp(
     commandContext: CommandContext,
     sessionID: string,
-    isDebuggable: boolean
+    isDebuggable: boolean,
+    args: string[],
+    env: { [name: string]: string }
 ) {
     await checkWorkspace(commandContext, false);
     const runManager = new RunManager(sessionID, isDebuggable);
-    await runManager.runOnDebugDevice(commandContext);
+    await runManager.runOnDebugDevice(commandContext, args, env);
 }
 
 export async function runAppOnMultipleDevices(
