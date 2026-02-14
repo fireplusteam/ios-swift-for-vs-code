@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.3 - 2026-03-15
+
+### Added
+
+- Added `env` and `args` support to launch configuration for better debugging experience
+
 ## 0.7.2 - 2026-03-14
 
 ### Fixed

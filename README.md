@@ -51,6 +51,19 @@ Instead of xCode preview you can use hot reloading [InjectionNext](https://githu
 - SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
 To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
+For example you can add the following launch configuration to 'launch.json' to support InjectionNext file watching automatically project workspace:
+
+```json
+{
+    "type": "xcode-lldb",
+    "name": "Run App with InjectionNext & Debug",
+    "request": "launch",
+    "target": "app",
+    "env": {
+        "INJECTION_PROJECT_ROOT": "${workspaceFolder}"
+    }
+} 
+```
 
 ## Keybindings
 
