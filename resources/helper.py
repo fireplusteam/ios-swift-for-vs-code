@@ -181,6 +181,9 @@ def wait_debugger_to_action(session_id, actions: list[str]):
         time.sleep(1)
 
 
+LAST_DEBUGGER_CONFIG_CACHE = {}
+
+
 def is_debug_session_valid(session_id) -> bool:
     """
     Checks if the debug session with the given session ID is valid. A session is considered invalid if it is marked as "stopped" in the debugger configuration file.
@@ -190,15 +193,33 @@ def is_debug_session_valid(session_id) -> bool:
     :rtype: bool
     """
     try:
-        with fileLock.FileLock(DEBUGGER_CONFIG_FILE_LOCK):
-            with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
-                config = json.load(file)
+        global LAST_DEBUGGER_CONFIG_CACHE
+
+        def check_status(config) -> bool:
             if not session_id in config:
                 return False
+            if not "status" in config[session_id]:
+                return True  # valid as it's not reported as stopped yet
             if config[session_id]["status"] == "stopped":
                 return False
 
             return True
+
+        mtime = os.path.getmtime(DEBUGGER_CONFIG_FILE)
+        if (
+            "cache_mtime" in LAST_DEBUGGER_CONFIG_CACHE
+            and LAST_DEBUGGER_CONFIG_CACHE["cache_mtime"] == mtime
+        ):
+            return check_status(LAST_DEBUGGER_CONFIG_CACHE)
+
+        with fileLock.FileLock(DEBUGGER_CONFIG_FILE_LOCK):
+            with open(DEBUGGER_CONFIG_FILE, "r", encoding="utf-8") as file:
+                config = json.load(file)
+                LAST_DEBUGGER_CONFIG_CACHE = config
+                LAST_DEBUGGER_CONFIG_CACHE["cache_mtime"] = os.path.getmtime(
+                    DEBUGGER_CONFIG_FILE
+                )
+            return check_status(config)
     except:  # no file or a key, so the session is valid
         return True
 
@@ -274,7 +295,7 @@ def binary_readline(file, newline=b"\r\n"):
     while True:
         x = file.read(1)
         if x:
-            line += x
+            line.extend(x)
         else:
             if len(line) == 0:
                 return None

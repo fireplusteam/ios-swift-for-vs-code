@@ -143,7 +143,9 @@ Use the following guide to install them manually if any it doesn't work for you:
         "target": "app",
         "isDebuggable": true,
         "buildBeforeLaunch": "always",
-        "lldbCommands": []
+        "lldbCommands": [], 
+        "args": [],
+        "env": {}
     }
 ]
 ```
@@ -157,6 +159,8 @@ Use the following guide to install them manually if any it doesn't work for you:
   - "never" to never build before launching
   - "ask" to ask a user if the build is required before launching
 - `lldbCommands`: array of lldb commands to execute on debugger start
+- `args`: array of arguments to pass to the app on launch
+- `env`: environment variables to set for the app on launch
 
 ## User Defined Tasks
 
