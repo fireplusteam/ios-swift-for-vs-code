@@ -25,7 +25,6 @@ import { QuickPickItem, showPicker } from "../inputPicker";
 import { Mutex } from "async-mutex";
 import { RubyProjectFilesManagerInterface } from "./RubyProjectFilesManager";
 import { LogChannelInterface } from "../Logs/LogChannel";
-import * as touch from "touch";
 import {
     ProjectWatcherInterface,
     ProjectWatcherTouchInterface,
@@ -33,6 +32,8 @@ import {
 } from "./ProjectWatcher";
 
 export interface ProjectManagerInterface {
+    projectWatcher: ProjectWatcherInterface & ProjectWatcherTouchInterface;
+
     getRootProjectTargets(): Promise<string[]>;
 
     getTargetsForScheme(schemeName: string): Promise<string[]>;
@@ -1011,7 +1012,7 @@ export class ProjectManager
                 return rootProjectPath;
             })();
             if (shouldTouch) {
-                touch.sync(touchProjectPath);
+                this.projectWatcher.touchWithoutNotify(touchProjectPath);
             }
             this.log.debug(
                 `Generated scheme: VSCODE_AUTOCOMPLETE_TAG_${this.buildAllTargetTagCounter}, with added targets: ${result.join(", ")}`

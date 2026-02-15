@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import * as chokidar from "chokidar";
 import * as path from "path";
+import * as touch from "touch";
 
 export interface ProjectWatcherInterface extends vscode.Disposable {
     newFileWatcher(filePath: string): ProjectFileWatcherInterface;
@@ -10,6 +11,7 @@ export interface ProjectWatcherInterface extends vscode.Disposable {
 
 export interface ProjectWatcherTouchInterface {
     update(filePath: string): Promise<void>;
+    touchWithoutNotify(filePath: string): Promise<void>;
 }
 
 interface ProjectWatcherTimestamp {
@@ -28,6 +30,7 @@ export interface ProjectFileCheckerInterface {
 }
 
 interface ProjectFileWatcherImp {
+    skipNextNotify: boolean;
     notify(projectFilePath: string): Promise<boolean>;
 }
 
@@ -75,6 +78,12 @@ export class ProjectWatcher
         if (ext !== ".pbxproj" && ext !== ".swift") {
             return;
         }
+        const watcherEntry = this.watchers.get(filePath);
+
+        if (watcherEntry && watcherEntry.watcher.skipNextNotify) {
+            watcherEntry.watcher.skipNextNotify = false;
+            return;
+        }
 
         const components = filePath.split(path.sep).filter(c => c.length > 0) || [];
         let subPath = "";
@@ -91,11 +100,18 @@ export class ProjectWatcher
             }
         }
 
-        const watcherEntry = this.watchers.get(filePath);
         if (watcherEntry) {
             watcherEntry.timestamps = Date.now();
             watcherEntry.watcher.notify(filePath);
         }
+    }
+
+    async touchWithoutNotify(filePath: string): Promise<void> {
+        const watcherEntry = this.watchers.get(filePath);
+        if (watcherEntry) {
+            watcherEntry.watcher.skipNextNotify = true;
+        }
+        touch.sync(filePath);
     }
 
     private addPath(filePath: string) {
@@ -167,6 +183,7 @@ class ProjectFileWatcher
 {
     private timestamp: number = 0;
     private _onFileChanged: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+    skipNextNotify: boolean = false;
     public readonly onFileChanged: vscode.Event<void> = this._onFileChanged.event;
 
     constructor(

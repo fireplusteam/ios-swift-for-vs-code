@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import touch = require("touch");
 import { BundlePath } from "../CommandManagement/BundlePath";
 import {
     CommandContext,
@@ -488,7 +487,7 @@ export class BuildManager {
                     fs.unlinkSync(toDeleteSchemePath);
                 }
                 if (touchProjectPath && fs.existsSync(touchProjectPath)) {
-                    touch.sync(touchProjectPath);
+                    context.projectManager.projectWatcher.touchWithoutNotify(touchProjectPath);
                 }
             } catch {
                 // ignore errors
