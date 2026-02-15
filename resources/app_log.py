@@ -15,7 +15,7 @@ class AppLogger:
             while True:
                 try:
                     line = helper.binary_readline(file, b"\n")
-                    if not line:
+                    if not line or line == b"":
                         break
                     if not line.endswith(b"\n"):
                         break

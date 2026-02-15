@@ -226,6 +226,7 @@ def wait_for_process(
         process.suspend()
 
         def suspending():
+            nonlocal process_attach_state
             # repeatly suspend the process until it's fully attached as lldb only sunspends it once during attach but process can not react in all cases
             # so we keep suspending it until it's fully attached
             try:
@@ -382,6 +383,7 @@ def log_runtime_error(debugger: lldb.SBDebugger, json):
             try:
                 input_line = runtime_warning_process.stdout.readline()
                 if not input_line:
+                    time.sleep(0.1)
                     if not last_line:
                         continue
                     if last_line.find("[com.apple.runtime-issues") == -1:
