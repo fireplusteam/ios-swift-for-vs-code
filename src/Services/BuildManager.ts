@@ -230,9 +230,10 @@ export class BuildManager {
         buildEnv: { [name: string]: string },
         buildableTargetsIds: Set<string>,
         buildTouchTime: number,
-        shouldStopAfterGotStatusForAllTargets: boolean
+        shouldStopAfterGotStatusForAllTargets: boolean,
+        canStartBuildInXcode: boolean
     ) {
-        const buildTargetSpy = new BuildTargetSpy(buildEnv);
+        const buildTargetSpy = new BuildTargetSpy(buildEnv, canStartBuildInXcode);
         await buildTargetSpy.prepare();
         let isEndSpyCalled = false;
         this.builtTargetIdsWithError.clear();
@@ -319,17 +320,19 @@ export class BuildManager {
             );
         }
 
+        const canStartBuildInXcode = await this.xcodeBuildExecutor.canStartBuildInXcode(context);
         const buildEnv = await BuildManager.commonEnv();
         const buildTargetSpy = await this.startTargetBuildingSpyService(
             context,
             buildEnv,
             builtTargetIds,
             buildTouchTime,
-            false
+            false,
+            canStartBuildInXcode
         );
 
         try {
-            if (await this.xcodeBuildExecutor.canStartBuildInXcode(context)) {
+            if (canStartBuildInXcode) {
                 // at the moment build-for-testing does not work with opened Xcode workspace/project
                 await this.xcodeBuildExecutor.startBuildInXcode(
                     context,
@@ -382,17 +385,19 @@ export class BuildManager {
         const buildTouchTime = Date.now();
         const buildEnv = await BuildManager.commonEnv();
         const builtTargetIds = new Set<string>(includeTargets);
+        const canStartBuildInXcode = await this.xcodeBuildExecutor.canStartBuildInXcode(context);
+
         const buildTargetSpy = await this.startTargetBuildingSpyService(
             context,
             buildEnv,
             builtTargetIds,
             buildTouchTime,
-            true
+            true,
+            canStartBuildInXcode
         );
         try {
             let allBuildScheme: string = await context.projectEnv.autoCompleteScheme;
-            const canStartBuildInXcode =
-                await this.xcodeBuildExecutor.canStartBuildInXcode(context);
+
             try {
                 if ((await context.projectEnv.workspaceType()) === "xcodeProject") {
                     const scheme =
@@ -517,6 +522,7 @@ export class BuildManager {
             buildEnv,
             builtTargetIds,
             buildTouchTime,
+            false,
             false
         );
         try {

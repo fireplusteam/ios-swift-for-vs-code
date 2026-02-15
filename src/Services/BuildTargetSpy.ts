@@ -24,8 +24,11 @@ export class BuildTargetSpy {
     private isMessageSent = new Set<string>();
     private isProxyServerEnabled: boolean;
 
-    constructor(private env: { [name: string]: string }) {
-        this.isProxyServerEnabled = enabledSpyService();
+    constructor(
+        private env: { [name: string]: string },
+        isBuildInXcode: boolean
+    ) {
+        this.isProxyServerEnabled = enabledSpyService() && !isBuildInXcode;
     }
 
     async prepare() {
@@ -38,7 +41,7 @@ export class BuildTargetSpy {
 
     private async readMessages() {
         const spyOutputFile = this.env["SWBBUILD_SERVICE_PROXY_SERVER_SPY_OUTPUT_FILE"];
-        if (!this.isProxyServerEnabled || !this.isProxyServerEnabled) {
+        if (!this.isProxyServerEnabled) {
             return;
         }
         // should be optimized to not read the file from the beginning every time, but since spy messages are expected to be not so often and file is expected to be small, this approach should be fine for now and is much simpler than keeping track of file pointer and re-opening file with new pointer after each message
