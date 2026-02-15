@@ -6,6 +6,11 @@
 
 - Added `env` and `args` support to launch configuration for better debugging experience
 
+### Fixed
+
+- Improved mixed build system mode which utilize Xcode to build project in case if you want to use InjectionNext app from Xcode and VSCode
+- Improved lldb script performance
+
 ## 0.7.2 - 2026-03-14
 
 ### Fixed

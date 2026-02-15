@@ -338,6 +338,13 @@ export class BuildManager {
                     logFilePath,
                     await context.projectEnv.projectScheme
                 );
+                await buildTargetSpy.endSpy();
+                this.markTargetUpToDateAfterBuild(
+                    context,
+                    builtTargetIds,
+                    buildTouchTime,
+                    undefined
+                );
                 return;
             }
 
@@ -420,6 +427,13 @@ export class BuildManager {
                     logFilePath,
                     allBuildScheme
                 );
+                await buildTargetSpy.endSpy();
+                this.markTargetUpToDateAfterBuild(
+                    context,
+                    builtTargetIds,
+                    buildTouchTime,
+                    undefined
+                );
                 return;
             }
             context.bundle.generateNext();
@@ -437,10 +451,6 @@ export class BuildManager {
                     "-skipUnavailableActions", // for autocomplete, skip if it fails
                     "-jobs",
                     jobsCountForWatcher().toString(),
-                    // "CODE_SIGN_IDENTITY=",
-                    // "CODE_SIGNING_REQUIRED=NO",
-                    // "CODE_SIGN_ENTITLEMENTS=",
-                    // "CODE_SIGNING_ALLOWED=NO",
                 ],
                 env: {
                     ...buildEnv,
