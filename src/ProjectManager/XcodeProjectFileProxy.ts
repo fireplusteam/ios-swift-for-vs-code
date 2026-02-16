@@ -20,6 +20,9 @@ export class XcodeProjectFileProxy {
         this.process = spawn(`ruby '${getScriptPath("project_helper.rb")}'`, {
             shell: true,
             stdio: "pipe",
+            env: {
+                ...process.env,
+            },
         });
         let stderr = "";
         this.process.stderr?.on("data", data => {
