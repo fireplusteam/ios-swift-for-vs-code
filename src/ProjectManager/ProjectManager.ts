@@ -329,7 +329,11 @@ export class ProjectManager
         excludedFiles.push(getFilePathInWorkspace(".vscode/xcode/bundles"));
         const excludedFilesDict: { [key: string]: boolean } = {};
         for (const file of excludedFiles) {
-            const relative = path.relative(getWorkspacePath(), file);
+            let filePath = file;
+            if (!file.startsWith("/")) {
+                filePath = "/" + file;
+            }
+            const relative = path.relative(getWorkspacePath(), filePath);
             excludedFilesDict[relative] = true;
         }
         const workspaceName = `${getWorkspacePath().split(path.sep).at(-1)}/${await getProjectFileName()}`;
@@ -342,7 +346,8 @@ export class ProjectManager
             ],
             settings: {
                 "files.exclude": excludedFilesDict,
-                "search.exclude": excludedFilesDict,
+                // search exclude is inherited from files exclude, so we don't need to set it
+                // "search.exclude": excludedFilesDict,
                 // we use own lsp client, so we don't need to interfere with it
                 "swift.autoGenerateLaunchConfigurations": false,
                 "swift.disableAutoResolve": true,
