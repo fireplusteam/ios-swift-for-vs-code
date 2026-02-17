@@ -77,6 +77,8 @@ class Context:
         self.command = [f"{build_service_path}/{serviceName}-origin"] + filter_args()
 
     def __enter__(self):
+        if self.debug_mode == 0:
+            return self
         cache_path = os.path.join(
             os.path.expanduser(f"~/Library/Caches/{self.serviceName}Proxy"),
         )
