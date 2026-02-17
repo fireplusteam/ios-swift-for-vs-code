@@ -17,6 +17,7 @@ from BuildServiceUtils import (
     server_spy_output_file,
     config_file,
     update_build_status,
+    get_build_id,
 )
 from MessageModifiers import MessageModifierBase, ClientMessageModifier
 from MessageSpy import MessageSpyBase, MessageType
@@ -81,8 +82,11 @@ class Context:
         )
 
         os.makedirs(cache_path, exist_ok=True)
+        file_name = f"{'server' if not self.is_client else 'client'}"
+        if self.is_client:
+            file_name += f"_{get_build_id()}"
         self.log_file = open(
-            f"{cache_path}/xcbuild_{'server' if not self.is_client else 'client'}.log",
+            f"{cache_path}/xcbuild_{file_name}.log",
             "w+",
             encoding="utf-8",
         )
