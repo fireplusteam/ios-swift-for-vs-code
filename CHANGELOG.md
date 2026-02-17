@@ -4,6 +4,8 @@
 
 ### Fixed
 
+- Pass ruby environment variables so in some cases it was failing
+
 ## 0.7.3 - 2026-03-15
 
 ### Added
