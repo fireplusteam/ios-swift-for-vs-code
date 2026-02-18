@@ -460,7 +460,7 @@ export class BuildManager {
                 ],
                 env: {
                     ...buildEnv,
-                    continueBuildingAfterErrors: "True", // build even if there's an error triggered
+                    CONTINUE_BUILDING_AFTER_ERRORS: "True", // build even if there's an error triggered
                 },
                 mode: ExecutorMode.resultOk | ExecutorMode.stderr | ExecutorMode.commandName,
                 kill: { signal: "SIGINT", allSubProcesses: false },

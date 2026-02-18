@@ -322,7 +322,7 @@ async def xcode_client(context: Context):
         context.log(os.environ)
         context.log("START XCODE CLIENT")
 
-        reader = STDFeeder(context.stdin, context)
+        reader = STDFeeder(context.stdin, context, ClientMessageModifier())
         outer = STDOuter(context.stdout, context)
         asyncio.create_task(reader.feed_stdin(process.stdin))
         asyncio.create_task(outer.read_server_data(process.stdout))

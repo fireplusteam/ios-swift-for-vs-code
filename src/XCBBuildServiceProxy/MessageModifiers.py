@@ -10,10 +10,10 @@ def modify_json_content(json_data):
     is_fed = False
     # log(f"Original parameters: {content[3:].decode('utf-8')}")
 
-    continue_while_building = os.environ.get("continueBuildingAfterErrors", "False")
+    continue_while_building = os.environ.get("CONTINUE_BUILDING_AFTER_ERRORS", "False")
     single_file_building = os.environ.get("BUILD_XCODE_SINGLE_FILE_PATH", None)
     # log(f"ENV BUILD_XCODE_SINGLE_FILE_PATH: {single_file_building}")
-    # log(f"ENV continueBuildingAfterErrors: {continue_while_building}")
+    # log(f"ENV CONTINUE_BUILDING_AFTER_ERRORS: {continue_while_building}")
 
     config = json.loads(json_data)
 

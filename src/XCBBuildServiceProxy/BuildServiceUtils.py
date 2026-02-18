@@ -12,7 +12,7 @@ import lib.filelock as filelock
 
 def is_behave_like_proxy():
     if (
-        "continueBuildingAfterErrors" in os.environ
+        "CONTINUE_BUILDING_AFTER_ERRORS" in os.environ
         or "BUILD_XCODE_SINGLE_FILE_PATH" in os.environ
     ):
         return True
