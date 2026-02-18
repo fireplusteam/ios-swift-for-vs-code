@@ -171,6 +171,15 @@ export class SwiftLSPClient implements vscode.Disposable {
                 ]
             );
         }
+        documentSelector.push(
+            ...[
+                // document selector for swift-docc documentation
+                { scheme: "file", language: "markdown" },
+                { scheme: "untitled", language: "markdown" },
+                { scheme: "file", language: "tutorial" },
+                { scheme: "untitiled", language: "tutorial" },
+            ]
+        );
 
         const errorHandler = new SourceKitLSPErrorHandler(5);
         const clientOptions: langclient.LanguageClientOptions = {

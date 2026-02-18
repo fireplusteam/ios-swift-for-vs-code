@@ -16,9 +16,9 @@ interface SymbolToken {
     endOffset: number;
 }
 
-// if it's more then 40, then it's too many combination anyway
-const maxNumberOfSymbolsToCheckOnTypes = 40;
-const maxRecursiveCalls = 5;
+// if it's more then 20, then it's too many combination anyway
+const maxNumberOfSymbolsToCheckOnTypes = 20;
+const maxRecursiveCalls = 3;
 
 export class DefinitionProvider {
     constructor(private lspClient: SwiftLSPClient) {}
@@ -190,7 +190,7 @@ export class DefinitionProvider {
         offset: number,
         cancel: vscode.CancellationToken
     ) {
-        const hovers = (await this.sendHoverRequestFromText(uri, text, position)) || [];
+        const hovers = (await this.sendHoverRequestFromText(uri, text, position, cancel)) || [];
         const types = new Set<string>();
         for (const hover of hovers) {
             if (cancel.isCancellationRequested) {
@@ -209,7 +209,8 @@ export class DefinitionProvider {
                         (await this.sendHoverRequestFromText(
                             uri,
                             text,
-                            getPosition(text, typeInText.offset)
+                            getPosition(text, typeInText.offset),
+                            cancel
                         )) || [];
                     for (const typeAlias of possibleTypeAliasHover) {
                         if (cancel.isCancellationRequested) {
@@ -292,12 +293,18 @@ export class DefinitionProvider {
         uri: vscode.Uri,
         text: string,
         hoverPos: vscode.Position,
+        cancel: vscode.CancellationToken,
         isRecursiveCall = false
     ): Promise<string[] | null> {
+        if (cancel.isCancellationRequested) {
+            return null;
+        }
+
         const hoverParams: langclient.HoverParams = {
             textDocument: { uri: uri.toString() },
             position: langclient.Position.create(hoverPos.line, hoverPos.character),
         };
+
         try {
             const hover = (await (
                 await this.lspClient.client()
@@ -336,7 +343,7 @@ export class DefinitionProvider {
                 } catch {
                     return null;
                 }
-                return await this.sendHoverRequestFromText(uri, text, hoverPos, true);
+                return await this.sendHoverRequestFromText(uri, text, hoverPos, cancel, true);
             }
 
             return null;
