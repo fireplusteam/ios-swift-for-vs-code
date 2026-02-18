@@ -57,8 +57,14 @@ def main():
                         build = None
                     build_id = get_build_id()
                     if build:
-                        if int(build["build_id"]) >= build_id:
-                            # this client is outdated
+                        build_id_env = int(build["build_id"])
+                        if build_id_env > build_id:
+                            # this client is outdated, should exit and let newer client to run the build
+                            return
+                        if build_id_env == build_id:
+                            # xcodebuild can run sub xcodebuild processes for different build operations
+                            # subprocess of xcodebuild is supported as simple proxy without daemon server
+                            run_xcode_client(context)
                             return
 
                     build = {

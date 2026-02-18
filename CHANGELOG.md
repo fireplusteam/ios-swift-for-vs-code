@@ -5,6 +5,7 @@
 ### Fixed
 
 - Pass ruby environment variables so in some cases it was failing
+- xcodebuild can run sub xcodebuild processes for different build operations, subprocess of xcodebuild is supported as simple proxy without daemon server now, so it should work in more cases and be more stable now.
 
 ## 0.7.3 - 2026-03-15
 
