@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.6 - 2026-03-17
+
+### Fixed
+
+- Disabled lldb-dp workaround for setting breakpoint on break instruction as it can cause side effects
+
 ## 0.7.4 - 2026-03-16
 
 ### Fixed

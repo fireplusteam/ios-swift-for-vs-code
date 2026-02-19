@@ -101,51 +101,50 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         if (message.command === "breakpointLocations") {
             // example of getting breakpointLocations request
             // Received: {"command":"breakpointLocations","arguments":{"source":{"name":"ShopController.swift","path":"/path/UI/ShopController.swift"},"line":11},"type":"request","seq":51
-            if (
-                this.debugSession.configuration.type ===
-                DebugConfigurationProvider.RealLLDBTypeAdapter
-            ) {
-                // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
-                const sourcePath = `${message.arguments.source.path}, name: ${
-                    message.arguments.source.name
-                }, line: ${message.arguments.line}`;
-                const value = this.refreshBreakpoints.get(sourcePath);
-                if (value === undefined) {
-                    // first time seeing this breakpoint location, it's coming from starting the debug session, so no need to refresh yet
-                    this.refreshBreakpoints.set(sourcePath, { time: 0 });
-                    return;
-                }
-                if (Date.now() - value.time < 5000) {
-                    // reactive breakpoints only once every 5 seconds, less can cause side effects
-                    return;
-                }
-                /// update the map to not refresh again until next breakpointLocations
-                value.time = Date.now();
-
-                const breakpoints = vscode.debug.breakpoints;
-                // get vscode breakpoints by source and line
-                let breakpointFound = false;
-                const toRemove: vscode.Breakpoint[] = [];
-                for (const bp of breakpoints) {
-                    if (
-                        bp instanceof vscode.SourceBreakpoint &&
-                        bp.location.uri.fsPath === message.arguments.source.path &&
-                        bp.location.range.start.line + 1 === message.arguments.line
-                    ) {
-                        breakpointFound = true;
-                        // this.log?.debug(
-                        //     `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
-                        // );
-                        toRemove.push(bp);
-                    }
-                }
-                if (!breakpointFound) {
-                    this.refreshBreakpoints.delete(sourcePath);
-                } else {
-                    vscode.debug.removeBreakpoints(toRemove);
-                    vscode.debug.addBreakpoints(toRemove);
-                }
-            }
+            // if (
+            //     this.debugSession.configuration.type ===
+            //     DebugConfigurationProvider.RealLLDBTypeAdapter
+            // ) {
+            //     // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
+            //     const sourcePath = `${message.arguments.source.path}, name: ${
+            //         message.arguments.source.name
+            //     }, line: ${message.arguments.line}`;
+            //     const value = this.refreshBreakpoints.get(sourcePath);
+            //     if (value === undefined) {
+            //         // first time seeing this breakpoint location, it's coming from starting the debug session, so no need to refresh yet
+            //         this.refreshBreakpoints.set(sourcePath, { time: 0 });
+            //         return;
+            //     }
+            //     if (Date.now() - value.time < 5000) {
+            //         // reactive breakpoints only once every 5 seconds, less can cause side effects
+            //         return;
+            //     }
+            //     /// update the map to not refresh again until next breakpointLocations
+            //     value.time = Date.now();
+            //     const breakpoints = vscode.debug.breakpoints;
+            //     // get vscode breakpoints by source and line
+            //     let breakpointFound = false;
+            //     const toRemove: vscode.Breakpoint[] = [];
+            //     for (const bp of breakpoints) {
+            //         if (
+            //             bp instanceof vscode.SourceBreakpoint &&
+            //             bp.location.uri.fsPath === message.arguments.source.path &&
+            //             bp.location.range.start.line + 1 === message.arguments.line
+            //         ) {
+            //             breakpointFound = true;
+            //             // this.log?.debug(
+            //             //     `Refreshing breakpoint at ${sourcePath} to work around lldb-dap issue`
+            //             // );
+            //             toRemove.push(bp);
+            //         }
+            //     }
+            //     if (!breakpointFound) {
+            //         this.refreshBreakpoints.delete(sourcePath);
+            //     } else {
+            //         vscode.debug.removeBreakpoints(toRemove);
+            //         vscode.debug.addBreakpoints(toRemove);
+            //     }
+            // }
         } else if (
             message.command === "disconnect" &&
             (message.arguments === undefined || message.arguments.terminateDebuggee === true)
