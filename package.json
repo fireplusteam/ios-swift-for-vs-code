@@ -28,7 +28,7 @@
     "recommendation": [
         "connor4312.esbuild-problem-matchers"
     ],
-    "version": "0.7.6",
+    "version": "0.7.7",
     "os": [
         "darwin"
     ],
@@ -147,7 +147,7 @@
                     "type": "boolean",
                     "default": true,
                     "title": "Enable Compilation Cache",
-                    "description": "Caches the results of compilations for a particular set of inputs. Enabling this option can significantly speed up subsequent builds by reusing previously compiled outputs when the same inputs are encountered again.",
+                    "description": "Caches the results of compilations for a particular set of inputs. Enabling this option can significantly speed up subsequent builds by reusing previously compiled outputs when the same inputs are encountered again. This option is not compatible with HotReloading tool like InjectionNext, so you may need to disable it if you want to use InjectionNext for hot reloading in your project.",
                     "scope": "resource"
                 },
                 "vscode-ios.watcher.enabled": {

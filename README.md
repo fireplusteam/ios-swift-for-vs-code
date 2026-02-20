@@ -45,13 +45,13 @@ To activate extension you need to open a folder which contains your Xcode projec
 
 ## Hot Reloading
 
-Instead of xCode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) which works great with this extension, but you may need to activate **Patch Compiler** option there and do all necessary configuration for it to work:
+Instead of Xcode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) which works great with this extension as this extension generates all kind of building logs, but you may need to disable `vscode-ios.build.compilationCache` in vs code setting of this extension and not use `COMPILATION_CACHE_ENABLE_CACHING` in your project settings for any target which you want to use for injection.
 
-- HotReloading & Injection with [InjectionNext](https://github.com/johnno1962/InjectionNext)
+- More details how to configure HotReloading & Injection go to [InjectionNext](https://github.com/johnno1962/InjectionNext)
 - SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
 To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
-For example you can add the following launch configuration to 'launch.json' to support InjectionNext file watching automatically project workspace:
+Also, you can add the following launch configuration to 'launch.json' to automatically watch files on save/change by InjectionNext:
 
 ```json
 {
@@ -263,7 +263,7 @@ This extension contributes the following settings:
 
 - `vscode-ios.watcher.enabled`: Enable/disable the Background Indexing feature. Keep indexing up to date automatically while editing project files anywhere. Disable it if you want to manually build the project to update indexes. For example you can configure watcher task and run it manually when needed.
 - `vscode-ios.watcher.jobs`: Number of parallel jobs for xcodebuild background indexing watcher which builds the project in background to provide up-to-date indexes for LSP client.
-- `vscode-ios.build.compilationCache` : Enable/disable the compilation cache to speed up the building time.
+- `vscode-ios.build.compilationCache` : Enable/disable the compilation cache to speed up the building time. This option is not compatible with HotReloading tool like InjectionNext
 - `vscode-ios.swb.build.service`: if Enabled, it will ask a user sudo password to replace SWBBuildService with a proxy service which would enhance the Autocomplete feature. This's used to continue compile a project even if there's multiple errors, so all flags are updated
 - `vscode-ios.lsp.buildIndexesWhileBuilding`: Enable/disable building indexes while building the project to keep indexes up to date.
 - `vscode-ios.swiftui.runtimeWarnings`: Enable/disable SwiftUI runtime warnings in the sidebar Xcode panel of this extension.
