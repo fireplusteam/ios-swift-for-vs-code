@@ -129,6 +129,13 @@
                     ],
                     "scope": "resource"
                 },
+                "vscode-ios.hotreload.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "title": "Enable Hot Reloading",
+                    "description": "Enable Hot Reloading additional support feature for using InjectionNext tool, basically provide logs caching for InjectionNext app. It allows you to inject code changes into a running app without restarting it, which can significantly speed up the development process. Note: Find InjectionNext setup instructions in the README.md file.",
+                    "scope": "resource"
+                },
                 "vscode-ios.swb.build.service": {
                     "type": "boolean",
                     "default": false,

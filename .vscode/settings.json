@@ -48,6 +48,7 @@
         "devicectl",
         "disasm",
         "fbchisellldb",
+        "hotreload",
         "isysroot",
         "langclient",
         "libexec",

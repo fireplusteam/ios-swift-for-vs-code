@@ -21,7 +21,7 @@ class AppLogger:
                         break
 
                     if self.enabled:
-                        line = line.decode(errors="replace")
+                        line = line.decode(encoding="utf-8", errors="replace")
                         self.printer(line, end="", flush=True)
                 except:
                     # cut utf-8 characters as code lldb console can not print such characters and generates an error
