@@ -5,9 +5,8 @@ import helper
 
 
 class AppLogger:
-    def __init__(self, file_path, printer=print) -> None:
+    def __init__(self, file_path) -> None:
         self.file_path = file_path
-        self.printer = printer
         self.enabled = True
 
     def print_new_lines(self, file):
@@ -21,8 +20,11 @@ class AppLogger:
                         break
 
                     if self.enabled:
-                        line = line.decode(encoding="utf-8", errors="replace")
-                        self.printer(line, end="", flush=True)
+                        # line = line.decode(encoding="utf-8", errors="replace")
+                        # self.printer(line, end="", flush=True)
+
+                        sys.stdout.buffer.write(line)
+                        sys.stdout.flush()
                 except:
                     # cut utf-8 characters as code lldb console can not print such characters and generates an error
                     if self.enabled:
@@ -32,7 +34,8 @@ class AppLogger:
                                 to_print += i
                             else:
                                 to_print += "?"
-                        self.printer(to_print, end="")
+                        sys.stdout.buffer.write(to_print.encode())
+                        sys.stdout.flush()
 
         except:  # no such file
             pass

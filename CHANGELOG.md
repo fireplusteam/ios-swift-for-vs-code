@@ -6,6 +6,10 @@
 
 - Added better support of HotReloading feature for InjectionNext app or InjectionLite package by caching building compiled flags between sessions as sometimes Xcode build system likes to delete them so you have not to rebuild project to make injection work after. Full instructions in the README.md file.
 
+### Fixed
+
+- lldb logs now display properly in the extension output channel without encoding issues
+
 ## 0.7.6 - 2026-03-19
 
 ### Fixed
