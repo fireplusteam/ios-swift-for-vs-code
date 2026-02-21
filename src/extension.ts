@@ -62,6 +62,7 @@ import { RubyProjectFilesManager } from "./ProjectManager/RubyProjectFilesManage
 import { ProjectWatcher } from "./ProjectManager/ProjectWatcher";
 import { ProjectSettingsProvider } from "./Services/ProjectSettingsProvider";
 import { BuildManager } from "./Services/BuildManager";
+import { HotReloading } from "./LSP/HotReloading";
 
 // SETTINGS WATCHER
 
@@ -167,7 +168,14 @@ const projectManager = new ProjectManager(
     new RubyProjectFilesManager(logChannel)
 );
 const semanticManager = new SemanticManager(projectManager);
-const atomicCommand = new AtomicCommand(sourceLsp, projectManager, semanticManager, logChannel);
+const hotReloading = new HotReloading(logChannel);
+const atomicCommand = new AtomicCommand(
+    sourceLsp,
+    projectManager,
+    semanticManager,
+    hotReloading,
+    logChannel
+);
 
 let debugConfiguration: DebugConfigurationProvider;
 const autocompleteWatcher = new AutocompleteWatcher(
@@ -618,6 +626,7 @@ export async function deactivate() {
     projectManager?.cleanAutocompleteSchemes();
     projectManager?.dispose();
     projectWatcher.dispose();
+    hotReloading.dispose();
     deleteFile(getFilePathInWorkspace(".vscode/xcode/bundles"));
 }
 

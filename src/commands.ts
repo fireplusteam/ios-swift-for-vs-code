@@ -544,6 +544,7 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         // set build root to SYMROOT if it's set
         throw Error("No Build Server configuration generated for selected scheme");
     }
+    const buildRootPath = path.join(buildDir, "../..");
     const buildServerConfigData: BuildServerConfiguration = {
         name: "xcode build server",
         version: "1.3.0",
@@ -551,9 +552,12 @@ export async function generateXcodeServer(commandContext: CommandContext, check 
         languages: ["c", "cpp", "objective-c", "objective-cpp", "swift"],
         argv: [getXCodeBuildServerPath()],
         workspace: projectWorkspace,
-        build_root: path.join(buildDir, "../.."),
+        build_root: buildRootPath,
         kind: "xcode",
     };
+
+    commandContext.hotReloading.start(buildRootPath, getWorkspacePath());
+
     if ((await isBuildServerValid(buildServerConfigData)) === true) {
         return;
     }

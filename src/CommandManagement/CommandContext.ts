@@ -17,6 +17,7 @@ import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 import { SemanticManagerInterface } from "../BackgroundIndexing/SemanticManager";
+import { HotReloadingInterface } from "../LSP/HotReloading";
 
 export const UserTerminatedError = new CustomError("User Terminated");
 export const UserTerminalCloseError = new CustomError("User Closed Terminal");
@@ -69,6 +70,8 @@ export class CommandContext {
     readonly lspClient: LSPClientContext;
     readonly log: LogChannelInterface;
 
+    readonly hotReloading: HotReloadingInterface;
+
     private _terminal?: TerminalShell;
     public get terminal(): TerminalShell | undefined {
         return this._terminal;
@@ -91,6 +94,7 @@ export class CommandContext {
         projectManager: ProjectManagerInterface,
         semanticManager: SemanticManagerInterface,
         bundle: BundlePath,
+        hotReloading: HotReloadingInterface,
         log: LogChannelInterface
     ) {
         this.bundle = bundle;
@@ -102,6 +106,7 @@ export class CommandContext {
         this._terminal = terminal;
         this.lspClient = lspClient;
         this._semanticManager = semanticManager;
+        this.hotReloading = hotReloading;
         this.log = log;
     }
 

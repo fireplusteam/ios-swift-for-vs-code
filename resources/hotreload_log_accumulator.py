@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import pathlib
 import json
@@ -142,6 +143,8 @@ def get_files_from_args(args):
 
 
 if __name__ == "__main__":
+    # pass build_root_path and workspace_path as arguments
+    # and this script will parse all xclog files and save only swift-frontend and clang compile logs and put only them as logs
     build_path = sys.argv[1]
     workspace_path = sys.argv[2]
 
@@ -149,8 +152,7 @@ if __name__ == "__main__":
         pathlib.Path(workspace_path)
         / ".vscode"
         / "xcode"
-        / "logs"
-        / "hotreloading_log_accumulator.json"
+        / "hotreloading_flags_accumulator.json"
     )
 
     log_accumulator = LogAccumulator(log_accumulator_path)

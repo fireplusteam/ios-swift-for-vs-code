@@ -9,6 +9,7 @@ import { BundlePath } from "./BundlePath";
 import { LogChannelInterface } from "../Logs/LogChannel";
 import { ProjectManagerInterface } from "../ProjectManager/ProjectManager";
 import { SemanticManagerInterface } from "../BackgroundIndexing/SemanticManager";
+import { HotReloadingInterface } from "../LSP/HotReloading";
 
 export const UserCommandIsExecuting = new CustomError("User task is currently executing");
 
@@ -40,6 +41,7 @@ export class AtomicCommand {
         private readonly lspClient: LSPClientContext,
         private readonly projectManager: ProjectManagerInterface,
         private readonly semanticManager: SemanticManagerInterface,
+        private readonly hotReloading: HotReloadingInterface,
         private readonly log: LogChannelInterface
     ) {}
 
@@ -112,6 +114,7 @@ export class AtomicCommand {
                 this.projectManager,
                 this.semanticManager,
                 new BundlePath("autowatcher"),
+                this.hotReloading,
                 this.log
             );
             this._prevCommandContext = commandContext;
@@ -225,6 +228,7 @@ export class AtomicCommand {
                 this.projectManager,
                 this.semanticManager,
                 new BundlePath("bundle"),
+                this.hotReloading,
                 this.log
             );
             this._prevCommandContext = commandContext;
