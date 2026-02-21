@@ -65,35 +65,35 @@ class LogAccumulator:
                 pass
         return empty
 
-    def _clean_old_hashes(self):
+    def _clean_not_used_hashes(self):
         if not self.dirty:
             return
-        valid_hashes = set()
-        for _, hash_line in self.data.get("files", {}).items():
-            valid_hashes.add(hash_line)
+        valid_hashes = set(
+            hash_line for hash_line in self.data.get("files", {}).values()
+        )
         self.data["hashes"] = {
             k: v for k, v in self.data.get("hashes", {}).items() if k in valid_hashes
         }
         self.dirty = False
 
     def save_log_accumulator(self):
-        self._clean_old_hashes()
+        self._clean_not_used_hashes()
         with open(self.log_accumulator_path, "w") as f:
             json.dump(self.data, f)
 
-    def dum_xclog_file(self, xclog_file):
-        self._clean_old_hashes()
+    def dump_xclog_file(self, xclog_file):
+        self._clean_not_used_hashes()
         lines = list(self.data.get("hashes", {}).values())
         # sort by st_ctime desc
         lines.sort(key=lambda x: -x["st_ctime"])
-        lines = "\n\n".join([x["line"] for x in lines])
-        # gunzip lines
+        lines = "\n\n".join(x["line"] for x in lines)
 
         try:
             os.unlink(xclog_file)
         except:
             pass
 
+        # gunzip lines
         with gzip.open(xclog_file, "wb") as f:
             f.write(lines.encode("utf-8"))
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     log_accumulator.set_parsed_xclog_files(xclog_files)
     log_accumulator.save_log_accumulator()
-    log_accumulator.dum_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)
+    log_accumulator.dump_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)
 
     # watch for changes in xclog_path and parse new logs
 
@@ -193,6 +193,6 @@ if __name__ == "__main__":
         log_accumulator.set_parsed_xclog_files(xclog_files)
         if len(xclog_files) > 0:
             log_accumulator.save_log_accumulator()
-            log_accumulator.dum_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)
+            log_accumulator.dump_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)
 
         time.sleep(5)

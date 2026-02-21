@@ -45,9 +45,11 @@ To activate extension you need to open a folder which contains your Xcode projec
 
 ## Hot Reloading
 
-Instead of Xcode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) which works great with this extension as this extension generates all kind of building logs, but you may need to disable `vscode-ios.build.compilationCache` in vs code setting of this extension and not use `COMPILATION_CACHE_ENABLE_CACHING` in your project settings for any target which you want to use for injection.
+This feature is **EXPERIMENTAL and turned off by default**. To turn on hot reloading you need to enable `vscode-ios.hotreload.enabled` setting and configure InjectionNext or InjectionLite tool in your project.
+Instead of Xcode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) or [InjectionLite](https://github.com/johnno1962/InjectionLite) which works great with this extension as it generates all kind of building logs, necessary to feed recompilation and injection on a fly, but you may **need to disable `vscode-ios.build.compilationCache` in vs code setting of this extension and not use `COMPILATION_CACHE_ENABLE_CACHING`** in your project settings for any target which you want to use for injection. 
+As Xcode likes to delete building logs, this extension accumulates compilation flags for InjectionNext/InjectionLite in a separate file and restores them if they are deleted by Xcode, so you don't have to rebuild the project to make injection work after that. But as in case with lsp you need to make sure that you build a project from scratch at least one time after you start to use hot reloading feature.
 
-- More details how to configure HotReloading & Injection go to [InjectionNext](https://github.com/johnno1962/InjectionNext)
+- More details how to configure HotReloading & Injection go to [InjectionNext](https://github.com/johnno1962/InjectionNext) or [InjectionLite](https://github.com/johnno1962/InjectionLite).
 - SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
 To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
@@ -225,7 +227,7 @@ Thus it's **recommended to move any scripts from the build phases to a separate 
 
 **READ THIS SECTION CAREFULLY BEFORE ENABLING THIS FEATURE AND MAKE SURE YOU UNDERSTAND ALL THE RISKS.**
 
-This feature is optional and EXPERIMENTAL and disabled by default but it provides **fast incremental builds** as in Xcode due to not terminated SWBBuildService session between builds. It requires sudo password and security permissions to work correctly. Use it on your own risk. Also make sure that you read the instructions below carefully before enabling it.
+This feature is **optional and EXPERIMENTAL and disabled by default** but it provides **fast incremental builds and indexing** as in Xcode due to not terminated SWBBuildService session between builds. It requires sudo password and security permissions to work correctly. Use it on your own risk. Also make sure that you read the instructions below carefully before enabling it.
 Also you can build that proxy service from source code in `src/Services/SWBBuildServiceProxy` folder by cd into that folder and running:
 
 ```bash
@@ -270,6 +272,7 @@ This extension contributes the following settings:
 - `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
 - `vscode-ios.lsp.c_family`: Enable/disable C/C++/Objective-C language server support for header files to provide better autocomplete for such files.
 - `vscode-ios.log.level`: Set the logging level for the extension. Possible values are 'debug', 'info', 'warning', 'error', 'critical'.
+- `vscode-ios.hotreload.enabled`: Enable/disable the hot reloading support for InjectionNext tool which allows you to inject code changes into a running app without restarting it, which can significantly speed up the development process. 
 
 ### Also check [Tricks and Tips](Tricks_and_tips.md)
 
