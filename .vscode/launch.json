@@ -187,7 +187,6 @@
             "request": "launch",
             "program": "${workspaceFolder}/resources/hotreload_log_accumulator.py",
             "args": [
-                "${workspaceFolder}/xcode-build-server/xcode-build-server",
                 "/Users/Ievgenii_Mykhalevskyi/Library/Developer/Xcode/DerivedData/TestVSCode-ffjkkswypijxytcavrxvtbivqayk",
                 "/Users/Ievgenii_Mykhalevskyi/tests/example"
             ],
