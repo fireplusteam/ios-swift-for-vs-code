@@ -18,6 +18,7 @@ import * as path from "path";
 import { randomUUID } from "crypto";
 import { ensureKilled } from "../utils";
 import { BuildTargetSpy } from "./BuildTargetSpy";
+import { hotReloadingEnabled } from "../LSP/HotReloading";
 
 function isBuildIndexesWhileBuildingEnabled() {
     return vscode.workspace
@@ -104,10 +105,12 @@ export class BuildManager {
         // precompiled header breaks C++ autocompletion after incremental builds, so disable them by default
         extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
 
-        // compile flags emiting and hot reloading support
-        extra.push("EMIT_FRONTEND_COMMAND_LINES=YES");
-        // this option is questionable as can produce side effects
-        // extra.push(`OTHER_LDFLAGS="-Xlinker\\ -interposable"`);
+        if (hotReloadingEnabled()) {
+            // compile flags emitting and hot reloading support
+            extra.push("EMIT_FRONTEND_COMMAND_LINES=YES");
+            // this option is questionable as can produce side effects
+            // extra.push(`OTHER_LDFLAGS="-Xlinker\\ -interposable"`);
+        }
 
         // TODO: check CLANG_ENABLE_MODULES
         return [

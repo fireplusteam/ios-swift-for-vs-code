@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.7 - 2026-03-20
+
+### Added
+
+- Added better support of HotReloading feature for InjectionNext app or InjectionLite package by caching building compiled flags between sessions as sometimes Xcode build system likes to delete them so you have not to rebuild project to make injection work after. Full instructions in the README.md file.
+
 ## 0.7.6 - 2026-03-19
 
 ### Fixed

@@ -3,7 +3,7 @@ import { Executor, ShellProcessResult } from "../Executor";
 import * as vscode from "vscode";
 import { LogChannelInterface } from "../Logs/LogChannel";
 
-function hotReloadingEnabled() {
+export function hotReloadingEnabled() {
     const isEnabled = vscode.workspace.getConfiguration("vscode-ios").get("hotreload.enabled");
     if (!isEnabled) {
         return false;
