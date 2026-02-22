@@ -98,7 +98,8 @@ export class BuildManager {
         if (isBuildIndexesWhileBuildingEnabled()) {
             extra.push("COMPILER_INDEX_STORE_ENABLE=YES"); // Control whether the compiler should emit index data while building.
         }
-        if (isCompilationCacheEnabled()) {
+        if (isCompilationCacheEnabled() && !hotReloadingEnabled()) {
+            // compilation cache is not compatible with hot reloading at the moment
             extra.push("COMPILATION_CACHE_ENABLE_CACHING=YES"); // Caches the results of compilations for a particular set of inputs.
             extra.push("SWIFT_ENABLE_EXPLICIT_MODULES=YES");
         }
