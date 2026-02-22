@@ -13,6 +13,9 @@ import { Executor, ExecutorMode, ExecutorTaskError, ShellProcessResult } from ".
 import { XCRunHelper } from "../Tools/XCRunHelper";
 import { sleep } from "../utils";
 
+// MCP sidekick mode implementation of controlling Xcode build and test via MCP. Maybe it can be used here instead, but for simplicity we have all needed logic in this file for now. Maybe for future preserve a link
+// https://github.com/lapfelix/XcodeMCP?tab=readme-ov-file#sidekick-mode
+
 async function buildingMode() {
     if ((await isActivated()) === false) {
         return "xcodebuild";

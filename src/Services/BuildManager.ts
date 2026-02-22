@@ -102,6 +102,8 @@ export class BuildManager {
             // compilation cache is not compatible with hot reloading at the moment
             extra.push("COMPILATION_CACHE_ENABLE_CACHING=YES"); // Caches the results of compilations for a particular set of inputs.
             extra.push("SWIFT_ENABLE_EXPLICIT_MODULES=YES");
+        } else {
+            extra.push("COMPILATION_CACHE_ENABLE_CACHING=NO"); // force to disable compilation cache
         }
         // precompiled header breaks C++ autocompletion after incremental builds, so disable them by default
         extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
