@@ -109,10 +109,10 @@ export class BuildManager {
         extra.push("GCC_PRECOMPILE_PREFIX_HEADER=NO");
 
         if (hotReloadingEnabled()) {
-            // compile flags emitting and hot reloading support
+            // compile flags emitting
             extra.push("EMIT_FRONTEND_COMMAND_LINES=YES");
-            // this option is questionable as can produce side effects
-            // extra.push(`OTHER_LDFLAGS="-Xlinker\\ -interposable"`);
+            // to make injection possible
+            extra.push(`OTHER_LDFLAGS="\\$\\(inherited\\)\\ -Xlinker\\ -interposable"`);
         }
 
         // TODO: check CLANG_ENABLE_MODULES

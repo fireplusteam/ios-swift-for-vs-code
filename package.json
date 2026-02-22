@@ -133,7 +133,7 @@
                     "type": "boolean",
                     "default": false,
                     "title": "Enable Hot Reloading",
-                    "description": "EXPERIMENTAL: Enable Hot Reloading additional support feature for using InjectionNext tool, basically provide logs caching for InjectionNext app. It allows you to inject code changes into a running app without restarting it, which can significantly speed up the development process. When enabled, compilation cache option is automatically disabled for this extension to avoid issues with injection. However, you may need to disable compilation cache for your project/targets in Xcode as well by removing `COMPILATION_CACHE_ENABLE_CACHING=YES` in your project build settings to make injection work correctly when you build with Xcode.  Note: Find InjectionNext setup instructions in the README.md file.",
+                    "description": "EXPERIMENTAL: Enable Hot Reloading additional support feature for using InjectionNext tool, basically provide logs caching for InjectionNext app/InjectionLite package. It allows you to inject code changes into a running app without restarting it, which can significantly speed up the development process. When enabled, compilation cache option is automatically disabled for this extension to avoid issues with injection. However, you may need to disable compilation cache for your project/targets in Xcode if you use mixed build mode as well by setting `COMPILATION_CACHE_ENABLE_CACHING=NO` in your project build settings to make injection work correctly when you build with Xcode. Full instructions in the README.md file.",
                     "scope": "resource"
                 },
                 "vscode-ios.swb.build.service": {

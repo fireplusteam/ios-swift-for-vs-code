@@ -5,6 +5,7 @@
 ### Added
 
 - Added better support of HotReloading feature for InjectionNext app or InjectionLite package by caching building compiled flags between sessions as sometimes Xcode build system likes to delete them so you have not to rebuild project to make injection work after. Full instructions in the README.md file.
+- Added 'vscode-ios.hotreload.enabled' setting to enable/disable hot reloading support for InjectionNext app or InjectionLite package, by default it's enabled
 
 ### Fixed
 

@@ -46,14 +46,16 @@ To activate extension you need to open a folder which contains your Xcode projec
 ## Hot Reloading
 
 This feature is **EXPERIMENTAL and turned off by default**. To turn on hot reloading you need to enable `vscode-ios.hotreload.enabled` setting and configure InjectionNext or InjectionLite tool in your project.
-Instead of Xcode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) or [InjectionLite](https://github.com/johnno1962/InjectionLite) which works great with this extension as it generates all kind of building logs, necessary to feed recompilation and injection on a fly, but you may **need to disable `COMPILATION_CACHE_ENABLE_CACHING`** option in your project settings for any target which you want to use for injection if you want to build project via Xcode. When hot reloading option is on, then compilation cache is automatically disabled for builds via xcodebuild tool.  
+Instead of Xcode preview you can use hot reloading [InjectionNext](https://github.com/johnno1962/InjectionNext) or [InjectionLite](https://github.com/johnno1962/InjectionLite) which works great with this extension as it generates all kind of building logs, necessary to feed recompilation and injection on a fly, but you may **need to disable `COMPILATION_CACHE_ENABLE_CACHING`** option in your project settings for any target which you want to use for injection if you want to build project via Xcode in mixed mode. When hot reloading option is on, then compilation cache is automatically disabled for builds via xcodebuild tool.  
 As Xcode likes to delete building logs, this extension accumulates compilation flags for InjectionNext/InjectionLite in a separate file and restores them if they are deleted by Xcode, so you don't have to rebuild the project to make injection work after that. But as in case with lsp you need to make sure that you build a project from scratch at least one time after you start to use hot reloading feature.
+
+`EMIT_FRONTEND_COMMAND_LINES=YES` and `-Xlinker\\ -interposable` flags are added by this extension automatically to builds via xcodebuild tool when hot reloading is enabled but if you build with Xcode in mixed mode, you need to update them manually.
 
 - More details how to configure HotReloading & Injection go to [InjectionNext](https://github.com/johnno1962/InjectionNext) or [InjectionLite](https://github.com/johnno1962/InjectionLite).
 - SwiftUI injection property wrapper with [Inject](https://github.com/krzysztofzablocki/Inject) or [HotSwiftUI](https://github.com/johnno1962/HotSwiftUI)
 
 To Debug View Hierarchy you can use this technique [How to debug your view hierarchy using recursiveDescription](https://www.hackingwithswift.com/articles/101/how-to-debug-your-view-hierarchy-using-recursivedescription)
-Also, you can add the following launch configuration to 'launch.json' to automatically watch files on save/change by InjectionNext:
+Also, you can add the following launch configuration to 'launch.json' to automatically watch files on save/change by InjectionNext/InjectionLite:
 
 ```json
 {
