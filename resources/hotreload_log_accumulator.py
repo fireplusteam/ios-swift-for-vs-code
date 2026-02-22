@@ -120,9 +120,12 @@ def get_all_xclog_files(xclog_path: pathlib.Path):
 
 def extract_all_logs(xclog_files):
     for xclog_file in xclog_files:
-        raw_logs = parse_xclogs(str(xclog_file))
-        for line in raw_logs:
-            yield (line, xclog_file.stat().st_ctime)
+        try:
+            raw_logs = parse_xclogs(str(xclog_file))
+            for line in raw_logs:
+                yield (line, xclog_file.stat().st_ctime)
+        except:
+            pass
 
 
 def get_files_from_args(args):
