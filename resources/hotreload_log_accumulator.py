@@ -5,18 +5,17 @@ import json
 import os
 import time
 import gzip
+import hashlib
+from xcode_build_helper import parse_xclogs
 
-# import sibling folder from xcode-build-server
-path_root = pathlib.Path(__file__).resolve().parent.parent
-path_root = path_root / "xcode-build-server"
-sys.path.append(str(path_root))
-
-# import from xcode-build-server activitylog parser
-from xcactivitylog import tokenizer, TokenType
 
 VERSION = "1.0.0"
 
 HOT_RELOAD_LOG_XCLOG_KEY = "hot_reload_log_xclog.xcactivitylog"
+
+
+def to_hash_line(line: str):
+    return hashlib.sha256(line.encode("utf-8")).hexdigest()
 
 
 class LogAccumulator:
@@ -25,8 +24,8 @@ class LogAccumulator:
         self.dirty = False
         self.data = self._read_log_accumulator(log_accumulator_path)
 
-    def set_log(self, file, line, st_ctime):
-        hash_line = hash(line)
+    def set_log(self, file, line: str, st_ctime):
+        hash_line = to_hash_line(line)
 
         if "hashes" not in self.data:
             self.data["hashes"] = {}
@@ -43,6 +42,11 @@ class LogAccumulator:
         if self.data["files"].get(file, None) != hash_line:
             self.dirty = True
             self.data["files"][file] = hash_line
+
+    def clean_xclog_files(self):
+        if "parsed_xclog_files" not in self.data:
+            return
+        self.data["parsed_xclog_files"] = {}
 
     def set_parsed_xclog_files(self, parsed_xclog_files):
         if "parsed_xclog_files" not in self.data:
@@ -107,18 +111,6 @@ def cmd_split(s):
         return []
 
 
-def parse_xclogs(build_path):
-    for type, value in tokenizer(build_path):
-        # print(type, value)
-        if type != TokenType.String:
-            continue
-        assert isinstance(value, str)
-        lines = value.splitlines()
-        if len(lines) >= 1:
-            yield from iter(lines)
-            yield ""  # a empty line means section log end
-
-
 def get_all_xclog_files(xclog_path: pathlib.Path):
     # find all xclog files in xclog_path and sort them by creation date
     xclog_files = list(xclog_path.glob("*.xcactivitylog"))
@@ -174,6 +166,7 @@ if __name__ == "__main__":
     for line, st_ctime in extract_all_logs(xclog_files):
         parse_line(line, st_ctime)
 
+    log_accumulator.clean_xclog_files()
     log_accumulator.set_parsed_xclog_files(xclog_files)
     log_accumulator.save_log_accumulator()
     log_accumulator.dump_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)

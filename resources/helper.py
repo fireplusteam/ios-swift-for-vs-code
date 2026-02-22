@@ -296,11 +296,7 @@ def binary_readline(file, newline=b"\r\n"):
         x = file.read(1)
         if x:
             line.extend(x)
-        else:
-            if len(line) == 0:
-                return None
-            else:
+            if line.endswith(newline):
                 return line
-
-        if line.endswith(newline):
-            return line
+        else:
+            time.sleep(0.1)

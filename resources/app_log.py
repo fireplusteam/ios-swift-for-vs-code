@@ -20,9 +20,6 @@ class AppLogger:
                         break
 
                     if self.enabled:
-                        # line = line.decode(encoding="utf-8", errors="replace")
-                        # self.printer(line, end="", flush=True)
-
                         sys.stdout.buffer.write(line)
                         sys.stdout.flush()
                 except:

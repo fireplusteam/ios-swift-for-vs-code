@@ -4,7 +4,6 @@ import {
     getFilePathInWorkspace,
     getScriptPath,
     getWorkspaceFolder,
-    getXCodeBuildServerPath,
     isActivated,
 } from "../env";
 import * as fs from "fs/promises";
@@ -195,9 +194,9 @@ async function watchXcactivitylog(
                     continue;
                 }
                 await context.execShellWithOptions({
-                    scriptOrCommand: { command: getXCodeBuildServerPath() },
+                    scriptOrCommand: { command: getScriptPath("xcode_build_log_print.py") },
                     pipeToParseBuildErrors: true,
-                    args: ["debug", "print-build-log", newestLog.path],
+                    args: [newestLog.path],
                     mode: ExecutorMode.onlyCommandNameAndResult,
                     pipe: {
                         scriptOrCommand: { command: "tee" },
