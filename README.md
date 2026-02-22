@@ -272,7 +272,7 @@ This extension contributes the following settings:
 - `vscode-ios.building.system.mode`: Underline system to use for providing builds/indexes.\n - 'xcodebuild' is using xcodebuild only to provide LSP indexes/build apps/tests (recommended)\n - 'mixedWithXcode' is experimental and you should use on your own risk, this mode uses both Xcode when the project is opened in Xcode too to provide LSP indexes/build apps/tests and xcodebuild is used only when Xcode is closed.
 - `vscode-ios.lsp.c_family`: Enable/disable C/C++/Objective-C language server support for header files to provide better autocomplete for such files.
 - `vscode-ios.log.level`: Set the logging level for the extension. Possible values are 'debug', 'info', 'warning', 'error', 'critical'.
-- `vscode-ios.hotreload.enabled`: Enable/disable the hot reloading support for InjectionNext tool which allows you to inject code changes into a running app without restarting it, which can significantly speed up the development process. 
+- `vscode-ios.hotreload.enabled`: Enable/disable the hot reloading support for InjectionNext tool which allows you to inject code changes into a running app without restarting it, which can significantly speed up the development process. When enabled, compilation cache option is automatically disabled for this extension to avoid issues with injection. However, you may need to disable compilation cache for your project/targets in Xcode as well by removing `COMPILATION_CACHE_ENABLE_CACHING=YES` in your project build settings to make injection work correctly when you build with Xcode.
 
 ### Also check [Tricks and Tips](Tricks_and_tips.md)
 
