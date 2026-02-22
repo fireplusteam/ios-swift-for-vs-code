@@ -2,17 +2,24 @@
 import time
 import sys
 import helper
+import os
 
 
 class AppLogger:
-    def __init__(self, file_path) -> None:
+    def __init__(self, file_path, printer=print) -> None:
         self.file_path = file_path
         self.enabled = True
+        self.printer = printer
+
+    def _is_code_lldb(self):
+        return os.environ.get("LLDB_PROVIDER", "") == "code_lldb"
 
     def print_new_lines(self, file):
         try:
             while True:
                 try:
+                    if not "LLDB_PROVIDER" in os.environ:
+                        break
                     line = helper.binary_readline(file, b"\n")
                     if not line or line == b"":
                         break
@@ -20,19 +27,23 @@ class AppLogger:
                         break
 
                     if self.enabled:
-                        sys.stdout.buffer.write(line)
-                        sys.stdout.flush()
+                        if self._is_code_lldb():
+                            line = line.decode(encoding="utf-8", errors="replace")
+                            self.printer(line, end="", flush=True)
+                        else:
+                            sys.stdout.buffer.write(line)
+                            sys.stdout.flush()
                 except:
                     # cut utf-8 characters as code lldb console can not print such characters and generates an error
                     if self.enabled:
-                        to_print = ""
-                        for i in line:
-                            if ord(i) < 128:
-                                to_print += i
-                            else:
-                                to_print += "?"
-                        sys.stdout.buffer.write(to_print.encode())
-                        sys.stdout.flush()
+                        if self._is_code_lldb():
+                            to_print = ""
+                            for i in line:
+                                if ord(i) < 128:
+                                    to_print += i
+                                else:
+                                    to_print += "?"
+                            self.printer(to_print, end="", flush=True)
 
         except:  # no such file
             pass

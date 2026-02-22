@@ -469,6 +469,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                     program: exe,
                     launchCommands: [
                         ...importScripts,
+                        `set_environmental_var LLDB_PROVIDER=!!=lldb-dap`,
                         `launch_new_process ${sessionID}`,
                         ...lldbCommands,
                     ],
@@ -482,6 +483,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 request: "attach",
                 attachCommands: [
                     ...importScripts,
+                    `set_environmental_var LLDB_PROVIDER=!!=lldb-dap`,
                     `create_target ${sessionID}`,
                     ...lldbCommands,
                     `watch_new_process ${sessionID} lldb-dap`,
@@ -516,7 +518,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 const debugSession: vscode.DebugConfiguration = {
                     type: "lldb", // code lldb
                     request: "custom",
-                    targetCreateCommands: [...importScripts, `create_target ${sessionID}`],
+                    targetCreateCommands: [
+                        ...importScripts,
+                        `set_environmental_var LLDB_PROVIDER=!!=code_lldb`,
+                        `create_target ${sessionID}`,
+                    ],
                     processCreateCommands: [
                         ...lldbCommands,
                         `launch_new_process ${sessionID}`,
@@ -531,7 +537,11 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
             const debugSession: vscode.DebugConfiguration = {
                 type: "lldb", // code lldb
                 request: "custom",
-                targetCreateCommands: [...importScripts, `create_target ${sessionID}`],
+                targetCreateCommands: [
+                    ...importScripts,
+                    `set_environmental_var LLDB_PROVIDER=!!=code_lldb`,
+                    `create_target ${sessionID}`,
+                ],
                 processCreateCommands: [
                     ...lldbCommands,
                     `watch_new_process ${sessionID} codelldb`,
