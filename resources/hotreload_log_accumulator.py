@@ -137,7 +137,7 @@ def get_files_from_args(args):
     return files
 
 
-if __name__ == "__main__":
+def run():
     # pass build_root_path and workspace_path as arguments
     # and this script will parse all xclog files and save only swift-frontend and clang compile logs and put only them as logs
     build_path = sys.argv[1]
@@ -165,20 +165,10 @@ if __name__ == "__main__":
                 for file in files:
                     log_accumulator.set_log(file, line, st_ctime)
 
-    xclog_files = get_all_xclog_files(xclog_path)
-    for line, st_ctime in extract_all_logs(xclog_files):
-        parse_line(line, st_ctime)
-
-    log_accumulator.clean_xclog_files()
-    log_accumulator.set_parsed_xclog_files(xclog_files)
-    log_accumulator.save_log_accumulator()
-    log_accumulator.dump_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)
-
-    # watch for changes in xclog_path and parse new logs
-
     already_parsed_files = set(log_accumulator.data.get("parsed_xclog_files", []))
-    while True:
-        # add only new created files, because xcodebuild creates new xclog file for each build
+
+    def parse_new_logs(force_dump):
+        nonlocal already_parsed_files
         xclog_files = get_all_xclog_files(xclog_path)
         xclog_files = [f for f in xclog_files if str(f) not in already_parsed_files]
 
@@ -187,8 +177,27 @@ if __name__ == "__main__":
 
         already_parsed_files |= set(str(f) for f in xclog_files)
         log_accumulator.set_parsed_xclog_files(xclog_files)
-        if len(xclog_files) > 0:
+        if force_dump or len(xclog_files) > 0:
             log_accumulator.save_log_accumulator()
             log_accumulator.dump_xclog_file(xclog_path / HOT_RELOAD_LOG_XCLOG_KEY)
 
+    log_accumulator.clean_xclog_files()
+
+    log_manifest_path = xclog_path / "LogStoreManifest.plist"
+    last_mtime = log_manifest_path.stat().st_mtime
+    parse_new_logs(True)
+
+    # watch for changes in xclog_path and parse new logs
+
+    while True:
+        mtime = log_manifest_path.stat().st_mtime
+        if mtime != last_mtime:
+            # add only new created files, because xcodebuild creates new xclog file for each build
+            parse_new_logs(False)
+            last_mtime = mtime
+
         time.sleep(5)
+
+
+if __name__ == "__main__":
+    run()

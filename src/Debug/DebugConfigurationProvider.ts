@@ -21,6 +21,7 @@ import { handleValidationErrors } from "../extension";
 import { BuildTestsInput } from "../Services/BuildManager";
 import * as fs from "fs";
 import { TerminalMessageStyle } from "../TerminalShell";
+import { hotReloadingEnabled } from "../LSP/HotReloading";
 
 function runtimeWarningsConfigStatus() {
     return vscode.workspace
@@ -410,11 +411,19 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
 
         const logId = deviceID.id;
         emptyAppLog(logId);
+        const dbgConfigEnv = dbgConfig.env || {};
+        if (
+            hotReloadingEnabled() &&
+            dbgConfigEnv.INJECTION_PROJECT_ROOT === undefined &&
+            getWorkspaceFolder()?.fsPath !== undefined
+        ) {
+            dbgConfigEnv["INJECTION_PROJECT_ROOT"] = getWorkspaceFolder()?.fsPath || "";
+        }
 
         const commonSettings = {
             name: dbgConfig.name,
             args: dbgConfig.args || [],
-            env: dbgConfig.env || {},
+            env: dbgConfigEnv,
             initCommands: [],
             exitCommands: [],
             cwd: getWorkspacePath(),
@@ -511,7 +520,7 @@ export class DebugConfigurationProvider implements vscode.DebugConfigurationProv
                 isCoverage: dbgConfig.isCoverage,
                 processExe: processExe,
                 args: dbgConfig.args || [],
-                env: dbgConfig.env || {},
+                env: dbgConfigEnv,
             };
 
             if (isLaunchingApp) {

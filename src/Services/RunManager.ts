@@ -4,13 +4,14 @@ import {
     UserTerminalCloseError,
     UserTerminatedError,
 } from "../CommandManagement/CommandContext";
-import { BundleAppNameMissedError, DeviceID, getLogRelativePath } from "../env";
+import { BundleAppNameMissedError, DeviceID, getLogRelativePath, getWorkspaceFolder } from "../env";
 import { sleep } from "../utils";
 import { promiseWithTimeout, TimeoutError } from "../utils";
 import { DebugAdapterTracker } from "../Debug/DebugAdapterTracker";
 import { ExecutorMode, ExecutorTaskError } from "../Executor";
 import { BuildManager } from "./BuildManager";
 import { XCRunHelper } from "../Tools/XCRunHelper";
+import { hotReloadingEnabled } from "../LSP/HotReloading";
 
 export class RunManager {
     private sessionID: string;
@@ -166,6 +167,13 @@ export class RunManager {
         const launchEnv: { [key: string]: string } = {};
         for (const [key, value] of Object.entries(env)) {
             launchEnv[`SIMCTL_CHILD_${key}`] = value;
+        }
+        if (
+            hotReloadingEnabled() &&
+            env.INJECTION_PROJECT_ROOT === undefined &&
+            getWorkspaceFolder()?.fsPath !== undefined
+        ) {
+            launchEnv["SIMCTL_CHILD_INJECTION_PROJECT_ROOT"] = getWorkspaceFolder()?.fsPath || "";
         }
         context
             .execShellParallel({
