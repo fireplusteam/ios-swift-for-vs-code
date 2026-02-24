@@ -30,6 +30,7 @@ import {
     ProjectWatcherTouchInterface,
     watcherStabilityThreshold,
 } from "./ProjectWatcher";
+import { debounce } from "ts-debounce";
 
 export interface ProjectManagerInterface {
     projectWatcher: ProjectWatcherInterface & ProjectWatcherTouchInterface;
@@ -81,12 +82,17 @@ export class ProjectManager
     private cachedTestTargets = new Map<string, string[]>();
 
     private isSavingProjects = false;
+    private debouncedTouch: () => void;
 
     constructor(
         private readonly log: LogChannelInterface,
         readonly projectWatcher: ProjectWatcherInterface & ProjectWatcherTouchInterface,
         private readonly rubyProjectFilesManager: RubyProjectFilesManagerInterface
     ) {
+        this.debouncedTouch = debounce(async () => {
+            await this.touch();
+        }, 1500); // to avoid any kind of scripts to change project files multiple times
+
         this.projectCache = new ProjectsCache(projectWatcher, (projectFile: string) => {
             return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
         });
@@ -148,9 +154,11 @@ export class ProjectManager
             const watcher = this.projectWatcher.newFileWatcher(getFullProjectPath(projectPath));
             this.projectWatcherDisposable.push(
                 watcher.onFileChanged(async () => {
+                    // debounce changes to avoid multiple notifications when project file is changed multiple times during save operation
+
                     if (!this.isSavingProjects) {
                         // notify only when we are not saving projects ourselves
-                        await this.touch();
+                        this.debouncedTouch();
                     }
                 })
             );

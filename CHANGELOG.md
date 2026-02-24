@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.8 - 2026-03-21
+
+### Fixed
+
+- Debounce on reloading project files so if some script changes project files quickly, extension will not freeze
+
 ## 0.7.7 - 2026-03-20
 
 ### Added
