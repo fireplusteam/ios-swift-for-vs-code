@@ -5,6 +5,7 @@
 ### Fixed
 
 - Debounce on reloading project files so if some script changes project files quickly, extension will not freeze
+- Compact workspace generation to have less excluded files and better support of large projects with many files
 
 ## 0.7.7 - 2026-03-20
 

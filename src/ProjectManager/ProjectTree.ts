@@ -31,41 +31,58 @@ export class ProjectTree {
 
     excludedFiles() {
         const list: string[] = [];
+        const included: boolean[] = [];
         const filePath: string[] = [];
-        function excludedFiles(node: Node | undefined) {
-            if (node === undefined) {
-                return;
+        function toPath(components: string[]) {
+            if (components.length === 0) {
+                return "";
             }
-            if (node.isLeaf && node.isVisible) {
-                return;
+            return path.join(...components);
+        }
+        function excludedFiles(node: Node | undefined) {
+            if (node === undefined || (node.isLeaf && node.isVisible)) {
+                return false;
             }
             if (node.edges === null) {
                 if (!node.isVisible) {
-                    if (filePath.length > 0) {
-                        list.push(path.join(...filePath));
-                    } else {
-                        list.push("");
-                    }
+                    list.push(toPath(filePath));
+                    included.push(true);
+                    return true;
                 }
-                return;
+                return false;
             }
             if (!node.isVisible) {
-                if (filePath.length > 0) {
-                    list.push(path.join(...filePath));
-                } else {
-                    list.push("");
-                }
-                return;
+                list.push(toPath(filePath));
+                included.push(true);
+                return true;
             }
+            const childsIdx: number[] = [];
+            const childsValues: string[] = [];
             for (const [, value] of node.edges) {
                 filePath.push(value[0]);
-                excludedFiles(value[1]);
+                if (excludedFiles(value[1])) {
+                    childsIdx.push(list.length - 1);
+                    childsValues.push(value[0]);
+                }
                 filePath.pop();
             }
+            if (childsIdx.length > 1) {
+                // try to group all leafs with the same parent, for example:
+                // /User/root_folder/sub/project.pbxproj
+                // /User/root_folder/sub/file.swift
+                // can be grouped to /User/root_folder/sub/{project.pbxproj,file.swift}
+                const concatPath = childsValues.join(",");
+                for (const idx of childsIdx) {
+                    included[idx] = false;
+                }
+                list.push(`${toPath(filePath)}/{${concatPath}}`);
+                included.push(true);
+            }
+            return false;
         }
 
         excludedFiles(this.root);
-        return list;
+        return list.filter((_, idx) => included[idx]);
     }
 
     private add(

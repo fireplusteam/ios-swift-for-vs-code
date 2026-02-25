@@ -100,7 +100,7 @@ suite("ProjectTree Test Suite", () => {
             projectTree.addExcluded("src/file1.ts");
             projectTree.addExcluded("src/file2.ts");
             const excluded = projectTree.excludedFiles();
-            assert.deepStrictEqual(excluded, ["src/file1.ts", "src/file2.ts"]);
+            assert.deepStrictEqual(excluded, ["src/{file1.ts,file2.ts}"]);
         });
 
         test("should exclude entire directory", () => {
@@ -154,7 +154,7 @@ suite("ProjectTree Test Suite", () => {
             projectTree.addExcluded("src/components/root2/");
             projectTree.addExcluded("src/components/root3/");
             const excluded = projectTree.excludedFiles();
-            assert.deepStrictEqual(excluded, ["src/components/root2", "src/components/root3"]);
+            assert.deepStrictEqual(excluded, ["src/components/{root2,root3}"]);
         });
 
         test("should exclude parent folder and include child file", () => {
@@ -254,10 +254,25 @@ suite("ProjectTree Test Suite", () => {
             projectTree.addExcluded("src/.xcode/file1.json");
             projectTree.addExcluded("src/.xcode/file2.json");
             const excluded = projectTree.excludedFiles();
+            assert.deepStrictEqual(excluded, ["src/.config/settings.json", "src/{.vscode,.xcode}"]);
+        });
+
+        test("should group multiple excluded files under the same parent", () => {
+            projectTree.addIncluded("src/.config/");
+            projectTree.addIncluded("src/.config/settings2.json");
+            projectTree.addIncluded("src/.config/sub_vis/vis.json");
+            projectTree.addExcluded("src/.config/sub/settings2.json");
+            projectTree.addExcluded("src/.config/sub_vis/settings5.json");
+            projectTree.addExcluded("src/.config/settings.json");
+            projectTree.addExcluded("src/.config/settings1.json");
+            projectTree.addExcluded("src/.vscode/file.json");
+            projectTree.addExcluded("src/.xcode/file1.json");
+            projectTree.addExcluded("src/.xcode/file2.json");
+            const excluded = projectTree.excludedFiles();
             assert.deepStrictEqual(excluded, [
-                "src/.config/settings.json",
-                "src/.vscode",
-                "src/.xcode",
+                "src/.config/sub_vis/settings5.json",
+                "src/.config/{sub,settings.json,settings1.json}",
+                "src/{.vscode,.xcode}",
             ]);
         });
 
@@ -295,7 +310,7 @@ suite("ProjectTree Test Suite", () => {
                 projectTree.addExcluded(`src/file${i}.ts`);
             }
             const excluded = projectTree.excludedFiles();
-            assert.deepStrictEqual(excluded.length, 10000);
+            assert.deepStrictEqual(excluded.length, 1);
         });
 
         test("should handle many included files", () => {
@@ -325,7 +340,7 @@ suite("ProjectTree Test Suite", () => {
                 projectTree.addIncluded(`folder${i + 20000}/`, true);
             }
             const excluded = projectTree.excludedFiles();
-            assert.deepStrictEqual(excluded.length, 10000);
+            assert.deepStrictEqual(excluded.length, 1);
         });
     });
 
@@ -337,7 +352,7 @@ suite("ProjectTree Test Suite", () => {
             projectTree.addExcluded("src/root/componentS1/Button.tsx");
             projectTree.addExcluded("src/root/components/Button.tsx");
             const excluded = projectTree.excludedFiles();
-            assert.deepStrictEqual(excluded, ["src/root/components", "src/root/components1"]);
+            assert.deepStrictEqual(excluded, ["src/root/{components,components1}"]);
         });
 
         test("should include subdirectories with includeSubfolders=true", () => {
@@ -347,7 +362,7 @@ suite("ProjectTree Test Suite", () => {
             projectTree.addExcluded("src/root/componentS1/Button.tsx");
             projectTree.addExcluded("src/root/components/Button.tsx");
             const excluded = projectTree.excludedFiles();
-            assert.deepStrictEqual(excluded, ["src/root/components", "src/root/components1"]);
+            assert.deepStrictEqual(excluded, ["src/root/{components,components1}"]);
         });
 
         test("should not include subdirectories with includeSubfolders=false", () => {
