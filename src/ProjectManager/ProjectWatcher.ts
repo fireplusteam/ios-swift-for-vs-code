@@ -85,6 +85,9 @@ export class ProjectWatcher
             return;
         }
 
+        // update any parent file checker which is watching file
+        // example file checker is watching "/User/root_folder/"
+        // update come to /User/root_folder/sub/project.pbxproj, then "/User/root_folder/" checker should be updated
         const components = filePath.split(path.sep).filter(c => c.length > 0) || [];
         let subPath = "";
         for (let i = 0; i < components.length; i++) {
