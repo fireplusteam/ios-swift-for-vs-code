@@ -31,7 +31,8 @@ export class ProjectTree {
 
     excludedFiles() {
         const list: string[] = [];
-        function excludedFiles(node: Node | undefined, filePath: string) {
+        const filePath: string[] = [];
+        function excludedFiles(node: Node | undefined) {
             if (node === undefined) {
                 return;
             }
@@ -40,20 +41,30 @@ export class ProjectTree {
             }
             if (node.edges === null) {
                 if (!node.isVisible) {
-                    list.push(filePath);
+                    if (filePath.length > 0) {
+                        list.push(path.join(...filePath));
+                    } else {
+                        list.push("");
+                    }
                 }
                 return;
             }
             if (!node.isVisible) {
-                list.push(filePath);
+                if (filePath.length > 0) {
+                    list.push(path.join(...filePath));
+                } else {
+                    list.push("");
+                }
                 return;
             }
             for (const [, value] of node.edges) {
-                excludedFiles(value[1], path.join(filePath, value[0]));
+                filePath.push(value[0]);
+                excludedFiles(value[1]);
+                filePath.pop();
             }
         }
 
-        excludedFiles(this.root, "");
+        excludedFiles(this.root);
         return list;
     }
 
