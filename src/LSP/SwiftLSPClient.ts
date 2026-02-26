@@ -120,7 +120,7 @@ export class SwiftLSPClient implements vscode.Disposable {
         if (this.logs.logLevel === "debug") {
             debugOptions["XBS_DEBUG"] = 1;
             debugOptions["XBS_LOGPATH"] = getFilePathInWorkspace(
-                "/.vscode/xcode/logs/xcode-build-server.log"
+                ".vscode/xcode/logs/xcode-build-server.log"
             );
             // to see how Xcode is using sourcekit lsp: export SOURCEKIT_LOGGING=3 && /Applications/Xcode.app/Contents/MacOS/Xcode
             //then use it in terminal: log stream --process sourcekit-lsp --debug

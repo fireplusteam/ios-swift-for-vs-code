@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.9 - 2026-03-22
+
+### Fixed
+
+- Use caching on renaming/moving/deleting file operations for large projects to increase performance and avoid freezing
+
 ## 0.7.8 - 2026-03-21
 
 ### Fixed

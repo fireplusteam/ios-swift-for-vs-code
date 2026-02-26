@@ -1,8 +1,9 @@
-import * as fs from "fs";
 import * as vscode from "vscode";
 import { getFilePathInWorkspace, isProjectFileChanged } from "../env";
 import { isFolder } from "../utils";
 import { ProjectWatcherInterface } from "./ProjectWatcher";
+import { glob } from "glob";
+import { statSync } from "fs";
 
 type ProjFilePath = {
     path: string;
@@ -10,123 +11,126 @@ type ProjFilePath = {
     includeAllSubfolders: boolean;
 };
 
-function isProjFilePath(obj: any): obj is ProjFilePath {
-    return (
-        obj &&
-        typeof obj.path === "string" &&
-        typeof obj.isFolder === "boolean" &&
-        typeof obj.includeAllSubfolders === "boolean"
-    );
-}
-
 type ProjFile = {
     list: Set<ProjFilePath>;
 };
-function mapReplacer(key: any, value: any) {
-    if (value instanceof Map) {
-        return {
-            dataType: "Map",
-            value: Array.from(value.entries()), // or with spread: value: [...value]
-        };
-    } else if (value instanceof Set) {
-        return {
-            dataType: "Set",
-            value: [...value],
-        };
-    } else {
-        return value;
-    }
-}
-function mapReviver(key: any, value: any) {
-    if (typeof value === "object" && value !== null) {
-        if (value.dataType === "Map") {
-            return new Map(value.value);
-        }
-        if (value.dataType === "Set") {
-            const parsed = new Set(value.value);
-            if (parsed.size > 0) {
-                for (const v of parsed) {
-                    if (!isProjFilePath(v)) {
-                        throw Error("Generated Format of file is wrong");
-                    }
-                }
-            }
-            return parsed;
-        }
-    }
-    return value;
-}
 
 export interface ProjectCacheInterface extends vscode.Disposable {
-    preloadCacheFromFile(filePath: string): Promise<void>;
-    saveCacheToFile(filePath: string): Promise<void>;
     has(project: string): boolean;
     getList(project: string, onlyFiles?: boolean): Promise<Set<string>>;
     getProjects(): string[];
     allFiles(): Promise<{ path: string; includeSubfolders: boolean }[]>;
+
+    getProjectTargets(projectFile: string): Promise<string[]>;
+    getProjectTestsTargets(projectFile: string): Promise<string[]>;
+    listFilesFromTarget(projectFile: string, targetName: string): Promise<string[]>;
+    listDependenciesForTarget(projectFile: string, targetName: string): Promise<string[]>;
+
     addProject(projectPath: string): Promise<boolean>;
+
+    getFilesInFolder(folderPath: string): Promise<string[]>;
 }
 
 export class ProjectsCache implements ProjectCacheInterface {
     private cache = new Map<string, ProjFile>();
+    private cacheTargetsForProject = new Map<string, string[]>();
+    private cacheTestsTargetsForProject = new Map<string, string[]>();
+    private cacheFilesFromProjectAndTarget = new Map<string, string[]>();
+    private cacheDependenciesForTarget = new Map<string, string[]>();
 
-    listFilesFromProject: (projectFile: string) => Promise<string[]>;
+    _listFilesFromProject: (projectFile: string) => Promise<string[]>;
+    _listFilesFromTarget: (projectFile: string, targetName: string) => Promise<string[]>;
+    _getProjectTargets: (projectFile: string) => Promise<string[]>;
+    _getProjectTestsTargets: (projectFile: string) => Promise<string[]>;
+    _listDependenciesForTarget: (projectFile: string, targetName: string) => Promise<string[]>;
 
     constructor(
         private readonly projectWatcher: ProjectWatcherInterface,
-        listFilesFromProject: (projectFile: string) => Promise<string[]>
+        listFilesFromProject: (projectFile: string) => Promise<string[]>,
+        getProjectTargets: (projectFile: string) => Promise<string[]>,
+        getProjectTestsTargets: (projectFile: string) => Promise<string[]>,
+        listFilesFromTarget: (projectFile: string, targetName: string) => Promise<string[]>,
+        listDependenciesForTarget: (projectFile: string, targetName: string) => Promise<string[]>
     ) {
-        this.listFilesFromProject = listFilesFromProject;
+        this._listFilesFromProject = listFilesFromProject;
+        this._listFilesFromTarget = listFilesFromTarget;
+        this._getProjectTargets = getProjectTargets;
+        this._getProjectTestsTargets = getProjectTestsTargets;
+        this._listDependenciesForTarget = listDependenciesForTarget;
     }
 
     dispose() {
         this.cache.clear();
-    }
-
-    async preloadCacheFromFile(filePath: string) {
-        return new Promise<void>((resolve, reject) => {
-            fs.readFile(filePath, (e, data) => {
-                if (e === null) {
-                    try {
-                        const val = JSON.parse(data.toString(), mapReviver);
-                        if (val instanceof Map) {
-                            this.cache = val;
-                        } else {
-                            reject(Error("Json format is wrong"));
-                        }
-                        resolve();
-                    } catch (err) {
-                        console.log(`Preload Cache from file error: ${err}`);
-                        reject(err);
-                    }
-                } else {
-                    reject(e);
-                }
-            });
-        });
-    }
-
-    async saveCacheToFile(filePath: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const proj = JSON.stringify(this.cache, mapReplacer, 4);
-            fs.writeFile(filePath, proj, e => {
-                if (e === null) {
-                    resolve();
-                } else {
-                    reject(e);
-                }
-            });
-        });
+        this.cacheTargetsForProject.clear();
+        this.cacheTestsTargetsForProject.clear();
+        this.cacheFilesFromProjectAndTarget.clear();
+        this.cacheDependenciesForTarget.clear();
     }
 
     private async getFilesForProject(projectPath: string) {
         if (await isProjectFileChanged(projectPath, "ProjectsCache.files", this.projectWatcher)) {
             const list = await this.parseProjectList(
-                await this.listFilesFromProject(getFilePathInWorkspace(projectPath))
+                await this._listFilesFromProject(getFilePathInWorkspace(projectPath))
             );
             this.cache.set(projectPath, { list });
         }
         return this.cache.get(projectPath)?.list;
+    }
+
+    private async getFilesForTarget(projectPath: string, targetName: string) {
+        const cacheKey = `${projectPath}|${targetName}`;
+        if (
+            await isProjectFileChanged(
+                projectPath,
+                `ProjectsCache.targetFiles.${targetName}`,
+                this.projectWatcher
+            )
+        ) {
+            const list = await this._listFilesFromTarget(projectPath, targetName);
+            this.cacheFilesFromProjectAndTarget.set(cacheKey, list);
+        }
+        return this.cacheFilesFromProjectAndTarget.get(cacheKey);
+    }
+
+    async getProjectTargets(projectPath: string) {
+        if (await isProjectFileChanged(projectPath, "ProjectsCache.targets", this.projectWatcher)) {
+            const list = await this._getProjectTargets(projectPath);
+            this.cacheTargetsForProject.set(projectPath, list);
+        }
+        return this.cacheTargetsForProject.get(projectPath) || [];
+    }
+
+    async getProjectTestsTargets(projectPath: string) {
+        if (
+            await isProjectFileChanged(
+                projectPath,
+                "ProjectsCache.testsTargets",
+                this.projectWatcher
+            )
+        ) {
+            const list = await this._getProjectTestsTargets(projectPath);
+            this.cacheTestsTargetsForProject.set(projectPath, list);
+        }
+        return this.cacheTestsTargetsForProject.get(projectPath) || [];
+    }
+
+    async listFilesFromTarget(projectFile: string, targetName: string): Promise<string[]> {
+        return (await this.getFilesForTarget(projectFile, targetName)) || [];
+    }
+
+    async listDependenciesForTarget(projectFile: string, targetName: string): Promise<string[]> {
+        const cacheKey = `${projectFile}|${targetName}`;
+        if (
+            await isProjectFileChanged(
+                projectFile,
+                `ProjectsCache.dependenciesForTarget.${targetName}`,
+                this.projectWatcher
+            )
+        ) {
+            const list = await this._listDependenciesForTarget(projectFile, targetName);
+            this.cacheDependenciesForTarget.set(cacheKey, list);
+        }
+        return this.cacheDependenciesForTarget.get(cacheKey) || [];
     }
 
     has(project: string) {
@@ -220,5 +224,33 @@ export class ProjectsCache implements ProjectCacheInterface {
             return true;
         }
         return false;
+    }
+
+    private cacheFolderFiles = new Map<
+        string,
+        { files: string[]; fingerprint: number | undefined }
+    >();
+    async getFilesInFolder(folderPath: string) {
+        const mstat = getFolderFingerprint(folderPath)?.getTime();
+        if (mstat === undefined || mstat !== this.cacheFolderFiles.get(folderPath)?.fingerprint) {
+            const files: string[] = await glob("*", {
+                absolute: true,
+                cwd: folderPath,
+                dot: true,
+                nodir: false,
+                ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
+            });
+            this.cacheFolderFiles.set(folderPath, { files, fingerprint: mstat });
+        }
+        return this.cacheFolderFiles.get(folderPath)?.files || [];
+    }
+}
+
+function getFolderFingerprint(folderPath: string) {
+    try {
+        const stats = statSync(folderPath);
+        return stats.mtime;
+    } catch {
+        return undefined;
     }
 }

@@ -666,7 +666,7 @@ export async function isProjectFileChanged(
     id: string,
     projectWatcher: ProjectWatcherInterface
 ) {
-    const filePath = getFullProjectPath(projectPath);
+    const filePath = path.isAbsolute(projectPath) ? projectPath : getFullProjectPath(projectPath);
     const fileWatcher = projectWatcher.newFileChecker(filePath, id);
     if (await fileWatcher.isFileChanged()) {
         return true;

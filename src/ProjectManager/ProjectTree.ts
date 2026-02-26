@@ -92,37 +92,38 @@ export class ProjectTree {
         index: number,
         includeSubfolders: boolean
     ) {
-        if (node === undefined) {
-            return;
-        }
-        if (index >= components.length) {
-            if (!isVisible) {
+        while (node !== undefined) {
+            if (index >= components.length) {
+                if (!isVisible) {
+                    return;
+                }
+                if (includeSubfolders) {
+                    node.isLeaf = true;
+                } // if it's visible, tells that's a leaf
                 return;
             }
-            if (includeSubfolders) {
-                node.isLeaf = true;
-            } // if it's visible, tells that's a leaf
-            return;
+            if (isVisible) {
+                node.isVisible = true;
+            }
+            if (!isVisible && node.isLeaf) {
+                return;
+            }
+            const edges = node.edges || new Map<string, [string, Node]>();
+            if (!edges.has(components[index].toLowerCase())) {
+                edges.set(components[index].toLowerCase(), [
+                    components[index],
+                    {
+                        isVisible: isVisible,
+                        isLeaf: index === components.length - 1 && includeSubfolders ? true : false,
+                        edges: null,
+                    },
+                ]);
+            }
+            node.edges = edges;
+            const key = edges.get(components[index].toLowerCase());
+
+            node = key?.[1];
+            index++;
         }
-        if (isVisible) {
-            node.isVisible = true;
-        }
-        if (!isVisible && node.isLeaf) {
-            return;
-        }
-        const edges = node.edges || new Map<string, [string, Node]>();
-        if (!edges.has(components[index].toLowerCase())) {
-            edges.set(components[index].toLowerCase(), [
-                components[index],
-                {
-                    isVisible: isVisible,
-                    isLeaf: index === components.length - 1 && includeSubfolders ? true : false,
-                    edges: null,
-                },
-            ]);
-        }
-        node.edges = edges;
-        const key = edges.get(components[index].toLowerCase());
-        this.add(key?.[1], components, isVisible, index + 1, includeSubfolders);
     }
 }

@@ -91,11 +91,29 @@ export class ProjectManager
     ) {
         this.debouncedTouch = debounce(async () => {
             await this.touch();
-        }, 1500); // to avoid any kind of scripts to change project files multiple times
+        }, 1000); // to avoid any kind of scripts to change project files multiple times
 
-        this.projectCache = new ProjectsCache(projectWatcher, (projectFile: string) => {
-            return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
-        });
+        this.projectCache = new ProjectsCache(
+            projectWatcher,
+            (projectFile: string) => {
+                return this.rubyProjectFilesManager.listFilesFromProject(projectFile);
+            },
+            (projectFile: string) => {
+                return this.rubyProjectFilesManager.getProjectTargets(projectFile);
+            },
+            (projectFile: string) => {
+                return this.rubyProjectFilesManager.getProjectTestsTargets(projectFile);
+            },
+            (projectFile: string, targetName: string) => {
+                return this.rubyProjectFilesManager.listFilesFromTarget(projectFile, targetName);
+            },
+            (projectFile: string, targetName: string) => {
+                return this.rubyProjectFilesManager.listDependenciesForTarget(
+                    projectFile,
+                    targetName
+                );
+            }
+        );
 
         this.disposable.push(
             vscode.workspace.onDidCreateFiles(async e => {
@@ -312,13 +330,9 @@ export class ProjectManager
                 if (!visitedFolders.has(compPath)) {
                     visitedFolders.add(compPath);
                     try {
-                        const excludedFiles = await glob("*", {
-                            absolute: true,
-                            cwd: path.join(getWorkspacePath(), compPath),
-                            dot: true,
-                            nodir: false,
-                            ignore: "**/{.git,.svn,.hg,CVS,.DS_Store,Thumbs.db,.gitkeep,.gitignore}",
-                        });
+                        const excludedFiles = await this.projectCache.getFilesInFolder(
+                            path.join(getWorkspacePath(), compPath)
+                        );
                         for (const excludeFile of excludedFiles) {
                             projectTree.addExcluded(excludeFile);
                             // this.log.debug("Excluding file: " + excludeFile);
@@ -656,24 +670,20 @@ export class ProjectManager
         if (rootProjectFile === undefined) {
             return [];
         }
-        return this.getProjectTargets(rootProjectFile);
+        return this.projectCache.getProjectTargets(rootProjectFile);
     }
 
     // project is a related path to workspace
     async getProjectTargets(project: string) {
-        return await this.rubyProjectFilesManager.getProjectTargets(
-            getFilePathInWorkspace(project)
-        );
+        return await this.projectCache.getProjectTargets(getFilePathInWorkspace(project));
     }
 
     async getTestProjectTargets(project: string) {
-        return await this.rubyProjectFilesManager.getProjectTestsTargets(
-            getFilePathInWorkspace(project)
-        );
+        return await this.projectCache.getProjectTestsTargets(getFilePathInWorkspace(project));
     }
 
     async getFilesForTarget(project: string, targetName: string) {
-        return await this.rubyProjectFilesManager.listFilesFromTarget(
+        return await this.projectCache.listFilesFromTarget(
             getFilePathInWorkspace(project),
             targetName
         );
@@ -730,8 +740,7 @@ export class ProjectManager
                 selectedProjectPath,
                 file.fsPath
             );
-            const targets =
-                await this.rubyProjectFilesManager.getProjectTargets(selectedProjectPath);
+            const targets = await this.projectCache.getProjectTargets(selectedProjectPath);
             const items: QuickPickItem[] = sortTargets(targets, fileTargets);
             let message = `Edit targets of\n${path.relative(selectedProjectPath, file.fsPath)}`;
             if (typeOfPath.startsWith("folder:")) {
@@ -870,7 +879,7 @@ export class ProjectManager
                 [...filesToAdd][0],
                 selectedProject
             );
-            const targets = await this.rubyProjectFilesManager.getProjectTargets(
+            const targets = await this.projectCache.getProjectTargets(
                 getFilePathInWorkspace(selectedProject)
             );
             const items = sortTargets(targets, proposedTargets);
@@ -1225,7 +1234,7 @@ export class ProjectManager
         const projectFiles = this.projectCache.getProjects();
         for (const project of projectFiles) {
             const projectPath = getFilePathInWorkspace(project);
-            const targets = await this.rubyProjectFilesManager.getProjectTargets(projectPath);
+            const targets = await this.projectCache.getProjectTargets(projectPath);
 
             for (const target of targets) {
                 const buildingLogsTargetId = `${await buildingLogProjectName(project)}::${target}`;
@@ -1234,7 +1243,7 @@ export class ProjectManager
                     projectPath: project,
                     id: `${getFilePathInWorkspace(project)}::${target}`,
                     files: new Set(
-                        await this.rubyProjectFilesManager.listFilesFromTarget(
+                        await this.projectCache.listFilesFromTarget(
                             getFilePathInWorkspace(project),
                             target
                         )
@@ -1254,7 +1263,7 @@ export class ProjectManager
 
         // resolve dependencies
         for (const [, targetDep] of graph) {
-            const dependencies = await this.rubyProjectFilesManager.listDependenciesForTarget(
+            const dependencies = await this.projectCache.listDependenciesForTarget(
                 getFilePathInWorkspace(targetDep.projectPath),
                 targetDep.targetName
             );
