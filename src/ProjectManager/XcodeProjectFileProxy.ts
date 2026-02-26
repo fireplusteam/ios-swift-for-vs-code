@@ -45,6 +45,12 @@ export class XcodeProjectFileProxy {
 
     private async read() {
         const process = this.process;
+        const handleError = (error: any) => {
+            this.rl = undefined;
+            process?.kill();
+            this.log.error(`Error in XcodeProjectFileProxy for project path: ${String(error)}`);
+            this.onEndReadWithError.fire(error);
+        };
         try {
             if (this.process?.stdout) {
                 this.rl = createInterface({
@@ -56,7 +62,7 @@ export class XcodeProjectFileProxy {
             if (this.rl === undefined) {
                 throw Error(`XcodeProjectFileProxy process stdout is undefined`);
             }
-            for await (const line of this.rl) {
+            this.rl.on("line", line => {
                 if (line === "ERROR_REQUEST_error") {
                     this.onEndReadWithError.fire(new Error(result.join("\n")));
                     result = [];
@@ -66,12 +72,10 @@ export class XcodeProjectFileProxy {
                 } else {
                     result.push(line);
                 }
-            }
+            });
+            this.rl.on("error", error => handleError(error));
         } catch (error) {
-            this.rl = undefined;
-            process?.kill();
-            this.log.error(`Error in XcodeProjectFileProxy for project path: ${String(error)}`);
-            this.onEndReadWithError.fire(error);
+            handleError(error);
         }
     }
 
