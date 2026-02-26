@@ -152,6 +152,7 @@ async function initialize(
     await projectManager.loadProjectFiles(true);
     await projectManager.cleanAutocompleteSchemes();
     await semanticManager.refreshSemanticGraph();
+    autocompleteWatcher.setEnabled();
     autocompleteWatcher.triggerIncrementalBuild(vscode.window.activeTextEditor?.document.uri, true);
     return true;
 }

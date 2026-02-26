@@ -26,6 +26,7 @@ export class AutocompleteWatcher {
     private buildTouchTime = 0;
 
     private activelyBuildingTargetsIds = new Set<string>();
+    private enabled = false;
 
     constructor(
         atomicCommand: AtomicCommand,
@@ -93,6 +94,10 @@ export class AutocompleteWatcher {
         this.problemResolver = problemResolver;
     }
 
+    setEnabled() {
+        this.enabled = true;
+    }
+
     async triggerIncrementalBuild(
         file: vscode.Uri | undefined,
         wasFileModified: boolean,
@@ -149,7 +154,7 @@ export class AutocompleteWatcher {
     }
 
     private async isWatcherEnabledAnyFile() {
-        if ((await isActivated()) === false) {
+        if (this.enabled === false || (await isActivated()) === false) {
             return false;
         }
         const isWatcherEnabled = vscode.workspace
