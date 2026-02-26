@@ -10,6 +10,7 @@ if !File.respond_to?(:absolute_path?)
 end
 
 def clean_path(path)
+  path = path.to_s
   if File.absolute_path?(path)
     return File.expand_path(path)
   else
@@ -48,7 +49,13 @@ def get_real_path(file, project)
     if xc_project_dir_path.empty?
       clean_path(file.real_path)
     else
-      clean_path(File.join(project.project_dir, xc_project_dir_path, file.path))
+      clean_path(
+        File.join(
+          project.project_dir.to_s,
+          xc_project_dir_path.to_s,
+          file.path.to_s
+        )
+      )
     end
   else
     clean_path(file.path)
@@ -78,7 +85,11 @@ module Traverse
   def traverse_all_group(project)
     GC.disable
     group = project.main_group
-    path = File.join(project.project_dir, project.root_object.project_dir_path)
+    path =
+      File.join(
+        project.project_dir.to_s,
+        project.root_object.project_dir_path.to_s
+      )
     path = combine_path(group, path) if group != project.root_object
 
     queue_group = [group]
