@@ -24,6 +24,7 @@ GEM
     sorbet-static (0.6.12883-aarch64-linux)
     sorbet-static (0.6.12883-universal-darwin)
     sorbet-static (0.6.12883-x86_64-linux)
+    stackprof (0.2.28)
     syntax_tree (6.3.0)
       prettier_print (>= 1.2.0)
     xcodeproj (1.27.0)
@@ -44,6 +45,7 @@ DEPENDENCIES
   ruby-lsp
   sorbet
   sorbet-runtime
+  stackprof
   syntax_tree
   xcodeproj
 
@@ -66,11 +68,9 @@ CHECKSUMS
   sorbet-static (0.6.12883-aarch64-linux) sha256=c9c86775d0f9560c6744eaec46d080f431a19b9c66d62a852ce69a409facdc69
   sorbet-static (0.6.12883-universal-darwin) sha256=649a45ca40144ef71173d26b8f81bd6a4454a6fd47ac5060eaff432187cba870
   sorbet-static (0.6.12883-x86_64-linux) sha256=7b21a4576d64de080116aee5ffa701241cf2dfbc3345c74e0bed225fb07bcb4e
+  stackprof (0.2.28) sha256=4ec2ace02f386012b40ca20ef80c030ad711831f59511da12e83b34efb0f9a04
   syntax_tree (6.3.0) sha256=56e25a9692c798ec94c5442fe94c5e94af76bef91edc8bb02052cbdecf35f13d
   xcodeproj (1.27.0) sha256=8cc7a73b4505c227deab044dce118ede787041c702bc47636856a2e566f854d3
-
-RUBY VERSION
-  ruby 3.3.0
 
 BUNDLED WITH
   4.0.3

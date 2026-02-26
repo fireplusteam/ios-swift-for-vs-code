@@ -3,17 +3,18 @@ Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
 
 require "xcodeproj"
-require "pathname"
 require_relative "project_scheme_helper"
 require_relative "project_file_helper"
 require_relative "package_helper"
+
+require "stackprof" if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
 
 # https://www.rubydoc.info/github/CocoaPods/Xcodeproj/Xcodeproj/Project/Object/PBXProject#project_dir_path-instance_method
 
 # FILE AND GROUP MANAGEMENT
 
 def find_file(project, file_path)
-  file_path = Pathname.new(file_path).cleanpath
+  file_path = clean_path(file_path)
   file_ref =
     project.files.find { |file| get_real_path(file, project) == file_path }
 
@@ -115,8 +116,8 @@ def add_group(project, group_path)
   splitted_path = group_path.split("/")
   # todo: optimize the search by starting from root_group
   for i in 1..(splitted_path.length - 2)
-    current_path = splitted_path[0..i].join("/")
-    new_group_path = current_path + "/" + splitted_path[i + 1]
+    current_path = File.join(*splitted_path[0..i])
+    new_group_path = File.join(current_path, splitted_path[i + 1])
     parent_group = find_group_by_absolute_dir_path(project, current_path)
     current_group = find_group_by_absolute_dir_path(project, new_group_path)
 
@@ -216,12 +217,12 @@ def list_files(project)
     ) do |group, parent_group, group_path, _type|
       if _type == GroupType::SYNCHRONIZED_GROUP
         puts "folder:#{group_path}"
-        all_files_in_folder(project, group).each do |file_in_folder|
+        all_files_in_folder(project, group, group_path).each do |file_in_folder|
           puts "file:#{file_in_folder}"
         end
       elsif _type == GroupType::FOLDER_REFERENCE
         puts "folder:#{group_path}"
-        all_files_in_folder(project, group).each do |file_in_folder|
+        all_files_in_folder(project, group, group_path).each do |file_in_folder|
           puts "file:#{file_in_folder}"
         end
       else
@@ -246,7 +247,7 @@ def list_files_for_target(project, target_name)
       if target.respond_to?(:file_system_synchronized_groups) &&
            target.file_system_synchronized_groups
         target.file_system_synchronized_groups.each do |folder|
-          all_files_in_folder(project, folder).each do |file_in_folder|
+          all_files_in_folder(project, folder, nil).each do |file_in_folder|
             puts file_in_folder
           end
         end
@@ -256,7 +257,7 @@ def list_files_for_target(project, target_name)
 end
 
 def get_targets_for_file(project, file_path)
-  file_path = Pathname.new(file_path).cleanpath
+  file_path = clean_path(file_path)
   group = first_folder_by_absolute_dir_path(project, file_path)
   result = []
   if not group.nil?
@@ -651,7 +652,20 @@ def perform_action_on_project(project_path, action, arg)
     handle_action(projects, action, arg)
   else
     project = get_latest_project(project_path)
-    handle_action(project, action, arg)
+
+    if ENV["DEBUG_XCODE_PROJECT_HELPER"] == "1"
+      StackProf.run(mode: :cpu, out: "stackprof-output.dump") do
+        start_time = Time.now
+        handle_action(project, action, arg)
+        end_time = Time.now
+        puts "Time for action #{action}: #{end_time - start_time} seconds"
+      end
+      # dump to console
+      # to see result in terminal use stackprof stackprof-output.dump
+      StackProf.results("stackprof-output.dump")
+    else
+      handle_action(project, action, arg)
+    end
   end
 
   if action == "save" && project.is_a?(Xcodeproj::Project)

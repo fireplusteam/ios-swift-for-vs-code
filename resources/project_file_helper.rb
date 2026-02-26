@@ -1,12 +1,19 @@
 require "xcodeproj"
 require "find"
-require "pathname"
 
 # to support old ruby 2.6 versions
 if !File.respond_to?(:absolute_path?)
   def File.absolute_path?(path)
     # Check if it starts with / (Unix)
     path.start_with?("/")
+  end
+end
+
+def clean_path(path)
+  if File.absolute_path?(path)
+    return File.expand_path(path)
+  else
+    File.expand_path(path, "/").delete_prefix("/")
   end
 end
 
@@ -36,15 +43,15 @@ end
 def get_real_path(file, project)
   xc_project_dir_path = project.root_object.project_dir_path
   if file.path.nil?
-    file.real_path.cleanpath
+    clean_path(file.real_path)
   elsif is_relative_path?(file.path)
     if xc_project_dir_path.empty?
-      file.real_path.cleanpath
+      clean_path(file.real_path)
     else
-      (project.project_dir + xc_project_dir_path + file.path).cleanpath
+      clean_path(File.join(project.project_dir, xc_project_dir_path, file.path))
     end
   else
-    Pathname.new(file.path).cleanpath
+    clean_path(file.path)
   end
 end
 
@@ -57,11 +64,11 @@ end
 
 def combine_path(group, parent_path)
   if group.path.nil?
-    parent_path
+    parent_path.to_s
   elsif is_relative_path?(group.path)
-    parent_path + group.path
+    File.join(parent_path.to_s, group.path.to_s)
   else
-    Pathname.new(group.path)
+    group.path.to_s
   end
 end
 
@@ -69,8 +76,9 @@ module Traverse
   VERSION = "0.1.0"
 
   def traverse_all_group(project)
+    GC.disable
     group = project.main_group
-    path = project.project_dir + project.root_object.project_dir_path
+    path = File.join(project.project_dir, project.root_object.project_dir_path)
     path = combine_path(group, path) if group != project.root_object
 
     queue_group = [group]
@@ -84,17 +92,27 @@ module Traverse
       head_queue += 1
 
       catch(:prune) do
-        yield(group, parent_group, current_path.cleanpath, GroupType::GROUP)
+        yield(group, parent_group, clean_path(current_path), GroupType::GROUP)
         group.children.each do |child|
           # if child is a file reference with folder type, print it as folder reference
           child_path = combine_path(child, current_path)
           if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
                is_folder_reference(child)
-            yield(child, group, child_path, GroupType::FOLDER_REFERENCE)
+            yield(
+              child,
+              group,
+              clean_path(child_path),
+              GroupType::FOLDER_REFERENCE
+            )
           elsif child.kind_of?(
                 Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
               )
-            yield(child, group, child_path, GroupType::SYNCHRONIZED_GROUP)
+            yield(
+              child,
+              group,
+              clean_path(child_path),
+              GroupType::SYNCHRONIZED_GROUP
+            )
           elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
             queue_group << child
             queue_parent_group << group
@@ -103,6 +121,7 @@ module Traverse
         end
       end
     end
+    GC.enable
   end
 
   def prune
@@ -126,14 +145,14 @@ def get_path_of_group(project, folder)
   nil
 end
 
-def all_files_in_folder(project, group)
+def all_files_in_folder(project, group, folder_path)
   result = []
-  folder_path = get_path_of_group(project, group)
+  folder_path = get_path_of_group(project, group) if folder_path.nil?
   return result if folder_path.nil?
   # look up all files in folder and subfolders and further folders recursively in file system
   # don't recurse folder if it has Package.swift file at root (as Swift Package)
   def package_file(path)
-    path + "Package.swift"
+    File.join(path, "Package.swift")
   end
 
   if File.exist?(package_file(folder_path))
@@ -142,7 +161,7 @@ def all_files_in_folder(project, group)
   end
   if File.directory?(folder_path)
     Find.find(folder_path) do |path|
-      path = Pathname.new(path).cleanpath
+      path = clean_path(path)
       # skip search if we have Package.swift file in subfolder
       if File.directory?(path) && File.exist?(package_file(path))
         result << package_file(path)
@@ -156,7 +175,7 @@ def all_files_in_folder(project, group)
 end
 
 def find_group_by_absolute_dir_path(project, path)
-  path = Pathname.new(path).cleanpath
+  path = clean_path(path)
   Traverse.traverse_all_group(
     project
   ) do |group, parent_group, group_path, _type|
@@ -166,12 +185,12 @@ def find_group_by_absolute_dir_path(project, path)
 end
 
 def first_folder_by_absolute_dir_path(project, path)
-  path = Pathname.new(path).cleanpath.to_s.split("/")
+  path = clean_path(path).split("/")
 
   all_pref_paths = {}
-  current_path = Pathname.new("/")
+  current_path = "/"
   path.each do |part|
-    current_path = current_path + part
+    current_path = File.join(current_path, part)
     all_pref_paths[current_path.to_s] = true
   end
 
@@ -189,12 +208,12 @@ def furthest_group_by_absolute_dir_path(project, path)
 
   result_group = nil
   result_path_components = 0
-  path = Pathname.new(path).cleanpath.to_s.split("/")
+  path = clean_path(path).split("/")
 
   all_pref_paths = {}
-  current_path = Pathname.new("/")
+  current_path = "/"
   path.each do |part|
-    current_path = current_path + part
+    current_path = File.join(current_path, part)
     all_pref_paths[current_path.to_s] = current_path.to_s.split("/").length
   end
 

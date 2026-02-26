@@ -234,7 +234,7 @@ def find_files(path)
   result = []
   if File.directory?(path)
     Find.find(path) do |path|
-      result << Pathname.new(path).cleanpath if File.file?(path)
+      result << clean_path(path) if File.file?(path)
     end
   end
   result
@@ -245,7 +245,7 @@ end
 def package_list_files(project)
   project.targets.each do |target|
     dir_path = target.path
-    full_dir_path = (project.project_dir_path + dir_path).cleanpath
+    full_dir_path = clean_path(File.join(project.project_dir_path, dir_path))
     if File.exist?(full_dir_path) && File.directory?(full_dir_path)
       find_files(full_dir_path).each { |file_path| puts "file:#{file_path}" }
     end
@@ -253,14 +253,14 @@ def package_list_files(project)
   # print all files in the package root, without recursing into subfolders
   Dir.foreach(project.project_dir_path) do |entry|
     next if entry == "." || entry == ".." || entry.start_with?(".")
-    file_path = project.project_dir_path + entry
+    file_path = clean_path(File.join(project.project_dir_path, entry))
     puts "file:#{file_path}" if File.file?(file_path)
   end
 end
 
 def package_list_targets_for_file(project, file_path)
   project.targets.each do |target|
-    candidate_target = (project.project_dir_path + target.path).cleanpath
+    candidate_target = clean_path(File.join(project.project_dir_path, target.path))
     if file_path.to_s.downcase.start_with?("#{candidate_target.to_s.downcase}/")
       puts target.name
     end
@@ -272,7 +272,7 @@ def package_list_files_for_target(project, target_name)
   project.targets.each do |target|
     next if target.name != target_name
     dir_path = target.path
-    full_dir_path = (project.project_dir_path + dir_path).cleanpath
+    full_dir_path = clean_path(File.join(project.project_dir_path, dir_path))
     if File.exist?(full_dir_path) && File.directory?(full_dir_path)
       find_files(full_dir_path).each { |file_path| puts file_path }
     end

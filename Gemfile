@@ -13,6 +13,8 @@ gem "ruby-lsp"
 gem "sorbet-runtime"
 
 group :development do
+  gem "stackprof", require: true
+
   gem "sorbet", require: false
   # linter
   #gem 'rubocop', require: false
