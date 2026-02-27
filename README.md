@@ -120,7 +120,7 @@ Use the following guide to install them manually if any it doesn't work for you:
 - **xcodeproj** gem library to make possible to add/delete/rename files in your Xcode project directly from vs code.
 
     ```bash
-    brew install ruby # if you don't have ruby installed, but it's preinstalled on macOS
+    brew install ruby # if you want to install the latest version of ruby to improve performance of this extension. MacOS has preinstalled old ruby which is compatible with this extension but it may be slow. Also to improve performance you can install a ruby version with YJIT support via rbenv or rvm.
     gem install xcodeproj
     ```
 

@@ -2,6 +2,8 @@
 
 ## 0.7.9 - 2026-03-22
 
+This release is focused on improving the performance and stability of the extension when working with large projects, especially during file operations and project indexing.
+
 ### Fixed
 
 - Use caching on renaming/moving/deleting file operations for large projects to increase performance and avoid freezing
