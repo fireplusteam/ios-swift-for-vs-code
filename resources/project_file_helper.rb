@@ -74,6 +74,10 @@ module GroupType
 end
 
 def combine_path(group, parent_path)
+  if group.source_tree && group.source_tree == "SOURCE_ROOT" && group.project
+    # relative to project directory
+    return File.join(group.project.project_dir.to_s, group.path.to_s)
+  end
   if group.path.nil?
     parent_path.to_s
   elsif is_relative_path?(group.path)

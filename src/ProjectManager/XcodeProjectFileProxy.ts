@@ -22,6 +22,7 @@ export class XcodeProjectFileProxy {
             stdio: "pipe",
             env: {
                 ...process.env,
+                RUBY_YJIT_ENABLE: "1", // Enable YJIT for better performance if a user has a compatible Ruby version
             },
         });
         let stderr = "";
