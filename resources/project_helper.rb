@@ -53,6 +53,8 @@ def update_file_targets(project, targets, file_path)
 
   file_ref = find_file(project, file_path)
   file_ref.remove_from_project if not file_ref.nil?
+  Traverse.clean_cache(file_ref)
+
   add_file_to_targets(project, targets, file_path)
 end
 
@@ -84,6 +86,8 @@ def delete_file(project, file_path)
   return if not group.nil?
   file_ref = find_file(project, file_path)
   file_ref.remove_from_project if not file_ref.nil?
+
+  Traverse.clean_cache(file_ref)
 end
 
 def rename_file(project, old_file_path, new_file_path)
@@ -91,6 +95,8 @@ def rename_file(project, old_file_path, new_file_path)
   return if not group.nil?
   file_ref = find_file(project, old_file_path)
   file_ref.set_path(new_file_path) if not file_ref.nil?
+
+  Traverse.clean_cache(file_ref)
 end
 
 def move_file(project, old_path, new_path)
@@ -131,7 +137,9 @@ end
 
 def rename_group(project, old_group_path, new_group_path)
   group = find_group_by_absolute_dir_path(project, old_group_path)
+
   if not group.nil?
+    Traverse.clean_cache(group)
     if is_folder(group)
       group.path = File.basename(new_group_path)
       return
@@ -147,6 +155,8 @@ def move_group(project, old_path, new_path)
   new_parent_group = find_group_by_absolute_dir_path(project, new_parent_path)
   if (not new_parent_group.nil?) && is_folder(new_parent_group) == false
     old_group = find_group_by_absolute_dir_path(project, old_path)
+    Traverse.clean_cache(old_group)
+
     if old_group.nil? # it's a folder if it's not found as a group
       # create an instance of  PBXFileSystemSynchronizedRootGroup and inherit all properties of parent folder
       new_folder =
@@ -183,7 +193,9 @@ end
 
 def delete_group(project, group_path)
   group = find_group_by_absolute_dir_path(project, group_path)
+
   if not group.nil?
+    Traverse.clean_cache(group)
     if is_folder(group)
       # remove group from project
       group.exceptions.each { |exception| exception.remove_from_project }
@@ -213,7 +225,8 @@ end
 def list_files(project)
   def print_all_group_paths(project)
     Traverse.traverse_all_group(
-      project
+      project,
+      true
     ) do |group, parent_group, group_path, _type|
       if _type == GroupType::SYNCHRONIZED_GROUP
         puts "folder:#{group_path}"
@@ -225,15 +238,18 @@ def list_files(project)
         all_files_in_folder(project, group, group_path).each do |file_in_folder|
           puts "file:#{file_in_folder}"
         end
+      elsif _type == GroupType::FILE_REFERENCE
+        puts "file:#{group_path}"
       else
         puts "group:#{group_path}"
       end
     end
   end
-  project.files.each do |file|
-    puts "file:#{get_real_path(file, project)}" if !is_folder_reference(file)
-  end
   print_all_group_paths(project)
+  # this's too slow
+  # project.files.each do |file|
+  #   puts "file:#{get_real_path(file, project)}" if !is_folder_reference(file)
+  # end
 end
 
 def list_files_for_target(project, target_name)

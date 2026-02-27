@@ -42,6 +42,9 @@ def is_relative_path?(path)
 end
 
 def get_real_path(file, project)
+  cached_path = Traverse.get_cached_path(file)
+  return cached_path if cached_path
+
   xc_project_dir_path = project.root_object.project_dir_path
   if file.path.nil?
     clean_path(file.real_path)
@@ -67,6 +70,7 @@ module GroupType
   GROUP = 0
   SYNCHRONIZED_GROUP = 1
   FOLDER_REFERENCE = 2
+  FILE_REFERENCE = 3
 end
 
 def combine_path(group, parent_path)
@@ -82,7 +86,25 @@ end
 module Traverse
   VERSION = "0.1.0"
 
-  def traverse_all_group(project)
+  @cached_files = {}
+
+  def cache_object(object, path)
+    @cached_files[object.uuid] = path if object && object.uuid
+  end
+
+  def get_cached_path(object)
+    if object && object.uuid && @cached_files.key?(object.uuid)
+      @cached_files[object.uuid]
+    end
+  end
+
+  def clean_cache(object)
+    if object && object.uuid && @cached_files.key?(object.uuid)
+      @cached_files.delete(object.uuid)
+    end
+  end
+
+  def traverse_all_group(project, include_files = false)
     GC.disable
     group = project.main_group
     path =
@@ -103,27 +125,26 @@ module Traverse
       head_queue += 1
 
       catch(:prune) do
-        yield(group, parent_group, clean_path(current_path), GroupType::GROUP)
+        group_path = clean_path(current_path)
+        cache_object(group, group_path)
+        yield(group, parent_group, group_path, GroupType::GROUP)
         group.children.each do |child|
           # if child is a file reference with folder type, print it as folder reference
           child_path = combine_path(child, current_path)
-          if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference) &&
-               is_folder_reference(child)
-            yield(
-              child,
-              group,
-              clean_path(child_path),
-              GroupType::FOLDER_REFERENCE
-            )
+          if child.kind_of?(Xcodeproj::Project::Object::PBXFileReference)
+            child_path = clean_path(child_path)
+            cache_object(child, child_path)
+            if is_folder_reference(child)
+              yield(child, group, child_path, GroupType::FOLDER_REFERENCE)
+            elsif include_files # print files
+              yield(child, group, child_path, GroupType::FILE_REFERENCE)
+            end
           elsif child.kind_of?(
                 Xcodeproj::Project::Object::PBXFileSystemSynchronizedRootGroup
               )
-            yield(
-              child,
-              group,
-              clean_path(child_path),
-              GroupType::SYNCHRONIZED_GROUP
-            )
+            child_path = clean_path(child_path)
+            cache_object(child, child_path)
+            yield(child, group, child_path, GroupType::SYNCHRONIZED_GROUP)
           elsif child.kind_of?(Xcodeproj::Project::Object::PBXGroup)
             queue_group << child
             queue_parent_group << group
@@ -139,7 +160,11 @@ module Traverse
     throw :prune
   end
 
-  module_function :traverse_all_group, :prune
+  module_function :traverse_all_group,
+                  :prune,
+                  :cache_object,
+                  :get_cached_path,
+                  :clean_cache
 end
 
 def parent_group_of_group(project, target_group)
@@ -150,6 +175,9 @@ def parent_group_of_group(project, target_group)
 end
 
 def get_path_of_group(project, folder)
+  cached_path = Traverse.get_cached_path(folder)
+  return cached_path if cached_path
+
   Traverse.traverse_all_group(project) do |group, _parent, group_path, type|
     return group_path if group == folder
   end
