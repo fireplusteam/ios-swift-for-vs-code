@@ -32,6 +32,8 @@ def add_file_to_targets(project, targets, file_path)
 
   if file_ref.nil?
     group = find_group_by_absolute_dir_path(project, File.dirname(file_path))
+    group = project.main_group.new_group(File.dirname(file_path)) if group.nil?
+
     file_ref = group.new_reference(file_path)
   end
 
