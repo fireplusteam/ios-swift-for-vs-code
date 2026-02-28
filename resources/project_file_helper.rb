@@ -227,6 +227,13 @@ def find_group_by_absolute_dir_path(project, path)
   nil
 end
 
+def is_group_in_synchronized_group?(synchronized_groups, group)
+  synchronized_groups.each do |synchronized_group|
+    return true if synchronized_group.uuid == group.uuid
+  end
+  false
+end
+
 def first_folder_by_absolute_dir_path(project, path)
   path = clean_path(path).split("/")
 

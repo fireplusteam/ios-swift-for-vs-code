@@ -192,9 +192,9 @@ export class ProblemDiagnosticResolver implements HandleProblemDiagnosticResolve
                           ?.filter(e => sourcePredicate(e.source || "")) || []),
                 ...filesWithNewBuildDiagnostics[file],
             ];
-            this.log.debug(
-                `Storing problems for file: ${file}, to add: ${JSON.stringify(toAddItems)}, all others: ${JSON.stringify(allOthers)}`
-            );
+            // this.log.debug(
+            //     `Storing problems for file: ${file}, to add: ${JSON.stringify(toAddItems)}, all others: ${JSON.stringify(allOthers)}`
+            // );
             this.diagnosticBuildCollection.set(fileUri, [
                 ...this.uniqueDiagnostics(toAddItems, allOthers),
                 ...allOthers,

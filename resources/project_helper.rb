@@ -61,7 +61,7 @@ def update_file_targets(project, targets, file_path)
 end
 
 def update_folder_targets(project, targets, folder_path)
-  group = find_group_by_absolute_dir_path(project, folder_path)
+  group = first_folder_by_absolute_dir_path(project, folder_path)
   if group.nil? || is_folder(group) == false
     puts "folder_not_found"
     return
@@ -71,11 +71,17 @@ def update_folder_targets(project, targets, folder_path)
     if target.respond_to?(:file_system_synchronized_groups) &&
          target.file_system_synchronized_groups
       if targets.split(",").include?(target.name)
-        unless target.file_system_synchronized_groups.include?(group)
+        unless is_group_in_synchronized_group?(
+                 target.file_system_synchronized_groups,
+                 group
+               )
           target.file_system_synchronized_groups << group
         end
       else
-        if target.file_system_synchronized_groups.include?(group)
+        if is_group_in_synchronized_group?(
+             target.file_system_synchronized_groups,
+             group
+           )
           target.file_system_synchronized_groups.delete(group)
         end
       end
@@ -174,7 +180,10 @@ def move_group(project, old_path, new_path)
       project.targets.each do |target|
         if target.respond_to?(:file_system_synchronized_groups) &&
              target.file_system_synchronized_groups &&
-             target.file_system_synchronized_groups.include?(old_parent)
+             is_group_in_synchronized_group?(
+               target.file_system_synchronized_groups,
+               old_parent
+             )
           target.file_system_synchronized_groups << new_folder
         end
       end
@@ -282,7 +291,10 @@ def get_targets_for_file(project, file_path)
     project.targets.each do |target|
       if target.respond_to?(:file_system_synchronized_groups) &&
            target.file_system_synchronized_groups &&
-           target.file_system_synchronized_groups.include?(group)
+           is_group_in_synchronized_group?(
+             target.file_system_synchronized_groups,
+             group
+           )
         result << target.name
       end
     end
