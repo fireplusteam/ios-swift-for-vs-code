@@ -127,19 +127,24 @@ def add_group(project, group_path)
   root_group = furthest_group_by_absolute_dir_path(project, group_path)
   return if root_group && is_folder(root_group)
 
-  splitted_path = group_path.split("/")
-  # todo: optimize the search by starting from root_group
-  for i in 1..(splitted_path.length - 2)
-    current_path = File.join(*splitted_path[0..i])
-    new_group_path = File.join(current_path, splitted_path[i + 1])
-    parent_group = find_group_by_absolute_dir_path(project, current_path)
-    current_group = find_group_by_absolute_dir_path(project, new_group_path)
+  if root_group
+    root_group_path = get_real_path(root_group, project) if root_group
+    start_index = root_group_path.split("/").length
 
-    if current_group.nil?
-      unless parent_group.nil?
-        parent_group.new_group(splitted_path[i + 1], new_group_path)
-      end
+    splitted_path = group_path.split("/")
+    parent_group = root_group
+    current_path = root_group_path
+    for i in start_index..(splitted_path.length - 1)
+      current_path = File.join(current_path, splitted_path[i])
+      parent_group = parent_group.new_group(splitted_path[i], current_path)
     end
+  else
+    # didn't find any parent group, so add to main group
+    main_group_path = get_real_path(project.main_group, project)
+    # then relative path from main group to new group
+    relative_path =
+      Pathname.new(group_path).relative_path_from(Pathname.new(main_group_path))
+    project.main_group.new_group(relative_path.to_s, group_path)
   end
 end
 

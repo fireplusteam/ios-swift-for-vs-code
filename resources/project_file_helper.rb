@@ -79,6 +79,7 @@ def combine_path(group, parent_path)
     return File.join(group.project.project_dir.to_s, group.path.to_s)
   end
   if group.path.nil?
+    return group.name.to_s if group.name && !is_relative_path?(group.name) # if name is absolute path, use it as path
     parent_path.to_s
   elsif is_relative_path?(group.path)
     File.join(parent_path.to_s, group.path.to_s)
