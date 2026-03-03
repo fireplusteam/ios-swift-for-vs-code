@@ -19,7 +19,7 @@ export interface ProjectCacheInterface extends vscode.Disposable {
     has(project: string): boolean;
     getList(project: string, onlyFiles?: boolean): Promise<Set<string>>;
     getProjects(): string[];
-    allFiles(): Promise<{ path: string; includeSubfolders: boolean }[]>;
+    allFiles(): Promise<{ path: string; isFolder: boolean; includeSubfolders: boolean }[]>;
 
     getProjectTargets(projectFile: string): Promise<string[]>;
     getProjectTestsTargets(projectFile: string): Promise<string[]>;
