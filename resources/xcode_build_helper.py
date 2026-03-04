@@ -3,7 +3,7 @@ import pathlib
 
 # import sibling folder from xcode-build-server
 path_root = pathlib.Path(__file__).resolve().parent.parent
-path_root = path_root / "xcode-build-server"
+path_root = path_root / "resources" / "xcode_build_server"
 sys.path.append(str(path_root))
 
 # import from xcode-build-server activitylog parser

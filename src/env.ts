@@ -465,7 +465,7 @@ export async function getProjectFolderPath() {
 }
 
 export function getXCodeBuildServerPath() {
-    return path.join(__dirname, "..", "xcode-build-server", "xcode-build-server");
+    return path.join(__dirname, "..", "resources", "xcode_build_server", "xcode-build-server");
 }
 
 export function getSWBBuildServicePath() {
