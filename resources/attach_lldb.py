@@ -147,7 +147,7 @@ def print_app_log(debugger: lldb.SBDebugger, pid: str):
         platform = os.getenv("PLATFORM").strip('"')
         log_message(f"SCHEME: {scheme}, device: {device}, platform: {platform}")
         app_logger.file_path = f".vscode/xcode/logs/app_{device}.log"
-        app_logger.watch_app_log()
+        app_logger.watch_app_log(debugger)
     except Exception as e:
         print(f"Printer crashed: {str(e)}")
 

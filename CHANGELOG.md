@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.10 - 2026-03-23
+
+### Fixed 
+
+- Use lldb-dap send-event command to fix an issue with output of lldb logs to debug console for Xcode 26.4
+
 ## 0.7.9 - 2026-03-22
 
 This release is focused on improving the performance and stability of the extension when working with large projects, especially during file operations and project indexing.
