@@ -8,27 +8,6 @@ import attach_lldb
 import json
 
 
-# def perform_debugger_command(debugger: lldb.SBDebugger, command: str) -> bool:
-#     """
-#     Executes a command in the LLDB debugger and logs the result.
-
-#     :param debugger: debugger instance
-#     :param command: The command to execute.
-#     :return: The result of the command execution.
-#     """
-#     if isinstance(debugger, lldb.SBTarget):
-#         debugger = debugger.GetDebugger()
-#     attach_lldb.log_message(f"Result Command: {str(command)}, time: {time.time()}")
-#     debugger = lldb.debugger
-#     try:
-#         interpreter = debugger.GetCommandInterpreter()
-#         return_object = lldb.SBCommandReturnObject()
-#         interpreter.HandleCommand(command, return_object)
-#         return return_object.Succeeded()
-#     except Exception as e:
-#         return False
-
-
 class AppLogger:
     def __init__(self, file_path, printer=print) -> None:
         self.file_path = file_path
@@ -56,16 +35,24 @@ class AppLogger:
                             self.printer(line, end="", flush=True)
                         else:
                             if self._debugger:
-                                body = {
-                                    "output": line.decode(
-                                        encoding="utf-8", errors="replace"
-                                    )
-                                }
-                                body = json.dumps(body)
-                                attach_lldb.perform_debugger_command(
-                                    self._debugger,
-                                    f"lldb-dap send-event output '{body}'",
-                                )
+                                line = line.split(b"'")
+                                for i, split_line in enumerate(line):
+                                    if split_line != b"":
+                                        body = {
+                                            "output": split_line.decode(
+                                                encoding="utf-8", errors="replace"
+                                            )
+                                        }
+                                        body = json.dumps(body)
+                                        attach_lldb.perform_debugger_command(
+                                            self._debugger,
+                                            f"lldb-dap send-event output '{body}'",
+                                        )
+                                    if i < len(line) - 1:
+                                        attach_lldb.perform_debugger_command(
+                                            self._debugger,
+                                            'lldb-dap send-event output "{\\"output\\": \\"\'\\"}"',
+                                        )
                             else:
                                 sys.stdout.buffer.write(line)
                                 sys.stdout.flush()
