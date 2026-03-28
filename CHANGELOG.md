@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.11 - 2026-03-23
+
+### Fixed
+
+- Fixed an issue encoding of ' character in lldb logs which caused issues with displaying them in debug console, now it should work properly without encoding issues
+
 ## 0.7.10 - 2026-03-23
 
 ### Fixed 
