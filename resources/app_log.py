@@ -3,7 +3,6 @@ import time
 import sys
 import helper
 import os
-import lldb
 import attach_lldb
 import json
 
@@ -15,7 +14,7 @@ class AppLogger:
         self.printer = printer
 
     def _is_code_lldb(self):
-        return os.environ.get("LLDB_PROVIDER", "") == "code_lldb"
+        return not attach_lldb.is_lldb_dap()
 
     def print_new_lines(self, file):
         try:

@@ -55,12 +55,27 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     }
     private _stream: fs.WriteStream;
 
+    private unverifiedBreakpointDisposables?: vscode.Disposable;
+
     constructor(debugSession: vscode.DebugSession, problemResolver: ProblemDiagnosticResolver) {
         this.debugSession = debugSession;
         this.problemResolver = problemResolver;
         this._stream = fs.createWriteStream(getFilePathInWorkspace(this.logPath), { flags: "a+" });
         this.log = this.context?.commandContext.log;
         this.simulatorInteractor = new SimulatorFocus(this.log);
+        this.unverifiedBreakpointDisposables = vscode.debug.onDidReceiveDebugSessionCustomEvent(
+            e => {
+                if (
+                    e.event === "fixBreakpointsLocations" &&
+                    e.session.id === this.debugSession.id
+                ) {
+                    this.log?.debug(
+                        "Received fixBreakpoints event, refreshing breakpoints to work around lldb-dap issue"
+                    );
+                    this.syncUnverifiedBreakpoints(e.body);
+                }
+            }
+        );
     }
 
     private get logPath(): string {
@@ -96,49 +111,35 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         }
     }
 
-    private refreshBreakpoints = new Map<string, { time: number }>();
+    private refreshBreakpoints = new Set<string>();
 
-    private syncUnverifiedBreakpoints(message: any) {
+    private syncUnverifiedBreakpoints(message: { filePath: string; line: number }) {
         if (
             this.debugSession.configuration.type === DebugConfigurationProvider.RealLLDBTypeAdapter
         ) {
             // lldb-dap has an annoying bug when all breakpoints are not verified at start of app, just remove them and add them back solves the issue
-            const sourcePath = `${message.arguments.source.path}, name: ${
-                message.arguments.source.name
-            }, line: ${message.arguments.line}`;
+            const sourcePath = message.filePath;
 
-            const value = this.refreshBreakpoints.get(sourcePath);
-            if (value === undefined) {
-                // first time seeing this breakpoint location, it's coming from starting the debug session, so no need to refresh yet
-                this.refreshBreakpoints.set(sourcePath, { time: 0 });
+            if (this.refreshBreakpoints.has(sourcePath)) {
                 return;
             }
-            if (Date.now() - value.time < 5000) {
-                // reactive breakpoints only once every 5 seconds, less can cause side effects
-                return;
-            }
-            /// update the map to not refresh again until next breakpointLocations
-            value.time = Date.now();
+            this.refreshBreakpoints.add(sourcePath);
 
-            /// update the map to not refresh again until next breakpointLocations
             const breakpoints = this.breakpoints;
-            // get vscode breakpoints by source and line
             let breakpointFound = false;
             for (const bp of breakpoints) {
                 if (
                     bp instanceof vscode.SourceBreakpoint &&
-                    bp.location.uri.fsPath === message.arguments.source.path &&
-                    bp.location.range.start.line + 1 === message.arguments.line
+                    bp.location.uri.fsPath === message.filePath
                 ) {
                     breakpointFound = true;
+                    break;
                 }
             }
-            if (!breakpointFound) {
-                this.refreshBreakpoints.delete(sourcePath);
-            } else {
+            if (breakpointFound) {
                 const dummyBp = new vscode.SourceBreakpoint(
                     new vscode.Location(
-                        vscode.Uri.file(message.arguments.source.path),
+                        vscode.Uri.file(message.filePath),
                         new vscode.Position(0, 0)
                     ),
                     true
@@ -152,11 +153,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onWillReceiveMessage(message: any) {
         // this.log?.debug(`Received: ${JSON.stringify(message)}`);
-        if (message.command === "breakpointLocations") {
-            // example of getting breakpointLocations request
-            // Received: {"command":"breakpointLocations","arguments":{"source":{"name":"ShopController.swift","path":"/path/UI/ShopController.swift"},"line":11},"type":"request","seq":51
-            // this.syncUnverifiedBreakpoints(message);
-        } else if (
+        if (
             message.command === "disconnect" &&
             (message.arguments === undefined || message.arguments.terminateDebuggee === true)
         ) {
@@ -166,6 +163,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
 
     onWillStopSession() {
         this.log?.info("Debug session is stopping...");
+        this.unverifiedBreakpointDisposables?.dispose();
         if (this.debugSession.configuration.target === "app") {
             this.terminateCurrentSession(true, true);
         }
@@ -186,6 +184,7 @@ export class DebugAdapterTracker implements vscode.DebugAdapterTracker {
         try {
             this.disList.forEach(dis => dis.dispose());
             this.disList = [];
+            this.unverifiedBreakpointDisposables?.dispose();
             this._stream.close();
             this.isTerminated = true;
             await DebugAdapterTracker.updateStatus(this.sessionID, "stopped");

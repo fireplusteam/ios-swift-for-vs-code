@@ -5,12 +5,67 @@ import time
 import subprocess
 import threading
 import os
+import json
 import helper
 import lldb
 from app_log import AppLogger
 import runtime_warning_database
 
 LOG_DEBUG = 0
+
+
+def is_lldb_dap():
+    return os.environ.get("LLDB_PROVIDER", "") == "lldb-dap"
+
+
+class BreakpointStopHook:
+    def __init__(self, target, extra_args, internal_dict):
+        pass
+
+    def _notify(self, debugger: lldb.SBDebugger, filePath, line):
+        if is_lldb_dap():
+            # lldb-dap has a bug that the breakpoint location is not updated after app is launched, just send a command to trigger the update as workaround
+            data = {"filePath": filePath, "line": line}
+            data = json.dumps(data)
+            perform_debugger_command(
+                debugger, f"lldb-dap send-event fixBreakpointsLocations '{data}'"
+            )
+
+    def handle_stop(self, exe_ctx: lldb.SBExecutionContext, stream):
+        try:
+            log_message(f"Hook_stop_called")
+            thread = exe_ctx.GetThread()
+            if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
+                return True
+
+            frame = exe_ctx.GetFrame()
+            if not frame.IsValid():
+                return True
+
+            line_entry = frame.GetLineEntry()
+            if line_entry.IsValid():
+                file_spec = line_entry.GetFileSpec()
+
+                filename = file_spec.GetFilename()
+                directory = file_spec.GetDirectory()
+                full_path = os.path.join(directory, filename)
+                line = line_entry.GetLine()
+
+                debugger = exe_ctx.GetTarget().GetDebugger()
+
+                log_message(f"--- Stop Hook Triggered ---")
+                log_message(f"File: {filename}")
+                log_message(f"Path: {full_path}")
+                log_message(f"Line: {line}")
+                self._notify(debugger, full_path, line)
+            else:
+                log_message(
+                    "Stopped in a location with no debug symbols (no file info)."
+                )
+        except:
+            return True
+
+        return True
 
 
 def create_app_logger():
@@ -314,6 +369,11 @@ def launch_new_process(
         helper.update_debugger_launch_config(session_id, "status", "launched")
         log_message(f"Launching process: {executable}, time: {time.time()}")
 
+        if is_lldb_dap():
+            perform_debugger_command(
+                debugger, "target stop-hook add -P attach_lldb.BreakpointStopHook"
+            )
+
         if perform_debugger_command(debugger, f"process launch -s -- '{executable}'"):
             # get process pid
             process = debugger.GetSelectedTarget().GetProcess()
@@ -559,6 +619,10 @@ def create_target(
         log_message(f"Exe: {executable}")
         result.AppendMessage(f"Creating {executable}")
         perform_debugger_command(debugger, f'target create "{executable}"')
+        if is_lldb_dap():
+            perform_debugger_command(
+                debugger, "target stop-hook add -P attach_lldb.BreakpointStopHook"
+            )
         result.AppendMessage(str(debugger.GetSelectedTarget()))
         result.AppendMessage(f"Target created for {executable}")
         # Set common breakpoints, so if tests are running with debugger, so it's caught
