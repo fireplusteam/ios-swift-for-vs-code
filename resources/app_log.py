@@ -31,7 +31,15 @@ class AppLogger:
                     if self.enabled:
                         if self._is_code_lldb():
                             line = line.decode(encoding="utf-8", errors="replace")
-                            self.printer(line, end="", flush=True)
+                            line = line[:-2].replace("'", "\\'")
+                            attach_lldb.perform_debugger_command(
+                                self._debugger,
+                                f"script print('{line}', end='')",
+                            )
+                            attach_lldb.perform_debugger_command(
+                                self._debugger, 'script print("")'
+                            )
+
                         else:
                             if self._debugger:
                                 line = line.split(b"'")

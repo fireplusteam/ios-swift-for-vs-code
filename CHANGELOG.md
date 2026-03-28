@@ -5,6 +5,8 @@
 ### Fixed
 
 - Fixed an issue encoding of ' character in lldb logs which caused issues with displaying them in debug console, now it should work properly without encoding issues
+- Print app output to debug console for when Codelldb is used
+- Fixed an issue with unverified breakpoints not being refreshed after each launch of debug session which caused breakpoints to not work in some cases with lldb-dap, now it should work properly without any issues with lldb-dap
 
 ## 0.7.10 - 2026-03-23
 
