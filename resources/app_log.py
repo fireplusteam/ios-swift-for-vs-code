@@ -16,6 +16,39 @@ class AppLogger:
     def _is_code_lldb(self):
         return not attach_lldb.is_lldb_dap()
 
+    def _print_line(self, line):
+        if self.enabled:
+            if self._is_code_lldb():
+                line = line.replace("'", "\\'")
+                if self._debugger:
+                    attach_lldb.perform_debugger_command(
+                        self._debugger,
+                        f"script print('{line[:-2]}', end='')",
+                    )
+                    attach_lldb.perform_debugger_command(
+                        self._debugger, 'script print("")'
+                    )
+                else:
+                    self.printer(line, end="")
+            else:
+                if self._debugger:
+                    line = line.split("'")
+                    for i, split_line in enumerate(line):
+                        if split_line != b"":
+                            body = {"output": split_line}
+                            body = json.dumps(body)
+                            attach_lldb.perform_debugger_command(
+                                self._debugger,
+                                f"lldb-dap send-event output '{body}'",
+                            )
+                        if i < len(line) - 1:
+                            attach_lldb.perform_debugger_command(
+                                self._debugger,
+                                'lldb-dap send-event output "{\\"output\\": \\"\'\\"}"',
+                            )
+                else:
+                    self.printer(line, end="")
+
     def print_new_lines(self, file):
         try:
             while True:
@@ -28,53 +61,17 @@ class AppLogger:
                     if not line.endswith(b"\n"):
                         break
 
-                    if self.enabled:
-                        if self._is_code_lldb():
-                            line = line.decode(encoding="utf-8", errors="replace")
-                            line = line[:-2].replace("'", "\\'")
-                            attach_lldb.perform_debugger_command(
-                                self._debugger,
-                                f"script print('{line}', end='')",
-                            )
-                            attach_lldb.perform_debugger_command(
-                                self._debugger, 'script print("")'
-                            )
-
-                        else:
-                            if self._debugger:
-                                line = line.split(b"'")
-                                for i, split_line in enumerate(line):
-                                    if split_line != b"":
-                                        body = {
-                                            "output": split_line.decode(
-                                                encoding="utf-8", errors="replace"
-                                            )
-                                        }
-                                        body = json.dumps(body)
-                                        attach_lldb.perform_debugger_command(
-                                            self._debugger,
-                                            f"lldb-dap send-event output '{body}'",
-                                        )
-                                    if i < len(line) - 1:
-                                        attach_lldb.perform_debugger_command(
-                                            self._debugger,
-                                            'lldb-dap send-event output "{\\"output\\": \\"\'\\"}"',
-                                        )
-                            else:
-                                sys.stdout.buffer.write(line)
-                                sys.stdout.flush()
+                    line = line.decode(encoding="utf-8", errors="replace")
+                    self._print_line(line)
                 except:
                     # cut utf-8 characters as code lldb console can not print such characters and generates an error
-                    if self.enabled:
-                        if self._is_code_lldb():
-                            to_print = ""
-                            for i in line:
-                                if ord(i) < 128:
-                                    to_print += i
-                                else:
-                                    to_print += "?"
-                            self.printer(to_print, end="", flush=True)
-
+                    to_print = ""
+                    for i in line:
+                        if ord(i) < 128:
+                            to_print += i
+                        else:
+                            to_print += "?"
+                    self._print_line(to_print)
         except:  # no such file
             pass
 
