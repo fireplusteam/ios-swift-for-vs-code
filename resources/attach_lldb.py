@@ -23,7 +23,7 @@ class BreakpointStopHook:
         pass
 
     def _notify(self, debugger: lldb.SBDebugger, filePath, line):
-        if is_lldb_dap():
+        if is_lldb_dap() and filePath and line and len(filePath) > 0:
             # lldb-dap has a bug that the breakpoint location is not updated after app is launched, just send a command to trigger the update as workaround
             data = {"filePath": filePath, "line": line}
             data = json.dumps(data)
@@ -33,7 +33,6 @@ class BreakpointStopHook:
 
     def handle_stop(self, exe_ctx: lldb.SBExecutionContext, stream):
         try:
-            log_message(f"Hook_stop_called")
             thread = exe_ctx.GetThread()
             if thread.GetStopReason() != lldb.eStopReasonBreakpoint:
                 return True
