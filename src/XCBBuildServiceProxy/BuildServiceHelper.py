@@ -376,6 +376,8 @@ async def main_client(context: Context):
 
             new_mtime = mtime_of_config_file()
             if new_mtime != last_mtime:
+                last_mtime = new_mtime
+
                 build = build_status()
                 # if server accept another client to build and pipes were changed, client should be stopped
                 if build["status"] == "server_started_build" and (
