@@ -425,7 +425,12 @@ async def main_server(context: Context):
                 await asyncio.sleep(0.3)
                 new_mtime = mtime_of_config_file()
                 # we don't want to change the client while it's building as it would be wrongly report messages to new client
-                if new_mtime != last_mtime and not message_spy.is_building:
+                if (
+                    new_mtime != last_mtime
+                    and not message_spy.is_building
+                    and reader.msg_reader.is_empty
+                    and outer.msg_reader.is_empty
+                ):
                     last_mtime = new_mtime
 
                     config_file_path = config_file()
