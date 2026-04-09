@@ -218,6 +218,9 @@ class STDFeeder:
             sys.stderr.write(
                 f"Exception in feed_stdin: {e}, message: {str(last_message)}\n"
             )
+            self.context.log(
+                f"Exception in feed_stdin: {e}, message: {str(last_message)}\n"
+            )
             print_raw_bytes_as_hex(last_message)
             self.context.should_exit = True
 
@@ -307,6 +310,9 @@ class STDOuter:
                     await asyncio.sleep(0.03)
         except Exception as e:
             sys.stderr.write(
+                f"Exception in read_server_data: {e}, message: {str(last_message)}\n"
+            )
+            self.context.log(
                 f"Exception in read_server_data: {e}, message: {str(last_message)}\n"
             )
             print_raw_bytes_as_hex(last_message)
