@@ -103,7 +103,7 @@ def is_pid_alive(pid: int):
 
 
 def kill_by_pid(pid: int):
-    if psutil.pid_exists(pid):
+    if pid and psutil.pid_exists(pid):
         psutil.Process(pid).kill()
         return True
     return False

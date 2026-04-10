@@ -120,7 +120,10 @@ def main():
                             if (
                                 time.time() - time_start > 22
                             ):  # after 22 seconds of waiting for server, start a new one, as this one is probably frozen
-                                kill_by_pid(context.server_pid)
+                                server_pid = get_server_pid_by_session_id(
+                                    context.session_id
+                                )
+                                kill_by_pid(server_pid)
                                 time.sleep(0.5)
                                 # start a new server
                                 context.server_pid = start_server()
