@@ -102,6 +102,13 @@ def is_pid_alive(pid: int):
     return False
 
 
+def kill_by_pid(pid: int):
+    if psutil.pid_exists(pid):
+        psutil.Process(pid).kill()
+        return True
+    return False
+
+
 def get_server_pid_by_session_id(session_id: str):
     if session_id is None:
         return False

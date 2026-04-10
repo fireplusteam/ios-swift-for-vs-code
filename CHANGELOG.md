@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.12 - 2026-03-24
+
+### Fixed
+
+- Improved stability of SWBBuildServiceProxy by fixing some edge cases when xcodebuild can freeze and not respond sometimes
+
 ## 0.7.11 - 2026-03-23
 
 ### Fixed

@@ -5,9 +5,11 @@
 
 import sys
 import os
+import time
 
 from BuildServiceUtils import (
     get_server_pid_by_session_id,
+    kill_by_pid,
     update_build_status,
     get_build_id,
     build_status,
@@ -80,7 +82,8 @@ def main():
                 context.stdout_file = stdout_temp  # read out of server's stdout
 
                 context.server_pid = get_server_pid_by_session_id(context.session_id)
-                if not context.server_pid:
+
+                def start_server():
                     server_command = sys.argv + ["-proxy-server", context.session_id]
                     if is_debug():
                         server_command = context.command + [
@@ -98,7 +101,33 @@ def main():
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
-                    context.server_pid = server.pid
+                    return server.pid
+
+                if not context.server_pid:
+                    context.server_pid = start_server()
+                else:
+                    # wait server to be ready for build
+                    time_start = time.time()
+                    while True:
+                        try:
+                            time.sleep(0.1)
+                            build = build_status(with_lock=True)
+                            if build and build["status"] == "server_started_build":
+                                if int(build["build_id"]) == build_id:
+                                    break
+                                else:
+                                    return  # outdated client, just exit
+                            if (
+                                time.time() - time_start > 22
+                            ):  # after 22 seconds of waiting for server, start a new one, as this one is probably frozen
+                                kill_by_pid(context.server_pid)
+                                time.sleep(0.5)
+                                # start a new server
+                                context.server_pid = start_server()
+                                break
+                        except:
+                            return  # on corrupted build, don't do anything
+
                 run_client(context)
         else:  # server
             if is_debug():
