@@ -60,11 +60,30 @@ export async function killSpawnLaunchedProcesses(deviceID: string) {
 }
 
 export function ensureKilled(proc: ChildProcess) {
-    sleep(60000).then(() => {
+    function isSameProcess(cmd: string | undefined, proc: ChildProcess) {
+        if (cmd === undefined) {
+            return false;
+        }
+        const procCmd = proc.spawnargs.join(" ").replace(/["']/g, "");
+        return procCmd.includes(cmd.replace(/["']/g, ""));
+    }
+
+    sleep(25000).then(() => {
         // check if process is still alive after waiting for graceful termination
-        if (proc.exitCode === null) {
+        if (proc.exitCode === null && proc.pid !== undefined) {
             // if it's still running - force kill
-            killAll(proc.pid, "SIGKILL");
+            // check if pid is still belonging to the process, because sometimes after graceful kill, pid can be reused for another process, so we need to make sure we are killing the right process
+            find("pid", proc.pid)
+                .then(list => {
+                    for (const process of list) {
+                        if (process.pid === proc.pid && isSameProcess(process.cmd, proc)) {
+                            killAll(proc.pid, "SIGKILL");
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.log(`Error finding process for kill: ${err}`);
+                });
         }
     });
 }

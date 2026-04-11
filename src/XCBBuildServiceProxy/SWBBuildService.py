@@ -116,6 +116,9 @@ def main():
                                 if int(build["build_id"]) == build_id:
                                     break
                                 else:
+                                    context.log(
+                                        "Build ID mismatch, probably outdated client, exiting"
+                                    )
                                     return  # outdated client, just exit
                             if (
                                 time.time() - time_start > 22
@@ -128,7 +131,8 @@ def main():
                                 # start a new server
                                 context.server_pid = start_server()
                                 break
-                        except:
+                        except Exception as e:
+                            context.log(f"Exception in server wait loop: {e}")
                             return  # on corrupted build, don't do anything
 
                 run_client(context)
