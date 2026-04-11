@@ -211,7 +211,7 @@ export class ProjectManager
     }
 
     async loadProjectFiles(shouldDropCache = false) {
-        if (!this.isAllowed()) {
+        if (!(await this.isAllowed())) {
             if (await isActivated()) {
                 setTimeout(() => {
                     this.onProjectLoaded.fire();
@@ -511,7 +511,7 @@ export class ProjectManager
     }
 
     private async renameFileInXcodeProject(oldFiles: vscode.Uri[], files: vscode.Uri[]) {
-        if (!this.isAllowed()) {
+        if (!(await this.isAllowed())) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
                 return;
@@ -645,7 +645,7 @@ export class ProjectManager
     }
 
     async deleteFileFromXcodeProject(files: vscode.Uri[]) {
-        if (!this.isAllowed()) {
+        if (!(await this.isAllowed())) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
                 return;
@@ -690,7 +690,7 @@ export class ProjectManager
     }
 
     async editFileTargets(file: vscode.Uri | undefined) {
-        if (!this.isAllowed()) {
+        if (!(await this.isAllowed())) {
             return;
         }
         if (!file) {
@@ -916,7 +916,7 @@ export class ProjectManager
     }
 
     async addAFileToXcodeProject(files: vscode.Uri | vscode.Uri[] | undefined) {
-        if (!this.isAllowed()) {
+        if (!(await this.isAllowed())) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
                 return;
@@ -997,7 +997,7 @@ export class ProjectManager
         generate: (generatedSchemeName: string, originalSchemeName: string) => Promise<string[]>,
         shouldTouch: boolean = true
     ): Promise<{ scheme: string; path: string; projectPath: string } | undefined> {
-        if (!this.isAllowed()) {
+        if (!(await this.isAllowed())) {
             if (await isActivated()) {
                 this.onProjectUpdate.fire();
                 return;
