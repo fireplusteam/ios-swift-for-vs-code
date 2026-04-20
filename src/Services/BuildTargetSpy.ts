@@ -17,6 +17,11 @@ enum BuildTargetParsingStatus {
     endGraph = 2,
 }
 
+//        ➜ Explicit dependency on target 'project_lib' in project 'project_lib'
+const explicitDependencyPattern = /dependency on target '(.+?)' in project '(.+?)'/;
+//     Target 'SomeProject' in project 'SomeProject'
+const targetPattern = /Target '(.+?)' in project '(.+?)'/;
+
 export class BuildTargetSpy {
     private end: boolean = false;
     private outfile: fs.ReadStream | undefined;
@@ -83,23 +88,23 @@ export class BuildTargetSpy {
     private parsingStatus = BuildTargetParsingStatus.findGraphStart;
     private parsingIndex = 0;
     private data = "";
-    private bufferLines: string[] = [];
+    private bufferLines: string[][] = []; // two dimensional array for performance reason to avoid string concatenation penalties for big logs
     private currentTargetId = "";
     private bufferCurrentParseLineIndx = 0;
 
     private parseBuildingLog() {
         for (; this.parsingIndex < this.data.length; this.parsingIndex++) {
             if (this.data[this.parsingIndex] === "\n") {
-                this.bufferLines.push("");
+                this.bufferLines.push([]);
             } else if (this.bufferLines.length > 0) {
-                this.bufferLines[this.bufferLines.length - 1] += this.data[this.parsingIndex];
+                this.bufferLines[this.bufferLines.length - 1].push(this.data[this.parsingIndex]);
             }
         }
         switch (this.parsingStatus) {
             case BuildTargetParsingStatus.findGraphStart: {
                 const startPattern = "ComputeTargetDependencyGraph";
                 while (this.bufferCurrentParseLineIndx < this.bufferLines.length - 1) {
-                    const line = this.bufferLines[this.bufferCurrentParseLineIndx];
+                    const line = this.bufferLines[this.bufferCurrentParseLineIndx].join("");
                     this.bufferCurrentParseLineIndx++;
 
                     if (line.includes(startPattern)) {
@@ -111,7 +116,7 @@ export class BuildTargetSpy {
             }
             case BuildTargetParsingStatus.parsingGraph: {
                 while (this.bufferCurrentParseLineIndx < this.bufferLines.length - 1) {
-                    const line = this.bufferLines[this.bufferCurrentParseLineIndx];
+                    const line = this.bufferLines[this.bufferCurrentParseLineIndx].join("");
                     this.bufferCurrentParseLineIndx++;
 
                     if (line.trim() === "") {
@@ -119,8 +124,6 @@ export class BuildTargetSpy {
                     } else {
                         if (line.includes("➜")) {
                             //        ➜ Explicit dependency on target 'project_lib' in project 'project_lib'
-                            const explicitDependencyPattern =
-                                /dependency on target '(.+?)' in project '(.+?)'/;
                             const match = line.match(explicitDependencyPattern);
                             if (match && match.length === 3) {
                                 const targetName = match[1];
@@ -152,7 +155,7 @@ export class BuildTargetSpy {
                 }
                 // but if it's disabled then we can try to parse linker messages as it's the last step of build process after compilation, so all flags are got
                 while (this.bufferCurrentParseLineIndx < this.bufferLines.length - 1) {
-                    const line = this.bufferLines[this.bufferCurrentParseLineIndx];
+                    const line = this.bufferLines[this.bufferCurrentParseLineIndx].join("");
                     this.bufferCurrentParseLineIndx++;
 
                     const linkPattern = /(^Ld).+\(in target '(.+?)' from project '(.+?)'\)/;
