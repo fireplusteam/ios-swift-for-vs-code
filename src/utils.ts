@@ -5,7 +5,8 @@ import { lock, unlock } from "lockfile";
 import { ChildProcess, exec } from "child_process";
 import treeKill = require("tree-kill");
 import psTree = require("ps-tree");
-import find = require("find-process");
+import find from "find-process";
+
 export class CustomError implements Error {
     name: string = "Cancel";
     message: string;
@@ -60,14 +61,6 @@ export async function killSpawnLaunchedProcesses(deviceID: string) {
 }
 
 export function ensureKilled(proc: ChildProcess) {
-    function isSameProcess(cmd: string | undefined, proc: ChildProcess) {
-        if (cmd === undefined) {
-            return false;
-        }
-        const procCmd = proc.spawnargs.join(" ").replace(/["']/g, "");
-        return procCmd.includes(cmd.replace(/["']/g, ""));
-    }
-
     sleep(25000).then(() => {
         // check if process is still alive after waiting for graceful termination
         if (proc.exitCode === null && proc.pid !== undefined) {
@@ -76,7 +69,7 @@ export function ensureKilled(proc: ChildProcess) {
             find("pid", proc.pid)
                 .then(list => {
                     for (const process of list) {
-                        if (process.pid === proc.pid && isSameProcess(process.cmd, proc)) {
+                        if (process.pid === proc.pid && proc.exitCode === null) {
                             killAll(proc.pid, "SIGKILL");
                         }
                     }
