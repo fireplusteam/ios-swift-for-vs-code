@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.13 - 2026-03-25
+
+### Fixed
+
+- Minor performance improvements while building project
+
 ## 0.7.12 - 2026-03-24
 
 ### Fixed
