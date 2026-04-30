@@ -4,7 +4,7 @@ import * as path from "path";
 export class XCRunHelper {
     private static async getStdOut(command: string): Promise<string> {
         return new Promise<string>((resolve, reject) => {
-            exec(command, (error, stdout) => {
+            exec(command, { maxBuffer: 1024 * 1024 * 32 }, (error, stdout) => {
                 if (error) {
                     reject(error);
                 } else {
@@ -42,7 +42,7 @@ export class XCRunHelper {
     private static lldbDapPath?: string;
     public static async getLLDBDapPath(): Promise<string> {
         if (this.lldbDapPath === undefined) {
-            this.lldbDapPath = await this.getStdOut("xcrun -find lldb-dap");
+            this.lldbDapPath = await this.getStdOut("xcrun --find lldb-dap");
         }
         return this.lldbDapPath;
     }

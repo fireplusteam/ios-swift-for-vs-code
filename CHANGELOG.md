@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.14 - 2026-03-26
+
+### Fixed
+
+- Increase max buffer size for converting plist to json to avoid issue with larger testing files
+
 ## 0.7.13 - 2026-03-25
 
 ### Fixed
