@@ -135,7 +135,6 @@ export class BuildTargetSpy {
                             }
                         } else {
                             //     Target 'SomeProject' in project 'SomeProject'
-                            const targetPattern = /Target '(.+?)' in project '(.+?)'/;
                             const match = line.match(targetPattern);
                             if (match && match.length === 3) {
                                 const targetName = match[1];
