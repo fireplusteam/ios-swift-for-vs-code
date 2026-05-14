@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.7.15 - 2026-03-27
+
+### Fixed
+
+- Fixed an issue with SWBBuildServiceProxy where in some cases it could restart a server for a wrong client
+
 ## 0.7.14 - 2026-03-26
 
 ### Fixed

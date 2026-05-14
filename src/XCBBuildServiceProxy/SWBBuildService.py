@@ -112,9 +112,10 @@ def main():
                         try:
                             time.sleep(0.1)
                             build = build_status(with_lock=True)
-                            if build and build["status"] == "server_started_build":
+                            if build:
                                 if int(build["build_id"]) == build_id:
-                                    break
+                                    if build["status"] == "server_started_build": # ready for build for this client
+                                        break
                                 else:
                                     context.log(
                                         "Build ID mismatch, probably outdated client, exiting"
