@@ -210,8 +210,8 @@ export class ProjectManager
         }
     }
 
-    async loadProjectFiles(shouldDropCache = false) {
-        if (!(await this.isAllowed())) {
+    async loadProjectFiles(initialLoad = false) {
+        if (!initialLoad && !(await this.isAllowed())) {
             if (await isActivated()) {
                 setTimeout(() => {
                     this.onProjectLoaded.fire();
@@ -220,7 +220,7 @@ export class ProjectManager
             }
             return;
         }
-        if (shouldDropCache) {
+        if (initialLoad) {
             this.resetProjectCache();
         } else {
             // try {
@@ -264,7 +264,7 @@ export class ProjectManager
             );
             if (option === "Update Dependencies" && this.onUpdateDeps !== undefined) {
                 await this.onUpdateDeps();
-                this.loadProjectFiles(shouldDropCache);
+                this.loadProjectFiles(initialLoad);
             } else if (option === "Open in Xcode") {
                 vscode.commands.executeCommand("vscode-ios.env.open.xcode");
             }
